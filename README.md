@@ -2,6 +2,12 @@
 
 > 인간-인공지능협업제품서비스설계 · T07 생성형 AI 팀 프로젝트
 
+## 🚨 Up Next 🚨
+**[ 11/06(금) ]** 아이디어 공모 마감
+- `docs/ideas` 폴더 → Add file → Create new file
+- 파일 이름: `이름.md` (예: `ian.md`)
+- [템플릿](docs/ideas/_template.md) 내용을 복사해 붙이고 자유롭게 작성 → Commit changes
+
 ## 한 줄 소개
 (아이디어 확정 후 작성) 누구를 위해, 어떤 문제를, 어떤 생성형 AI로 해결하는가.
 
@@ -12,12 +18,6 @@
 | 김남희 |  | 미정 |
 | 배한결 |  | 미정 |
 | 신태림 |  | 미정 |
-
-## 🚨 Up Next 🚨
-**[ 11/06(금) ]** 아이디어 공모 마감
-- `docs/ideas` 폴더 → Add file → Create new file
-- 파일 이름: `이름.md` (예: `ian.md`)
-- [템플릿](docs/ideas/_template.md) 내용을 복사해 붙이고 자유롭게 작성 → Commit changes
 
 ## 전체 일정
 Weekly Meeting : 매주 일요일 19:00
