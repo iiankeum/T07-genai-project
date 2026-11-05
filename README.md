@@ -6,7 +6,7 @@
 **[ ~11/06(금) ]** 아이디어 공모 마감
 - [docs/ideas](docs/ideas) 폴더 → Add file → Create new file
 - 파일 이름: `아이디어명.md` (예: `AI-회의록-요약-서비스.md`)
-- [템플릿](docs/ideas/_template.md) 내용을 복사해 붙이고 자유롭게 작성 → Commit changes
+- [템플릿](docs/ideas/00_template.md) 내용을 복사해 붙이고 자유롭게 작성 → Commit changes
 
 **[ 11/07(토) ~ 11/08(일) 오전 ]** 아이템 선정 투표
 - 투표 링크: 11/07(토) 오전 오픈 예정
