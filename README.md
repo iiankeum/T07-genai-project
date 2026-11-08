@@ -6,14 +6,9 @@
 (아이디어 확정 후 작성) 누구를 위해, 어떤 문제를, 어떤 생성형 AI로 해결하는가.
 
 ## 🚨 Up Next 🚨
-**[ ~11/07(토) ]** 아이디어 공모 마감
-- [docs/ideas](docs/ideas) 폴더 → Add file → Create new file
-- 파일 이름: `아이디어명.md` (예: `AI-회의록-요약-서비스.md`)
-- [템플릿](docs/ideas/00_template.md) 내용을 복사해 붙이고 자유롭게 작성 → Commit changes
-
-**[ 11/08(일) ]** 아이템 선정 투표
-- 투표 링크: 11/08(일) 오전 오픈 예정
-- 방식: Discussions Poll, 1인 1표, 익명
+**[ 11/08(일) ~23:59 ]** 아이템 선정 투표
+- 투표 링크: [Discussions #1](https://github.com/iiankeum/T07-genai-project/discussions/1)
+- 방식: Discussions Poll, 1인 1표, 익명 · 투표 후 선택 이유 댓글 한 줄
 - 동표 시: 11/11(수) 22:00 킥오프 미팅에서 결정
 
 ## 팀원
