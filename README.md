@@ -8,7 +8,7 @@
 ## 🚨 Up Next 🚨
 **[ 11/08(일) ~23:59 ]** 아이템 선정 투표
 - 투표 링크: [Discussions #1](https://github.com/iiankeum/T07-genai-project/discussions/1)
-- 방식: Discussions Poll, 1인 1표, 익명 · 투표 후 선택 이유 댓글 한 줄
+- 방식: Discussions Poll, 1인 1표, 익명
 - 동표 시: 11/11(수) 22:00 킥오프 미팅에서 결정
 
 ## 팀원
