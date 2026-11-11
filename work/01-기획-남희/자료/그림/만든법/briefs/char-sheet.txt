@@ -1,0 +1,17 @@
+Generate ONE image with your built-in image generation tool and save it. Do not write code or scripts to draw anything.
+1. Call the image generation tool once with the brief below.
+2. Save (or copy) the result as a PNG to ref/char-sheet.png in the working folder. Create no other files and change nothing else.
+3. Answer with one line: saved ref/char-sheet.png and its pixel size.
+
+BRIEF — character design sheet for an illustrated product-planning document (Korean auto-parts dealership)
+
+STYLE: warm, friendly 2D digital illustration in the style of a modern Korean webtoon / editorial illustration. Clean confident line art, soft cel shading with gentle gradients, appealing semi-realistic proportions (about 6.5 heads tall), expressive but natural faces. Palette: deep teal #1E6E6E, warm orange #F28C28, navy #23395B, warm grays, on a plain OPAQUE warm-white background (#FBF8F2). Not photorealistic, not 3D, not chibi.
+
+LAYOUT: landscape 3:2. Three characters standing side by side, evenly spaced, each shown full body from the front. Above or beside each, two small head close-ups of the same person: one calm/neutral, one expressive (as described). Plenty of white space. NO text, labels, names, captions or logos anywhere.
+
+CHARACTERS (keep them very distinct from each other):
+1. PARK — 61-year-old Korean man, the order-taking clerk at the parts counter of an auto-parts dealership for 20 years. Short salt-and-pepper hair, slightly receding at the temples; thin rimless reading glasses sitting low on his nose; kind, slightly tired eyes with crow's feet; clean-shaven. Light blue collared shirt, navy quilted work vest with a ballpoint pen clipped in the chest pocket, dark gray trousers, black comfortable shoes. A slim single-ear office headset with a small mic boom. Holds a small spiral memo pad in one hand and a pen in the other. Medium build, small belly. Close-ups: calm smile / puzzled frown scratching his head.
+2. KIM — 48-year-old Korean man, owner of a small car repair shop. Short black hair, light stubble, sturdy broad build. Dark charcoal mechanic coverall with one orange stripe across the chest, the top half unzipped and tied at the waist over a white T-shirt, small grease smudges, a gray towel over his right shoulder, work gloves sticking out of a pocket. Holds a smartphone to his ear. Close-ups: hurried, talking fast / relieved grin.
+3. LEE — 34-year-old Korean woman, delivery and shipping staff of the same dealership. Black hair in a low ponytail, navy baseball cap with no logo, orange-and-navy windbreaker jacket, dark cargo pants, white sneakers. Carries a brown cardboard parts box with a plain white label (no readable text) under one arm and a rugged tablet in the other hand. Close-ups: focused / cheerful thumbs-up.
+
+RULES: every person has exactly two arms and two hands with five fingers each. No brand logos of any car or parts company. No text of any kind. Opaque background.
