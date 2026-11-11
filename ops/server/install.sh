@@ -29,6 +29,8 @@ install -o root -g root -m 0755 "$SRC/applog.sh" "$LIB/applog.sh"
 install -o root -g root -m 0644 "$SRC/placeholder.mjs" "$LIB/placeholder.mjs"
 install -o root -g root -m 0644 "$SRC/placeholder.html" "$LIB/placeholder.html"
 install -o callnote-deploy -g callnote-deploy -m 0644 "$SRC/placeholder.html" /var/lib/callnote-deploy/public/placeholder.html
+# 윈도우에서 올리면 줄 끝에 CR 이 붙어 셸 스크립트가 안 돈다 → 떼어 낸다
+sed -i 's/\r$//' "$LIB"/*.py "$LIB"/*.sh "$LIB"/*.mjs
 
 echo "[4] 비밀값 파일 $ENVF"
 if [ ! -f "$ENVF" ]; then

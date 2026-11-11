@@ -177,15 +177,16 @@ def app_log() -> list[str]:
 
 
 def build_release(sha: str) -> tuple[str, bool]:
-    rel = os.path.join(RELEASES, sha[:12])
-    if os.path.exists(rel):
-        shutil.rmtree(rel)
+    # 같은 커밋을 다시 배포해도 지금 돌고 있는 폴더를 지우지 않게, 폴더 이름에 시각을 붙인다.
+    rel = os.path.join(RELEASES, f"{sha[:12]}-{time.strftime('%Y%m%d%H%M%S')}")
     os.makedirs(rel)
     archive = subprocess.run(["git", "-C", REPO, "archive", "--format=tar", sha],
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)
     if archive.returncode != 0:
         raise RuntimeError("git archive 실패: " + archive.stderr.decode("utf-8", "replace")[:300])
     run(["tar", "-x", "-C", rel], input_bytes=archive.stdout, timeout=120)
+    with open(os.path.join(rel, "REVISION"), "w", encoding="utf-8") as f:
+        f.write(sha + "\n")
     app_dir = os.path.join(rel, "src", "app")
     has_app = os.path.isfile(os.path.join(app_dir, "server.mjs"))
     if has_app:
