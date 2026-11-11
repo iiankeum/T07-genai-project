@@ -1,0 +1,25 @@
+# 비밀값 — 절대 올리지 않는다 (공개 저장소)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+secrets/
+.t07-secrets/
+
+# 실제 통화 녹음 · 받아쓴 글 — 저장소에 올리지 않는다
+real/
+**/real-recordings/
+
+# 만들어지는 것들
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+out/
+*.sqlite
+*.sqlite3
+*.db
+.DS_Store
+Thumbs.db
