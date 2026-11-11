@@ -8,3 +8,4 @@
 - 인물(박 부장 · 김 사장 · 이 기사)은 모두 지어낸 가짜 인물이다.
 - 저장소에는 가로 1400px · 256색 PNG 로 줄여 넣었다(`publish.py`). 원본(1536px)은 작업 PC 에만 있다.
 - 다시 그리기: `python scenes.py briefs` → `python scenes.py run 4 <id>` (작업 폴더에 `ref/char-sheet.png` 가 있어야 한다).
+- 말풍선 글자: 그림 생성기는 한글을 깨뜨리기 쉬워서, 빈 말풍선으로 그린 뒤 `bubbles.py` 로 글자를 얹었다(배달의민족 주아 글꼴 · OFL). 대상: `d01-day` · `s01-rush` · `s02-dispute`. 말은 모두 지어낸 현장 말이다.
