@@ -28,8 +28,13 @@ python app.py
 | 카드 상세 | 거래처·차종·연식·차번호·부품·수량 고치기, **품번 입력**, 확정 → 출고 완료. 통화 글·녹음 재생·근거 발화·AI 초안과 비교 |
 | 오늘 마감 요약 | 오늘 주문 n건 · 아직 확정 안 됨 · 급한데 미출고 · 다시 전화할 곳. 카톡 등에 붙여 넣을 글 |
 
-품번이 비어 있으면 확정되지 않는다. **AI는 초안까지만, 품번은 사람이 정한다**는 원칙을 화면에서 강제한다.
-AI가 품번을 만들어 내도 코드에서 지운다.
+**AI는 초안까지만, 품번은 사람이 정한다**는 원칙을 서버에서 강제한다.
+
+- 확정 조건: 부품 1개 이상, 모든 부품에 품번과 수량(1 이상), ‘다시 물어볼 것’이 모두 해결(삭제)됨
+- 상태 변경은 서버가 이전 상태를 검사한다: 확인 필요 → 확정 → 출고 완료. 확정·출고·취소된 카드는 ‘다시 열기’ 전까지 고칠 수 없다
+- AI가 품번을 만들어 내도 코드에서 지운다
+- **AI 결과는 통화 원문과 대조한다.** 원문에 없는 차종·차번호·연식·거래처·부품·수량·근거 문장은 지우지 않고 ⚠ ‘원문 미확인’으로 표시하고, ‘다시 물어볼 것’에 넣는다 (`order_ai/verify.py`)
+- 통화 글은 세 가지를 따로 보관한다: 음성 인식 원문, 원문 + 낱말 사전 교정(대조 기준), AI가 다듬은 글(참고용)
 
 ## AI 켜기
 
@@ -37,17 +42,22 @@ AI가 품번을 만들어 내도 코드에서 지운다.
 
 | 단계 | 설정 | 녹음·통화 글이 PC 밖으로 나가나 |
 |---|---|---|
-| 음성 인식 | `STT_BACKEND=faster-whisper` (`pip install faster-whisper`) | 안 나감 |
+| 음성 인식 | `STT_BACKEND=faster-whisper` (`pip install -r requirements-stt.txt`) | 안 나감 |
 | 음성 인식 | `STT_BACKEND=openai` (`pip install openai`, `OPENAI_API_KEY`) | 나감 |
 | 주문 추출 | `LLM_PROVIDER=ollama` ([Ollama](https://ollama.com) 설치 후 `ollama pull qwen2.5:7b`) | 안 나감 |
 | 주문 추출 | `LLM_PROVIDER=anthropic` (`ANTHROPIC_API_KEY`) 또는 `openai` | 나감 |
 
 실제 대리점 시범 사용에서는 **faster-whisper + ollama** 조합이 개인정보 처리 위탁·국외 이전 문제를 피하는 선택지다.
-AI 호출이 실패하면 규칙 기반 추출로 자동 대체하고, 카드에 그 사실을 남긴다.
+AI 호출이 실패하면(키 없음, HTTP 오류, 연결 끊김, 시간 초과, 이상한 응답) 규칙 기반 추출로 자동 대체하고, 카드에 그 사실을 남긴다.
+
+- `requirements-stt.txt`는 실제 디코딩을 확인한 `faster-whisper==1.2.1` + `av==15.1.0` 조합이다 (PyAV 19.0.2와는 WAV 디코딩 오류). 설치 후 `python -m pytest -q tests`를 돌리면 `tests/test_stt_decode.py`가 짧은 WAV를 실제로 디코딩해 확인한다
+- CPU만 있는 PC에서 `qwen2.5:7b`는 한 건에 몇 분이 걸릴 수 있다 (리뷰 환경에서 4분 이상). 대기 시간은 `LLM_TIMEOUT`(초)으로 늘리고, 더 작은 모델이나 GPU를 검토한다
+- 워크스페이스에 묶이지 않은 Claude API 키라면 `.env`에 `ANTHROPIC_WORKSPACE_ID`를 넣는다
 
 ## 녹음 폴더 감시
 
 통화 녹음이 자동으로 쌓이는 폴더(녹취 프로그램 저장 폴더 등)를 지정해 두면 새 파일만 카드로 만든다.
+처리에 실패한 파일(잠겨 있거나 음성 인식 오류)은 원인과 함께 기록하고 다음 확인 때 다시 시도한다(같은 파일 최대 5회, 파일이 바뀌면 처음부터). 실패 목록은 웹 첫 화면에 나온다.
 
 ```bash
 python cli.py watch "D:/통화녹음" --interval 5
@@ -88,6 +98,7 @@ order_ai/
   stt.py             음성 인식 (none · faster-whisper · openai)
   glossary.py        낱말 사전 교정
   extract.py         주문 추출 흐름 + 생성형 AI 프롬프트
+  verify.py          AI 결과를 통화 원문과 대조해 ⚠ 원문 미확인 표시
   llm.py             AI 호출 (anthropic · openai · ollama, SDK 없이 urllib)
   rules.py           규칙 기반 추출 + 빠진 정보 점검(check_missing)
   models.py          주문 카드 자료 구조
@@ -103,6 +114,13 @@ tests/               pytest
 ```bash
 python -m pytest -q tests
 ```
+
+`tests/test_review_fixes.py`는 코드 리뷰에서 지적된 동작(빈 수량·빈 주문 확정, 확인 전 출고, 원문에 없는 AI 값, 폴더 감시 실패 누락, AI 시간 초과)을 재현하는 회귀 테스트다.
+
+## 보안 메모 (시연용 프로토타입)
+
+- 로그인이 없다. `127.0.0.1`에서 담당자 혼자 쓰는 것을 전제로 한다
+- 디버그 모드는 `FLASK_DEBUG=1`일 때만 켜진다. 비밀키는 실행할 때마다 무작위로 만든다(`SECRET_KEY`로 지정 가능)
 
 ## 아직 안 한 것
 

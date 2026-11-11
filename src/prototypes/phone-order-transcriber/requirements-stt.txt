@@ -1,0 +1,7 @@
+# 녹음 파일을 PC 안에서 받아쓸 때만 설치한다 (STT_BACKEND=faster-whisper)
+#   pip install -r requirements-stt.txt
+#
+# 코드 리뷰(2026-11-11, Python 3.12)에서 실제 WAV 디코딩을 확인한 조합으로 고정한다.
+# faster-whisper 1.2.1 + PyAV 19.0.2 조합은 decode_audio의 metadata_errors 인자 오류로 실패했다.
+faster-whisper==1.2.1
+av==15.1.0
