@@ -45,15 +45,27 @@ export async function buildRouter() {
   return { router, starters };
 }
 
-function serveStatic(req, res, pathname) {
-  let rel = decodeURIComponent(pathname);
+function serveStatic(req, res, pathname, search = '') {
+  let rel;
+  try {
+    rel = decodeURIComponent(pathname);
+  } catch {
+    throw new HttpError(400, 'bad_url', '주소가 잘못됐습니다.'); // %E0%A4%A 같은 잘못된 인코딩
+  }
   if (rel === '/' || rel === '') rel = '/index.html';
-  // 폴더 주소(/intro, /intro/)는 그 안의 index.html
+  // 폴더 주소(/intro/)는 그 안의 index.html
   let file = path.normalize(path.join(PUBLIC_DIR, rel));
   if (!file.startsWith(PUBLIC_DIR + path.sep) && file !== PUBLIC_DIR) return false;
   try {
     let st = statSync(file);
     if (st.isDirectory()) {
+      // 끝 / 가 없으면(/intro) / 를 붙인 주소로 보낸다 — 그래야 intro.js · privacy.html 같은 상대 주소가 맞게 풀린다.
+      // 앞의 / 는 하나로 줄인다(//host 꼴의 다른 사이트 주소가 되지 않게).
+      if (!pathname.endsWith('/')) {
+        res.writeHead(301, { Location: `/${pathname.replace(/^\/+/, '')}/${search}`, 'Cache-Control': 'no-cache' });
+        res.end();
+        return true;
+      }
       file = path.join(file, 'index.html');
       st = statSync(file);
     }
@@ -113,7 +125,7 @@ export function createApp(router) {
         if (pathname === '/intro/' || pathname === '/intro/index.html') countVisit('intro', cleanSrc(url.searchParams.get('src')), clientIp(req));
         else if (pathname === '/' || pathname === '/index.html') countVisit('demo', cleanSrc(url.searchParams.get('src')) || (url.searchParams.get('from') === 'intro' ? 'intro' : ''), clientIp(req));
       }
-      if (serveStatic(req, res, pathname)) return;
+      if (serveStatic(req, res, pathname, url.search)) return;
       // 모르는 화면 주소는 첫 화면으로(해시 라우팅이라 보통 생기지 않음)
       if (!path.extname(pathname) && serveStatic(req, res, '/')) return;
       throw new HttpError(404, 'not_found', '없는 주소입니다.');

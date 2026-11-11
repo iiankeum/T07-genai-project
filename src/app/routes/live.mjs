@@ -7,6 +7,7 @@ import { aiEnabled, extractCard, AiError } from '../lib/ai.mjs';
 import { buildCardFromAi, previewCard, normalizeSegments } from '../lib/cards.mjs';
 import { processLive } from '../lib/pipeline.mjs';
 
+const MIN_EXTRACT_CHARS = 10;     // 이보다 짧으면 AI 를 부르지 않는다
 const MAX_EXTRACT_CHARS = 4000;   // AI 에 보내는 길이
 const MAX_EXTRACT_INPUT = 20_000; // 받는 길이(넘으면 413)
 const MAX_SAVE_CHARS = 20_000;
@@ -32,6 +33,8 @@ export function register(router) {
   router.post('/api/live/extract', async ({ req, ip }) => {
     const body = await readJson(req, 128 * 1024);
     const text = clipForAi(readText(body.text, MAX_EXTRACT_INPUT));
+    // 말이 아직 몇 마디뿐이면 AI 를 부르지 않는다(빈칸 · 띄어쓰기 빼고 센다)
+    if (text.replace(/\s/g, '').length < MIN_EXTRACT_CHARS) return { card: null, aiError: '말이 너무 짧아요' };
     if (!aiEnabled()) return { card: null, aiError: 'AI 키 없음' };
     limit('ai', ip);
     takeDaily('ai', config.dailyAiLimit);

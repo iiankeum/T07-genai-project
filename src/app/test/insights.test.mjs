@@ -14,6 +14,7 @@ const { Router } = await import('../lib/http.mjs');
 const { kstDay } = await import('../lib/security.mjs');
 const { createApp } = await import('../server.mjs');
 const { addDays } = await import('../routes/calls.mjs');
+const { kstTime } = await import('../lib/repo.mjs');
 const insights = await import('../routes/insights.mjs');
 
 const today = kstDay();
@@ -24,9 +25,9 @@ function addCall({ id, recordedAt, status = 'ready', customer = null, transcript
   db().prepare(`INSERT INTO calls(id, created_at, recorded_at, source, status, title, customer, duration_sec, transcript, segments, is_fake)
     VALUES(?, ?, ?, 'seed', ?, ?, ?, 20, ?, ?, 1)`).run(id, now, recordedAt, status, `${customer ?? '거래처 확인 필요'} · ${id}`, customer, transcript, JSON.stringify(segments));
   if (card) {
-    db().prepare(`INSERT INTO cards(call_id, status, customer, car_model, model_year, plate, items, urgent, due, delivery, ask_back, unsure, callback, callback_reason,
+    db().prepare(`INSERT INTO cards(call_id, status, call_type, customer, car_model, model_year, plate, items, urgent, due, delivery, ask_back, unsure, callback, callback_reason,
         created_at, updated_at, confirmed_at, shipped_at)
-      VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(id, card.status ?? 'draft', card.customer ?? customer, card.carModel ?? null, card.modelYear ?? null,
+      VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(id, card.status ?? 'draft', card.callType ?? '주문', card.customer ?? customer, card.carModel ?? null, card.modelYear ?? null,
       card.plate ?? null, JSON.stringify(card.items ?? []), card.urgent ? 1 : 0, card.due ?? null, card.delivery ?? null, JSON.stringify(card.askBack ?? []),
       JSON.stringify(card.unsure ?? []), card.callback ? 1 : 0, card.callbackReason ?? null, now, now, card.confirmedAt ?? null, card.shippedAt ?? null);
   }
@@ -170,13 +171,35 @@ test('브리핑: AI 꺼짐 503 · 10분 캐시 · 없는 callId 는 null', async
   const dash = await get('/api/dashboard');
   assert.equal(dash.body.briefing.paragraph, '오늘은 가짜 통화 9건. 새한카센터 앞범퍼가 급합니다.');
   const text = await get('/api/briefing/text');
-  assert.ok(text.body.text.endsWith('■ AI 요약\n오늘은 가짜 통화 9건. 새한카센터 앞범퍼가 급합니다.'));
+  assert.ok(text.body.text.endsWith(`■ AI 요약(${kstTime(first)} 기준)\n오늘은 가짜 통화 9건. 새한카센터 앞범퍼가 급합니다.`));
 
-  // 통화가 없는 날은 AI 를 부르지 않는다
-  r = await post('/api/briefing', { day: addDays(today, -7) });
+  // 만든 뒤 숫자가 바뀌면(옛 요약) 복사 글에 AI 요약을 붙이지 않는다
+  db().prepare("UPDATE cards SET callback = 1, callback_reason = '가짜 표시' WHERE call_id = 'c8'").run();
+  const staleText = await get('/api/briefing/text');
+  assert.ok(!staleText.body.text.includes('AI 요약'), '숫자가 바뀐 옛 요약은 빠진다');
+  assert.ok(staleText.body.text.includes('■ 다시 전화할 곳 2곳'));
+  db().prepare("UPDATE cards SET callback = 0, callback_reason = NULL WHERE call_id = 'c8'").run();
+  assert.ok((await get('/api/briefing/text')).body.text.includes('■ AI 요약('));
+
+  // 통화가 없는 날은 AI 를 부르지 않고 DB 에도 남기지 않는다
+  const quietDay = addDays(today, -7);
+  r = await post('/api/briefing', { day: quietDay });
   assert.equal(r.res.status, 200);
   assert.equal(calls, 1);
   assert.match(r.body.paragraph, /통화가 없습니다/);
+  assert.equal(r.body.model, null);
+  assert.equal(db().prepare('SELECT COUNT(*) AS n FROM briefings WHERE day = ?').get(quietDay).n, 0);
+
+  // 날짜는 오늘 앞뒤 60일 안만
+  for (const day of ['1990-01-01', addDays(today, -61), addDays(today, 61)]) {
+    r = await post('/api/briefing', { day });
+    assert.equal(r.res.status, 400, day);
+    assert.equal(r.body.error, 'bad_date');
+  }
+  r = await post('/api/briefing', { day: addDays(today, -60) });
+  assert.equal(r.res.status, 200);
+  assert.equal(calls, 1);
+  assert.equal(db().prepare('SELECT COUNT(*) AS n FROM briefings').get().n, 1, '통화 있는 오늘 것만 남는다');
   insights.setAiForTest(null);
 });
 
@@ -280,6 +303,38 @@ test('출고 CSV: BOM · 칸 · 수식 주입 막기', async () => {
   assert.equal(insights.csvCell('-1'), `"'-1"`);
   assert.equal(insights.csvCell('@x'), `"'@x"`);
   assert.equal(insights.csvCell('a"b'), '"a""b"');
+});
+
+test('출고 대상: 주문 · 반품·교환 + 부품 있음만 — 출고 목록 · CSV · 급한데 출고 전 · 할 일 「출고」', async () => {
+  // 사흘 전 날짜에 넣는다(앞 시험의 오늘 숫자를 바꾸지 않게)
+  addCall({ id: 'n1', recordedAt: at(old3, '13:00'), customer: '대한카센터',
+    card: { status: 'confirmed', callType: '배송 문의', urgent: true, items: [], confirmedAt: at(old3, '13:05') } });
+  addCall({ id: 'n2', recordedAt: at(old3, '13:10'), customer: '한일카',
+    card: { status: 'confirmed', callType: '기타', items: [], confirmedAt: at(old3, '13:15') } });
+  addCall({ id: 'n3', recordedAt: at(old3, '13:20'), customer: '한빛모터스',
+    card: { status: 'confirmed', callType: '반품·교환', urgent: true, items: [{ part: '앞범퍼(반품)', qty: 1 }], confirmedAt: at(old3, '13:25') } });
+  addCall({ id: 'n4', recordedAt: at(old3, '13:30'), customer: '제일카서비스',
+    card: { status: 'draft', callType: '재고·단가 문의', urgent: true, items: [{ part: '헤드램프', qty: 1 }] } });
+  addCall({ id: 'n5', recordedAt: at(old3, '13:40'), customer: '세한모터스',
+    card: { status: 'confirmed', callType: '주문', urgent: true, items: [], confirmedAt: at(old3, '13:45') } });
+
+  const { body } = await get('/api/shipping');
+  const ids = body.groups.flatMap((g) => g.cards.map((c) => c.callId)).sort();
+  assert.deepEqual(ids, ['c2', 'c6', 'n3', 'o1']);
+  assert.equal(body.total, 4, '머리 숫자도 남은 카드 수');
+
+  const csv = await (await fetch(base + '/api/shipping.csv')).text();
+  assert.ok(csv.includes('"앞범퍼(반품)"'));
+  assert.ok(!csv.includes('대한카센터') && !csv.includes('한일카') && !csv.includes('세한모터스'), '출고할 것이 없는 카드는 CSV 에도 없다');
+
+  const dash = await get(`/api/dashboard?day=${old3}`);
+  assert.equal(dash.body.stats.urgentOpen, 1);
+  assert.deepEqual(dash.body.urgentOpen.map((c) => c.callId), ['n3']);
+  assert.deepEqual(dash.body.todos.filter((t) => t.kind === 'ship').map((t) => t.callId), ['n3']);
+  const text = await get(`/api/briefing/text?day=${old3}`);
+  assert.ok(text.body.text.includes('■ 급한데 아직 출고 안 된 것 1건'));
+  assert.ok(text.body.text.includes('- 한빛모터스: 앞범퍼(반품) 1개 (확정)'));
+  assert.ok(!text.body.text.includes('부품 확인 필요'));
 });
 
 test('질문 낱말 · 날짜 말', () => {

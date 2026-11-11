@@ -195,6 +195,27 @@ export function cloneItems(items) {
   }));
 }
 
+/** 부품 줄 한 칸 값을 비교용으로(빈칸 · 띄어쓰기만 다른 것은 같게) */
+function itemVal(k, v) {
+  if (k === 'qty') return num(v);
+  const s = String(v ?? '').trim();
+  return s || null;
+}
+/** 두 부품 줄의 부품 이름 · 위치 · 수량 · 품번이 모두 같은가 */
+export function sameItem(a, b) {
+  if (!a || !b) return false;
+  return ITEM_SUBS.every((k) => itemVal(k, a[k] ?? (k === 'partNo' ? a.part_no : undefined)) === itemVal(k, b[k] ?? (k === 'partNo' ? b.part_no : undefined)));
+}
+/**
+ * 부품 줄 하나에 붙일 표시: 'ai'(AI 초안과 같음) · 'edited'(사람이 고치거나 넣음) · null(빈 줄 · 초안 없음).
+ * 줄을 지우거나 순서가 바뀌어도 맞게, 같은 번호 줄 말고도 초안 어느 줄과든 같으면 'ai' 로 본다.
+ */
+export function itemMark(draftItems, item) {
+  if (!Array.isArray(draftItems) || !item) return null;
+  if (!itemVal('part', item.part) && !itemVal('partNo', item.partNo)) return null;
+  return draftItems.some((d) => sameItem(d, item)) ? 'ai' : 'edited';
+}
+
 /** 서버에 보낼 부품 줄(빈 줄은 뺀다) */
 export function itemsForSave(items) {
   return (Array.isArray(items) ? items : [])

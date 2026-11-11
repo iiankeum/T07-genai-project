@@ -4,7 +4,7 @@
 //   ctx = { params, query, meta, navigate(path), refreshMeta() }
 // 화면마다 css/pages/<이름>.css 가 있으면 처음 열 때 자동으로 붙인다.
 import { getMeta } from './api.js';
-import { html, render, esc } from './ui.js';
+import { html, render, esc, routeOf } from './ui.js';
 
 const ROUTES = [
   { re: /^\/?$/, page: 'today' },
@@ -48,24 +48,8 @@ let cleanup = null;
 let seq = 0;
 const loadedCss = new Set();
 
-function parseHash() {
-  const h = location.hash.replace(/^#/, '') || '/';
-  const qi = h.indexOf('?');
-  const rawPath = qi >= 0 ? h.slice(0, qi) : h;
-  const qs = qi >= 0 ? h.slice(qi + 1) : '';
-  let path;
-  try { path = rawPath.split('/').map((p) => decodeURIComponent(p)).join('/'); } catch { path = rawPath; }
-  const query = Object.fromEntries(new URLSearchParams(qs || ''));
-  for (const r of ROUTES) {
-    const m = r.re.exec(path);
-    if (m) {
-      const params = {};
-      (r.keys || []).forEach((k, i) => { params[k] = m[i + 1]; });
-      return { page: r.page, params, query, path };
-    }
-  }
-  return { page: 'notfound', params: {}, query, path };
-}
+// 경로는 풀기 전 주소로 맞추고 잡힌 값만 푼다(ui.js routeOf) — 「A/S 공업사」(%2F) 같은 이름도 열린다
+const parseHash = () => routeOf(location.hash, ROUTES);
 
 function ensureCss(page) {
   if (loadedCss.has(page)) return;

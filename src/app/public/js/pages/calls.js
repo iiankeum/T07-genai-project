@@ -97,6 +97,7 @@ export default {
           <h1>통화 기록 · 찾기</h1>
           <p class="sub">받아쓴 글과 주문 카드에서 찾습니다. 문장을 누르면 그 대목으로 갑니다.</p>
         </div>
+        <a class="btn btn-primary cl-upload" href="#/upload"><span aria-hidden="true">⤒</span> 녹음 올리기</a>
       </div>
       <form class="cl-search" role="search" data-slot="form">
         <label class="sr-only" for="cl-q">통화 찾기</label>

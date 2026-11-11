@@ -48,6 +48,20 @@ export function makeTitle({ customer, items, recordedAt, durationSec, source }) 
 }
 
 export const CALL_TYPES = ['주문', '배송 문의', '반품·교환', '재고·단가 문의', '기타'];
+
+/** 출고(기사가 들고 나가거나 회수할 물건)가 있는 통화 종류 */
+export const SHIP_CALL_TYPES = ['주문', '반품·교환'];
+/**
+ * 출고 대상 카드인가: 통화 종류가 주문 · 반품·교환이고 부품 줄이 하나라도 있을 것.
+ * 출고 목록 · CSV · 대시보드 「급한데 출고 전」 · 할 일 「출고」가 모두 이것을 쓴다.
+ * 배송 문의 · 잘못 건 전화처럼 부품 없이 「처리 끝」으로 확정한 카드는 빠진다.
+ * @param {{callType?:string, items?:any[]}|null} card cardView 모양
+ */
+export function isShipTarget(card) {
+  if (!card) return false;
+  const items = Array.isArray(card.items) ? card.items.filter((i) => i && typeof i === 'object') : [];
+  return SHIP_CALL_TYPES.includes(card.callType || '주문') && items.length > 0;
+}
 const CARD_FIELDS = ['callType', 'customer', 'contact', 'carModel', 'modelYear', 'plate', 'items', 'urgent', 'due', 'delivery', 'askBack', 'note'];
 
 /** 카드 행 → API 모양 */

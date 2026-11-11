@@ -23,3 +23,4 @@
 .gl-note { margin: 4px 0 0; color: var(--muted); font-size: .92rem; }
 .gl-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .gl-del { flex: none; min-height: var(--tap); padding: 8px 12px; font-size: .95rem; }
+.gl-locked { flex: none; display: inline-flex; align-items: center; min-height: var(--tap); padding: 0 4px; color: var(--muted); font-size: .95rem; font-weight: 700; white-space: nowrap; }

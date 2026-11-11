@@ -8,7 +8,7 @@
 .board-col-draft .board-col-head { color: var(--warn); }
 .board-col-confirmed .board-col-head { color: var(--ok); }
 .board-col-shipped .board-col-head { color: #3a4a7a; }
-.board-col-hint { margin: 0 4px 12px; color: var(--muted); font-size: .88rem; }
+.board-col-hint { margin: 0 4px 12px; color: var(--muted); font-size: 1rem; }
 .board-empty { margin: 8px 0; padding: 24px 12px; text-align: center; color: var(--muted); background: #fff; border: 1px dashed var(--line); border-radius: var(--radius-sm); }
 .board-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 .board-more { margin-top: 10px; }
@@ -25,7 +25,7 @@
 .bcard-car { margin-top: 2px; color: var(--ink-2); font-weight: 600; }
 .bcard-parts { margin-top: 6px; font-size: 1.02rem; }
 .bcard-flags { display: flex !important; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-.bcard-when { margin-top: 8px; color: var(--muted); font-size: .88rem; }
+.bcard-when { margin-top: 8px; color: var(--muted); font-size: 1rem; }
 .bcard-actions { padding: 0 14px 14px; }
 .chip-ask { color: #7a5200; background: #fff1c7; border-color: #f0d9a8; }
 

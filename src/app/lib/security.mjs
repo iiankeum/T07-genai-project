@@ -31,12 +31,15 @@ export function securityHeaders(res) {
   res.setHeader('Strict-Transport-Security', 'max-age=15552000');
 }
 
-/** 상태를 바꾸는 요청이 다른 사이트에서 왔으면 막는다(Origin 이 있을 때만 비교). */
+/**
+ * 상태를 바꾸는 요청이 다른 사이트에서 왔으면 막는다(Origin 이 있을 때만 비교).
+ * Host 헤더와 PUBLIC_BASE_URL 만 본다 — 요청이 마음대로 붙일 수 있는 X-Forwarded-Host 는 믿지 않는다.
+ */
 export function checkOrigin(req) {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return;
   const origin = req.headers.origin;
   if (!origin) return; // 일꾼·ingest 같은 서버 간 호출은 Origin 이 없다
-  const host = req.headers['x-forwarded-host'] || req.headers.host;
+  const host = req.headers.host;
   try {
     const o = new URL(origin);
     if (o.host === host) return;
@@ -79,15 +82,28 @@ setInterval(() => {
 // 빈도 제한 기본값(분당/시간당)
 export const LIMITS = {
   ai: { max: 12, windowMs: 10 * 60_000 },       // AI 호출: IP 당 10분에 12번
-  upload: { max: 5, windowMs: 60 * 60_000 },     // 녹음 올리기: IP 당 1시간에 5건
+  uploadTry: { max: 30, windowMs: 60 * 60_000 }, // 녹음 올리기 시도(본문을 읽기 전, 실패도 셈): IP 당 1시간에 30번
+  upload: { max: 10, windowMs: 60 * 60_000 },    // 녹음 올리기 받아들임(중복 검사 뒤 · 변환 앞): IP 당 1시간에 10건
   live: { max: 10, windowMs: 60 * 60_000 },      // 실시간 받아쓰기 저장: 1시간 10건
   login: { max: 5, windowMs: 10 * 60_000 },      // 관리자 로그인 시도
   trial: { max: 3, windowMs: 60 * 60_000 },      // 체험 신청
   write: { max: 120, windowMs: 10 * 60_000 },    // 카드 고치기 등 일반 쓰기
 };
+
+// IP 하나가 하루에 쓸 수 있는 AI 횟수(하루 전체 상한을 한 사람이 다 쓰지 못하게). 환경변수 PER_IP_DAILY_AI 로 바꾼다.
+const AI_KINDS = new Set(['ai', 'live']);
+const PER_IP_DAILY_AI_DEFAULT = 40;
+export function perIpDailyAi() {
+  const n = Number.parseInt(String(process.env.PER_IP_DAILY_AI ?? ''), 10);
+  return Number.isSafeInteger(n) && n > 0 ? n : PER_IP_DAILY_AI_DEFAULT;
+}
+const IP_DAILY_AI_MESSAGE = '오늘 이 기기에서 쓸 수 있는 AI 횟수를 다 썼습니다. 내일 다시 해 주세요.';
+
+/** 빈도 제한. kind 가 'ai' · 'live' 면 IP 별 하루 AI 상한도 센다(DB 에 남아 재시작해도 유지). */
 export function limit(kind, ip) {
   const l = LIMITS[kind];
   if (l) rateLimit(kind, ip, l.max, l.windowMs);
+  if (AI_KINDS.has(kind)) takeDaily(`ai-ip:${ipHash(ip)}`, perIpDailyAi(), IP_DAILY_AI_MESSAGE);
 }
 
 // ── 하루 전체 상한(DB 에 남겨 재시작해도 유지) ─────────────────────────
@@ -98,14 +114,20 @@ export function kstDay(date = new Date()) {
 export function usageCount(kind, day = kstDay()) {
   return db().prepare('SELECT count FROM usage WHERE day = ? AND kind = ?').get(day, kind)?.count ?? 0;
 }
+const DAILY_LIMIT_MESSAGE = '오늘 데모에서 쓸 수 있는 양을 다 썼습니다. 내일 다시 해 주세요.';
+
+/** 하루 상한에 닿았으면 429(세지는 않는다) */
+export function checkDaily(kind, max, message = DAILY_LIMIT_MESSAGE) {
+  if (usageCount(kind) >= max) throw new HttpError(429, 'daily_limit', message);
+}
+/** 하루 사용량을 1 늘린다(상한은 보지 않는다 — 이미 끝난 일을 셀 때) */
+export function addDaily(kind) {
+  db().prepare('INSERT INTO usage(day, kind, count) VALUES(?, ?, 1) ON CONFLICT(day, kind) DO UPDATE SET count = count + 1').run(kstDay(), kind);
+}
 /** 하루 상한을 넘으면 429, 아니면 1 늘린다 */
-export function takeDaily(kind, max) {
-  const day = kstDay();
-  const n = usageCount(kind, day);
-  if (n >= max) {
-    throw new HttpError(429, 'daily_limit', '오늘 데모에서 쓸 수 있는 양을 다 썼습니다. 내일 다시 해 주세요.');
-  }
-  db().prepare('INSERT INTO usage(day, kind, count) VALUES(?, ?, 1) ON CONFLICT(day, kind) DO UPDATE SET count = count + 1').run(day, kind);
+export function takeDaily(kind, max, message = DAILY_LIMIT_MESSAGE) {
+  checkDaily(kind, max, message);
+  addDaily(kind);
 }
 
 // ── 토큰 비교 ─────────────────────────────────────────────────────

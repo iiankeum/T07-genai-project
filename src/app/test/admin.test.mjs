@@ -13,7 +13,8 @@ const { db, nowIso } = await import('../lib/db.mjs');
 const { Router } = await import('../lib/http.mjs');
 const { createApp } = await import('../server.mjs');
 const { config } = await import('../lib/config.mjs');
-const { kstDay } = await import('../lib/security.mjs');
+const { kstDay, limit } = await import('../lib/security.mjs');
+const { countVisit, visitStats } = await import('../lib/visits.mjs');
 const { loadSeedFiles } = await import('../lib/seed.mjs');
 const admin = await import('../routes/admin.mjs');
 const trial = await import('../routes/trial.mjs');
@@ -198,7 +199,10 @@ test('관리자: 체험 신청 보기(최신순) · 하나 지우기 · 사용�
   assert.equal(typeof st.json.glossary, 'number');
   assert.equal(st.json.calls.total, SEED_COUNT);
   assert.equal(st.json.calls.bySource.seed, SEED_COUNT);
-  assert.ok(st.json.calls.today > 0);
+  // 오늘(KST) 통화 수: 새벽 05:05 전에는 시드가 어제에 놓이므로 0 일 수 있다 → DB 와 같은지만 본다
+  const dayStartMs = Date.parse(`${kstDay()}T00:00:00.000Z`) - 9 * 3600_000;
+  assert.equal(st.json.calls.today, n('SELECT COUNT(*) AS n FROM calls WHERE recorded_at >= ? AND recorded_at < ?',
+    new Date(dayStartMs).toISOString(), new Date(dayStartMs + 86_400_000).toISOString()));
   assert.equal(st.json.cards.total, SEED_COUNT);
   assert.ok(st.json.cards.byStatus.draft > 0);
   assert.equal(st.json.trials, 3);
@@ -239,6 +243,15 @@ test('관리자: 데모 초기화(확인 글자 필요) → 시드 다시 · 체
   const now = nowIso();
   db().prepare("INSERT INTO calls(id, created_at, recorded_at, source, status, is_fake) VALUES('live_r1', ?, ?, 'live', 'ready', 1)").run(now, now);
   db().prepare("INSERT INTO glossary(id, kind, term, status, source, created_at, updated_at) VALUES('g_r1', '현장말', '사용자말', 'approved', '사용자', ?, ?)").run(now, now);
+  // 올린 녹음 파일 · 시드 음성 파일
+  const audioDir = path.join(config.dataDir, 'audio');
+  fs.mkdirSync(audioDir, { recursive: true });
+  const upWav = path.join(audioDir, 'call_up_r1.wav');
+  const seedWav = path.join(audioDir, 'fx-c01.wav');
+  fs.writeFileSync(upWav, 'RIFF');
+  fs.writeFileSync(seedWav, 'RIFF');
+  db().prepare("INSERT INTO calls(id, created_at, recorded_at, source, status, is_fake, audio_file) VALUES('call_up_r1', ?, ?, 'upload', 'queued', 1, 'audio/call_up_r1.wav')").run(now, now);
+  db().prepare("UPDATE calls SET audio_file = 'audio/fx-c01.wav' WHERE id = 'fx-c01'").run();
 
   const noConfirm = await req('POST', '/api/admin/reset', { body: {}, cookie });
   assert.equal(noConfirm.status, 400);
@@ -253,4 +266,68 @@ test('관리자: 데모 초기화(확인 글자 필요) → 시드 다시 · 체
   assert.equal(n("SELECT COUNT(*) AS n FROM glossary WHERE source = '사용자'"), 0);
   assert.equal(n('SELECT COUNT(*) AS n FROM trials'), 3);
   assert.ok(logs.includes('[admin] reset'));
+  // 올린 녹음 파일은 함께 지우고, 시드 음성은 남아 다시 붙는다
+  assert.equal(fs.existsSync(upWav), false, '올린 녹음 파일도 지운다');
+  assert.equal(fs.existsSync(seedWav), true, '시드 음성은 남긴다');
+  assert.equal(db().prepare("SELECT audio_file FROM calls WHERE id = 'fx-c01'").get().audio_file, 'audio/fx-c01.wav');
+});
+
+test('Origin 검사: X-Forwarded-Host 는 믿지 않고 Host 와만 비교', async () => {
+  const post = (headers) => fetch(`${base}/api/admin/logout`, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: '{}' });
+  assert.equal((await post({ origin: 'https://evil.example' })).status, 403);
+  const forged = await post({ origin: 'https://evil.example', 'x-forwarded-host': 'evil.example' });
+  assert.equal(forged.status, 403);
+  assert.equal((await forged.json()).error, 'bad_origin');
+  assert.equal((await post({ origin: base })).status, 200);
+});
+
+test('정적 파일: 끝 / 없는 폴더 주소는 / 를 붙여 301(질의 유지) · 잘못된 퍼센트 인코딩은 400', async () => {
+  const r = await fetch(`${base}/intro?src=ig-1`, { redirect: 'manual' });
+  assert.equal(r.status, 301);
+  assert.equal(r.headers.get('location'), '/intro/?src=ig-1');
+  assert.equal((await fetch(`${base}/intro/`)).status, 200);
+  // //intro 꼴(다른 사이트 주소로 읽힘)로 보내지 않는다
+  const raw = await new Promise((resolve, reject) => {
+    http.get({ host: '127.0.0.1', port: new URL(base).port, path: '/.//intro' }, (res) => { res.resume(); resolve(res); }).on('error', reject);
+  });
+  assert.equal(raw.statusCode, 301);
+  assert.equal(raw.headers.location, '/intro/');
+  for (const [m, p] of [['GET', '/%E0%A4%A'], ['DELETE', '/api/calls/%E0%A4%A'], ['GET', '/intro/%E0%A4%A']]) {
+    const b = await fetch(base + p, { method: m });
+    assert.equal(b.status, 400, `${m} ${p}`);
+    assert.equal((await b.json()).error, 'bad_url');
+  }
+  assert.ok(!logs.some((l) => l.includes('URIError')));
+});
+
+test('방문 수: 하루 서로 다른 src 는 50개까지만 따로, 넘으면 other', async () => {
+  const before = new Set(visitStats(1).filter((v) => v.day === kstDay()).map((v) => v.src));
+  for (let i = 0; i < 70; i++) countVisit('intro', `junk${i}`, '10.2.9.9');
+  countVisit('intro', 'junk3', '10.2.9.8'); // 이미 따로 세는 src 는 계속 따로
+  const today = visitStats(1).filter((v) => v.day === kstDay() && !before.has(v.src));
+  const junk = today.filter((v) => v.src.startsWith('junk'));
+  assert.ok(junk.length <= 50, `따로 센 src ${junk.length}개`);
+  assert.equal(junk.find((v) => v.src === 'junk3').count, 2);
+  const other = today.find((v) => v.src === 'other');
+  assert.ok(other, 'other 로 묶임');
+  assert.equal(other.count, 1, '같은 사람은 하루 한 번');
+});
+
+test('AI 하루 상한(IP 별): ai · live 를 함께 세고, 넘으면 429 · 다른 IP 는 따로', () => {
+  const prev = process.env.PER_IP_DAILY_AI;
+  process.env.PER_IP_DAILY_AI = '3';
+  try {
+    const ip = '10.2.8.8';
+    limit('ai', ip);
+    limit('live', ip);
+    limit('ai', ip);
+    assert.throws(() => limit('ai', ip), (e) => e.status === 429 && e.code === 'daily_limit'
+      && e.publicMessage === '오늘 이 기기에서 쓸 수 있는 AI 횟수를 다 썼습니다. 내일 다시 해 주세요.');
+    assert.throws(() => limit('live', ip), { status: 429 });
+    limit('ai', '10.2.8.9');
+    limit('write', ip); // AI 가 아닌 한도는 상관없다
+  } finally {
+    if (prev === undefined) delete process.env.PER_IP_DAILY_AI;
+    else process.env.PER_IP_DAILY_AI = prev;
+  }
 });

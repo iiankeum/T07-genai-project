@@ -68,15 +68,21 @@ export default {
     }
     function citeView(c) {
       if (!c || !c.callId) return '';
-      const at = Number(c.at);
+      // at 이 없으면(null · '') 0:00 으로 만들지 않는다 — Number(null) 은 0 이라 처음부터 재생되던 문제
+      const at = c.at == null || c.at === '' ? NaN : Number(c.at);
+      const hasAt = Number.isFinite(at);
+      const seg = c.segIndex == null || c.segIndex === '' ? NaN : Number(c.segIndex);
+      const hasSeg = Number.isInteger(seg) && seg >= 0;
+      // 시각도 문장 번호도 없으면 통화에서 한 말이 아니라 주문 카드에 적힌 내용이다
+      const fromCard = !hasAt && !hasSeg && c.kind !== 'segment';
       const query = {};
-      if (Number.isFinite(at)) query.t = Math.max(0, Math.round(at * 10) / 10);
-      if (c.segIndex != null && c.segIndex !== '') query.seg = c.segIndex;
+      if (hasAt) query.t = Math.max(0, Math.round(at * 10) / 10);
+      if (hasSeg) query.seg = seg;
       return html`<a class="ask-cite" href="${href('/calls/' + encodeURIComponent(c.callId), query)}">
         <span class="ask-cite-title">${c.title || '통화'}</span>
-        <span class="ask-cite-when">${when(c.recordedAt)}${Number.isFinite(at) ? html` · <span class="ask-cite-at">${fmtSec(at)} 대목</span>` : ''}</span>
+        <span class="ask-cite-when">${when(c.recordedAt)}${hasAt ? html` · <span class="ask-cite-at">${fmtSec(at)} 대목</span>` : fromCard ? html` · <span class="ask-cite-at">주문 카드 내용</span>` : ''}</span>
         ${c.quote ? html`<span class="ask-cite-quote">「${c.quote}」</span>` : ''}
-        <span class="ask-cite-go">그 대목 듣기 ›</span>
+        <span class="ask-cite-go">${hasAt ? '그 대목 듣기 ›' : hasSeg ? '그 대목 보기 ›' : '통화 열기 ›'}</span>
       </a>`;
     }
     function msgView(m) {

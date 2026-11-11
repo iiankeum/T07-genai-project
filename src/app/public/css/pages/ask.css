@@ -20,14 +20,14 @@
 .ask-bubble.is-wait { color: var(--muted); }
 
 .ask-cites { width: min(92%, 640px); margin-top: 8px; display: flex; flex-direction: column; gap: 8px; }
-.ask-cites-head { margin: 0; font-size: .82rem; font-weight: 700; color: var(--muted); }
+.ask-cites-head { margin: 0; font-size: .9rem; font-weight: 700; color: var(--muted); }
 .ask-cite { display: block; padding: 10px 12px; min-height: var(--tap); border: 1px solid var(--brand-line); border-left: 4px solid var(--brand); border-radius: var(--radius-sm); background: #fbfaff; color: var(--ink); text-decoration: none; }
 .ask-cite:hover { background: var(--brand-soft); }
 .ask-cite-title { display: block; font-weight: 800; }
-.ask-cite-when { display: block; font-size: .85rem; color: var(--muted); }
+.ask-cite-when { display: block; font-size: .95rem; color: var(--muted); }
 .ask-cite-at { font-weight: 700; color: var(--ink-2); }
 .ask-cite-quote { display: block; margin-top: 4px; font-size: .98rem; color: var(--ink-2); }
-.ask-cite-go { display: block; margin-top: 4px; font-size: .88rem; font-weight: 800; color: var(--brand-ink); }
+.ask-cite-go { display: block; margin-top: 4px; font-size: .95rem; font-weight: 800; color: var(--brand-ink); }
 
 .ask-compose { position: sticky; bottom: calc(70px + env(safe-area-inset-bottom)); z-index: 5; display: flex; gap: 8px; align-items: flex-end; background: var(--paper); border: 1px solid var(--brand-line); border-radius: var(--radius); padding: 8px; box-shadow: 0 6px 20px rgba(40, 30, 90, .10); }
 .ask-input { flex: 1; min-width: 0; min-height: var(--tap); max-height: 180px; resize: none; border: 0; box-shadow: none; padding: 10px; font-size: 1.05rem; line-height: 1.5; }

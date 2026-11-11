@@ -12,7 +12,7 @@
 .admin-trial-name { font-size: 1.05rem; }
 .admin-dl { margin: 6px 0 0; }
 .admin-dl > div { display: grid; grid-template-columns: 5em minmax(0, 1fr); gap: 8px; padding: 3px 0; }
-.admin-dl dt { color: var(--muted); font-size: .88rem; font-weight: 700; }
+.admin-dl dt { color: var(--muted); font-size: .95rem; font-weight: 700; }
 .admin-dl dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 .admin-msg { white-space: pre-wrap; }
 

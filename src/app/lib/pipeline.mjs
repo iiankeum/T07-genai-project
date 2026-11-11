@@ -116,9 +116,13 @@ export async function reextract(callId, { beforeAi } = {}) {
   }
   const fresh = getCallRow(callId);
   if (!fresh) throw new HttpError(404, 'not_found', '통화를 찾지 못했습니다.');
+  // AI 를 기다리는 동안(10~30초) 다른 단추 · 탭에서 확정 · 출고했으면 저장하지 않는다(확정 · 출고 기록을 지우지 않게)
+  const prevRow = getCardRow(callId);
+  if (prevRow && (prevRow.status === 'confirmed' || prevRow.status === 'shipped')) {
+    throw new HttpError(409, 'locked', '다시 정리하는 동안 카드가 확정(또는 출고)됐습니다. 다시 정리는 반영하지 않았습니다.');
+  }
   const values = buildCardFromAi(fresh, out);
   // 사람이 고친 칸은 다시 정리해도 덮어쓰지 않는다(빈칸 · AI 초안 칸만 새 값). AI 초안(ai_draft)은 새 값으로.
-  const prevRow = getCardRow(callId);
   if (prevRow) {
     const prev = cardView(prevRow);
     const COL = { callType: 'call_type', customer: 'customer', contact: 'contact', carModel: 'car_model', modelYear: 'model_year', plate: 'plate', items: 'items', urgent: 'urgent', due: 'due', delivery: 'delivery', askBack: 'ask_back', note: 'note' };

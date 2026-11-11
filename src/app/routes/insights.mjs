@@ -3,7 +3,7 @@ import { config } from '../lib/config.mjs';
 import { db, parseJson, nowIso } from '../lib/db.mjs';
 import { HttpError, readJson, cleanText } from '../lib/http.mjs';
 import { limit, takeDaily, kstDay } from '../lib/security.mjs';
-import { callView, cardView, makeTitle, kstTime, CARD_STATUS_LABEL } from '../lib/repo.mjs';
+import { callView, cardView, makeTitle, kstTime, CARD_STATUS_LABEL, isShipTarget } from '../lib/repo.mjs';
 import {
   EFF_CUSTOMER, parseDay, kstDayRange, addDays, kstDateTime, itemsText, knownCustomerNames,
 } from './calls.mjs';
@@ -70,6 +70,8 @@ function viewCard(row) {
 
 const WORKING = ['queued', 'transcribing', 'extracting'];
 const isOpen = (card) => card && (card.status === 'draft' || card.status === 'confirmed');
+/** 급한데 아직 출고 안 된 것: 출고 대상(주문 · 반품·교환 + 부품 있음)만 센다 */
+const isUrgentOpen = (card) => Boolean(card && card.urgent && isOpen(card) && isShipTarget(card));
 const needsCallback = (card) => card && (card.callback || (card.status === 'draft' && card.askBack.length > 0));
 
 /** 그날 통화 + 카드 [{row, card, customer, title}] (최신 먼저) */
@@ -100,7 +102,7 @@ export function computeStats(entries) {
     if (card.status === 'draft') s.draft += 1;
     if (card.status === 'confirmed') s.confirmed += 1;
     if (card.status === 'shipped') s.shipped += 1;
-    if (card.urgent && isOpen(card)) s.urgentOpen += 1;
+    if (isUrgentOpen(card)) s.urgentOpen += 1;
     if (needsCallback(card)) s.callbacks += 1;
     if (card.status === 'draft' && card.unsure.length > 0) s.unsure += 1;
   }
@@ -141,7 +143,7 @@ export function buildTodos(entries) {
           cands.push({ kind: 'listen', title: `${who(e)} 녹음 들어 보기`, why: reasons || '받아쓰기가 틀렸을 수 있는 곳이 있어요.', priority: 2 });
         }
       }
-      if (card.status === 'confirmed' && card.urgent) {
+      if (card.status === 'confirmed' && card.urgent && isShipTarget(card)) {
         cands.push({ kind: 'ship', title: `${who(e)} 출고`, why: `급한 주문 · 확정됨${due}${card.delivery ? ` · ${card.delivery}` : ''}`, priority: 1 });
       }
     }
@@ -177,7 +179,7 @@ export function buildDashboard(day) {
       reason: e.card.callbackReason || (e.card.askBack.length ? '되물을 것이 남았어요' : '다시 전화하기로 표시했어요'),
       askBack: e.card.askBack, urgent: e.card.urgent, recordedAt: e.row.recorded_at,
     }));
-  const urgentOpen = entries.filter((e) => e.card?.urgent && isOpen(e.card))
+  const urgentOpen = entries.filter((e) => isUrgentOpen(e.card))
     .sort((a, b) => (a.row.recorded_at < b.row.recorded_at ? -1 : 1))
     .map((e) => ({ callId: e.row.id, title: e.title, customer: e.customer, status: e.card.status, statusLabel: e.card.statusLabel, due: e.card.due, delivery: e.card.delivery, recordedAt: e.row.recorded_at }));
   const drafts = entries.filter((e) => e.card?.status === 'draft')
@@ -212,7 +214,7 @@ export function buildBriefingText(day) {
   lines.push(`확정 ${s.confirmed}건 · 확인 필요 ${s.draft}건 · 출고 완료 ${s.shipped}건`);
   if (s.working || s.failed) lines.push(`받아쓰는 중 ${s.working}건 · 실패 ${s.failed}건`);
 
-  const urgent = entries.filter((e) => e.card?.urgent && isOpen(e.card)).reverse();
+  const urgent = entries.filter((e) => isUrgentOpen(e.card)).reverse();
   lines.push('', `■ 급한데 아직 출고 안 된 것 ${urgent.length ? urgent.length + '건' : ': 없음'}`);
   for (const e of urgent) {
     const items = itemsText(e.card.items, { unit: '개' }) || '부품 확인 필요';
@@ -224,8 +226,9 @@ export function buildBriefingText(day) {
     const what = e.card.askBack.length ? e.card.askBack.join(' / ') : (e.card.callbackReason || '다시 전화 표시');
     lines.push(`- ${who(e)}: ${what}`);
   }
-  const b = getBriefing(day);
-  if (b?.paragraph) lines.push('', '■ AI 요약', b.paragraph);
+  // AI 요약은 만든 뒤로 숫자가 그대로일 때만 붙인다(숫자가 바뀌었으면 옛 요약이 위 숫자와 어긋난다)
+  const b = getBriefing(day, s);
+  if (b?.paragraph && !b.stale) lines.push('', `■ AI 요약(${kstTime(b.createdAt)} 기준)`, b.paragraph);
   return lines.join('\n');
 }
 
@@ -264,26 +267,23 @@ async function makeBriefing(day, ip) {
   const cached = getBriefing(day, stats);
   if (cached && !cached.stale && Date.now() - Date.parse(cached.createdAt) < BRIEFING_FRESH_MS) return cached;
   const ai = await requireAi('writeBriefing');
-  let paragraph;
-  let todos = [];
-  let model = null;
+  // 통화가 없는 날은 AI 도 DB 도 쓰지 않고 문장만 돌려준다(아무 날짜로 DB 를 채우지 못하게)
   if (!entries.length) {
-    paragraph = `${dayLabel(day)}에는 통화가 없습니다.`;
-  } else {
-    limit('ai', ip);
-    takeDaily('ai', config.dailyAiLimit);
-    const cards = entries.filter((e) => e.card).slice(0, 60).map(cardSummaryForAi);
-    let out;
-    try { out = await ai.writeBriefing({ day, stats, cards }); } catch (e) { throw aiHttpError(e); }
-    paragraph = cleanText(out?.paragraph, 1500);
-    if (!paragraph) throw new HttpError(502, 'ai_bad_output', 'AI 답을 읽지 못했습니다. 다시 해 주세요.');
-    todos = (Array.isArray(out?.todos) ? out.todos : []).map((t) => ({
-      title: cleanText(t?.title, 80),
-      why: cleanText(t?.why, 200),
-      callId: ids.has(t?.callId) ? t.callId : null,
-    })).filter((t) => t.title).slice(0, 8);
-    model = cleanText(out?.model, 80) || config.model;
+    return { paragraph: `${dayLabel(day)}에는 통화가 없습니다.`, todos: [], createdAt: nowIso(), model: null, stale: false };
   }
+  limit('ai', ip);
+  takeDaily('ai', config.dailyAiLimit);
+  const cards = entries.filter((e) => e.card).slice(0, 60).map(cardSummaryForAi);
+  let out;
+  try { out = await ai.writeBriefing({ day, stats, cards }); } catch (e) { throw aiHttpError(e); }
+  const paragraph = cleanText(out?.paragraph, 1500);
+  if (!paragraph) throw new HttpError(502, 'ai_bad_output', 'AI 답을 읽지 못했습니다. 다시 해 주세요.');
+  const todos = (Array.isArray(out?.todos) ? out.todos : []).map((t) => ({
+    title: cleanText(t?.title, 80),
+    why: cleanText(t?.why, 200),
+    callId: ids.has(t?.callId) ? t.callId : null,
+  })).filter((t) => t.title).slice(0, 8);
+  const model = cleanText(out?.model, 80) || config.model;
   const createdAt = nowIso();
   db().prepare(`INSERT INTO briefings(day, content, model, created_at) VALUES(?, ?, ?, ?)
     ON CONFLICT(day) DO UPDATE SET content = excluded.content, model = excluded.model, created_at = excluded.created_at`)
@@ -579,8 +579,12 @@ function loadShipping(day, scope) {
 export function buildShipping(day, scope) {
   const rows = loadShipping(day, scope);
   const groups = new Map();
+  let total = 0;
   for (const r of rows) {
     const card = viewCard(r);
+    // 배송 문의 · 잘못 건 전화처럼 들고 나갈 물건이 없는 카드는 뺀다(대시보드와 같은 기준)
+    if (!isShipTarget(card)) continue;
+    total += 1;
     const customer = r.eff || NO_CUSTOMER;
     const item = {
       callId: r.call_id,
@@ -605,7 +609,7 @@ export function buildShipping(day, scope) {
     if (b.customer === NO_CUSTOMER) return -1;
     return a.customer.localeCompare(b.customer, 'ko');
   });
-  return { day, scope, total: rows.length, groups: list };
+  return { day, scope, total, groups: list };
 }
 
 /** CSV 한 칸: 수식으로 읽히는 첫 글자(= + - @ 탭 CR)는 ' 를 붙이고, 늘 따옴표로 감싼다 */
@@ -633,6 +637,17 @@ export function buildShippingCsv(day, scope) {
   return '﻿' + lines.join('\r\n') + '\r\n';
 }
 
+/** 브리핑을 만들 날: 오늘 앞뒤 BRIEFING_DAY_RANGE 일 안만(먼 날짜로 DB 를 채우지 못하게) */
+const BRIEFING_DAY_RANGE = 60;
+function parseBriefingDay(v) {
+  const day = parseDay(v);
+  const today = kstDay();
+  if (day < addDays(today, -BRIEFING_DAY_RANGE) || day > addDays(today, BRIEFING_DAY_RANGE)) {
+    throw new HttpError(400, 'bad_date', `날짜는 오늘 앞뒤 ${BRIEFING_DAY_RANGE}일 안으로 골라 주세요.`);
+  }
+  return day;
+}
+
 function parseScope(v) {
   const s = cleanText(v, 10) || 'all';
   if (s !== 'all' && s !== 'today') throw new HttpError(400, 'bad_scope', 'scope 는 today 나 all 입니다.');
@@ -646,8 +661,9 @@ export function register(router) {
 
   router.get('/api/briefing', ({ query }) => ({ briefing: getBriefing(parseDay(query.day)) }));
   router.post('/api/briefing', async ({ req, ip }) => {
+    limit('write', ip);
     const body = await readJson(req);
-    return makeBriefing(parseDay(body.day), ip);
+    return makeBriefing(parseBriefingDay(body.day), ip);
   });
   router.get('/api/briefing/text', ({ query }) => ({ text: buildBriefingText(parseDay(query.day)) }));
 

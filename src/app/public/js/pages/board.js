@@ -28,11 +28,13 @@ export const customerHref = (name) => `#/customers/${encodeURIComponent(name)}`;
 // ── 보드 ──────────────────────────────────────────────────────────
 const COLS = [
   { key: 'draft', label: '확인 필요', hint: 'AI 가 만든 초안입니다. 열어서 칸을 확인하고 확정하세요.' },
-  { key: 'confirmed', label: '확정', hint: '사람이 확인한 주문입니다. 챙겨 보낸 뒤 「출고 완료」를 누르세요.' },
+  { key: 'confirmed', label: '확정', hint: '사람이 확인한 주문입니다. 챙겨 보낸 뒤 「출고 완료」를 누르세요(주문이 아닌 통화는 「처리 완료」).' },
   { key: 'shipped', label: '출고 완료', hint: '나간 주문입니다. 잘못 눌렀으면 「되돌리기」.' },
 ];
 const SHOW_MAX = 30;
 const ts = (iso) => Date.parse(iso || '') || 0;
+/** 주문이 아닌 카드(배송 문의 · 반품·교환 · 기타 등)는 「출고」가 아니라 「처리」로 부른다 */
+const doneWord = (card) => (card?.callType && card.callType !== '주문' ? '처리 완료' : '출고 완료');
 
 function sortCol(key, list) {
   if (key === 'shipped') return list.sort((a, b) => ts(b.card.shippedAt || b.card.updatedAt) - ts(a.card.shippedAt || a.card.updatedAt));
@@ -49,7 +51,7 @@ function cardPiece(call, busy) {
   if (c.status === 'draft') {
     action = html`<a class="btn btn-primary btn-block" href="${callHref(call.id)}">열어서 확인</a>`;
   } else if (c.status === 'confirmed') {
-    action = html`<button type="button" class="btn btn-ok btn-block" data-act="ship" data-id="${call.id}" ${busy ? html`disabled` : ''}>${busy ? '바꾸는 중…' : '출고 완료'}</button>`;
+    action = html`<button type="button" class="btn btn-ok btn-block" data-act="ship" data-id="${call.id}" ${busy ? html`disabled` : ''}>${busy ? '바꾸는 중…' : doneWord(c)}</button>`;
   } else {
     action = html`<button type="button" class="btn btn-block" data-act="reopen" data-id="${call.id}" ${busy ? html`disabled` : ''}>${busy ? '바꾸는 중…' : '되돌리기'}</button>`;
   }
@@ -156,9 +158,12 @@ export default {
       const call = st.calls.find((c) => c.id === id);
       if (!call || !call.card || st.busy.has(id)) return;
       const who = call.card.customer || call.customer || '이';
+      const word = doneWord(call.card);
+      const what = word === '처리 완료' ? '통화를' : '주문을';
+      const whose = word === '처리 완료' ? '통화의' : '주문의';
       const ok = await confirmBox(action === 'ship'
-        ? `${who} 주문을 「출고 완료」로 옮길까요?`
-        : `${who} 주문의 「출고 완료」를 되돌릴까요?`);
+        ? `${who} ${what} 「${word}」로 옮길까요?`
+        : `${who} ${whose} 「${word}」를 되돌릴까요?`);
       if (!ok || !alive()) return;
       st.busy.add(id);
       draw();
@@ -166,7 +171,7 @@ export default {
         const res = await api.post(`/api/cards/${encodeURIComponent(id)}/${action}`, {}, { signal: ac.signal });
         if (!alive()) return;
         if (res?.card) call.card = res.card;
-        toast(action === 'ship' ? '출고 완료로 옮겼습니다.' : `되돌렸습니다(${res?.card?.statusLabel || '이전 상태'}).`, 'ok');
+        toast(action === 'ship' ? `${word}로 옮겼습니다.` : `되돌렸습니다(${res?.card?.statusLabel || '이전 상태'}).`, 'ok');
         if (!res?.card) { st.busy.delete(id); await load(); return; }
       } catch (err) {
         if (err?.name === 'AbortError' || !alive()) return;

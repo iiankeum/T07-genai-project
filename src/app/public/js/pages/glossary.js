@@ -42,6 +42,8 @@ function normalize(data) {
     note: String(x.note ?? '').trim(),
     status: x.status || 'approved',
     builtin: x.source === '기본' || ['default', 'seed', 'builtin', 'system'].includes(x.source) || x.builtin === true || x.isDefault === true,
+    // 서버는 source 가 '기본' 인 항목을 관리자만 지우게 한다(routes/glossary.mjs)
+    adminOnly: x.source === '기본',
   })).filter((x) => x.term);
 }
 
@@ -55,6 +57,7 @@ export default {
     let loadError = null;
     let busy = false;
     let disposed = false;
+    let isAdmin = false; // 모르면 관리자가 아닌 것으로 본다(기본 항목 지우기 단추를 숨김)
 
     render(el, html`<div class="page page-narrow gl-page">
       <div class="page-head"><div>
@@ -62,7 +65,7 @@ export default {
         <h1>낱말 사전</h1>
         <p class="sub">현장 말 · 거래처 · 차종을 넣어 두면 AI 가 더 잘 알아듣습니다.</p>
       </div></div>
-      <div class="notice" role="note">여기 넣은 말은 받아쓰기 힌트와 AI 카드 정리에 같이 쓰입니다. 넣은 뒤 통화 화면의 「AI 로 다시 정리」를 누르면 반영됩니다.</div>
+      <div class="notice" role="note">여기 넣은 말은 받아쓰기 힌트와 AI 카드 정리에 같이 쓰입니다. 넣은 뒤 통화 화면의 「AI 로 다시 정리」를 누르면 반영됩니다. 처음부터 들어 있는 「기본」 항목은 관리자만 지울 수 있습니다 — 지우기는 직접 넣은 말로 해 보세요.</div>
       <div class="tabs gl-tabs" role="tablist" aria-label="사전 종류" data-ref="tabs"></div>
       <section class="card gl-form-card" aria-labelledby="glFormTitle">
         <h2 id="glFormTitle" class="gl-form-title" data-ref="formTitle"></h2>
@@ -138,7 +141,9 @@ export default {
             ${it.status === 'pending' ? html`<span class="chip chip-working">검토 대기</span>` : ''}
           </div>
         </div>
-        ${it.id != null ? html`<button type="button" class="btn btn-danger gl-del" data-act="del" data-id="${it.id}" aria-label="${it.term} 지우기">지우기</button>` : ''}
+        ${it.id == null ? ''
+    : it.adminOnly && !isAdmin ? html`<span class="gl-locked" title="기본 항목은 관리자만 지울 수 있습니다">기본 항목</span>`
+      : html`<button type="button" class="btn btn-danger gl-del" data-act="del" data-id="${it.id}" aria-label="${it.term} 지우기">지우기</button>`}
       </li>`;
     }
 
@@ -281,6 +286,11 @@ export default {
 
     renderTabs();
     renderForm();
+    // 관리자로 들어와 있으면 기본 항목에도 「지우기」를 보인다(목록과 따로 읽는다)
+    api.get('/api/admin/me').then((r) => {
+      isAdmin = Boolean(r?.admin);
+      if (isAdmin && !disposed && !loading) renderPanel();
+    }).catch(() => { /* 모르면 관리자가 아닌 것으로 둔다 */ });
     await load();
 
     return () => {

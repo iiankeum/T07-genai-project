@@ -2,7 +2,7 @@
 // call.js 만 쓴다. 칸을 고치면 칸에서 벗어날 때(change) PATCH 로 저장하고, 입력칸은 다시 그리지 않아 커서를 잃지 않는다.
 import { api } from '../api.js';
 import { html, render, toast, confirmBox, fmtSec, fmtWhen, cardChip } from '../ui.js';
-import { groupUnsure, cloneItems, itemsForSave, num, parseUnsureField, FIELD_LABEL } from './call-util.js';
+import { groupUnsure, cloneItems, itemsForSave, num, parseUnsureField, itemMark, FIELD_LABEL } from './call-util.js';
 
 const TOP_FIELDS = [
   { key: 'customer', label: '거래처', ph: '통화에서 말한 거래처' },
@@ -57,13 +57,31 @@ export function mountCard(el, o) {
   const editable = () => Boolean(card) && card.status === 'draft';
   const slot = (name) => el.querySelector(`[data-slot="${name}"]`);
 
+  /** 주문이 아닌 통화(배송 문의 · 반품·교환 등) */
+  const nonOrder = () => Boolean(card?.callType) && card.callType !== '주문';
+  /** 출고할 물건이 없는 통화: 주문이 아니고 부품 줄도 없다 → 확정 = 처리 끝 */
+  const nothingToShip = () => nonOrder() && !(card.items || []).length;
+  const shipWord = () => (nonOrder() ? '처리 완료' : '출고 완료');
+
   // ── 그리기 ──────────────────────────────────────────────────────
+  // 확정 · 출고된 카드는 사람이 확인을 마친 것이라 「AI 초안」 대신 「사람이 확인」으로 바꿔 보인다(기획서 공통 기준)
+  const humanChecked = () => card && (card.status === 'confirmed' || card.status === 'shipped');
+  const aiChip = () => (humanChecked()
+    ? html`<span class="chip chip-confirmed">사람이 확인</span>`
+    : html`<span class="chip chip-ai">AI 초안</span>`);
+  const editedChip = () => html`<span class="chip chip-edited">사람이 고침</span>`;
   function chipFor(key) {
     if (!card || !card.aiDraft) return '';
-    if ((card.edited || []).includes(key)) return html`<span class="chip chip-edited">고침</span>`;
+    if (key.startsWith('item:')) {
+      // 부품 줄마다: AI 초안 줄과 같으면 「AI 초안」, 사람이 고치거나 넣은 줄이면 「사람이 고침」
+      const mark = itemMark(card.aiDraft.items, items[Number(key.slice(5))]);
+      if (mark === 'edited') return editedChip();
+      return mark === 'ai' ? aiChip() : '';
+    }
+    if ((card.edited || []).includes(key)) return editedChip();
     const v = key === 'items' ? items.length : key === 'askBack' ? (card.askBack || []).length : card[key];
     if (v === null || v === undefined || v === '' || v === 0 || v === false) return '';
-    return html`<span class="chip chip-ai">AI 초안</span>`;
+    return aiChip();
   }
 
   function evButton(r, label) {
@@ -140,6 +158,7 @@ export function mountCard(el, o) {
       <div class="cd-item-head">
         <span class="cd-item-no" aria-hidden="true">${n}</span>
         <span class="cd-item-title">${it.part || '새 부품'}</span>
+        <span class="cd-chipslot" data-chip="item:${i}">${chipFor(`item:${i}`)}</span>
         ${evButton(r, `${n}번째 부품`)}
         ${ro ? '' : html`<button type="button" class="btn btn-ghost cd-item-del" data-del="${i}" aria-label="${n}번째 부품 줄 지우기">지우기</button>`}
       </div>
@@ -214,17 +233,21 @@ export function mountCard(el, o) {
     const s = card.status;
     const n = (card.askBack || []).length;
     if (s === 'draft') {
-      return html`${n
-        ? html`<p class="notice notice-warn cd-why" id="cd-confirm-why">다시 물어볼 것이 ${n}개 남아 있어 아직 확정할 수 없습니다. 거래처에 확인한 뒤 「해결함」을 눌러 주세요.</p>`
-        : html`<p class="cd-why-ok">칸을 모두 확인했으면 확정하세요. 확정한 주문만 출고 목록에 올라갑니다.</p>`}
-        <button type="button" class="btn btn-ok btn-lg btn-block" data-act="confirm" ${n ? html`aria-describedby="cd-confirm-why"` : ''}>✓ 확인하고 확정</button>`;
+      // 다시 물어볼 것이 남으면 서버가 확정을 막는다(409) — 단추도 미리 막고 바로 위에 이유를 보인다
+      let why;
+      if (n) why = html`<p class="notice notice-warn cd-why" id="cd-confirm-why">다시 물어볼 것 ${n}개를 먼저 해결해 주세요. 거래처에 확인한 뒤 위 「다시 물어볼 것」에서 「해결함」을 누르면 확정할 수 있습니다.</p>`;
+      else if (nothingToShip()) why = html`<p class="cd-why-ok">주문이 아닌 통화(${card.callType})는 부품 줄 없이도 확정할 수 있습니다. 확정하면 처리가 끝난 통화로 표시됩니다.</p>`;
+      else if (!nonOrder() && !(card.items || []).length) why = html`<p class="cd-why-ok">부품이 한 줄도 없습니다. 위 「부품 줄 추가」로 넣은 뒤 확정하세요.</p>`;
+      else why = html`<p class="cd-why-ok">칸을 모두 확인했으면 확정하세요. 확정한 주문만 출고 목록에 올라갑니다.</p>`;
+      return html`${why}
+        <button type="button" class="btn btn-ok btn-lg btn-block" data-act="confirm" ${n ? html`disabled aria-describedby="cd-confirm-why"` : ''}>✓ 확인하고 확정</button>`;
     }
     if (s === 'confirmed') {
-      return html`<p class="notice notice-ok">확정됨${card.confirmedAt ? ` · ${fmtWhen(card.confirmedAt)}` : ''} — 출고 목록에 올라 있습니다.</p>
-        <div class="cd-act-row"><button type="button" class="btn btn-primary btn-lg" data-act="ship">출고 완료</button><button type="button" class="btn btn-lg" data-act="reopen">다시 고치기</button></div>`;
+      return html`<p class="notice notice-ok">확정됨${card.confirmedAt ? ` · ${fmtWhen(card.confirmedAt)}` : ''} — ${nothingToShip() ? '처리가 끝난 통화입니다.' : '출고 목록에 올라 있습니다.'}</p>
+        <div class="cd-act-row"><button type="button" class="btn btn-primary btn-lg" data-act="ship">${shipWord()}</button><button type="button" class="btn btn-lg" data-act="reopen">다시 고치기</button></div>`;
     }
     if (s === 'shipped') {
-      return html`<p class="notice notice-ok">출고 완료${card.shippedAt ? ` · ${fmtWhen(card.shippedAt)}` : ''}</p>
+      return html`<p class="notice notice-ok">${shipWord()}${card.shippedAt ? ` · ${fmtWhen(card.shippedAt)}` : ''}</p>
         <button type="button" class="btn btn-lg btn-block" data-act="reopen">출고 되돌리기</button>`;
     }
     if (s === 'cancelled') {
@@ -251,7 +274,7 @@ export function mountCard(el, o) {
     const ai = o.meta?.aiEnabled !== false;
     const hasText = Boolean(call.transcript || (call.segments || []).length);
     return html`<h3>AI 로 다시 정리</h3>
-      <p class="help">낱말 사전(현장 말 · 거래처 · 차종)을 고친 뒤 누르면, 고친 낱말을 반영해 카드를 새로 만듭니다. 손으로 고친 칸은 새 초안으로 바뀝니다. <a href="#/glossary">낱말 사전 열기</a></p>
+      <p class="help">낱말 사전(현장 말 · 거래처 · 차종)을 고친 뒤 누르면, 고친 낱말을 반영해 카드를 새로 만듭니다. 손으로 고친(「사람이 고침」) 칸은 그대로 두고, 빈칸과 AI 초안 칸만 새로 채웁니다. <a href="#/glossary">낱말 사전 열기</a></p>
       ${locked ? html`<p class="notice notice-warn">${card.statusLabel || '확정'} 상태의 카드는 먼저 위의 「${({ confirmed: '다시 고치기', shipped: '출고 되돌리기', cancelled: '취소 되돌리기' })[card.status] || '되돌리기'}」로 확인 필요 상태로 돌린 뒤 다시 정리할 수 있습니다.</p>` : ''}
       ${!ai ? html`<p class="notice notice-warn">AI 키 없음 — 지금은 다시 정리를 할 수 없습니다.</p>` : ''}
       ${!hasText ? html`<p class="notice">받아쓴 글이 없어 다시 정리할 수 없습니다.</p>` : ''}
@@ -282,7 +305,7 @@ export function mountCard(el, o) {
     const other = groups.get('other') || [];
     render(el, html`
       <div class="cd-card-head"><h2 id="cd-card-h">주문 카드</h2><span data-slot="status">${cardChip(card.status)}</span></div>
-      <p class="cd-card-sub">AI 가 채운 칸은 <span class="chip chip-ai">AI 초안</span>, 사람이 고친 칸은 <span class="chip chip-edited">고침</span> 입니다. 칸을 누르면 그 말을 한 대목이 ${o.hasAudio ? '들리고 ' : ''}통화 글에 표시됩니다.</p>
+      <p class="cd-card-sub">AI 가 채운 칸은 <span class="chip chip-ai">AI 초안</span>, 사람이 고친 칸은 <span class="chip chip-edited">사람이 고침</span>, 확정한 뒤에는 <span class="chip chip-confirmed">사람이 확인</span> 입니다. 칸을 누르면 그 말을 한 대목이 ${o.hasAudio ? '들리고 ' : ''}통화 글에 표시됩니다.</p>
       ${card.aiError ? html`<p class="notice notice-warn" role="note">카드를 AI 가 만들지 못했습니다(${card.aiError}) — 직접 채워 주세요.</p>` : ''}
       ${lockNotice()}
       ${other.length ? html`<div class="cd-sec cd-other-flags"><h3>들어 볼 곳</h3>${flagsView(other.map((x) => ({ ...x, u: { ...x.u, reason: otherReason(x.u) } })))}</div>` : ''}
@@ -434,7 +457,10 @@ export function mountCard(el, o) {
       warn(r);
       renderAll();
       o.onCardChange(card, { fields: ['status'] });
-      toast(DONE_MSG[action] || '바꿨습니다.', 'ok');
+      const msg = action === 'confirm' && nothingToShip() ? '확정했습니다. 처리가 끝난 통화로 표시됩니다.'
+        : action === 'ship' && nonOrder() ? '처리 완료로 바꿨습니다.'
+          : DONE_MSG[action];
+      toast(msg || '바꿨습니다.', 'ok');
     } catch (e) {
       if (!alive) return;
       toast(e?.message || '바꾸지 못했습니다.', 'error');
@@ -466,7 +492,7 @@ export function mountCard(el, o) {
   }
   async function reextract() {
     if (reexBusy) return;
-    const ok = await confirmBox('AI 로 이 통화의 카드를 다시 정리할까요? 낱말 사전에 고친 낱말이 반영되고, 손으로 고친 칸은 새 초안으로 바뀝니다.');
+    const ok = await confirmBox('AI 로 이 통화의 카드를 다시 정리할까요? 낱말 사전에 고친 낱말이 반영됩니다. 손으로 고친(「사람이 고침」) 칸은 그대로 두고, 빈칸과 AI 초안 칸만 새로 채웁니다.');
     if (!ok || !alive) return;
     reexBusy = true;
     renderReex();

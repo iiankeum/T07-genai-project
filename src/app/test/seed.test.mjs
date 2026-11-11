@@ -20,6 +20,8 @@ const seedRows = () => db().prepare("SELECT * FROM calls WHERE source = 'seed' O
 // calls.json 에 든 통화만(해결사 방이 calls-*.json 을 더 넣어도 이 시험은 그대로)
 const mainIds = new Set(mainCalls.calls.map((c) => c.id));
 const mainRows = () => seedRows().filter((r) => mainIds.has(r.id));
+// 시드 자리 잡기는 05:05 KST 전(한밤중)이면 어제 기준으로 놓는다. 시험은 언제 돌려도 같게 오늘 12:00 KST 로 넣는다.
+const NOON = new Date(Date.parse(`${kstDay()}T12:00:00+09:00`));
 
 test('seed 파일: 가짜 표시 · 18~20건 · 같은 id 없음 · 가짜 번호', () => {
   assert.match(mainCalls._설명, /가짜/);
@@ -45,8 +47,100 @@ test('turnsToSegments: 문장 나누기 · 말한 사람 · 시각 추정', () =
   for (let i = 1; i < segs.length; i++) assert.ok(segs[i].start > segs[i - 1].end);
 });
 
+// ── 부품 줄의 action · car 와 대본 번호 정리 ─────────────────────────────
+const build = (sc) => {
+  const { call, card, warnings } = seed.buildSeedCall(sc, { anchorMs: seed.seedAnchorMs(NOON) });
+  const items = JSON.parse(card.items);
+  return { call, card, items, parts: items.map((i) => i.part), draft: JSON.parse(card.ai_draft), warnings };
+};
+
+test('buildSeedCall: 취소한 부품만 있는 주문 통화 → 부품 줄 없이 「기타」, 메모에 「취소: 라디에이터 1」', () => {
+  const r = build({
+    id: 'fx-t1', offsetMin: 0, status: 'confirmed', summary: 'c36 아반떼 CN7 라디에이터 1 취소(호스만 빠짐)',
+    turns: [{ who: 'dealer', say: '네, 부품입니다.' }, { who: 'shop', say: '한일카인데요. 아까 시킨 라디에이터 그거 취소요.' }],
+    card: { customer: '한일카', carModel: '아반떼 CN7', items: [{ part: '라디에이터', side: null, qty: 1, partNo: null, action: '취소' }], note: null },
+  });
+  assert.deepEqual(r.items, []);
+  assert.equal(r.card.call_type, '기타');
+  assert.equal(r.card.note, '취소: 라디에이터 1');
+  assert.match(r.call.title, /^한일카 · 기타 · /);
+  assert.equal(r.call.summary, '앞 통화 아반떼 CN7 라디에이터 1 취소(호스만 빠짐)');
+  assert.equal(r.draft.callType, '기타', 'AI 초안도 같은 통화 종류(「고침」 표시가 붙지 않게)');
+});
+
+test('buildSeedCall: 반품·교환 통화는 반품 · 교환 줄만 남기고(표시를 붙여), 문의 줄은 메모로 · 들어 보기 줄 번호도 맞춘다', () => {
+  const r = build({
+    id: 'fx-t2', offsetMin: 0, status: 'confirmed', callType: '반품·교환',
+    turns: [{ who: 'shop', say: '제일카서비스인데요. 뒷 패드 미개봉이라 반품할게요. 헤드램프 재고 있어요? 앞 패드 하나 주세요.' }],
+    card: {
+      customer: '제일카서비스', carModel: '싼타페 TM', note: '거래처 착오',
+      items: [
+        { part: '뒷 패드(미개봉)', qty: 1, action: '반품' },
+        { part: '헤드램프', qty: 1, action: '문의' },
+        { part: '앞 패드', qty: 1, action: '주문' },
+      ],
+      unsure: [{ field: 'qty', item: 2, reason: '수량이 흐림' }, { field: 'part', item: 1, reason: '뺀 줄' }],
+    },
+  });
+  assert.equal(r.card.call_type, '반품·교환');
+  assert.deepEqual(r.parts, ['뒷 패드(미개봉 · 반품)', '앞 패드']);
+  assert.equal(r.card.note, '거래처 착오 / 문의: 헤드램프 1');
+  const unsure = JSON.parse(r.card.unsure);
+  assert.equal(unsure[0].item, 1, '앞 패드는 이제 둘째 줄');
+  assert.ok(!('item' in unsure[1]), '뺀 줄을 가리키던 것은 줄 번호 없이');
+  for (const it of r.items) assert.ok(it.quote && typeof it.at === 'number', it.part);
+
+  // 반품·교환 통화가 아니면 반품 줄도 출고 줄로 남기지 않는다
+  const s = build({
+    id: 'fx-t3', offsetMin: 0, status: 'confirmed',
+    turns: [{ who: 'shop', say: '앞범퍼 반품할게요.' }],
+    card: { customer: '한빛모터스', items: [{ part: '앞범퍼', qty: 1, action: '반품' }] },
+  });
+  assert.deepEqual(s.items, []);
+  assert.equal(s.card.call_type, '기타');
+  assert.equal(s.card.note, '반품: 앞범퍼 1');
+});
+
+test('buildSeedCall: 다른 차 부품은 이름 뒤에 차종 · 대본 번호와 굳은 날짜는 지우거나 「앞 통화」로', () => {
+  const r = build({
+    id: 'fx-t4', offsetMin: 0, status: 'draft', summary: '아반떼 AD 앞범퍼 1(10/30 c02 와 같은 것, 안개등 커버 제외) · c14 건',
+    turns: [{ who: 'shop', say: '대한모터스인데요. 카니발 뒷범퍼 하나, 레이 에어컨 필터 세 개, 앞범퍼 하나요.' }],
+    card: {
+      customer: '대한모터스', carModel: '카니발 KA4',
+      items: [
+        { part: '뒷범퍼', qty: 1, action: '주문', car: '카니발 KA4' },
+        { part: '에어컨 필터', qty: 3, action: '주문', car: '레이 TAM' },
+        { part: '앞범퍼(10/30 c02 와 같은 것)', qty: 1 },
+      ],
+    },
+  });
+  assert.deepEqual(r.parts, ['뒷범퍼', '에어컨 필터(레이 TAM)', '앞범퍼']);
+  assert.equal(r.call.summary, '아반떼 AD 앞범퍼 1(앞 통화와 같은 것, 안개등 커버 제외) · 앞 통화 건');
+  assert.equal(r.card.call_type, '주문');
+  assert.deepEqual(r.warnings, []);
+  assert.equal(seed.cleanSeedPart('운전석 헤드램프 LED(잘못 출고 · 회수)'), '운전석 헤드램프 LED(잘못 출고 · 회수)', '번호 없는 괄호는 그대로');
+});
+
+test('실제 데모 시드(calls-*.json): 취소 · 문의 줄은 출고 줄에 없고, 화면 글에 대본 번호 · 굳은 날짜가 없다', () => {
+  const data = seed.loadSeedFiles();
+  const anchorMs = seed.seedAnchorMs(NOON);
+  const REF = /(^|[^A-Za-z0-9])c\d{2}(?![0-9])|(?<![0-9])\d{1,2}\/\d{1,2}(?![0-9])/;
+  for (const sc of data.calls) {
+    const { call, card } = seed.buildSeedCall(sc, { anchorMs, customers: data.customers });
+    const items = JSON.parse(card.items);
+    for (const text of [call.title, call.summary, card.note, ...items.map((i) => i.part)]) {
+      assert.ok(!REF.test(String(text ?? '')), `${sc.id} 「${text}」`);
+    }
+    const src = Array.isArray(sc.card?.items) ? sc.card.items : [];
+    const kept = src.filter((i) => !i.action || i.action === '주문' || (card.call_type === '반품·교환' && ['반품', '교환'].includes(i.action)));
+    assert.equal(items.length, kept.length, `${sc.id} 남은 부품 줄`);
+    for (const it of src.filter((i) => !kept.includes(i))) assert.ok(String(card.note).includes(`${it.action}: `), `${sc.id} 메모에 ${it.action}`);
+    if (card.call_type === '주문') assert.ok(items.length > 0, `${sc.id} 부품 없는 주문`);
+  }
+});
+
 test('seedDemo: 빈 DB 에 통화 · 카드 · 사전 · 거래처를 넣는다', async () => {
-  const inserted = await seed.seedDemo({ reset: false, dir: FIX });
+  const inserted = await seed.seedDemo({ reset: false, dir: FIX, now: NOON });
   assert.equal(inserted, files.calls.length);
   assert.equal(n('SELECT COUNT(*) AS n FROM calls'), inserted);
   assert.equal(n('SELECT COUNT(*) AS n FROM cards'), inserted);
@@ -147,10 +241,10 @@ test('시드 카드: 상태 섞임 · 근거 문장 · AI 초안 · 품번은 �
 
 test('seedDemo(reset 아님): 이미 있으면 통화는 건너뛰고, 사전이 비었으면 사전만 넣는다', async () => {
   const before = n('SELECT COUNT(*) AS n FROM calls');
-  assert.equal(await seed.seedDemo({ reset: false, dir: FIX }), 0);
+  assert.equal(await seed.seedDemo({ reset: false, dir: FIX, now: NOON }), 0);
   assert.equal(n('SELECT COUNT(*) AS n FROM calls'), before);
   db().exec('DELETE FROM glossary');
-  assert.equal(await seed.seedDemo({ reset: false, dir: FIX }), 0);
+  assert.equal(await seed.seedDemo({ reset: false, dir: FIX, now: NOON }), 0);
   assert.equal(n('SELECT COUNT(*) AS n FROM glossary'), files.glossary.length + 28);
   assert.equal(n('SELECT COUNT(*) AS n FROM calls'), before);
 });
@@ -195,7 +289,7 @@ test('seedDemo(reset): 통화 · 카드 · 일감 · 브리핑 · 사전을 비�
   db().prepare("INSERT INTO glossary(id, kind, term, standard, status, source, created_at, updated_at) VALUES('g_user1', '현장말', '헨다', '휀다', 'approved', '사용자', ?, ?)").run(now, now);
   db().prepare("INSERT INTO trials(id, created_at, name, contact, consent_at) VALUES('trial_t1', ?, '가짜 이름', 'fake@example.com', ?)").run(now, now);
 
-  const inserted = await seed.seedDemo({ reset: true, dir: FIX });
+  const inserted = await seed.seedDemo({ reset: true, dir: FIX, now: NOON });
   assert.equal(inserted, files.calls.length);
   assert.equal(n('SELECT COUNT(*) AS n FROM calls'), files.calls.length);
   assert.equal(n("SELECT COUNT(*) AS n FROM calls WHERE id = 'up_t1'"), 0);

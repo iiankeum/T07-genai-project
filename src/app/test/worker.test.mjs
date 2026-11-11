@@ -168,9 +168,19 @@ test('claim → 오디오 받기(그 일꾼만) → result', async () => {
   assert.equal(callRow(job.callId).status, 'transcribing');
   assert.equal(jobRow(job.jobId).attempts, 1);
 
-  // 다른 일꾼 · 토큰 없음
+  // 다른 일꾼 · 일꾼 이름 없음 · 토큰 없음
   const other = await api('GET', `/api/worker/jobs/${job.jobId}/audio?worker=gpu-pc-2`);
   assert.equal(other.status, 409);
+  for (const q of ['', '?worker=', '?worker=%20']) {
+    const noName = await api('GET', `/api/worker/jobs/${job.jobId}/audio${q}`);
+    assert.equal(noName.status, 400, `이름 없음 ${q}`);
+    assert.equal(noName.body.error, 'bad_worker');
+  }
+  assert.equal(jobs.isLeasedBy(jobRow(job.jobId), ''), false, 'isLeasedBy 는 일꾼 이름이 꼭 있어야 한다');
+  assert.equal(jobs.isLeasedBy(jobRow(job.jobId), 'gpu-pc-1'), true);
+  // 이름은 X-Worker 머리로도 받는다
+  const byHeader = await fetch(`${srv.base}/api/worker/jobs/${job.jobId}/audio`, { method: 'HEAD', headers: { Authorization: `Bearer ${WORKER}`, 'X-Worker': 'gpu-pc-1' } });
+  assert.equal(byHeader.status, 200);
   assert.equal((await api('GET', new URL(job.audioUrl).pathname + new URL(job.audioUrl).search, undefined, null)).status, 401);
   const a = await api('GET', new URL(job.audioUrl).pathname + new URL(job.audioUrl).search);
   assert.equal(a.status, 200);
@@ -215,8 +225,8 @@ test('claim → 오디오 받기(그 일꾼만) → result', async () => {
 
   // 끝난 일감: result · 오디오 모두 409
   assert.equal((await api('POST', `/api/worker/jobs/${job.jobId}/result`, result)).status, 409);
-  assert.equal((await api('GET', `/api/worker/jobs/${job.jobId}/audio`)).status, 409);
-  assert.equal((await api('GET', '/api/worker/jobs/job_nope/audio')).status, 404);
+  assert.equal((await api('GET', `/api/worker/jobs/${job.jobId}/audio?worker=gpu-pc-1`)).status, 409);
+  assert.equal((await api('GET', '/api/worker/jobs/job_nope/audio?worker=gpu-pc-1')).status, 404);
 });
 
 test('fail: retryable 은 줄 뒤로, 3번째에 실패로 끝남 · 경로 · 토큰은 가린다', async () => {
@@ -288,6 +298,57 @@ test('claim: 녹음 파일이 없어진 일감은 실패로 넘기고 다음 것
   assert.equal(c.body.callId, b.body.callId);
   assert.equal(jobRow(a.body.jobId).state, 'failed');
   assert.equal(callRow(a.body.callId).status, 'failed');
+  drain();
+});
+
+test('주인 없는 녹음 파일 정리: 행이 없는 오래된 wav 만 지우고 시드 음성 · 새 파일 · 쓰는 파일은 남긴다', async () => {
+  const dir = path.join(process.env.DATA_DIR, 'audio');
+  fs.mkdirSync(dir, { recursive: true });
+  const old = new Date(Date.now() - 2 * 3600_000);
+  const put = (name, { aged = true } = {}) => {
+    const abs = path.join(dir, name);
+    fs.writeFileSync(abs, 'RIFF');
+    if (aged) fs.utimesSync(abs, old, old);
+    return abs;
+  };
+  const orphan = put('call_orphan1.wav');
+  const seedVoice = put('fx-c99.wav');
+  const fresh = put('call_fresh1.wav', { aged: false });
+  const notWav = put('readme.txt');
+  const ing = await ingest(uniqueWav());
+  const usedAbs = audio.audioPath(callRow(ing.body.callId).audio_file);
+  fs.utimesSync(usedAbs, old, old);
+  drain();
+
+  const n = worker.sweepOrphanAudio();
+  assert.ok(n >= 1, `지운 수 ${n}`);
+  assert.equal(fs.existsSync(orphan), false, '행이 없는 오래된 파일은 지운다');
+  assert.equal(fs.existsSync(seedVoice), true, '시드 음성은 남긴다');
+  assert.equal(fs.existsSync(fresh), true, '막 만든 파일은 남긴다');
+  assert.equal(fs.existsSync(notWav), true, 'wav 가 아니면 보지 않는다');
+  assert.equal(fs.existsSync(usedAbs), true, '통화가 쓰는 파일은 남긴다');
+  fs.rmSync(seedVoice);
+  fs.rmSync(fresh);
+  fs.rmSync(notWav);
+});
+
+test('ingest: 다른 녹음을 2건 받는 중이면 본문을 읽지 않고 503 busy', async () => {
+  const httpLib = await import('../lib/http.mjs');
+  let release;
+  const hold = new Promise((r) => { release = r; });
+  const fakeReq = { headers: {} };
+  const slots = [httpLib.withUploadSlot(fakeReq, () => hold), httpLib.withUploadSlot(fakeReq, () => hold)];
+  try {
+    const r = await ingest(uniqueWav());
+    assert.equal(r.status, 503);
+    assert.equal(r.body.error, 'busy');
+  } finally {
+    release();
+    await Promise.all(slots);
+  }
+  assert.equal(httpLib.uploadsInProgress(), 0);
+  const ok = await ingest(uniqueWav());
+  assert.equal(ok.status, 201, JSON.stringify(ok.body));
   drain();
 });
 

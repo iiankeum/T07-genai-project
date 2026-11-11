@@ -61,10 +61,10 @@ export function claim(worker) {
   });
 }
 
-/** 임대 중인 일감인지(그 일꾼 · 기한 안). worker 를 비우면 일꾼 이름은 보지 않는다. */
+/** 그 일꾼이 임대 중인 일감인지(기한 안). worker 는 꼭 넣는다 — 비우면 false. */
 export function isLeasedBy(job, worker) {
   if (!job || job.state !== 'leased') return false;
-  if (worker && job.worker !== worker) return false;
+  if (!worker || job.worker !== worker) return false;
   return !job.lease_until || job.lease_until > nowIso();
 }
 

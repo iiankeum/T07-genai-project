@@ -89,13 +89,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .page-narrow { max-width: 760px; }
 .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 4px 0 16px; }
 .page-head h1 { font-size: 1.55rem; line-height: 1.3; margin: 0; letter-spacing: -0.8px; }
-.page-head .sub { margin: 4px 0 0; color: var(--muted); font-size: .95rem; }
+.page-head .sub { margin: 4px 0 0; color: var(--muted); font-size: 1rem; }
 .eyebrow { font-size: .75rem; font-weight: 700; color: var(--brand); letter-spacing: .5px; margin: 0 0 4px; }
 h2 { font-size: 1.2rem; margin: 0 0 10px; letter-spacing: -0.5px; }
 h3 { font-size: 1.05rem; margin: 0 0 8px; }
 .loading { color: var(--muted); padding: 24px 0; }
 .muted { color: var(--muted); }
-.small { font-size: .85rem; }
+.small { font-size: .95rem; }
 .stack > * + * { margin-top: 12px; }
 .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .row-between { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
@@ -174,10 +174,10 @@ a.list-item:hover { background: #faf9fe; }
 .input-search { padding-left: 40px; background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2362647a' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E") no-repeat 12px center; }
 .check { display: flex; gap: 10px; align-items: flex-start; font-size: .95rem; cursor: pointer; }
 .check input { width: 22px; height: 22px; margin-top: 2px; accent-color: var(--brand); flex: none; }
-.help { font-size: .85rem; color: var(--muted); margin-top: 4px; }
+.help { font-size: .95rem; color: var(--muted); margin-top: 4px; }
 
 /* ── 알림 상자 ── */
-.notice { border-radius: var(--radius-sm); padding: 12px 14px; background: var(--info-soft); border: 1px solid #cddcff; color: #1e3a8a; font-size: .95rem; margin-bottom: 12px; }
+.notice { border-radius: var(--radius-sm); padding: 12px 14px; background: var(--info-soft); border: 1px solid #cddcff; color: #1e3a8a; font-size: 1rem; margin-bottom: 12px; }
 .notice-warn { background: var(--warn-soft); border-color: var(--warn-line); color: var(--warn); }
 .notice-error { background: var(--danger-soft); border-color: #f4c7c1; color: var(--danger); }
 .notice-ok { background: var(--ok-soft); border-color: #bfe3d6; color: var(--ok); }
@@ -205,7 +205,8 @@ mark.hl { border-radius: 4px; padding: 0 2px; color: inherit; }
 .legend mark { font-size: .8rem; }
 
 /* ── 알림 띠 · 확인 상자 ── */
-.toast { position: fixed; left: 50%; bottom: 84px; transform: translate(-50%, 20px); background: #2c2a3b; color: #fff; padding: 12px 18px; border-radius: 12px; font-size: .95rem; max-width: calc(100vw - 32px); opacity: 0; pointer-events: none; transition: .2s; z-index: 50; box-shadow: 0 10px 30px rgba(0,0,0,.2); }
+/* left:50% 만 두면 폭이 화면 반으로 접힌다 — 글 길이만큼 넓히고 화면 폭(양옆 16px)에서 멈춘다 */
+.toast { position: fixed; left: 50%; bottom: 84px; transform: translate(-50%, 20px); width: max-content; max-width: min(480px, calc(100vw - 32px)); background: #2c2a3b; color: #fff; padding: 12px 18px; border-radius: 12px; font-size: 1rem; opacity: 0; pointer-events: none; transition: .2s; z-index: 50; box-shadow: 0 10px 30px rgba(0,0,0,.2); }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 .toast-error { background: var(--danger); }
 .toast-ok { background: var(--ok); }

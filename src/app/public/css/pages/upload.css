@@ -37,7 +37,7 @@
 .upload-flow li::before { content: counter(step); position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 26px; height: 26px; border-radius: 50%; background: var(--brand); color: #fff; font-weight: 800; font-size: .85rem; display: flex; align-items: center; justify-content: center; }
 .upload-flow li + li::after { content: '↓'; position: absolute; left: 50%; top: -21px; transform: translateX(-50%); color: var(--brand); font-weight: 800; line-height: 1.2; }
 .upload-flow strong { display: block; }
-.upload-flow span { display: block; color: var(--muted); font-size: .85rem; }
+.upload-flow span { display: block; color: var(--muted); font-size: .95rem; }
 @media (min-width: 900px) {
   .upload-flow { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 22px; }
   .upload-flow li { padding: 40px 10px 10px; text-align: center; }
@@ -49,7 +49,7 @@
 .upload-worker-state { margin: 0 0 8px; font-weight: 700; }
 .upload-dl { margin: 0 0 8px; }
 .upload-dl div { display: flex; gap: 10px; padding: 4px 0; border-bottom: 1px solid var(--line); }
-.upload-dl dt { color: var(--muted); font-size: .88rem; min-width: 5.5em; }
+.upload-dl dt { color: var(--muted); font-size: .95rem; min-width: 5.5em; }
 .upload-dl dd { margin: 0; font-weight: 600; min-width: 0; }
 .upload-queue { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
 .upload-queue > div { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 8px 12px; background: #fff; }

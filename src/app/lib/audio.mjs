@@ -18,7 +18,7 @@ const ascii = (buf, start, len) => buf.subarray(start, start + len).toString('la
 
 /**
  * 오디오 형식 판별. 모르면 null.
- * @returns {{format:string, ext:string, demuxer:string|null}|null} demuxer 는 ffmpeg -f 로 고정할 입력 형식(애매하면 null)
+ * @returns {{format:string, ext:string, demuxer:string}|null} demuxer 는 ffmpeg -f 로 고정할 입력 형식
  */
 export function sniffAudio(buf) {
   if (!buf || buf.length < 12) return null;
@@ -32,17 +32,18 @@ export function sniffAudio(buf) {
     const is3gp = brand.startsWith('3g');
     return { format: is3gp ? '3gp' : 'm4a', ext: is3gp ? '3gp' : 'm4a', demuxer: 'mov' };
   }
-  if (ascii(buf, 0, 3) === 'ID3') return { format: 'mp3', ext: 'mp3', demuxer: null };
+  // mp3 · aac 도 입력 형식을 고정한다(ffmpeg 가 내용을 짐작해 concat · hls 같은 오디오 아닌 형식을 고르지 않게)
+  if (ascii(buf, 0, 3) === 'ID3') return { format: 'mp3', ext: 'mp3', demuxer: 'mp3' };
   if (buf[0] === 0xff) {
     // ADTS AAC: 동기 12비트 + layer 00
-    if ((buf[1] & 0xf6) === 0xf0) return { format: 'aac', ext: 'aac', demuxer: null };
+    if ((buf[1] & 0xf6) === 0xf0) return { format: 'aac', ext: 'aac', demuxer: 'aac' };
     // MPEG 오디오 프레임: 동기 11비트 · 버전 01(예약) 아님 · layer 00(예약) 아님 · 비트레이트 1111 아님 · 표본율 11 아님
     const sync = (buf[1] & 0xe0) === 0xe0;
     const version = (buf[1] >> 3) & 3;
     const layer = (buf[1] >> 1) & 3;
     const bitrate = buf[2] >> 4;
     const rate = (buf[2] >> 2) & 3;
-    if (sync && version !== 1 && layer !== 0 && bitrate !== 15 && rate !== 3) return { format: 'mp3', ext: 'mp3', demuxer: null };
+    if (sync && version !== 1 && layer !== 0 && bitrate !== 15 && rate !== 3) return { format: 'mp3', ext: 'mp3', demuxer: 'mp3' };
   }
   return null;
 }
@@ -248,10 +249,36 @@ export async function audioFromForm(form, field = 'file') {
   if (file.size > config.maxUploadBytes) {
     throw new HttpError(413, 'too_large', `파일이 너무 큽니다(최대 ${Math.round(config.maxUploadBytes / 1024 / 1024)}MB).`);
   }
-  const buf = Buffer.from(await file.arrayBuffer());
+  // lib/http.mjs 의 readForm 은 본문을 가리키는 buffer 를 준다(복사하지 않음). 웹 표준 File 이면 arrayBuffer 로.
+  const buf = Buffer.isBuffer(file.buffer) ? file.buffer : Buffer.from(await file.arrayBuffer());
   if (!sniffAudio(buf)) throw new HttpError(415, 'not_audio', '오디오 파일이 아닙니다. wav · mp3 · m4a 같은 녹음 파일을 올려 주세요.');
   const name = String(file.name || '').replace(/[\u0000-\u001F\u007F\\/]/g, '_').trim().slice(0, 120) || null;
   return { buf, name, sha256: sha256(buf) };
+}
+
+/**
+ * DATA_DIR/audio 의 *.wav 가운데 어떤 통화도 가리키지 않는 파일 지우기(데모 초기화 · 행 삭제 뒤 남은 것).
+ * 막 변환해 아직 행이 생기기 전인 파일을 지우지 않게 minAgeMs 보다 오래된 것만 본다.
+ * @param {(relFile:string) => boolean} keep 'audio/<이름>.wav' 를 받아 남길지 정한다(DB 에 있음 · 시드 음성 등)
+ * @returns {number} 지운 파일 수
+ */
+export function cleanOrphanAudio(keep, minAgeMs = 3600_000) {
+  let n = 0;
+  let names;
+  try { names = fs.readdirSync(AUDIO_DIR()); } catch { return 0; } // 폴더 없음
+  for (const f of names) {
+    if (!f.toLowerCase().endsWith('.wav')) continue;
+    const rel = `audio/${f}`;
+    try {
+      if (keep(rel)) continue;
+      const abs = path.join(AUDIO_DIR(), f);
+      const st = fs.statSync(abs);
+      if (!st.isFile() || Date.now() - st.mtimeMs < minAgeMs) continue;
+      fs.rmSync(abs, { force: true });
+      n += 1;
+    } catch { /* 넘어감 */ }
+  }
+  return n;
 }
 
 /** 지난번에 남은 임시 파일 지우기(1시간 넘은 것) */

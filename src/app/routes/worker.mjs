@@ -1,12 +1,13 @@
 // 받아쓰기 일꾼 API v1 (docs/worker-api.md) · 녹음 넣기 POST /api/ingest · 공개 GET /api/worker/status.
 import fs from 'node:fs';
+import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { config } from '../lib/config.mjs';
 import { db, nowIso } from '../lib/db.mjs';
-import { HttpError, readJson, readForm, sendJson, sendEmpty, cleanText } from '../lib/http.mjs';
-import { requireBearer, rateLimit, takeDaily, ipHash } from '../lib/security.mjs';
+import { HttpError, readJson, readForm, sendJson, sendEmpty, cleanText, withUploadSlot } from '../lib/http.mjs';
+import { requireBearer, rateLimit, checkDaily, addDaily, ipHash } from '../lib/security.mjs';
 import { dictionaryForAi } from '../lib/repo.mjs';
-import { audioPath, audioFromForm, cleanTmp, ffmpegAvailable } from '../lib/audio.mjs';
+import { audioPath, audioFromForm, cleanTmp, cleanOrphanAudio, ffmpegAvailable } from '../lib/audio.mjs';
 import {
   claim, complete, fail, getJob, isLeasedBy, queueStats, sweepExpired,
   acceptRecording, findCallBySha, retryIfFailed, normalizePhone, parseRecordedAt,
@@ -184,9 +185,10 @@ export function register(router) {
 
   router.get('/api/worker/jobs/:jobId/audio', ({ req, res, params, query }) => {
     requireBearer(req, 'WORKER_TOKEN');
+    // 일꾼 이름(?worker= 또는 X-Worker)은 꼭 있어야 한다 — 비우면 400(이름 검사를 건너뛰지 못하게)
+    const who = workerName(query.worker || req.headers['x-worker']);
     const job = getJob(params.jobId);
     if (!job) throw new HttpError(404, 'not_found', '없는 일감입니다.');
-    const who = cleanText(query.worker || req.headers['x-worker'], 40);
     if (!isLeasedBy(job, who)) throw new HttpError(409, 'not_leased', '이 일꾼이 임대한 일감이 아닙니다.');
     const call = db().prepare('SELECT audio_file FROM calls WHERE id = ?').get(job.call_id);
     let abs;
@@ -236,47 +238,73 @@ export function register(router) {
   // 녹음 PC 프로그램 → 서버 (tools/folder-sender.mjs)
   router.post('/api/ingest', async ({ req, res, ip }) => {
     requireBearer(req, 'INGEST_TOKEN');
-    rateLimit('ingest', ip, INGEST_RATE.max, INGEST_RATE.windowMs);
-    const form = await readForm(req, config.maxUploadBytes);
-    if (config.demoMode && !isTrue(form.get('fake'))) {
-      throw new HttpError(422, 'real_recording_not_accepted', '공개 데모는 가짜(연습) 녹음만 받습니다. fake=true 로 보내 주세요.');
-    }
-    const recordedAt = parseRecordedAt(form.get('recordedAt'));
-    if (!recordedAt) throw new HttpError(400, 'bad_recorded_at', 'recordedAt 에 녹음 시각(ISO 8601)을 넣어 주세요.');
-    const deviceName = cleanText(form.get('deviceName'), 40);
-    if (!deviceName) throw new HttpError(400, 'bad_device_name', 'deviceName 에 보낸 PC 이름(40자 이하)을 넣어 주세요.');
-    const file = await audioFromForm(form);
+    // 화면 올리기와 같은 동시 처리 자리(최대 2건)를 쓴다 — 본문을 읽기 전에 크기 413 · 바쁨 503(보내기 프로그램은 다음 바퀴에 다시 보냄)
+    return withUploadSlot(req, async () => {
+      rateLimit('ingest', ip, INGEST_RATE.max, INGEST_RATE.windowMs);
+      const form = await readForm(req, config.maxUploadBytes);
+      if (config.demoMode && !isTrue(form.get('fake'))) {
+        throw new HttpError(422, 'real_recording_not_accepted', '공개 데모는 가짜(연습) 녹음만 받습니다. fake=true 로 보내 주세요.');
+      }
+      const recordedAt = parseRecordedAt(form.get('recordedAt'));
+      if (!recordedAt) throw new HttpError(400, 'bad_recorded_at', 'recordedAt 에 녹음 시각(ISO 8601)을 넣어 주세요.');
+      const deviceName = cleanText(form.get('deviceName'), 40);
+      if (!deviceName) throw new HttpError(400, 'bad_device_name', 'deviceName 에 보낸 PC 이름(40자 이하)을 넣어 주세요.');
+      const file = await audioFromForm(form);
 
-    const dup = findCallBySha(file.sha256);
-    if (dup) {
-      const r = retryIfFailed(dup);
-      sendJson(res, 200, { callId: r.callId, status: 'duplicate', ...(r.requeued ? { jobId: r.jobId, requeued: true } : {}) });
+      const dup = findCallBySha(file.sha256);
+      if (dup) {
+        const r = retryIfFailed(dup);
+        sendJson(res, 200, { callId: r.callId, status: 'duplicate', ...(r.requeued ? { jobId: r.jobId, requeued: true } : {}) });
+        return undefined;
+      }
+      checkDaily('ingest', INGEST_DAILY);
+      const out = await acceptRecording({
+        buf: file.buf,
+        source: 'ingest',
+        recordedAt,
+        callerNumber: normalizePhone(cleanText(form.get('callerNumber'), 40)),
+        deviceName,
+        title: cleanText(form.get('title'), 80),
+        originalName: file.name,
+        uploader: ipHash(ip),
+        isFake: config.demoMode ? true : isTrue(form.get('fake')),
+      });
+      if (out.duplicate) {
+        sendJson(res, 200, { callId: out.callId, status: 'duplicate' });
+        return undefined;
+      }
+      addDaily('ingest'); // 변환 · 저장까지 끝난 것만 하루 상한에 센다
+      sendJson(res, 201, { callId: out.callId, jobId: out.jobId, status: 'queued' });
       return undefined;
-    }
-    takeDaily('ingest', INGEST_DAILY);
-    const out = await acceptRecording({
-      buf: file.buf,
-      source: 'ingest',
-      recordedAt,
-      callerNumber: normalizePhone(cleanText(form.get('callerNumber'), 40)),
-      deviceName,
-      title: cleanText(form.get('title'), 80),
-      originalName: file.name,
-      uploader: ipHash(ip),
-      isFake: config.demoMode ? true : isTrue(form.get('fake')),
     });
-    if (out.duplicate) {
-      sendJson(res, 200, { callId: out.callId, status: 'duplicate' });
-      return undefined;
-    }
-    sendJson(res, 201, { callId: out.callId, jobId: out.jobId, status: 'queued' });
-    return undefined;
   });
+}
+
+/**
+ * DATA_DIR/audio 에서 어떤 통화 행도 가리키지 않는 *.wav 를 지운다(데모 초기화 · 행 삭제 뒤 남은 올린 녹음).
+ * 시드 음성(fx-*.wav)은 행이 없어도 남긴다 — 시드를 다시 넣을 때 파일이 있으면 다시 붙는다.
+ * @returns {number} 지운 파일 수
+ */
+export function sweepOrphanAudio(minAgeMs = 3600_000) {
+  const used = new Set(db().prepare('SELECT DISTINCT audio_file FROM calls WHERE audio_file IS NOT NULL').all()
+    .map((r) => path.resolve(config.dataDir, String(r.audio_file))));
+  return cleanOrphanAudio((rel) => used.has(path.resolve(config.dataDir, rel)) || /^audio\/fx-[^/]*\.wav$/i.test(rel), minAgeMs);
 }
 
 export async function start() {
   const removed = cleanTmp();
   if (removed) console.log(`[audio] 남은 임시 파일 ${removed}개를 지웠습니다.`);
+  // 하루 한 번(시작할 때 · 이후 24시간마다): 주인 없는 녹음 파일 지우기
+  const sweepAudio = () => {
+    try {
+      const n = sweepOrphanAudio();
+      if (n) console.log(`[audio] 어떤 통화도 가리키지 않는 녹음 파일 ${n}개를 지웠습니다.`);
+    } catch (e) {
+      console.error('[audio] 주인 없는 녹음 파일 정리 실패:', e?.message || e);
+    }
+  };
+  sweepAudio();
+  setInterval(sweepAudio, 24 * 3600_000).unref();
   ffmpegAvailable().then((ok) => {
     if (!ok) console.warn('[audio] ffmpeg 를 찾지 못했습니다. 16kHz mono WAV 만 받을 수 있습니다(FFMPEG_PATH 확인).');
   }).catch(() => {});

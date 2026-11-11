@@ -175,8 +175,37 @@ export function aiOffNotice(meta) {
   }
   return html``;
 }
-/** 해시 주소 만들기: href('/calls', {q:'쏘렌토'}) → '#/calls?q=쏘렌토' */
+/** 해시 주소 만들기: href('/calls', {q:'쏘렌토'}) → '#/calls?q=쏘렌토' (경로 안의 값은 부르는 쪽이 encodeURIComponent 한다) */
 export function href(path, query) {
   const qs = query ? new URLSearchParams(Object.entries(query).filter(([, v]) => v !== undefined && v !== null && v !== '')).toString() : '';
   return '#' + path + (qs ? '?' + qs : '');
+}
+/** %xx 풀기. 깨진 글(예: %E0%A4)이면 원문 그대로 돌려준다 */
+export function safeDecode(s) {
+  try { return decodeURIComponent(s); } catch { return s; }
+}
+/**
+ * 해시(#/customers/A%2FS…?t=3)를 화면 이름 · 매개변수 · 물음 값으로 푼다.
+ * 경로 맞추기는 풀기 전 주소로 하고, 잡힌 값만 푼다 — 「A/S 공업사」 처럼 / 가 든 이름(%2F)도 한 칸으로 남게.
+ * @param {string} hash location.hash
+ * @param {{re:RegExp, page:string, keys?:string[]}[]} routes
+ * @returns {{page:string, params:Record<string,string>, query:Record<string,string>, path:string}}
+ */
+export function routeOf(hash, routes) {
+  const h = String(hash ?? '').replace(/^#/, '') || '/';
+  const qi = h.indexOf('?');
+  const rawPath = qi >= 0 ? h.slice(0, qi) : h;
+  const qs = qi >= 0 ? h.slice(qi + 1) : '';
+  const path = rawPath.split('/').map(safeDecode).join('/'); // 보여 주기용
+  let query = {};
+  try { query = Object.fromEntries(new URLSearchParams(qs)); } catch { query = {}; }
+  for (const r of routes) {
+    const m = r.re.exec(rawPath);
+    if (m) {
+      const params = {};
+      (r.keys || []).forEach((k, i) => { params[k] = safeDecode(m[i + 1]); });
+      return { page: r.page, params, query, path };
+    }
+  }
+  return { page: 'notfound', params: {}, query, path };
 }

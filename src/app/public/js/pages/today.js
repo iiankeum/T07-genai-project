@@ -33,6 +33,9 @@ export default {
     const ac = new AbortController();
     const st = {
       day: isDay(ctx.query.day) ? ctx.query.day : kstDay(),
+      // 날짜를 고르지 않고 들어왔으면, 오늘 통화가 아직 없을 때 가장 최근 업무일(어제)을 대신 보여 준다
+      autoDay: !isDay(ctx.query.day),
+      fallback: false,
       meta: ctx.meta || {},
       data: null,
       error: null,
@@ -60,6 +63,7 @@ export default {
           <p class="eyebrow">가짜 통화 데모</p>
           <h1>${isToday ? '오늘 브리핑' : `${fmtDate(dayIso(st.day))} 브리핑`}</h1>
           <p class="sub">${isToday ? `${greeting()} ` : ''}${fmtDate(dayIso(st.day))} 주문 흐름입니다.</p>
+          ${st.fallback && !isToday ? html`<p class="notice today-fallback">오늘은 아직 통화가 없어요 — 가장 최근 업무일(어제) 흐름을 보여 드립니다. 오늘 통화가 들어오면 저절로 오늘로 바뀝니다.</p>` : ''}
         </div>
         <div class="day-switch" role="group" aria-label="날짜 고르기">
           <button type="button" class="btn" data-act="day" data-day="${yest}" aria-pressed="${String(st.day === yest)}">어제</button>
@@ -256,6 +260,18 @@ export default {
           quiet ? ctx.refreshMeta().catch(() => st.meta) : Promise.resolve(st.meta),
         ]);
         if (!alive() || day !== st.day) return;
+        // 오늘 통화가 0건이면(새벽 · 영업 전) 어제로 바꿔 다시 부른다
+        if (st.autoDay && !st.fallback && day === kstDay() && num(data?.stats?.calls) === 0) {
+          st.fallback = true;
+          st.day = yesterdayOf();
+          return load({ quiet });
+        }
+        // 어제를 대신 보여 주는 중이면, 오늘 통화가 생겼는지 가끔 본다
+        if (st.fallback && quiet) {
+          const t = await api.get('/api/dashboard', { day: kstDay() }, { signal: ac.signal }).catch(() => null);
+          if (!alive() || day !== st.day) return;
+          if (t && num(t.stats?.calls) > 0) { st.fallback = false; st.day = kstDay(); st.data = null; return load(); }
+        }
         // 방금 만든 요약이 아직 목록에 안 실렸으면 들고 있는 것을 쓴다
         if (data && !data.briefing && st.data?.briefing && st.data.day === data.day) data.briefing = st.data.briefing;
         st.data = data || {};
@@ -348,6 +364,8 @@ export default {
         const day = b.dataset.day;
         if (!isDay(day) || day === st.day) return;
         st.day = day;
+        st.autoDay = false;
+        st.fallback = false;
         st.data = null;
         st.error = null;
         st.brief = 'idle';

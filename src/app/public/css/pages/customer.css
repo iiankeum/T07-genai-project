@@ -12,7 +12,7 @@
 
 .cust-day { margin: 0 0 18px; }
 .cust-day-h { display: flex; align-items: baseline; gap: 8px; margin: 0 0 8px; font-size: 1.12rem; }
-.cust-day-n { color: var(--muted); font-size: .88rem; font-weight: 600; }
+.cust-day-n { color: var(--muted); font-size: .95rem; font-weight: 600; }
 
 .cust-call > span { display: block; }
 .cust-call .cc-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
@@ -21,6 +21,6 @@
 .cc-car { color: var(--ink-2); }
 .cust-call .cc-flags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .cust-call .cc-ask { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin-top: 6px; padding: 8px 10px; background: #fffaf0; border: 1px solid var(--warn-line); border-radius: 10px; }
-.cc-ask-label { color: var(--warn); font-size: .82rem; font-weight: 800; }
+.cc-ask-label { color: var(--warn); font-size: .9rem; font-weight: 800; }
 .cc-q { font-weight: 600; }
-.cc-meta { margin-top: 6px; color: var(--muted); font-size: .88rem; }
+.cc-meta { margin-top: 6px; color: var(--muted); font-size: .95rem; }

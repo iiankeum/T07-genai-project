@@ -9,6 +9,7 @@ import {
   limit, adminLogin, adminCookie, adminLogout, adminLogoutCookie, isAdmin, requireAdmin, kstDay, usageCount,
 } from '../lib/security.mjs';
 import { seedDemo, placeSeed } from '../lib/seed.mjs';
+import { removeAudio } from '../lib/audio.mjs';
 import { workerStatus } from './system.mjs';
 import { visitStats } from '../lib/visits.mjs';
 import { parseJson } from '../lib/db.mjs';
@@ -148,7 +149,14 @@ export function register(router) {
     requireAdmin(req);
     const body = await readJson(req, 4 * 1024);
     if (body.confirm !== '초기화') throw new HttpError(400, 'confirm_required', '확인 칸에 「초기화」라고 적어야 초기화합니다.');
+    // 올린 · 보낸 · 실시간 통화의 녹음 파일은 행이 지워지면 지울 길이 없으므로 먼저 모아 두었다가 지운다(시드 음성은 남김)
+    const files = db().prepare("SELECT DISTINCT audio_file FROM calls WHERE (source IS NULL OR source <> 'seed') AND audio_file IS NOT NULL")
+      .all().map((r) => r.audio_file);
     const seeded = await seedDemo({ reset: true });
+    const stillUsed = db().prepare('SELECT 1 AS x FROM calls WHERE audio_file = ? LIMIT 1');
+    for (const f of files) {
+      if (!stillUsed.get(f)) removeAudio(f); // 다시 넣은 시드 통화가 같은 파일을 쓰면 남긴다 · DATA_DIR/audio 밖은 removeAudio 가 막음
+    }
     console.log('[admin] reset');
     return { ok: true, seeded };
   });

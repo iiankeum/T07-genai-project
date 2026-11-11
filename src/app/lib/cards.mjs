@@ -18,6 +18,7 @@ export const PLATE_RE = /^\d{2,3}[가-힣]\d{4}$/;
 
 export const MSG = {
   partNoNotSaid: '통화에 품번을 불러 준 말이 없어 비웠습니다',
+  partNoNotHeard: '통화에서 이 품번을 불러 준 말을 찾지 못해 비웠습니다 — 들어 보세요',
   partNoOdd: '자릿수가 보통과 다릅니다 — 들어 보세요',
   plateOdd: '차번호 형식이 맞지 않아 비웠습니다 — 들어 보세요',
 };
@@ -37,6 +38,27 @@ const EVIDENCE_KEYS = [
 /** 공백 · 문장부호 · 기호를 뺀 비교용 글 */
 export function squash(s) {
   return String(s ?? '').replace(/[\s\p{P}\p{S}]/gu, '').toLowerCase();
+}
+
+// 한국어로 읽은 숫자 한 글자 → 숫자(품번 확인용)
+const KO_DIGIT = { 공: '0', 영: '0', 일: '1', 이: '2', 삼: '3', 사: '4', 오: '5', 육: '6', 륙: '6', 칠: '7', 팔: '8', 구: '9' };
+
+/**
+ * 품번을 찾아볼 통화 글 두 벌.
+ * A: 공백 · 문장부호를 빼고 대문자로. B: A 에서 「다시」(줄표를 읽은 말) · '-' 를 지우고 한국어 숫자 읽기를 숫자로.
+ * 예: 「오팔일공일 다시 디사…」 → B 에 58101 이 들어 있다.
+ */
+export function partNoHaystacks(transcript) {
+  const a = String(transcript ?? '').replace(/[\s\p{P}\p{S}]/gu, '').toUpperCase();
+  const b = a.replace(/다시/g, '').replace(/-/g, '').replace(/[공영일이삼사오육륙칠팔구]/g, (ch) => KO_DIGIT[ch]);
+  return [a, b];
+}
+
+/** 품번이 통화에서 불린 것 같은가: 숫자 덩어리 중 4자리 이상인 첫 덩어리가 A 나 B 에 있으면 true(그런 덩어리가 없으면 검사하지 않음) */
+export function partNoHeard(partNo, haystacks) {
+  const key = (String(partNo ?? '').match(/\d+/g) || []).find((d) => d.length >= 4);
+  if (!key) return true;
+  return haystacks.some((h) => h.includes(key));
 }
 
 function grams(s) {
@@ -149,6 +171,7 @@ export function buildCardFromAi(callRow, aiOut) {
   const transcript = String(callRow?.transcript || segs.map((s) => s.text).join(' '));
   const prepared = segs.map((s) => squash(s.text));
   const saidPartNo = squash(transcript).includes('품번');
+  const partNoHay = partNoHaystacks(transcript);
   const unsure = [];
   const fixes = [];
 
@@ -170,6 +193,10 @@ export function buildCardFromAi(callRow, aiOut) {
     const idx = items.length;
     if (row.partNo && !saidPartNo) {
       unsure.push({ field: 'partNo', item: idx, reason: MSG.partNoNotSaid, value: row.partNo, at: row.at, seg: row.seg });
+      row.partNo = null;
+    } else if (row.partNo && !partNoHeard(row.partNo, partNoHay)) {
+      // 「품번」 낱말은 있어도 이 품번의 숫자를 불러 준 말이 없으면 AI 가 지어낸 것일 수 있다
+      unsure.push({ field: 'partNo', item: idx, reason: MSG.partNoNotHeard, value: row.partNo, at: row.at, seg: row.seg });
       row.partNo = null;
     } else if (row.partNo && !PART_NO_RE.test(row.partNo)) {
       unsure.push({ field: 'partNo', item: idx, reason: MSG.partNoOdd, value: row.partNo, at: row.at, seg: row.seg });

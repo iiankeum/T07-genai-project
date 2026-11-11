@@ -139,6 +139,47 @@ test('buildCardFromAi: 품번을 불러 줬으면 대문자로 남기고, 자릿
   assert.equal(v.unsure[0].field, 'partNo');
 });
 
+test('buildCardFromAi: 「품번」 낱말이 있어도 그 품번 숫자를 불러 준 말이 없으면 비운다', () => {
+  // 「품번은 모르겠어요」 + AI 가 지어낸 품번 → 지우고 들어 보기
+  insertCall('pn1', { segs: [
+    { start: 0, end: 2, text: '네, 부품입니다.' },
+    { start: 2.5, end: 6, text: '새한카센터인데요. 쏘렌토 MQ4 앞범퍼 하나요.' },
+    { start: 6.5, end: 9, text: '품번은 모르겠어요, 그쪽에서 찾아 주세요.' },
+  ] });
+  const made = { ...AI4, customer: '새한카센터', urgent: false, items: [{ part: '앞범퍼', side: null, qty: 1, part_no: '86511-P2000', quote: '쏘렌토 MQ4 앞범퍼 하나요' }] };
+  let v = cards.buildCardFromAi(getCallRow('pn1'), made);
+  assert.equal(v.items[0].partNo, null);
+  const u = v.unsure.find((x) => x.field === 'partNo');
+  assert.ok(u);
+  assert.equal(u.item, 0);
+  assert.equal(u.reason, '통화에서 이 품번을 불러 준 말을 찾지 못해 비웠습니다 — 들어 보세요');
+  assert.equal(u.value, '86511-P2000');
+  assert.equal(u.at, 2.5);
+  assert.equal(v.ai_draft.items[0].partNo, null);
+
+  // 한국어로 읽어 준 품번(「오팔일공일 다시 디사…」)은 남긴다
+  insertCall('pn2', { segs: [
+    { start: 0, end: 2, text: '한성정비인데요. 품번 불러 드릴게요.' },
+    { start: 2.5, end: 7, text: '오팔일공일 다시 디사에이이오, 앞 브레이크 패드 두 개요.' },
+  ] });
+  v = cards.buildCardFromAi(getCallRow('pn2'), { ...AI4, items: [{ ...AI4.items[0], quote: '앞 브레이크 패드 두 개요' }] });
+  assert.equal(v.items[0].partNo, '58101-D4A25');
+  assert.deepEqual(v.unsure.filter((x) => x.field === 'partNo'), []);
+
+  // 줄마다 따로 본다: 불러 준 품번은 남고, 지어낸 품번만 비운다
+  v = cards.buildCardFromAi(getCallRow('pn2'), { ...AI4, items: [{ ...AI4.items[0] }, { part: '뒤 브레이크 패드', qty: 1, part_no: '58302-D4A00' }] });
+  assert.equal(v.items[0].partNo, '58101-D4A25');
+  assert.equal(v.items[1].partNo, null);
+  assert.deepEqual(v.unsure.filter((x) => x.field === 'partNo').map((x) => x.item), [1]);
+
+  // 도우미: 숫자 4자리 이상 덩어리가 없으면 검사하지 않는다
+  const hay = cards.partNoHaystacks('품번은 공일이삼사 다시 오');
+  assert.deepEqual(hay, ['품번은공일이삼사다시오', '품번은012345']);
+  assert.equal(cards.partNoHeard('X1234-AB', hay), true);
+  assert.equal(cards.partNoHeard('ABC-12', hay), true);
+  assert.equal(cards.partNoHeard('99999-AB', hay), false);
+});
+
 test('buildCardFromAi: 차번호 형식 검사 · 근거 시각(공백 · 문장부호 무시) · 칠하기 대목 거르기', () => {
   const v = cards.buildCardFromAi(getCallRow('c2'), AI2);
   assert.equal(v.plate, '34나5678');
@@ -420,6 +461,35 @@ test('다시 정리: 새 AI 초안 · 고친 횟수 0 · AI 꺼짐이면 503', a
   assert.equal(r.status, 404);
 });
 
+test('다시 정리: AI 를 기다리는 동안 확정 · 출고되면 409 locked, 확정 · 출고 기록은 그대로', async () => {
+  insertCall('rx1', { segs: SEGS4 });
+  cards.saveCard('rx1', cards.buildCardFromAi(getCallRow('rx1'), AI4));
+  for (const [st, sql] of [
+    ['confirmed', "UPDATE cards SET status = 'confirmed', confirmed_at = ? WHERE call_id = 'rx1'"],
+    ['shipped', "UPDATE cards SET status = 'shipped', confirmed_at = ?, shipped_at = ? WHERE call_id = 'rx1'"],
+  ]) {
+    db().prepare("UPDATE cards SET status = 'draft', confirmed_at = NULL, shipped_at = NULL WHERE call_id = 'rx1'").run();
+    // 가짜 AI 가 답하기 전에 다른 탭에서 확정(또는 출고)한 것처럼 바꾼다
+    const stamp = nowIso();
+    ai.setClientForTest(fakeClient(() => {
+      db().prepare(sql).run(...(st === 'shipped' ? [stamp, stamp] : [stamp]));
+      return textResp({ ...AI4, customer: '바뀐 이름' });
+    }));
+    await assert.rejects(pipeline.reextract('rx1'), (e) => {
+      assert.equal(e.status, 409);
+      assert.equal(e.code, 'locked');
+      assert.match(e.publicMessage, /다시 정리하는 동안 카드가 확정\(또는 출고\)됐습니다/);
+      return true;
+    });
+    const row = getCardRow('rx1');
+    assert.equal(row.status, st);
+    assert.ok(row.confirmed_at);
+    if (st === 'shipped') assert.equal(row.shipped_at, stamp);
+    assert.equal(row.customer, '한성정비', '다시 정리 결과는 저장하지 않는다');
+  }
+  ai.setClientForTest(null);
+});
+
 // ── 4. 실시간 라우트 ────────────────────────────────────────────
 test('POST /api/live/extract: AI 꺼짐이면 {card:null, aiError} · 켜지면 저장 안 한 cardView', async () => {
   ai.setClientForTest(null);
@@ -427,6 +497,14 @@ test('POST /api/live/extract: AI 꺼짐이면 {card:null, aiError} · 켜지면 
   assert.equal(r.status, 200);
   assert.equal(r.data.card, null);
   assert.equal(r.data.aiError, 'AI 키 없음');
+
+  // 10자(띄어쓰기 빼고)가 안 되는 말은 AI 를 부르지 않는다
+  const idle = smartFake();
+  ai.setClientForTest(idle);
+  r = await req('POST', '/api/live/extract', { text: '앞범퍼 두 개 주세요' });
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.data, { card: null, aiError: '말이 너무 짧아요' });
+  assert.equal(idle.calls.length, 0);
 
   ai.setClientForTest(smartFake());
   const countBefore = db().prepare('SELECT COUNT(*) AS n FROM calls').get().n;

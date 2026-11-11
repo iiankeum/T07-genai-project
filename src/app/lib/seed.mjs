@@ -112,6 +112,28 @@ const QTY_WORDS = {
   30: ['서른 개', '서른'],
 };
 const URGENT_WORDS = ['급해', '급하게', '빨리', '퀵으로', '꼭 필요'];
+const CALL_TYPES = ['주문', '배송 문의', '반품·교환', '재고·단가 문의', '기타'];
+
+// ── 대본 안 표시 정리 ─────────────────────────────────────────────────
+// 대본 안 통화 번호(c02 등)와 굳은 날짜(10/30)는 화면에서 뜻이 없고, 날짜를 굴리면 실제 날짜와도 어긋난다.
+const REF_RE = /(^|[^A-Za-z0-9])c\d{2}(?![0-9])/g;
+const DATE_RE = /(?<![0-9])\d{1,2}\/\d{1,2}(?![0-9])\s*/g;
+const hasRef = (s) => /(^|[^A-Za-z0-9])c\d{2}(?![0-9])|(?<![0-9])\d{1,2}\/\d{1,2}(?![0-9])/.test(s);
+/** 글 속 대본 번호는 「앞 통화」로, 굳은 날짜는 지운다 */
+export function cleanSeedRefs(s) {
+  if (s == null) return s;
+  return String(s).replace(DATE_RE, '').replace(REF_RE, '$1앞 통화').replace(/앞 통화 [와과](?=\s)/g, '앞 통화와').trim();
+}
+/** 부품 이름: 대본 번호 · 날짜가 든 괄호는 괄호째 지운다 — 「앞범퍼(10/30 c02 와 같은 것)」 → 「앞범퍼」 */
+export function cleanSeedPart(s) {
+  if (s == null) return s;
+  return cleanSeedRefs(String(s).replace(/\s*\([^)]*\)/g, (m) => (hasRef(m) ? '' : m)));
+}
+/** 부품 이름 끝에 덧붙이기: 「앞범퍼」+반품 → 「앞범퍼(반품)」, 「패드(미개봉)」+반품 → 「패드(미개봉 · 반품)」 */
+function tagPart(part, tag) {
+  const p = String(part || '');
+  return p.endsWith(')') ? `${p.slice(0, -1)} · ${tag})` : `${p}(${tag})`;
+}
 
 /**
  * 시드 통화 하나 → calls 행 · cards 행 값. DB 를 건드리지 않는다(검사 도구 · 시험도 쓴다).
@@ -174,11 +196,41 @@ export function buildSeedCall(sc, { anchorMs, customers = [] }) {
     else if (say.delivery) warn(`delivery 근거 문장을 못 찾음(「${say.delivery}」)`);
   }
 
+  // 부품 줄 고르기: 정답 카드의 action(주문 · 취소 · 반품 · 교환 · 문의)과 car(두 번째 차)를 살린다.
+  // - 주문(또는 action 없음) 줄은 그대로.
+  // - 반품 · 교환 줄은 통화 종류가 「반품·교환」일 때만 남기고 부품 이름에 「(반품)」 등을 붙인다(기사가 회수할 물건).
+  // - 그 밖(취소 · 문의 등)은 출고할 물건이 아니므로 빼서 메모에 「취소: 라디에이터 1」처럼 적는다.
+  // - car 가 카드 차종과 다르면 부품 이름 뒤에 「(레이 TAM)」처럼 붙인다.
+  const callType0 = CALL_TYPES.includes(sc.callType || src.callType) ? (sc.callType || src.callType) : '주문';
+  const picked = [];
+  const dropped = [];
+  const itemIndex = new Map(); // 정답 카드 줄 번호 → 남은 줄 번호(들어 보기 item 에 쓴다)
+  (Array.isArray(src.items) ? src.items : []).forEach((it, i) => {
+    if (!it || typeof it !== 'object') return;
+    const action = typeof it.action === 'string' ? it.action.trim() : '';
+    let part = cleanSeedPart(it.part ?? null);
+    if (part && it.car && String(it.car) !== String(src.carModel ?? '')) part = `${part}(${it.car})`;
+    if (!action || action === '주문') {
+      itemIndex.set(i, picked.length);
+      picked.push({ it, i, part });
+    } else if ((action === '반품' || action === '교환') && callType0 === '반품·교환') {
+      itemIndex.set(i, picked.length);
+      picked.push({ it, i, part: part && !/반품|교환|회수/.test(part) ? tagPart(part, action) : part });
+    } else {
+      const qty = it.qty == null || it.qty === '' ? '' : ` ${it.qty}`;
+      const side = it.side && !String(part || '').includes(it.side) ? `${it.side} ` : '';
+      dropped.push(`${action}: ${side}${part || '부품'}${qty}`);
+    }
+  });
+  // 부품이 하나도 안 남은 「주문」 통화(취소 전화 등)는 출고할 것이 없으니 「기타」로
+  const callType = callType0 === '주문' && dropped.length && !picked.length ? '기타' : callType0;
+  const note = [cleanSeedRefs(src.note ?? null), ...dropped].filter(Boolean).join(' / ') || null;
+
   // 부품 줄: quote/at 은 부품 이름이 든 첫 문장
-  const items = (Array.isArray(src.items) ? src.items : []).map((it, i) => {
+  const items = picked.map(({ it, i, part }) => {
     const hint = (Array.isArray(say.items) && say.items[i]) || {};
     const qty = it.qty == null || it.qty === '' ? null : Number(it.qty);
-    const out = { part: it.part ?? null, side: it.side ?? null, qty: Number.isFinite(qty) ? qty : null, partNo: it.partNo ?? null, quote: null, at: null };
+    const out = { part: part ?? null, side: it.side ?? null, qty: Number.isFinite(qty) ? qty : null, partNo: it.partNo ?? null, quote: null, at: null };
     const partHit = findSeg(segs, it.quote || hint.part || stripParen(it.part)) || findSeg(segs, stripParen(it.part));
     if (partHit) {
       out.quote = partHit.seg.text;
@@ -208,6 +260,8 @@ export function buildSeedCall(sc, { anchorMs, customers = [] }) {
 
   // 들어 보기(unsure): at 은 say → 그 칸 근거 → 그 부품 줄 순서로
   const unsure = (Array.isArray(src.unsure) ? src.unsure : []).map((u) => {
+    // 부품 줄을 뺐으면 줄 번호가 바뀐다(뺀 줄을 가리키던 것은 줄 번호 없이)
+    const item = Number.isInteger(u.item) ? itemIndex.get(u.item) : undefined;
     let at = null;
     if (u.say || u.quote) {
       const hit = findSeg(segs, u.say || u.quote);
@@ -215,9 +269,9 @@ export function buildSeedCall(sc, { anchorMs, customers = [] }) {
       else warn(`들어 보기 「${u.say}」 를 못 찾음`);
     }
     if (at == null && evidence[u.field]) at = evidence[u.field].at;
-    if (at == null && Number.isInteger(u.item) && items[u.item]) at = items[u.item].at;
+    if (at == null && item != null && items[item]) at = items[item].at;
     const o = { field: u.field, reason: u.reason, at };
-    if (Number.isInteger(u.item)) o.item = u.item;
+    if (item != null) o.item = item;
     return o;
   });
 
@@ -248,11 +302,12 @@ export function buildSeedCall(sc, { anchorMs, customers = [] }) {
     fixes: Array.isArray(src.fixes) ? src.fixes : [],
     evidence,
     highlights,
-    note: src.note ?? null,
+    note,
   };
   // AI 초안 = 같은 카드. aiDraftDiff 가 있으면 그 칸만 AI 가 다르게 썼던 것으로(화면의 「고침」 표시용)
   const diff = sc.aiDraftDiff && typeof sc.aiDraftDiff === 'object' ? sc.aiDraftDiff : {};
-  const aiDraft = { ...content, ...diff };
+  // 통화 종류도 초안에 넣는다(없으면 「주문」으로 읽혀 주문이 아닌 통화마다 「고침」이 붙는다)
+  const aiDraft = { callType, ...content, ...diff };
 
   // 시각들
   const createdMs = recordedMs + Math.round(durationSec * 1000);
@@ -277,7 +332,7 @@ export function buildSeedCall(sc, { anchorMs, customers = [] }) {
     source: 'seed',
     status: 'ready',
     // 주문이 아닌 전화에 부품이 없으면 제목에 통화 종류를 쓴다(lib/cards.mjs refreshCallTitle 과 같게)
-    title: makeTitle({ customer: content.customer, items: !items.length && sc.callType && sc.callType !== '주문' ? [{ part: sc.callType }] : items, recordedAt, durationSec, source: 'seed' }),
+    title: makeTitle({ customer: content.customer, items: !items.length && callType !== '주문' ? [{ part: callType }] : items, recordedAt, durationSec, source: 'seed' }),
     customer: content.customer,
     caller_number: sc.callerNumber || null,
     duration_sec: durationSec,
@@ -285,14 +340,14 @@ export function buildSeedCall(sc, { anchorMs, customers = [] }) {
     segments: JSON.stringify(segs),
     engine: sc.audio ? SEED_ENGINE_AUDIO : SEED_ENGINE,
     is_fake: 1,
-    // 대본 안 통화 번호(c14 등)는 화면에서 뜻이 없으니 「앞 통화」로
-    summary: sc.summary ? String(sc.summary).replace(/(^|[^A-Za-z0-9])c\d{2}(?![0-9])/g, '$1앞 통화').slice(0, 160) : makeSummary(content),
+    // 대본 안 통화 번호(c14 등)는 「앞 통화」로, 굳은 날짜(10/30)는 지운다
+    summary: sc.summary ? cleanSeedRefs(sc.summary).slice(0, 160) : makeSummary(content),
     audio_file: hasAudio ? audioRel : null,
   };
   const card = {
     call_id: call.id,
     status,
-    call_type: ['주문', '배송 문의', '반품·교환', '재고·단가 문의', '기타'].includes(sc.callType || src.callType) ? (sc.callType || src.callType) : '주문',
+    call_type: callType,
     customer: content.customer,
     contact: content.contact,
     car_model: content.carModel,
@@ -399,21 +454,20 @@ export async function seedDemo({ reset = false, dir = SEED_DIR, now = new Date()
 
 /**
  * 시드 통화 자리 잡기(결정적): 시드 파일의 offsetMin(오늘 09:00 KST 기준 분)으로 시각을 다시 계산한다.
- * - 05:05 KST 뒤: 기준은 오늘 09:00. 지금 - 5분보다 늦은(미래) 통화는 [max(05:00, 지금-60분), 지금-5분] 안에 순서대로 놓는다(한밤중 시각을 만들지 않음).
- * - 05:05 KST 전(한밤중): 기준을 어제 09:00 으로(어제 하루 그대로 보이고 오늘은 아직 비어 있음).
- * 같은 날 · 같은 모드로 이미 잡았고 미래 통화가 없으면 아무것도 하지 않는다(10분마다 불러도 시각이 흔들리지 않게).
- * 카드의 확정 · 출고 시각과 제목 안 시각도 같은 만큼 옮긴다.
+ * - 08:05 KST 전(영업 전): 기준을 어제 09:00 으로 — 어제 하루가 그대로 보이고 오늘은 아직 비어 있다
+ *   (첫 화면은 「오늘은 아직 통화가 없어요 — 어제 흐름」으로 어제를 보여 준다). 새벽 시각 통화를 만들지 않는다.
+ * - 08:05 KST 뒤: 기준은 오늘 09:00. 오늘 통화 중 아직 「미래」인 것이 있으면 오늘 통화 전체를
+ *   [08:00, 지금-5분] 안으로 원래 간격 비율대로 옮긴다(업무 시각 분포 · 순서 유지). 다 지나면 원래 시각 그대로.
+ * 계산한 자리와 지금 자리가 같으면 아무것도 하지 않는다(10분마다 불러도 됨). 카드 시각 · 제목 안 시각도 같이 옮긴다.
  * @returns {number} 옮긴 통화 수
  */
-export function placeSeed({ now = new Date(), dir = SEED_DIR, force = false } = {}) {
+export function placeSeed({ now = new Date(), dir = SEED_DIR } = {}) {
   const d = db();
   const limitMs = now.getTime() - 5 * MIN;
   const today = kstDay(now);
   const dayStartMs = Date.parse(`${today}T00:00:00.000Z`) - 9 * 3600_000;
-  const early = now.getTime() < dayStartMs + 5 * 3600_000 + 5 * MIN;
-  const key = `${today}|${early ? 'yesterday' : 'today'}`;
-  const futureCount = d.prepare("SELECT COUNT(*) AS n FROM calls WHERE source = 'seed' AND recorded_at > ?").get(new Date(limitMs).toISOString()).n;
-  if (!force && getMeta('seedPlaced') === key && futureCount === 0) return 0;
+  const openMs = dayStartMs + 8 * 3600_000; // 08:00 KST
+  const early = now.getTime() < openMs + 5 * MIN;
 
   const offsets = new Map(loadSeedFiles(dir).calls.map((c) => [String(c.id), Number(c.offsetMin) || 0]));
   const anchorMs = seedAnchorMs(now) - (early ? 86_400_000 : 0);
@@ -421,10 +475,15 @@ export function placeSeed({ now = new Date(), dir = SEED_DIR, force = false } = 
     .filter((r) => offsets.has(r.id))
     .map((r) => ({ ...r, target: anchorMs + offsets.get(r.id) * MIN }))
     .sort((a, b) => a.target - b.target);
-  const future = rows.filter((r) => r.target > limitMs);
-  if (future.length) {
-    const winStart = Math.max(dayStartMs + 5 * 3600_000, limitMs - 60 * MIN);
-    future.forEach((r, i) => { r.target = winStart + Math.round(((i + 0.5) * (limitMs - winStart)) / future.length); });
+  if (!early) {
+    const todays = rows.filter((r) => r.target >= dayStartMs);
+    if (todays.length && todays[todays.length - 1].target > limitMs) {
+      const first = todays[0].target;
+      const last = todays[todays.length - 1].target;
+      const a = Math.min(openMs, first);
+      const span = Math.max(1, last - first);
+      for (const r of todays) r.target = Math.round(a + ((r.target - first) * (limitMs - a)) / span);
+    }
   }
   const mv = (iso, delta) => (iso ? new Date(Date.parse(iso) + delta).toISOString() : iso);
   let moved = 0;
@@ -434,7 +493,7 @@ export function placeSeed({ now = new Date(), dir = SEED_DIR, force = false } = 
     const upCard = db2.prepare('UPDATE cards SET created_at = ?, updated_at = ?, confirmed_at = ?, shipped_at = ? WHERE call_id = ?');
     for (const r of rows) {
       const delta = r.target - Date.parse(r.recorded_at);
-      if (!delta) continue;
+      if (Math.abs(delta) < 1000) continue;
       const at = new Date(r.target).toISOString();
       const hhmm = new Date(r.target + 9 * 3600_000).toISOString().slice(11, 16);
       const title = String(r.title || '').replace(/\b\d{2}:\d{2}\b/, hhmm);
@@ -444,7 +503,6 @@ export function placeSeed({ now = new Date(), dir = SEED_DIR, force = false } = 
       moved++;
     }
   });
-  setMeta('seedPlaced', key);
   return moved;
 }
 
