@@ -177,11 +177,12 @@ def to_8k(x: np.ndarray) -> np.ndarray:
     return band(x, 1, 3800)[::2]  # 3.8kHz 아래만 남기고 반으로 솎는다
 
 
-def phone_mix(dealer: np.ndarray, shop: np.ndarray, rng, *, lo=300, hi=3400, hiss=0.025, drops=0):
+def phone_mix(dealer: np.ndarray, shop: np.ndarray, rng, *, lo=300, hi=3400, hiss=0.035, drops=0):
     """두 쪽을 전화 회선에 태워 섞고 8kHz mu-law 로 만든다. (모노, 스테레오) 를 돌려준다.
 
     hiss(선로 잡음)를 너무 작게(0.006) 두면 Whisper 의 무음 거르기(Silero VAD, 기본 0.5)가
-    말까지 무음으로 보고 버린다(54건 중 절반이 첫 마디만 남음). 0.025 면 거의 다 살아난다.
+    말까지 무음으로 보고 버린다(54건 중 절반이 첫 마디만 남음). 0.035 면 일반 통화는 거의 다 살아난다
+    (공장소리 통화는 여전히 일부를 놓친다 — 현실에서도 어려운 경우라 시험거리로 둔다).
     """
     d = line(dealer, lo, hi, 1.6)
     s = line(shop, lo + 20, hi - 100, 2.2)

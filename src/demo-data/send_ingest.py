@@ -7,6 +7,9 @@
     python send_ingest.py --only c02                      # 한 건 시험
     python send_ingest.py --all                           # 54건 전부(빈도 제한을 지키며 천천히)
     python send_ingest.py --only c02 --dry-run            # 보낼 내용만 출력
+    python send_ingest.py --all --export ~/.t07-demo-audio/ingest
+        # 보내지 않고, 녹음 폴더 감시 프로그램(tools/folder-sender.mjs)이 먹는 모양으로 복사만 한다:
+        # fx-cNN_01000000101.wav (밑줄 뒤 = 걸려 온 번호), 파일 수정 시각 = 오늘 기준 통화 시각
 
 토큰은 환경변수 INGEST_TOKEN, 또는 --token-file(기본 ~/.t07-secrets/ingest.env)의 `INGEST_TOKEN=...` 줄에서 읽는다.
 그 파일에 `SERVER_URL=...` 이 있으면 --url 을 주지 않았을 때 그 주소로 보낸다.
@@ -70,6 +73,7 @@ def main() -> None:
     ap.add_argument("--token-file")
     ap.add_argument("--gap", type=float, default=2.0, help="보내기 사이 쉬는 초(빈도 제한)")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--export", default="", help="보내지 않고 이 폴더에 fx-cNN_번호.wav 로 복사")
     args = ap.parse_args()
     if not args.only and not args.all:
         raise SystemExit("--only c02,c03 또는 --all 을 주세요.")
@@ -79,12 +83,26 @@ def main() -> None:
         keep = set(args.only.split(","))
         calls = [c for c in calls if c["id"] in keep]
     today = datetime.now(KST).date()
+    ext = "mp3" if args.kind == "web" else "wav"
+    if args.export:
+        dest = Path(args.export).expanduser()
+        dest.mkdir(parents=True, exist_ok=True)
+        for c in calls:
+            src = Path(args.audio) / args.kind / f"{c['id']}.{ext}"
+            if not src.exists():
+                print(f"{c['id']}: 파일 없음 {src}")
+                continue
+            out = dest / f"fx-{c['id']}_{c['phone'].replace('-', '')}.{ext}"
+            out.write_bytes(src.read_bytes())
+            t = datetime.fromisoformat(recorded_at(c, today)).timestamp()
+            os.utime(out, (t, t))
+        print(f"{len(calls)}건 → {dest}")
+        return
     env = read_env(args.token_file)
     url = args.url or env.get("SERVER_URL") or DEFAULT_URL
     token = env.get("INGEST_TOKEN")
     if not token and not args.dry_run:
         raise SystemExit("INGEST_TOKEN 이 없습니다(환경변수 또는 --token-file).")
-    ext = "mp3" if args.kind == "web" else "wav"
 
     for c in calls:
         path = Path(args.audio) / args.kind / f"{c['id']}.{ext}"
