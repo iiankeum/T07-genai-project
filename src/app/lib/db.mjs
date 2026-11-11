@@ -53,11 +53,14 @@ CREATE TABLE IF NOT EXISTS cards(
   items TEXT NOT NULL DEFAULT '[]',     -- JSON [{part, qty, part_no, quote, at}]
   urgent INTEGER NOT NULL DEFAULT 0,
   due TEXT,
+  delivery TEXT,                        -- 배송/퀵/직접 수령 등
   ask_back TEXT NOT NULL DEFAULT '[]',  -- JSON [string]
   unsure TEXT NOT NULL DEFAULT '[]',    -- JSON [{field, reason, at}]
   fixes TEXT NOT NULL DEFAULT '[]',     -- JSON [{heard, fixed}]
+  evidence TEXT NOT NULL DEFAULT '{}',  -- JSON {customer:{quote,at}, carModel:{...}, plate, urgent, due, delivery}
   highlights TEXT NOT NULL DEFAULT '[]',-- JSON [{text, kind}]
   note TEXT,
+  customer_by_phone INTEGER NOT NULL DEFAULT 0, -- F11 걸려 온 번호로 맞춤
   callback INTEGER NOT NULL DEFAULT 0,  -- 다시 전화할 곳
   callback_reason TEXT,
   ai_draft TEXT,                        -- JSON: AI 가 처음 만든 카드(고치기 전)
@@ -96,9 +99,10 @@ CREATE TABLE IF NOT EXISTS glossary(
   kind TEXT NOT NULL,                   -- 현장말 | 오인식 | 거래처 | 차종
   term TEXT NOT NULL,                   -- 현장 말 / 틀린 말 / 거래처 이름 / 차종
   standard TEXT,                        -- 표준 말 / 바른 말 / (거래처) 메모
+  phone TEXT,                           -- 거래처의 (가짜) 전화번호, F11
   note TEXT,
   status TEXT NOT NULL DEFAULT 'approved', -- approved | pending
-  source TEXT,
+  source TEXT,                          -- 기본 | 사용자
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );

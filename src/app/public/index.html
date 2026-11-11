@@ -4,13 +4,39 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>콜노트(가칭) — 전화 주문 받아쓰기 데모</title>
+<meta name="description" content="자동차 부품 대리점의 전화 주문을 받아쓰고 주문 카드로 정리하는 데모. 모든 통화는 가짜입니다.">
 <meta name="theme-color" content="#7863da">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/css/app.css">
+<script type="module" src="/js/app.js"></script>
 </head>
 <body>
-<main style="font-family:system-ui,sans-serif;max-width:640px;margin:48px auto;padding:0 20px;line-height:1.7;font-size:18px">
-<p style="background:#fcf5e9;padding:10px 14px;border-radius:10px">가짜 통화 데모 · 준비 중</p>
-<h1>콜노트(가칭)</h1>
-<p>자동차 부품 대리점의 전화 주문을 받아쓰고 주문 카드로 정리하는 데모 사이트를 만들고 있습니다.</p>
-</main>
+<a class="skip-link" href="#view">본문으로 건너뛰기</a>
+<div class="fake-banner" role="note"><strong>가짜 통화 데모</strong><span>화면의 거래처·차번호·전화번호·품번은 모두 지어낸 것입니다. 실제 녹음은 올리지 마세요.</span></div>
+<header class="topbar">
+  <a class="brand" href="#/" aria-label="콜노트 첫 화면"><span class="brandmark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="brand-name">콜노트</span><span class="brand-tag">가칭 · 데모</span></a>
+  <div class="topbar-right">
+    <a class="worker-pill" id="workerPill" href="#/upload" title="받아쓰기 일꾼 상태"><span class="dot"></span><span class="worker-text">일꾼 확인 중</span></a>
+    <button class="btn btn-ghost btn-sm" id="bigTextBtn" type="button" aria-pressed="false">글씨 크게</button>
+  </div>
+</header>
+<div class="layout">
+  <nav class="sidenav" id="sideNav" aria-label="메뉴"></nav>
+  <main id="view" class="view" tabindex="-1" aria-live="polite"><div class="page"><p class="loading">불러오는 중…</p></div></main>
+</div>
+<nav class="tabbar" id="tabBar" aria-label="아래 메뉴"></nav>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<dialog id="confirmDialog" class="confirm-dialog">
+  <form method="dialog">
+    <p id="confirmText"></p>
+    <div class="dialog-actions"><button class="btn btn-ghost" value="no" type="submit">아니오</button><button class="btn btn-primary" value="yes" type="submit">예</button></div>
+  </form>
+</dialog>
+<noscript><div class="page"><p>이 사이트는 자바스크립트가 켜져 있어야 동작합니다.</p></div></noscript>
 </body>
 </html>
