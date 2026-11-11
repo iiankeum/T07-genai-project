@@ -1,0 +1,3 @@
+# /etc/sudoers.d/callnote-deploy (0440) — 배포 사용자가 할 수 있는 root 일은 이 두 가지뿐
+Defaults:callnote-deploy !requiretty
+callnote-deploy ALL=(root) NOPASSWD: /usr/bin/systemctl restart callnote-app.service, /usr/local/lib/callnote-deploy/applog.sh
