@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}주문 카드 #{{ r.id }}{% endblock %}
+{% block body %}
+{% set c = r.card %}
+<p><a href="{{ url_for('index', date=r.call_date) }}">← {{ r.call_date }} 목록</a></p>
+<div class="detail">
+  <form method="post" class="panel card-form">
+    <div class="card-head">
+      <h2>주문 카드 #{{ r.id }}</h2>
+      <span class="badge {{ r.status }}">{{ STATUS_LABELS[r.status] }}</span>
+      <span class="time">{{ r.call_date }} {{ r.call_time }} · {{ r.source_name }}</span>
+    </div>
+    <p class="hint">AI가 만든 초안입니다. 고칠 곳을 고치고 <b>품번</b>을 넣은 뒤 확정하세요.
+      {% if r.edited %}<span class="badge edited">담당자 수정함</span>{% endif %}</p>
+
+    <div class="grid">
+      <label>거래처 <input name="customer" value="{{ c.customer }}"></label>
+      <label>차종 <input name="vehicle_model" value="{{ c.vehicle_model }}"></label>
+      <label>연식 <input name="vehicle_year" value="{{ c.vehicle_year }}"></label>
+      <label>차번호 <input name="plate" value="{{ c.plate }}"></label>
+    </div>
+
+    <table class="items-table">
+      <thead><tr><th>위치</th><th>부품</th><th>수량</th><th>품번 (사람이 입력)</th><th>근거 발화</th><th>삭제</th></tr></thead>
+      <tbody>
+      {% for it in c.items + [none, none] %}
+        {% set i = loop.index0 %}
+        <tr class="{{ 'new' if it is none }}">
+          <td><input name="items-{{ i }}-position" value="{{ it.position if it }}" size="5"></td>
+          <td><input name="items-{{ i }}-part" value="{{ it.part if it }}" placeholder="{{ '부품 추가' if it is none }}"></td>
+          <td><input name="items-{{ i }}-quantity" value="{{ it.quantity if it and it.quantity is not none }}" size="3" inputmode="numeric"></td>
+          <td><input name="items-{{ i }}-part_number" value="{{ it.part_number if it }}" class="pn"></td>
+          <td class="evidence">{{ it.evidence if it }}<input type="hidden" name="items-{{ i }}-evidence" value="{{ it.evidence if it }}"></td>
+          <td>{% if it %}<input type="checkbox" name="items-{{ i }}-delete">{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="grid">
+      <label class="check"><input type="checkbox" name="urgent" {{ 'checked' if c.urgent }}> 급함</label>
+      <label>언제까지 <input name="due" value="{{ c.due }}"></label>
+      <label>받는 방법 <input name="delivery" value="{{ c.delivery }}" placeholder="퀵 / 배달 / 직접 수령"></label>
+    </div>
+    <label>☎ 다시 물어볼 것 (한 줄에 하나)
+      <textarea name="follow_ups" rows="3">{{ c.follow_ups|join('\n') }}</textarea></label>
+    <label>메모 <textarea name="memo" rows="2">{{ c.memo }}</textarea></label>
+
+    <div class="actions">
+      <button name="action" value="save">저장</button>
+      {% if r.status == 'draft' %}
+        <button name="action" value="confirm" class="primary">확정</button>
+      {% elif r.status == 'confirmed' %}
+        <button name="action" value="ship" class="primary">출고 완료</button>
+        <button name="action" value="reopen" class="ghost">확정 취소</button>
+      {% else %}
+        <button name="action" value="reopen" class="ghost">다시 열기</button>
+      {% endif %}
+      {% if r.status != 'canceled' %}<button name="action" value="cancel" class="ghost danger">주문 취소</button>{% endif %}
+    </div>
+  </form>
+
+  <aside class="panel transcript">
+    <h3>통화 내용</h3>
+    {% if r.audio_path %}<audio controls src="{{ url_for('audio', card_id=r.id) }}"></audio>{% endif %}
+    <pre>{{ r.transcript }}</pre>
+    {% if r.transcript_raw != r.transcript %}
+      <details><summary>음성 인식 원문 보기</summary><pre class="raw">{{ r.transcript_raw }}</pre></details>
+    {% endif %}
+    {% if r.warnings %}<ul class="warnings">{% for w in r.warnings %}<li>{{ w }}</li>{% endfor %}</ul>{% endif %}
+    <p class="muted small">추출: {{ r.extractor }}</p>
+    {% if r.edited %}
+      <details><summary>AI 초안과 비교</summary>
+        <pre class="raw">{{ r.ai_card.to_dict()|pretty }}</pre></details>
+    {% endif %}
+    <form method="post" action="{{ url_for('delete_card', card_id=r.id) }}" onsubmit="return confirm('이 카드를 지울까요?')">
+      <button class="link danger">카드 지우기</button>
+    </form>
+  </aside>
+</div>
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block body %}
+<section class="panel upload">
+  <form action="{{ url_for('upload') }}" method="post" enctype="multipart/form-data">
+    <label class="drop">
+      <input type="file" name="files" multiple accept=".wav,.mp3,.m4a,.ogg,.webm,.flac,.aac,.amr,.3gp,.txt,.md">
+      <span>통화 녹음(mp3·m4a·wav…) 또는 받아쓴 글(.txt)을 고르세요</span>
+    </label>
+    <button class="primary">주문 카드 만들기</button>
+  </form>
+  <form action="{{ url_for('load_samples') }}" method="post" class="inline">
+    <button class="ghost" title="팀원이 만든 가짜 주문 통화">가짜 주문 통화 불러오기</button>
+  </form>
+</section>
+
+<section class="toolbar">
+  <form method="get">
+    <select name="date" onchange="this.form.submit()">
+      {% for d in dates %}<option value="{{ d }}" {{ 'selected' if d == day }}>{{ d }}</option>{% endfor %}
+    </select>
+    <select name="status" onchange="this.form.submit()">
+      <option value="">전체 상태</option>
+      {% for k, v in STATUS_LABELS.items() %}<option value="{{ k }}" {{ 'selected' if k == status }}>{{ v }}</option>{% endfor %}
+    </select>
+  </form>
+  <span class="count">{{ records|length }}건</span>
+</section>
+
+{% if not records %}
+  <p class="empty">이 날짜에 주문 카드가 없습니다. 위에서 녹음을 올리거나 가짜 주문 통화를 불러와 보세요.</p>
+{% endif %}
+
+<div class="cards">
+{% for r in records %}
+  {% set c = r.card %}
+  <a class="card status-{{ r.status }}" href="{{ url_for('card', card_id=r.id) }}">
+    <div class="card-head">
+      <span class="badge {{ r.status }}">{{ STATUS_LABELS[r.status] }}</span>
+      {% if c.urgent %}<span class="badge urgent">급함{% if c.due %} · {{ c.due }}{% endif %}</span>{% endif %}
+      <span class="time">#{{ r.id }} · {{ r.call_time }}</span>
+    </div>
+    <h3>{{ c.customer or '거래처 미상' }}</h3>
+    <p class="car">{{ c.vehicle_model or '차종 미상' }} {{ c.vehicle_year }} {{ c.plate }}</p>
+    <ul class="items">
+      {% for it in c.items %}
+        <li>{{ it.position }} <b>{{ it.part }}</b> × {{ it.quantity if it.quantity is not none else '?' }}
+          {% if it.part_number %}<code>{{ it.part_number }}</code>{% endif %}</li>
+      {% else %}<li class="muted">부품 미상</li>{% endfor %}
+    </ul>
+    {% if c.follow_ups and r.status == 'draft' %}
+      <p class="ask">☎ 다시 물어볼 것 {{ c.follow_ups|length }}</p>
+    {% endif %}
+  </a>
+{% endfor %}
+</div>
+{% endblock %}

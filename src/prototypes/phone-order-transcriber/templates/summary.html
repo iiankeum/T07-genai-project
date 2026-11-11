@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{{ day }} 마감 요약{% endblock %}
+{% block body %}
+<section class="toolbar">
+  <form method="get">
+    <input type="date" name="date" value="{{ day }}" onchange="this.form.submit()">
+  </form>
+</section>
+<div class="stats">
+  <div class="stat"><b>{{ s.total }}</b><span>오늘 주문</span></div>
+  <div class="stat warn"><b>{{ s.pending|length }}</b><span>아직 확정 안 됨</span></div>
+  <div class="stat danger"><b>{{ s.urgent_pending|length }}</b><span>급한데 미출고</span></div>
+  <div class="stat"><b>{{ s.callbacks|length }}</b><span>다시 전화할 곳</span></div>
+</div>
+
+<div class="detail">
+  <section class="panel">
+    <h3>☎ 다시 전화할 곳</h3>
+    {% for who, asks in s.callbacks.items() %}
+      <p><b>{{ who }}</b></p><ul>{% for a in asks %}<li>{{ a }}</li>{% endfor %}</ul>
+    {% else %}<p class="muted">없음</p>{% endfor %}
+
+    <h3>아직 처리 안 된 주문</h3>
+    <ul>
+    {% for r in s.pending %}
+      <li><a href="{{ url_for('card', card_id=r.id) }}">#{{ r.id }} {{ r.call_time }} {{ r.card.customer or '거래처 미상' }}</a>
+        {% if r.card.urgent %}<span class="badge urgent">급함</span>{% endif %}</li>
+    {% else %}<li class="muted">없음</li>{% endfor %}
+    </ul>
+  </section>
+  <aside class="panel">
+    <h3>복사해서 공유하기</h3>
+    <textarea readonly rows="18" onclick="this.select()">{{ s.to_text() }}</textarea>
+  </aside>
+</div>
+{% endblock %}

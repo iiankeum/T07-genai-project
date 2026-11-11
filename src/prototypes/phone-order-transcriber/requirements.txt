@@ -1,0 +1,10 @@
+# 기본 (API 키 없이 규칙 기반으로 동작)
+flask>=3.0
+python-dotenv>=1.0
+
+# 선택: 녹음 파일 음성 인식 — 둘 중 하나만 설치
+# faster-whisper>=1.0   # PC 안에서 처리 (STT_BACKEND=faster-whisper)
+# openai>=1.40          # OpenAI 음성 인식 API (STT_BACKEND=openai)
+
+# 개발·테스트
+pytest>=8.0

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}전화 주문 받아쓰기{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="{{ url_for('index') }}">📞 전화 주문 받아쓰기 <small>프로토타입</small></a>
+  <nav>
+    <a href="{{ url_for('index') }}">주문 카드</a>
+    <a href="{{ url_for('summary') }}">오늘 마감 요약</a>
+  </nav>
+  <span class="engine" title=".env에서 바꿀 수 있음">음성 인식: <b>{{ settings.stt_backend }}</b> · 주문 추출: <b>{{ settings.llm_provider }}</b></span>
+</header>
+<main>
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% for cat, m in msgs %}<div class="flash {{ cat }}">{{ m }}</div>{% endfor %}
+  {% endwith %}
+  {% block body %}{% endblock %}
+</main>
+</body>
+</html>
