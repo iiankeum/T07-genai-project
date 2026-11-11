@@ -167,6 +167,16 @@ while True:
         post(f"/api/worker/jobs/{job['jobId']}/fail", {"error": str(e)[:300], "retryable": True})
 ```
 
+## 구현에서 정해진 것(v1.1 보탬 — 호환됨)
+
+- claim 의 `audioUrl` 에는 `?worker=<이름>` 이 붙는다. 오디오 받기는 그 일감을 임대한 일꾼만, 임대 기한 안에서만 된다(`X-Worker` 헤더도 됨).
+- claim 응답에 `attempt`(몇 번째 시도) 칸이 있다.
+- 다시 줄에 선 일감은 「마지막으로 가져간 시각」 기준으로 줄 뒤에 선다.
+- 실패했던 통화를 같은 파일로 다시 ingest 하면 `200 {status:"duplicate", requeued:true}` 로 다시 줄에 선다.
+- ingest 빈도 제한: IP 당 10분 300번 · 하루 1000건.
+- 시드(가짜 대본) 통화에 합성 음성을 붙이는 관리 주소: `POST /api/admin/seed-audio` (Bearer INGEST_TOKEN, multipart `callId` · `file`). 도구: `tools/attach-seed-audio.mjs`.
+
 ## 바뀐 기록
+- v1.1 (2026-11-11 23:30) — 위 「구현에서 정해진 것」 보탬. 일꾼 쪽 바꿀 것 없음.
 
 - v1 (2026-11-11) — 첫 확정. 초안 v0 에서 바꾼 점: claim 응답에 `callId · audioSha256 · durationSec · initialPrompt · carModels · leaseSec` 추가, `GET /api/worker/status` 추가, ingest 에 `fake` · `title` 추가, 중복 파일은 `200 duplicate`.

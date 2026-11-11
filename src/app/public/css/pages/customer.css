@@ -1,0 +1,26 @@
+/* 거래처별 모아 보기(F13) */
+.cust-head h1 { font-size: 1.7rem; }
+.cust-metrics { margin-bottom: 6px; }
+@media (min-width: 720px) { .cust-metrics { grid-template-columns: repeat(4, 1fr); } }
+.cust-metrics .metric-num { display: block; }
+.cust-metrics .metric-label { display: block; }
+.cust-last { margin: 0 0 14px; color: var(--muted); font-size: .92rem; }
+.cust-bar { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 10px 16px; margin-bottom: 14px; }
+.cust-pick { flex: 1 1 260px; max-width: 420px; margin: 0; }
+.cust-order { display: flex; gap: 6px; flex-wrap: wrap; }
+.cust-order .tab { min-height: 48px; padding: 8px 14px; font-size: .95rem; }
+
+.cust-day { margin: 0 0 18px; }
+.cust-day-h { display: flex; align-items: baseline; gap: 8px; margin: 0 0 8px; font-size: 1.12rem; }
+.cust-day-n { color: var(--muted); font-size: .88rem; font-weight: 600; }
+
+.cust-call > span { display: block; }
+.cust-call .cc-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.cc-title { font-size: 1.05rem; line-height: 1.4; }
+.cc-parts { margin-top: 4px; font-size: 1rem; }
+.cc-car { color: var(--ink-2); }
+.cust-call .cc-flags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.cust-call .cc-ask { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin-top: 6px; padding: 8px 10px; background: #fffaf0; border: 1px solid var(--warn-line); border-radius: 10px; }
+.cc-ask-label { color: var(--warn); font-size: .82rem; font-weight: 800; }
+.cc-q { font-weight: 600; }
+.cc-meta { margin-top: 6px; color: var(--muted); font-size: .88rem; }

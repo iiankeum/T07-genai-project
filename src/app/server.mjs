@@ -9,6 +9,7 @@ import { config, APP_DIR } from './lib/config.mjs';
 import { db } from './lib/db.mjs';
 import { Router, HttpError, sendJson, clientIp } from './lib/http.mjs';
 import { securityHeaders, checkOrigin } from './lib/security.mjs';
+import { countVisit, cleanSrc } from './lib/visits.mjs';
 
 const PUBLIC_DIR = path.join(APP_DIR, 'public');
 const ROUTES_DIR = path.join(APP_DIR, 'routes');
@@ -67,7 +68,8 @@ function serveStatic(req, res, pathname) {
     res.writeHead(200, {
       'Content-Type': MIME[ext] || 'application/octet-stream',
       'Content-Length': st.size,
-      'Cache-Control': ext === '.html' || ext === '.webmanifest' || file.endsWith('sw.js') ? 'no-cache' : 'public, max-age=300, must-revalidate',
+      // 빌드 없이 파일을 그대로 내므로 배포 직후 옛 js · css 가 섞이지 않게 늘 다시 확인(ETag 로 304)
+      'Cache-Control': ['.png', '.jpg', '.jpeg', '.webp', '.ico', '.woff2', '.svg'].includes(ext) ? 'public, max-age=86400' : 'no-cache',
       ETag: etag,
     });
     if (req.method === 'HEAD') { res.end(); return true; }
@@ -106,13 +108,22 @@ export function createApp(router) {
         return;
       }
       if (req.method !== 'GET' && req.method !== 'HEAD') throw new HttpError(405, 'method_not_allowed', '허용하지 않는 방식입니다.');
+      // 방문 수(숫자만): 소개 페이지 · 데모 첫 화면
+      if (req.method === 'GET') {
+        if (pathname === '/intro/' || pathname === '/intro/index.html') countVisit('intro', cleanSrc(url.searchParams.get('src')), clientIp(req));
+        else if (pathname === '/' || pathname === '/index.html') countVisit('demo', cleanSrc(url.searchParams.get('src')) || (url.searchParams.get('from') === 'intro' ? 'intro' : ''), clientIp(req));
+      }
       if (serveStatic(req, res, pathname)) return;
       // 모르는 화면 주소는 첫 화면으로(해시 라우팅이라 보통 생기지 않음)
       if (!path.extname(pathname) && serveStatic(req, res, '/')) return;
       throw new HttpError(404, 'not_found', '없는 주소입니다.');
     } catch (err) {
       const status = err instanceof HttpError ? err.status : 500;
-      if (status >= 500) console.error(`[error] ${req.method} ${pathname}:`, err?.stack || err);
+      if (err instanceof HttpError) {
+        if (status >= 500) console.warn(`[http] ${status} ${err.code} ${req.method} ${pathname}`);
+      } else {
+        console.error(`[error] ${req.method} ${pathname}:`, err?.stack || err);
+      }
       if (!res.headersSent) {
         sendJson(res, status, {
           error: err instanceof HttpError ? err.code : 'server_error',

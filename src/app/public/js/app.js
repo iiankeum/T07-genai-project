@@ -49,8 +49,12 @@ let seq = 0;
 const loadedCss = new Set();
 
 function parseHash() {
-  const h = decodeURIComponent(location.hash.replace(/^#/, '')) || '/';
-  const [path, qs] = h.split('?');
+  const h = location.hash.replace(/^#/, '') || '/';
+  const qi = h.indexOf('?');
+  const rawPath = qi >= 0 ? h.slice(0, qi) : h;
+  const qs = qi >= 0 ? h.slice(qi + 1) : '';
+  let path;
+  try { path = rawPath.split('/').map((p) => decodeURIComponent(p)).join('/'); } catch { path = rawPath; }
   const query = Object.fromEntries(new URLSearchParams(qs || ''));
   for (const r of ROUTES) {
     const m = r.re.exec(path);
@@ -78,14 +82,14 @@ const isActive = (item, page) => (Array.isArray(item.page) ? item.page.includes(
 function renderNav(page) {
   render(document.getElementById('sideNav'), html`
     <ul>${NAV.map((n) => html`<li><a class="nav-link ${isActive(n, page) ? 'active' : ''}" href="${n.href}" ${isActive(n, page) ? html`aria-current="page"` : ''}><span class="nav-icon" aria-hidden="true">${n.icon}</span><span>${n.label}</span></a></li>`)}</ul>
-    <div class="sidenav-foot"><a href="#/admin" class="nav-small">관리자</a><a href="/intro/" class="nav-small">소개 페이지</a></div>`);
+    <div class="sidenav-foot"><a href="#/admin" class="nav-small">관리자</a><a href="/intro/#signup" class="nav-small">소개 · 무료 체험 신청</a></div>`);
   render(document.getElementById('tabBar'), html`${TABS.map((t) => html`<a class="tab-link ${isActive(t, page) ? 'active' : ''}" href="${t.href}" ${isActive(t, page) ? html`aria-current="page"` : ''}><span class="tab-icon" aria-hidden="true">${t.icon}</span><span>${t.label}</span></a>`)}`);
 }
 
 function renderMore(el) {
   render(el, html`<div class="page">
     <div class="page-head"><h1>더보기</h1></div>
-    <ul class="menu-list">${NAV.filter((n) => !['today', 'live', 'ask'].includes(n.page) && !Array.isArray(n.page)).concat([{ href: '#/admin', label: '관리자', icon: '⚙' }, { href: '/intro/', label: '소개 페이지', icon: '★' }]).map((n) => html`<li><a class="menu-link" href="${n.href}"><span class="nav-icon" aria-hidden="true">${n.icon}</span><span>${n.label}</span><span class="menu-arrow" aria-hidden="true">›</span></a></li>`)}</ul>
+    <ul class="menu-list">${NAV.filter((n) => !['today', 'live', 'ask'].includes(n.page) && !Array.isArray(n.page)).concat([{ href: '#/admin', label: '관리자', icon: '⚙' }, { href: '/intro/#signup', label: '소개 페이지 · 무료 체험 신청', icon: '★' }]).map((n) => html`<li><a class="menu-link" href="${n.href}"><span class="nav-icon" aria-hidden="true">${n.icon}</span><span>${n.label}</span><span class="menu-arrow" aria-hidden="true">›</span></a></li>`)}</ul>
   </div>`);
 }
 

@@ -47,7 +47,8 @@ export function makeTitle({ customer, items, recordedAt, durationSec, source }) 
   return bits.join(' · ');
 }
 
-const CARD_FIELDS = ['customer', 'contact', 'carModel', 'modelYear', 'plate', 'items', 'urgent', 'due', 'delivery', 'askBack', 'note'];
+export const CALL_TYPES = ['주문', '배송 문의', '반품·교환', '재고·단가 문의', '기타'];
+const CARD_FIELDS = ['callType', 'customer', 'contact', 'carModel', 'modelYear', 'plate', 'items', 'urgent', 'due', 'delivery', 'askBack', 'note'];
 
 /** 카드 행 → API 모양 */
 export function cardView(row) {
@@ -55,6 +56,7 @@ export function cardView(row) {
   const card = {
     status: row.status,
     statusLabel: CARD_STATUS_LABEL[row.status] || row.status,
+    callType: row.call_type || '주문',
     customer: row.customer ?? null,
     customerByPhone: Boolean(row.customer_by_phone),
     contact: row.contact ?? null,
@@ -103,6 +105,7 @@ function normalizeForCompare(field, v) {
     return JSON.stringify((Array.isArray(v) ? v : []).map((i) => [i?.part ?? null, i?.side ?? null, i?.qty ?? null, i?.partNo ?? null]));
   }
   if (field === 'urgent') return v ? '1' : '0';
+  if (field === 'callType') return v || '주문';
   if (field === 'askBack') return JSON.stringify(Array.isArray(v) ? v : []);
   return v == null || v === '' ? '' : String(v);
 }

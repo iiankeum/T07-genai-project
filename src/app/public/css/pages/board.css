@@ -1,0 +1,36 @@
+/* 주문 카드 보드(F06): 좁은 화면은 위 탭으로 칸 하나, 넓은 화면(1100px~)은 세 칸 나란히 */
+.board-tabs .tab { min-height: 48px; padding: 8px 16px; font-size: 1rem; }
+.board-grid { display: grid; gap: 14px; }
+.board-col { display: none; min-width: 0; background: #f6f4fc; border: 1px solid #ebe6f8; border-radius: var(--radius); padding: 12px; }
+.board-col.is-active { display: block; }
+.board-col-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 2px 4px 2px; font-size: 1.15rem; }
+.board-count { display: inline-flex; align-items: center; justify-content: center; min-width: 34px; height: 34px; padding: 0 10px; border-radius: 999px; background: #fff; border: 1px solid var(--line); font-size: .95rem; }
+.board-col-draft .board-col-head { color: var(--warn); }
+.board-col-confirmed .board-col-head { color: var(--ok); }
+.board-col-shipped .board-col-head { color: #3a4a7a; }
+.board-col-hint { margin: 0 4px 12px; color: var(--muted); font-size: .88rem; }
+.board-empty { margin: 8px 0; padding: 24px 12px; text-align: center; color: var(--muted); background: #fff; border: 1px dashed var(--line); border-radius: var(--radius-sm); }
+.board-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.board-more { margin-top: 10px; }
+.board-note { margin: 14px 0 0; color: var(--muted); font-size: .92rem; }
+
+/* 카드 조각 */
+.bcard { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.bcard-urgent { border-left: 5px solid #d9480f; }
+.bcard-main { display: block; padding: 14px 14px 10px; color: inherit; text-decoration: none; }
+.bcard-main:hover { background: #faf9fe; }
+.bcard-main > span { display: block; }
+.bcard-top { display: flex !important; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.bcard-customer { font-size: 1.12rem; line-height: 1.35; }
+.bcard-car { margin-top: 2px; color: var(--ink-2); font-weight: 600; }
+.bcard-parts { margin-top: 6px; font-size: 1.02rem; }
+.bcard-flags { display: flex !important; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.bcard-when { margin-top: 8px; color: var(--muted); font-size: .88rem; }
+.bcard-actions { padding: 0 14px 14px; }
+.chip-ask { color: #7a5200; background: #fff1c7; border-color: #f0d9a8; }
+
+@media (min-width: 1100px) {
+  .board-tabs { display: none; }
+  .board-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; }
+  .board-col { display: block; }
+}

@@ -1,0 +1,52 @@
+/* 도움말 화면 */
+.help-page .card + .card, .help-page .card + .help-sec, .help-page .help-sec + .card, .help-page .notice + .help-sec { margin-top: 18px; }
+.help-page .card { margin-bottom: 0; }
+.help-page h2 { font-size: 1.25rem; }
+.help-page p { margin: 0 0 10px; }
+.help-sec { margin-top: 18px; }
+.help-note { color: var(--ink-2); font-size: .95rem; }
+.help-fake { margin: 18px 0 0; font-size: 1rem; line-height: 1.7; }
+
+/* 흐름 1~5 */
+.help-flow { list-style: none; margin: 12px 0 14px; padding: 0; display: grid; gap: 8px; }
+.help-flow li { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; background: var(--brand-soft); border-radius: var(--radius-sm); }
+.help-flow li > span:last-child { display: flex; flex-direction: column; color: var(--ink-2); font-size: .92rem; }
+.help-flow strong { color: var(--ink); font-size: 1.02rem; }
+.hf-n { flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--brand); color: #fff; font-weight: 800; }
+@media (min-width: 720px) { .help-flow { grid-template-columns: repeat(5, minmax(0, 1fr)); } .help-flow li { flex-direction: column; } }
+
+/* 기능 표 */
+.help-table { font-size: .98rem; }
+.help-table th[scope="row"] { white-space: normal; background: #fff; font-size: 1rem; color: var(--ink); min-width: 150px; }
+.help-fid { display: inline-block; margin-right: 6px; padding: 0 8px; border-radius: 999px; background: var(--brand-soft); color: var(--brand-ink); font-size: .8rem; font-weight: 800; }
+.help-fname { font-weight: 700; }
+.help-where { width: 1%; white-space: nowrap; }
+.help-go { min-height: 48px; padding: 8px 14px; font-size: .95rem; }
+.help-desc { color: var(--ink-2); }
+@media (max-width: 719px) {
+  .help-table-wrap { border: 0; background: transparent; overflow: visible; }
+  .help-table thead { display: none; }
+  .help-table, .help-table tbody, .help-table tr, .help-table th, .help-table td { display: block; width: auto; }
+  .help-table tr { margin: 0 0 10px; padding: 12px 14px; background: #fff; border: 1px solid var(--line); border-radius: var(--radius); }
+  .help-table th[scope="row"], .help-table td { padding: 0; border: 0; min-width: 0; }
+  .help-table .help-desc { margin: 6px 0 10px; }
+  .help-table .help-where { order: 3; white-space: normal; }
+  .help-table tr { display: flex; flex-direction: column; }
+  .help-go { width: 100%; }
+}
+
+.help-list { margin: 0; padding-left: 1.2em; }
+.help-list li { margin: 0 0 10px; line-height: 1.7; }
+.help-now { display: inline-block; padding: 4px 12px; border-radius: 999px; background: #f3f2f9; color: var(--ink-2); font-size: .88rem; font-weight: 600; }
+
+/* 홈 화면에 추가 */
+.help-two { display: grid; gap: 12px; }
+.help-two .card + .card { margin-top: 0; }
+@media (min-width: 720px) { .help-two { grid-template-columns: 1fr 1fr; } }
+.help-step h3 { font-size: 1.08rem; color: var(--brand-ink); }
+.help-step ol { margin: 0; padding-left: 1.3em; }
+.help-step li { margin: 0 0 6px; }
+
+.help-big .btn { margin: 4px 0 12px; }
+.help-links { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 599px) { .help-links .btn { flex: 1 1 100%; } .help-big .btn { width: 100%; } }

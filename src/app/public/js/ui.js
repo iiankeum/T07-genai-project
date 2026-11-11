@@ -30,26 +30,27 @@ export function render(el, safe) {
 // ── 시간 · 숫자 ────────────────────────────────────────────────────
 const KST = 9 * 3600_000;
 const kst = (iso) => new Date(Date.parse(iso) + KST);
+const badIso = (iso) => !iso || Number.isNaN(Date.parse(iso));
 export function kstDay(date = new Date()) {
   return new Date(date.getTime() + KST).toISOString().slice(0, 10);
 }
 /** 「오후 2:42」 */
 export function fmtClock(iso) {
-  if (!iso) return '';
+  if (badIso(iso)) return '';
   const d = kst(iso);
   const h = d.getUTCHours(); const m = String(d.getUTCMinutes()).padStart(2, '0');
   return `${h < 12 ? '오전' : '오후'} ${h % 12 === 0 ? 12 : h % 12}:${m}`;
 }
 /** 「11월 11일(수)」 */
 export function fmtDate(iso) {
-  if (!iso) return '';
+  if (badIso(iso)) return '';
   const d = kst(iso);
   const w = '일월화수목금토'[d.getUTCDay()];
   return `${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일(${w})`;
 }
 /** 오늘이면 「오늘 오후 2:42」, 아니면 「11월 10일(화) 오후 2:42」 */
 export function fmtWhen(iso) {
-  if (!iso) return '';
+  if (badIso(iso)) return '';
   const day = kst(iso).toISOString().slice(0, 10);
   const today = kstDay();
   const yesterday = kstDay(new Date(Date.now() - 86400_000));
@@ -77,7 +78,7 @@ export function callChip(call) {
   const cls = call.status === 'failed' ? 'chip-failed' : 'chip-working';
   return html`<span class="chip ${cls}">${call.statusLabel || CALL_LABEL[call.status] || call.status}</span>`;
 }
-export const SOURCE_LABEL = { seed: '대본 가짜 통화', upload: '올린 녹음', ingest: '폴더에서 온 녹음', live: '실시간 체험' };
+export const SOURCE_LABEL = { seed: '가짜 통화(대본)', upload: '올린 녹음', ingest: '폴더에서 온 녹음', live: '실시간 체험' };
 
 // ── 강조(마크) ─────────────────────────────────────────────────────
 /**

@@ -1,6 +1,5 @@
 // 데이터베이스: Node 내장 node:sqlite (네이티브 빌드 없음). 파일은 DATA_DIR/callnote.sqlite.
 // 표 구조는 docs/설계.md 「데이터 모델」과 같다. 바꿀 때는 둘 다 고친다.
-import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
@@ -13,6 +12,8 @@ process.emitWarning = function (warning, ...args) {
   if (msg && msg.includes('SQLite is an experimental feature')) return;
   return origEmit.call(process, warning, ...args);
 };
+// 경고 거르기를 건 뒤에 불러온다(정적 import 는 이 코드보다 먼저 돌아 경고가 새어 나옴)
+const { DatabaseSync } = await import('node:sqlite');
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS calls(
@@ -45,6 +46,7 @@ CREATE INDEX IF NOT EXISTS calls_sha ON calls(audio_sha256);
 CREATE TABLE IF NOT EXISTS cards(
   call_id TEXT PRIMARY KEY REFERENCES calls(id) ON DELETE CASCADE,
   status TEXT NOT NULL DEFAULT 'draft', -- draft | confirmed | shipped | cancelled
+  call_type TEXT NOT NULL DEFAULT '주문', -- 주문 | 배송 문의 | 반품·교환 | 재고·단가 문의 | 기타
   customer TEXT,
   contact TEXT,
   car_model TEXT,
@@ -131,7 +133,8 @@ CREATE TABLE IF NOT EXISTS trials(
   role TEXT,
   message TEXT,
   consent_at TEXT NOT NULL,
-  ip_hash TEXT
+  ip_hash TEXT,
+  extra TEXT                            -- JSON: 소개 페이지 양식의 그 밖 칸(업종·하루 통화 수·지역·마케팅 동의 등)
 );
 
 CREATE TABLE IF NOT EXISTS usage(
@@ -155,7 +158,25 @@ export function openDb(file) {
   const db = new DatabaseSync(dbFile);
   db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 3000;');
   db.exec(SCHEMA);
+  migrate(db);
   return db;
+}
+
+// 이미 만들어진 DB 에 나중에 생긴 칸을 더한다(CREATE TABLE IF NOT EXISTS 는 칸을 더하지 않으므로).
+// 칸을 새로 만들면 SCHEMA 와 여기 둘 다에 적는다.
+const COLUMNS = [
+  ['cards', 'delivery', 'TEXT'],
+  ['cards', 'evidence', "TEXT NOT NULL DEFAULT '{}'"],
+  ['cards', 'customer_by_phone', 'INTEGER NOT NULL DEFAULT 0'],
+  ['cards', 'call_type', "TEXT NOT NULL DEFAULT '주문'"],
+  ['glossary', 'phone', 'TEXT'],
+  ['trials', 'extra', 'TEXT'],
+];
+function migrate(db) {
+  for (const [table, col, ddl] of COLUMNS) {
+    const cols = db.prepare(`PRAGMA table_info(${table})`).all().map((c) => c.name);
+    if (!cols.includes(col)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${ddl}`);
+  }
 }
 
 /** 앱 전체가 쓰는 DB 하나. 테스트는 setDb() 로 바꿔 끼운다. */

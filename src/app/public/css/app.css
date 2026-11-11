@@ -121,7 +121,7 @@ h3 { font-size: 1.05rem; margin: 0 0 8px; }
 .btn-danger { background: #fff; border-color: #f2c2bd; color: var(--danger); }
 .btn-ghost { background: transparent; border-color: transparent; color: var(--brand-ink); }
 .btn-ghost:hover { background: var(--brand-soft); }
-.btn-sm { min-height: 38px; padding: 6px 12px; font-size: .88rem; border-radius: 10px; }
+.btn-sm { min-height: 44px; padding: 6px 12px; font-size: .88rem; border-radius: 10px; }
 .btn-lg { min-height: 56px; padding: 12px 22px; font-size: 1.1rem; }
 .btn-block { display: flex; width: 100%; }
 .btn-icon { width: var(--tap); padding: 0; }
@@ -187,7 +187,7 @@ a.list-item:hover { background: #faf9fe; }
 /* ── 탭 ── */
 .tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; margin-bottom: 12px; scrollbar-width: none; }
 .tabs::-webkit-scrollbar { display: none; }
-.tab { flex: none; min-height: 42px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); background: #fff; color: var(--ink-2); font-weight: 700; font-size: .92rem; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+.tab { flex: none; min-height: 48px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); background: #fff; color: var(--ink-2); font-weight: 700; font-size: .92rem; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
 .tab.active, .tab[aria-pressed="true"], .tab[aria-selected="true"] { background: var(--brand); border-color: var(--brand); color: #fff; }
 .tab .count { font-size: .78rem; opacity: .85; }
 
@@ -236,3 +236,16 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 16px 0; }
   .card { box-shadow: none; }
 }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* ── 좁은 화면 위 막대 ── */
+.brand-name, #bigTextBtn, .worker-text { white-space: nowrap; }
+.worker-text { overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 520px) {
+  .fake-banner { font-size: .74rem; padding: 4px 10px; gap: 6px; line-height: 1.45; }
+  .fake-banner strong { padding: 0 8px; }
+  .topbar { padding: 6px 10px; min-height: 54px; gap: 6px; }
+  .brand { font-size: 1.15rem; gap: 6px; }
+  .brand-tag { display: none; }
+  .worker-pill { max-width: 46vw; padding: 4px 8px; font-size: .74rem; }
+  #bigTextBtn { padding: 6px 8px; font-size: .8rem; }
+}

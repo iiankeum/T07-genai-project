@@ -1,0 +1,25 @@
+/* F07 낱말 사전 화면 — 탭 · 넣기 양식 · 목록 */
+.gl-tabs .tab { min-height: var(--tap); padding: 8px 18px; font-size: 1rem; }
+.gl-form-card { margin-bottom: 14px; }
+.gl-form-title { font-size: 1.1rem; margin: 0 0 12px; }
+.gl-form .notice { margin-bottom: 10px; }
+.gl-pair { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; }
+.gl-pair-arrow { display: none; }
+@media (min-width: 560px) {
+  .gl-pair { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: center; }
+  .gl-pair-arrow { display: block; color: var(--brand); font-weight: 800; font-size: 1.3rem; padding-top: 14px; }
+}
+.gl-form .field .help { display: block; font-weight: 400; }
+.gl-search { margin-bottom: 8px; }
+.gl-count { margin: 0 0 8px; }
+
+.gl-item { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; }
+.gl-body { min-width: 0; flex: 1; }
+.gl-main { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; font-size: 1.1rem; }
+.gl-term { font-weight: 800; }
+.gl-arrow { color: var(--brand); font-weight: 800; }
+.gl-std { font-weight: 700; color: var(--brand-ink); }
+.gl-phone { margin-top: 4px; font-size: .95rem; font-variant-numeric: tabular-nums; }
+.gl-note { margin: 4px 0 0; color: var(--muted); font-size: .92rem; }
+.gl-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.gl-del { flex: none; min-height: var(--tap); padding: 8px 12px; font-size: .95rem; }

@@ -1,0 +1,24 @@
+/* 무료 체험 신청 화면 — 소개 · 신청서 · 개인정보 안내 상자 */
+.trial-intro p { margin: 0 0 8px; }
+.trial-intro p:last-child { margin-bottom: 0; }
+.trial-class-note { font-size: .9rem; color: var(--muted); font-weight: 600; }
+.trial-page [data-ref="body"] { margin-top: 14px; }
+.trial-form-title { font-size: 1.15rem; margin: 0 0 12px; }
+.trial-req { font-style: normal; font-size: .75rem; font-weight: 800; color: #fff; background: var(--brand); border-radius: 999px; padding: 1px 8px; margin-left: 4px; vertical-align: 1px; }
+
+.trial-policy { border: 1px solid var(--line); background: #fafafd; border-radius: var(--radius-sm); padding: 12px 14px; margin: 6px 0 12px; max-height: 340px; overflow-y: auto; font-size: .92rem; }
+.trial-policy-title { font-size: 1rem; margin: 0 0 8px; }
+.trial-policy p { margin: 0 0 6px; }
+.trial-policy-list { margin: 0; }
+.trial-policy-list > div { padding: 6px 0; border-top: 1px solid var(--line); }
+.trial-policy-list > div:first-child { border-top: 0; padding-top: 0; }
+.trial-policy-list dt { font-weight: 800; color: var(--ink-2); }
+.trial-policy-list dd { margin: 2px 0 0; }
+.trial-policy-list dd p:last-child { margin-bottom: 0; }
+.trial-policy .notice { margin-bottom: 8px; }
+
+.trial-consent { padding: 12px 14px; border: 1px solid var(--brand-line); background: var(--brand-soft); border-radius: var(--radius-sm); margin-bottom: 12px; }
+.trial-form .notice { margin-bottom: 10px; }
+.trial-done h2 { margin-bottom: 8px; }
+.trial-done p { margin: 0 0 8px; }
+.trial-done:focus { outline: none; }
