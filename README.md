@@ -14,10 +14,10 @@
 ## 팀원
 | 이름 | GitHub | 역할 |
 |---|---|---|
-| 금*현 | iiankeum | 미정 |
-| 김*희 | kamnamhee | 미정 |
-| 배*결 | dmms0830-lang | 미정 |
-| 신*림 | taejs | 미정 |
+| 금*현 | iiankeum | 마케팅 |
+| 김*희 | kamnamhee | 기획 |
+| 배*결 | dmms0830-lang | 총괄 · 서버 · 음성 인식 |
+| 신*림 | taejs | 개발 |
 
 ## 전체 일정
 Weekly Meeting: 매주 수요일 22:00
@@ -39,7 +39,8 @@ docs/
   meetings/    # 회의록 (YYYY-MM-DD.md)
   research/    # 리서치 메모, 참고자료
   promotion/   # 홍보 기록 (게시글 링크, 반응, 수치)
-src/           # 소스 코드
+work/          # 역할별 작업 과정 · 산출물 (00-총괄 · 01-기획 · 02-마케팅 · 03-개발)
+src/           # 소스 코드 (7번 제품은 src/app/)
 ```
 
 ## 라이선스

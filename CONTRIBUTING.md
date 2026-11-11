@@ -10,7 +10,8 @@ T07 팀원이 이 저장소에 글과 코드를 올릴 때 지키는 약속입�
 | 회의록 | `docs/meetings/` | `YYYY-MM-DD.md` — [템플릿](docs/meetings/_template.md) 복사 |
 | 리서치 메모 | `docs/research/` | `주제.md` |
 | 홍보 기록 | `docs/promotion/` | `YYYY-MM-DD-채널.md` |
-| 소스 코드 | `src/` | — |
+| 역할별 작업 과정 · 산출물 | `work/<번호>-<역할>-<이름>/` | `LOG.md`(작업 기록) · `산출물/` · `자료/` — [안내](work/README.md) |
+| 소스 코드 | `src/` | 7번 제품 코드는 `src/app/` (`dev` 가지 → 데모 서버 자동 배포) |
 
 ## 커밋 메시지
 
