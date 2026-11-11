@@ -56,7 +56,7 @@ def feature_page(f):
   </div>
 </div>
 <div class="box gray seen"><h4>조사에서 본 것</h4><ul>{seen}</ul></div>
-<div class="refline">{esc(f['ref'])}</div>"""
+<div class="refline">{esc(f['ref'])} @@SITE:{f['id']}@@</div>"""
     return page(body, foot=f"{f['id']} {f['name']}")
 
 
@@ -89,6 +89,26 @@ def toc(pages):
     return '<h3>목차</h3><div class="toc2">' + "".join(items) + "</div><div style='height:3mm'></div>"
 
 
+SHOT_OF = {"F01": "F01-upload", "F02": "F02-F05-call", "F03": "F03-live", "F04": "F02-F05-call", "F05": "F02-F05-call",
+           "F06": "F06-board", "F07": "F07-glossary", "F08": "F08-calls", "F09": "F09-ask", "F10": "F10-today"}
+
+
+def site_refs(pages):
+    """기능 쪽 아래에 「사이트 화면: N쪽」을 단다(사이트 화면을 찍어 둔 경우만)."""
+    import re
+    where = {}
+    for i, x in enumerate(pages):
+        for m in re.findall(r"img/site-([\w-]+)\.jpg", x):
+            where.setdefault(m, i + 1)
+    out = []
+    for x in pages:
+        def rep(m):
+            n = where.get(SHOT_OF.get(m.group(1), ""))
+            return f"· 사이트 화면 {n}쪽" if n else ""
+        out.append(re.sub(r"@@SITE:(F\d\d)@@", rep, x))
+    return out
+
+
 def prepare_images():
     from PIL import Image
     out = BUILD / "img"
@@ -116,6 +136,7 @@ def build_html():
     pages += sitepages.pages(page)
     pages += sections.back_pages(page, img)
     pages = [x.replace("@@TOC@@", toc(pages)) for x in pages]
+    pages = site_refs(pages)
     doc = f"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>AI 전화 주문 받아쓰기 기획서 {VERSION}</title>
 <link rel="stylesheet" href="style.css"></head><body>{''.join(pages)}</body></html>"""
     BUILD.mkdir(exist_ok=True)
