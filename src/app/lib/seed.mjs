@@ -276,7 +276,8 @@ export function buildSeedCall(sc, { anchorMs, customers = [] }) {
     recorded_at: recordedAt,
     source: 'seed',
     status: 'ready',
-    title: makeTitle({ customer: content.customer, items, recordedAt, durationSec, source: 'seed' }),
+    // 주문이 아닌 전화에 부품이 없으면 제목에 통화 종류를 쓴다(lib/cards.mjs refreshCallTitle 과 같게)
+    title: makeTitle({ customer: content.customer, items: !items.length && sc.callType && sc.callType !== '주문' ? [{ part: sc.callType }] : items, recordedAt, durationSec, source: 'seed' }),
     customer: content.customer,
     caller_number: sc.callerNumber || null,
     duration_sec: durationSec,
