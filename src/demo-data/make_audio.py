@@ -41,10 +41,10 @@ PHONE_RATE = 8000
 # 다국어 목소리와 높낮이 · 빠르기를 섞어 사람마다 다르게 들리게 했다(Whisper large-v3 로 알아듣는지 확인함).
 VOICES = {
     # 대리점
-    "김 부장": ("ko-KR-InJoonNeural", "-4Hz", "+0%", 1.0),
+    "박 부장": ("ko-KR-InJoonNeural", "-4Hz", "+0%", 1.0),
     "이 대리": ("ko-KR-SunHiNeural", "+0Hz", "+6%", 1.0),
     # 정비소 — 남
-    "박 사장": ("ko-KR-HyunsuMultilingualNeural", "-14Hz", "-8%", 0.95),
+    "김 사장": ("ko-KR-HyunsuMultilingualNeural", "-6Hz", "+4%", 1.0),
     "정 실장": ("de-DE-FlorianMultilingualNeural", "-2Hz", "+6%", 1.0),
     "이 실장": ("ko-KR-HyunsuMultilingualNeural", "+0Hz", "+15%", 1.0),
     "송 사장": ("en-US-BrianMultilingualNeural", "+0Hz", "+8%", 1.0),
@@ -56,6 +56,7 @@ VOICES = {
     "서 공장장": ("fr-FR-RemyMultilingualNeural", "-4Hz", "+10%", 1.25),
     "임 사장": ("ko-KR-HyunsuMultilingualNeural", "-10Hz", "+3%", 1.0),
     "조 기사": ("ko-KR-HyunsuMultilingualNeural", "+12Hz", "+10%", 0.9),
+    "하 기사": ("en-US-BrianMultilingualNeural", "+10Hz", "+14%", 0.95),
     "문 실장": ("en-US-BrianMultilingualNeural", "-6Hz", "+3%", 1.0),
     "진 실장": ("ko-KR-InJoonNeural", "+6Hz", "+12%", 1.0),
     "홍 사장": ("fr-FR-RemyMultilingualNeural", "-12Hz", "-4%", 1.0),

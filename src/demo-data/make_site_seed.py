@@ -20,7 +20,7 @@ CALL_TYPE = {"주문": "주문", "주문추가": "주문", "확인회신": "주�
 URGENT_WORDS = ["퍼뜩", "퀵", "급해", "급하", "급한", "급혀", "빨리", "오전 중", "당장"]
 QTY = re.compile(r"(하나|한 개|한 세트|한 쌍|한 박스|한 짝|한 통|한 장|[가-힣]{1,3} ?(?:개|통|장|세트|박스|짝|쌍))")
 # 오늘 「다시 전화할 곳」과 「들어 보기」(받아쓰기가 틀렸을 수 있는 값) — 시연용으로 몇 건만
-CALLBACK = {"c12", "c39", "c52"}
+CALLBACK = {"c12", "c39", "c52", "c61"}  # 오늘 다시 전화할 곳: c52 재고 회신 · c61 K5 백미러 좌우(기획서 F10)
 UNSURE = {
     "c51": [{"field": "plate", "reason": "차번호 가운데 글자를 「나」라고 했다가 「라」로 고쳐 말함 — 들어 보기"}],
     "c32": [{"field": "plate", "reason": "「구」가 숫자 9 로 들릴 수 있음(거북이 구)"}],
@@ -86,6 +86,21 @@ def num_ko(n: int) -> str:
     return out + (DIG[n] if n else "")
 
 
+def find_with_qty(turns, words, qty):
+    """부품 낱말과 정답 수량이 한 턴에 같이 나오는 첫 턴(정비소 먼저). 없으면 부품 낱말만 처음 나온 곳."""
+    if qty:
+        for side in ("shop", None):
+            for i, t in enumerate(turns):
+                if side and t["who"] != side:
+                    continue
+                for w in words:
+                    m = loose(w).search(t["say"]) if w else None
+                    if m and qty_after(t["say"], m.start(), qty):
+                        clause = next((c for c in clauses(t["say"]) if loose(w).search(c)), t["say"])
+                        return i, clause, m.group(0)
+    return find(turns, words)
+
+
 def plate_phrase(turns, plate):
     m = re.match(r"(\d+)([가-힣])(\d{4})$", plate)
     front, tail = num_ko(int(m.group(1))), "".join(DIG[int(d)] for d in m.group(3))
@@ -128,7 +143,7 @@ def build(audio: Path) -> dict:
 
         items = []
         for it in g["items"]:
-            i, clause, word = find(turns, it["part_kw"])
+            i, clause, word = find_with_qty(turns, it["part_kw"], it["qty"])
             add_hl(word, "part")
             if clause and it["qty"]:
                 text = turns[i]["say"]
@@ -179,8 +194,8 @@ def build(audio: Path) -> dict:
             status = "cancelled"
         elif c["days_ago"] >= 2:
             status = "shipped" if g["is_order"] else "confirmed"
-        elif c["days_ago"] == 1:
-            status = "confirmed"
+        elif c["days_ago"] == 1:  # 어제 오전 주문은 이미 출고, 오후 것은 확정
+            status = "shipped" if (g["is_order"] and c["time"] < "12:00") else "confirmed"
         else:
             status = "draft"
         # 확정 · 출고된 카드는 되물을 것이 남지 않는다 → 남은 확인 거리는 메모로
@@ -190,7 +205,7 @@ def build(audio: Path) -> dict:
         out.append({
             "id": f"fx-{c['id']}", "offsetMin": mins, "durationSec": tim["duration"], "callerNumber": c["phone"],
             "turns": [{"who": t["who"], "say": t["say"]} for t in turns], "segments": segs,
-            "callType": CALL_TYPE[g["intent"]],
+            "callType": ("반품·교환" if g["intent"] == "주문다툼" and not g["is_order"] else CALL_TYPE[g["intent"]]),
             "card": {"customer": g["customer"], "contact": c["speakers"]["shop"] if c["customer"] else None,
                      "carModel": g.get("car"), "modelYear": g.get("year"), "plate": g.get("plate"), "items": items,
                      "urgent": bool(g["urgent"]), "due": due, "delivery": delivery, "askBack": ask_back,
@@ -200,7 +215,7 @@ def build(audio: Path) -> dict:
             "status": status, "callback": callback, "callbackReason": ask[0] if (callback and ask) else None,
             "audio": f"web/{c['id']}.mp3",
         })
-    return {"_설명": "가짜 통화 54건 — 거래처 · 사람 · 전화번호 · 차번호 · 품번 · 금액 모두 지어냄. src/demo-data/calls.json 에서 만듦"
+    return {"_설명": "가짜 통화 61건 — 거래처 · 사람 · 전화번호 · 차번호 · 품번 · 금액 모두 지어냄. src/demo-data/calls.json 에서 만듦"
                      "(make_site_seed.py). offsetMin 은 오늘 09:00 KST 기준 분. audio 는 음성 폴더(~/.t07-demo-audio) 기준.",
             "calls": out}, missing
 
