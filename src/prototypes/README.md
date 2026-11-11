@@ -37,3 +37,14 @@ Sites: https://t07-product-prototypes.butterybeam16.chatgpt.site
 - https://tiro.ooo/ko/blog/sales-meeting-tiro-usage
 
 실제 서비스 전환 시 전화 음질·차번호·현장 용어 인식과 식당 메뉴·가격·룸 데이터의 확보 방식을 별도로 설계해야 한다.
+
+## 저장소 반영
+
+GitHub 연결 앱의 브랜치 생성 요청이 403으로 거부되어 원격 업로드는 완료하지 못했다. 로컬 `feat/interactive-prototypes` 브랜치에 커밋하고, 같은 내용을 Sites의 `/t07-prototypes.patch`에 제공한다. 저장소에서 패치를 적용하려면 다음 명령을 사용한다.
+
+```sh
+git switch -c feat/interactive-prototypes
+git am /path/to/t07-prototypes.patch
+```
+
+이후 쓰기 권한이 있는 계정으로 브랜치를 푸시하고 PR을 생성한다. `main` 직접 수정이나 강제 푸시는 하지 않는다.
