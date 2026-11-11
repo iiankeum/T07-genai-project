@@ -1,7 +1,7 @@
 # 단체 식사 예약 도우미 AI — 프로토타입
 
 회식·거래처 식사·부서 모임 장소를 정할 때, 단체 채팅방 의견을 모아 **식당 후보 3곳**을 비교해 준다.
-아이디어 문서: [docs/ideas/남희-단체 식사 예약 도우미 AI.md](<../../../docs/ideas/남희-단체 식사 예약 도우미 AI.md>)
+아이디어 문서: [docs/ideas/남희-단체 식사 예약 도우미 AI.md](<../../../../docs/ideas/남희-단체 식사 예약 도우미 AI.md>)
 
 ```
 단체방 의견 ──▶ 생성형 AI: 조건 정리 ──▶ 코드: 식당 거르기·점수·금액 ──▶ 후보 3곳 ──▶ 팀원 투표 ──▶ 담당자 결정·예약
@@ -13,7 +13,7 @@
 ## 바로 실행 (API 키 없이 3분)
 
 ```bash
-cd src/prototypes/group-dining-helper
+cd src/prototypes/kamnamhee/group-dining-helper
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 python app.py
