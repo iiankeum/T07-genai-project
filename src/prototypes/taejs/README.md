@@ -1,4 +1,4 @@
-# T07 인터랙티브 프로토타입
+# taejs · T07 인터랙티브 프로토타입
 
 두 아이템의 UX와 업무 흐름을 비교하기 위한 브라우저 프로토타입이다.
 
@@ -7,7 +7,7 @@
 별도 패키지 설치나 빌드는 필요하지 않다. 저장소 루트에서 다음 명령으로 정적 서버를 실행한 뒤 `http://localhost:8000`에 접속한다.
 
 ```sh
-python3 -m http.server 8000 --directory src/prototypes
+python3 -m http.server 8000 --directory src/prototypes/taejs
 ```
 
 ## 화면
@@ -58,13 +58,13 @@ git am /path/to/t07-prototypes.patch
 Node.js 20 이상에서 저장소 루트 기준으로 실행한다.
 
 ```sh
-node src/prototypes/server/dev.mjs
+node src/prototypes/taejs/server/dev.mjs
 ```
 
-`http://localhost:4177/callnote/`에 접속한다. 모델을 연결하려면 서버 환경에 `OPENAI_API_KEY`를 설정한다. `OPENAI_MODEL`은 선택 사항이며 기본값은 `gpt-4o-mini`다. 서버용 키를 HTML·브라우저 저장소·Git에 넣지 않는다. 로컬 환경 파일을 사용할 경우 `src/prototypes/.env`에 저장하고 다음과 같이 실행한다.
+`http://localhost:4177/callnote/`에 접속한다. 모델을 연결하려면 서버 환경에 `OPENAI_API_KEY`를 설정한다. `OPENAI_MODEL`은 선택 사항이며 기본값은 `gpt-4o-mini`다. 서버용 키를 HTML·브라우저 저장소·Git에 넣지 않는다. 로컬 환경 파일을 사용할 경우 `src/prototypes/taejs/.env`에 저장하고 다음과 같이 실행한다.
 
 ```sh
-node --env-file=src/prototypes/.env src/prototypes/server/dev.mjs
+node --env-file=src/prototypes/taejs/.env src/prototypes/taejs/server/dev.mjs
 ```
 
 자유 입력은 서버의 OpenAI Responses API로 처리한다. 키워드 매칭 응답이나 모델 실패 시 가짜 답변을 제공하지 않는다. 모델 연결 없이도 명시적인 예시 대화 버튼으로 화면 흐름을 체험할 수 있다. 정적 서버에서는 실제 AI 채팅 endpoint가 없으므로 예시 체험만 가능하다.
@@ -84,7 +84,7 @@ node --env-file=src/prototypes/.env src/prototypes/server/dev.mjs
 Sites 소스 체크아웃에서 기존 프로젝트 ID를 유지하고 Worker 배포로 전환한다. `static` 설정을 제거하고 아래 패키징을 실행한다. 별도 의존성 설치 없이 정적 파일과 서버 endpoint를 Worker 한 파일에 포함한다.
 
 ```sh
-node src/prototypes/server/build-site.mjs
+node src/prototypes/taejs/server/build-site.mjs
 ```
 
 출력은 현재 작업 디렉터리의 `dist/server/index.js`다. Sites 런타임에 `OPENAI_API_KEY`를 비밀값으로 설정해야 실제 AI 응답이 가능하다. 원본 Site의 접근 범위는 유지한다.
