@@ -25,6 +25,7 @@ class Settings:
     openai_model: str
     ollama_model: str
     ollama_url: str
+    llm_timeout: float | None = None   # AI 응답 대기(초). 비우면 120, Ollama는 300
 
     @property
     def db_path(self) -> Path:
@@ -40,4 +41,5 @@ def load_settings() -> Settings:
         openai_model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
         ollama_model=os.getenv("OLLAMA_MODEL", "qwen2.5:7b"),
         ollama_url=os.getenv("OLLAMA_URL", "http://localhost:11434"),
+        llm_timeout=float(os.environ["LLM_TIMEOUT"]) if os.getenv("LLM_TIMEOUT") else None,
     )

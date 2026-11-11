@@ -9,7 +9,7 @@ import json
 from dataclasses import dataclass, field
 
 from .config import Settings
-from .llm import LLMError, chat, parse_json
+from .llm import chat, parse_json
 from .models import DAYS, DIET_TAGS, SLOTS, TYPES, Condition
 from .parse_rules import finalize, parse_opinions
 
@@ -130,7 +130,7 @@ def parse(opinions: list[dict], settings: Settings, stations: list[str], categor
         try:
             conds, unmatched = validate(parse_json(chat(SYSTEM_PROMPT, user, settings)), stations, categories)
             return ParseOutcome(conds, unmatched, settings.llm_provider, warnings)
-        except LLMError as e:
-            warnings.append(f"AI 정리 실패로 규칙 기반 정리를 썼습니다: {e}")
+        except Exception as e:  # 시간 초과·응답 형식 오류 등 무엇이든 규칙 기반으로 대체
+            warnings.append(f"AI 정리 실패로 규칙 기반 정리를 썼습니다 ({type(e).__name__}: {e})")
     r = parse_opinions(opinions, stations)
     return ParseOutcome(r.conditions, r.unmatched, "rule", warnings)
