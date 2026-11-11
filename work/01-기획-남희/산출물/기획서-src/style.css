@@ -117,7 +117,7 @@ figcaption { font-size: 7.8pt; color: var(--gray); margin-top: 1.2mm; }
 
 .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm; margin: 0 0 3mm; }
 .tile { background: var(--teal-ll); border: .3mm solid #CFE5E2; border-radius: 3mm; padding: 2.4mm 3mm; }
-.tile .big-number { font-size: 19pt; }
+.tile .big-number { font-size: 16pt; white-space: nowrap; }
 .tile .lbl { font-size: 8.4pt; color: var(--ink); font-weight: 600; }
 .tile .src { display: block; margin-top: .6mm; }
 .seen { margin-top: 2.5mm; } .seen li { font-size: 8.6pt; }
