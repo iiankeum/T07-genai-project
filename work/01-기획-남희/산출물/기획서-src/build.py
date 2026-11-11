@@ -43,7 +43,7 @@ def feature_page(f):
 <div class="fhead"><span class="fid">{f['id']}</span><span class="fname">{esc(f['name'])}</span>
 <span class="chip p0">{f['pri']} 데모 필수</span><span class="chip {demo_cls}">데모: {esc(f['demo'])}</span></div>
 <p class="fpurpose">{esc(f['purpose'])}</p>
-<div class="fimg"><img src="{img(f['img'])}" alt=""></div>
+<div class="fimg" style="height:{f.get('imgh', 104)}mm"><img src="{img(f['img'])}" alt=""></div>
 <div class="fcap">장면 그림 — 박 부장(접수) · 김 사장(정비소) · 이 기사(출고)와 장면 속 거래처 · 차 정보는 모두 지어낸 것이다. 그림 속 화면은 모양만 나타낸 것이다.</div>
 <div class="fcols">
   <div>
@@ -77,7 +77,7 @@ def toc(pages):
     want = [("문제와 사용자", "문제와 사용자"), ("조사 요약", "조사: 서비스"), ("대리점 생태계", "조사: 부품 대리점"), ("차별점", "차별점"),
             ("기능 한눈에", "기능 목록"), ("F01 녹음 올리기", "기능 쪽 F01~F10"), ("P1 기능", "P1 기능 F11~F15"),
             ("전체 시스템 구조", "시스템 구조"), ("데이터 · 보안 · 개인정보", "데이터 · 보안"), ("일정 · 미결 · 아침 질문", "일정 · 아침 질문"),
-            ("부록 A · 다음 단계", "부록 A 다음 단계"), ("부록 B · 출처", "부록 B 출처")]
+            ("부록 A · 다음 단계", "부록 A 다음 단계"), ("부록 B · 출처", "부록 B 출처"), ("부록 C · 만든 과정", "부록 C 만든 과정")]
     feet = [re.search(r'<div class="foot"><span>(.*?)</span>', x) for x in pages]
     feet = [m.group(1) if m else "" for m in feet]
     items = []

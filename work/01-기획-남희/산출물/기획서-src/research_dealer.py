@@ -63,7 +63,7 @@ def timeline_svg():
     hooks = [(8.6, "F10 아침 브리핑", 0), (10.2, "F04 · F05 통화마다 카드", 1), (14.3, "F08 · F09 「언제 된다 했지?」", 0), (17.3, "F10 마감 요약", 1)]
     for h, t, row in hooks:
         y = 238 + row * 30
-        w = len(t) * 11 + 16
+        w = len(t) * 12.6 + 22
         x = min(X(h) - 4, 892 - w)
         o.append(f'<line x1="{X(h):.0f}" y1="216" x2="{X(h):.0f}" y2="{y}" stroke="#1E6E6E" stroke-width="2"/>')
         o.append(f'<rect x="{x:.0f}" y="{y}" width="{w}" height="25" rx="12.5" fill="#E3F1EF" stroke="#BFDCD8"/>')

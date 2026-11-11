@@ -42,7 +42,7 @@ def front_pages(page, img):
 </div>
 {research.SUMMARY_FINDINGS}
 <div class="grid2">
- <div class="box teal"><h4>데모에서 진짜로 되는 것</h4>녹음 올리기 → PC GPU 받아쓰기(Whisper) → Claude 카드 정리 → 근거 재생 → 확정 → 찾기 · 묻기 · 브리핑. 휴대폰 · 태블릿 · PC 어디서나, 로그인 없이. 통화는 모두 <b>가짜</b>다.</div>
+ <div class="box teal"><h4>데모에서 진짜로 되는 것</h4>녹음 올리기 → PC GPU 받아쓰기(Whisper) → Claude 카드 정리 → 근거 재생 → 확정 → 찾기 · 묻기 · 브리핑. 휴대폰 · 태블릿 · PC 어디서나, 로그인 없이. 통화는 모두 <b>가짜</b>다.<br><b>데모 주소</b>: t07.3-39-67-126.sslip.io (소개 페이지 /intro/)</div>
  <div class="box gray"><h4>이번 데모 밖 (부록)</h4>전화기 · 교환기 연동(통화 중 받아쓰기), 양쪽 목소리 나누기, 부품 카탈로그 · 품번 자동 조회, 대리점 전산 자동 입력, 알림톡, PC 안 AI, 여러 대리점 계정.</div>
 </div>
 @@TOC@@
@@ -210,4 +210,46 @@ def back_pages(page, img):
 <tr><td><b>여러 대리점 · 계정 · 권한</b></td><td>대리점별 데이터 분리, 사장 · 접수 · 출고 역할.</td><td>로그인 · 감사 기록 · 보관 기간</td></tr>
 <tr><td><b>되물음 전화 문장 · 통화 품질 코칭</b></td><td>다시 전화할 때 읽을 질문을 만들고, 자주 빠지는 정보를 알려 준다.</td><td>현장 통화 데이터가 쌓인 뒤</td></tr></table>
 """ + research.NEXT_EXTRA, foot="부록 A · 다음 단계")
-    return [system, data, schedule, nxt] + research.appendix_pages(page, img)
+    return [system, data, schedule, nxt] + research.appendix_pages(page, img) + [process_page(page)]
+
+
+PROCESS = [
+    ("22:34", "작업방 시작", "회의록 · 아이디어 문서 · 프로토타입 셋(태림 님 화면 시안 · 남희 님 Python · 대표님 Whisper + Claude)과 평가 결과를 읽었다."),
+    ("22:35", "조사 Workflow 시작", "에이전트 8개 — A1 국내 · A2 해외 · A3 주문 접수 · 부품 플랫폼 · D1 대리점(웹) · D2 대리점(현장 문서 읽기) → B · C 상위 서비스 · 구조 → V1 · V2 반박 검증."),
+    ("22:38", "기능 목록 v0 전달", "조사를 기다리지 않고 지금 만들 수 있는 기능 15개(P0 10 · P1 5)를 개발 방에 넘겼다. 못 만드는 것은 처음부터 「다음 단계」로."),
+    ("22:40~23:00", "그림", "Codex 로 캐릭터 시트를 먼저 그리고, 그 시트를 참고로 장면 15장을 4장씩 동시에 그렸다. 모음판으로 전부 눈으로 검사했다."),
+    ("22:50~23:15", "조사 도착 · 반영", "D2 → D1 · A1 · A3 → A2 → V2 → B · C 순서로 들어온 결과를 기획서 쪽으로 옮겼다. 반박 검증이 고친 숫자 · 표현을 문장에 반영했다."),
+    ("23:15~", "다듬기 · 검증 반영", "쪽마다 그림으로 떠서 넘친 글자 · 겹친 그림 · 빈 공간을 고쳤다. V1(서비스 반박 검증)을 반영해 v1 을 구웠다."),
+    ("v1.1", "사이트와 맞추기", "개발 방의 구현-대조표와 기능을 1:1 로 맞춰, 사이트에서 다르게 동작하는 것은 기획서를 고친다."),
+]
+
+
+def process_page(page):
+    rows = "".join(f"<tr><td><b>{t}</b></td><td><b>{w}</b></td><td>{d}</td></tr>" for t, w, d in PROCESS)
+    return page(f"""
+<div class="kicker">부록 C</div><h2 class="sec">이 기획서를 만든 과정</h2>
+<p class="lead">대표님이 주무시는 동안 AI 작업방 다섯 개가 나눠 일했다. 이 문서는 그중 기획 방이 만들었다. 시각은 2026-11-11 밤 ~ 11-12 새벽(한국 시간).</p>
+<table><tr><th style="width:14%">시각</th><th style="width:18%">무엇</th><th>어떻게 · 왜</th></tr>{rows}</table>
+<div class="grid2" style="margin-top:4mm">
+<div class="box teal"><h4>판단한 것</h4><ul>
+<li>아침 결과물이 「기획서의 기능이 모두 동작하는 사이트」라서, 지금 조건으로 못 만드는 기능은 본문에 넣지 않았다.</li>
+<li>받아쓰기 · 요약은 이미 흔하다 → 우리 자리는 「전화 주문 카드 + 칸마다 근거」.</li>
+<li>해외 칸 채우기 규칙(사람 승인 · 근거 · 덮어쓰기 규칙)을 그대로 가져왔다.</li>
+<li>비공개 업무 프로그램에서 읽은 것은 업계 일반 흐름으로만 옮겼다.</li></ul></div>
+<div class="box yellow"><h4>사람이 확인할 것</h4><ul>
+<li>가짜 인물 · 장면 그림, 대리점 사실관계(아침 질문).</li>
+<li>조사 파일의 「확인 못 함」 · [추정] 표시가 붙은 것.</li>
+<li>점수표의 가중치(한국어 · 전화와 전화 주문 거리에 50%).</li>
+<li>이 문서의 법 · 개인정보 설명은 일반 정보다 — 도입 전 전문가 확인.</li></ul></div>
+</div>
+<h3>밤새 함께 돈 AI 작업방 (팀원 이름의 방이지만 일은 AI 가 했다)</h3>
+<div class="flow">
+ <div class="st"><b>관제소</b>방 나누기 · 조율 · 규칙</div><div class="ar">·</div>
+ <div class="st hot"><b>기획 방</b>조사 · 기능 목록 · 이 기획서</div><div class="ar">·</div>
+ <div class="st"><b>개발 방</b>데모 사이트 · 구현-대조표</div><div class="ar">·</div>
+ <div class="st"><b>총괄 · 서버 방</b>데모 서버 · 자동 배포 · 받아쓰기 일꾼</div><div class="ar">·</div>
+ <div class="st"><b>마케팅 방</b>프리마케팅 계획 · 소개 페이지</div><div class="ar">·</div>
+ <div class="st"><b>해결사</b>막힌 곳 · 가짜 통화 54건</div>
+</div>
+<p class="src">자세한 기록: work/01-기획-남희/LOG.md · 산출물/README.md. 조사 원문: work/01-기획-남희/자료/. 다른 방의 기록은 work/ 아래 각 역할 폴더.</p>
+""", foot="부록 C · 만든 과정")
