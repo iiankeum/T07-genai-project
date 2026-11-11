@@ -11,7 +11,7 @@ const CONFIG = {
   signupEndpoint: '/api/trial-signup',   // 무료 체험 신청을 받는 곳(개발 방 답 2026-11-11: POST /api/trial-signup). 다르면 여기만 바꾼다
   contactEmail: '',                      // 개인정보 문의 · 삭제 요청 받을 팀 공용 메일 — 정해지면 적는다
   privacyOfficer: '',                    // 개인정보 담당(직함, 예: 'T07 팀 총괄') — 정해지면 적는다
-  storage: '',                           // 저장 위치, 예: 'Amazon Web Services 서울 리전(대한민국) 서버' — 확인되면 적는다
+  storage: 'Amazon Web Services 서울 리전(대한민국)의 팀 데모 서버',  // 저장 위치(관제소 확인 2026-11-11: Lightsail ap-northeast-2, 서버 디스크에만)
   privacyUrl: 'privacy.html',            // 개인정보 처리방침 주소
   retentionUntil: '2026년 12월 31일',     // 신청 정보 보관 마감(가정)
   trialWhen: '2026년 12월 초',            // 체험판 목표 시기(목표)
