@@ -1,0 +1,125 @@
+<!doctype html>
+<!--
+  AI 초안 · 돌린 사람: 배*결 · Claude Code(Opus 5.5) · 강현(마케팅) 작업방 · 2026-11-11 · 검토 전
+  게시물 카드(1080×1350, 인스타 세로) 원본. 글을 고치려면 이 파일을 고치고 다시 뽑는다.
+  뽑는 법(윈도우, 이 폴더에서):
+    "C:\Program Files\Google\Chrome\Application\chrome.exe" --headless=new --hide-scrollbars --virtual-time-budget=6000 ^
+      --window-size=1080,1350 --screenshot=c1.png "file:///…/cards.html#c1"
+  주소 끝 #c1 ~ #c5 가 카드 번호, #og 는 1200×630 공유 미리보기.
+  그림(../그림/*.png)은 Codex(ChatGPT)로 만든 글자 없는 일러스트다.
+-->
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { overflow: hidden; background: #fbf8f2; }
+  body { font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif; color: #17171f; word-break: keep-all; }
+  .card { display: none; position: relative; width: 1080px; height: 1350px; overflow: hidden; background: #fbf8f2 center / cover no-repeat; }
+  .card:target { display: block; }
+  .text { position: absolute; left: 80px; right: 80px; top: 92px; }
+  .chip { display: inline-block; font-size: 34px; font-weight: 700; color: #4f3bb8; background: #ece9fb; padding: 10px 26px; border-radius: 999px; margin-bottom: 34px; }
+  h1 { font-size: 88px; line-height: 1.22; font-weight: 900; letter-spacing: -3px; }
+  h1 em { font-style: normal; color: #4f3bb8; }
+  .sub { font-size: 42px; line-height: 1.45; font-weight: 700; color: #3d3d4a; margin-top: 28px; }
+  .foot { position: absolute; left: 80px; right: 80px; bottom: 56px; display: flex; justify-content: space-between; align-items: center; font-size: 30px; font-weight: 700; color: #3d3d4a; }
+  .foot .mark { display: inline-flex; gap: 5px; align-items: center; margin-right: 12px; vertical-align: middle; }
+  .foot .mark i { display: block; width: 8px; border-radius: 4px; background: #4f3bb8; }
+  .foot .mark i:nth-child(1) { height: 18px; } .foot .mark i:nth-child(2) { height: 36px; } .foot .mark i:nth-child(3) { height: 27px; } .foot .mark i:nth-child(4) { height: 15px; }
+  .pill { background: #fff; border: 3px solid #17171f; border-radius: 999px; padding: 8px 22px; }
+  .card:not(.solid) .foot > span:first-child { background: rgba(255,255,255,.94); border-radius: 999px; padding: 8px 22px 8px 16px; }
+  .fake { position: absolute; right: 80px; top: 100px; font-size: 26px; font-weight: 700; color: #8a4b00; background: #fff1dc; padding: 6px 16px; border-radius: 999px; }
+
+  /* 보라 바탕 글 카드 */
+  .card.solid { background: #4f3bb8; color: #fff; }
+  .card.solid h1 { color: #fff; }
+  .card.solid .sub { color: #ecebff; }
+  .card.solid .chip { background: rgba(255,255,255,.16); color: #fff; }
+  .list { list-style: none; margin-top: 56px; display: grid; gap: 30px; }
+  .list li { font-size: 46px; font-weight: 700; line-height: 1.4; padding-left: 64px; position: relative; }
+  .list li::before { content: ''; position: absolute; left: 0; top: 14px; width: 36px; height: 36px; border-radius: 50%; background: #f2a900; }
+  .card.solid .foot { color: #fff; }
+  .card.solid .foot .mark i { background: #fff; }
+  .card.solid .pill { background: #f2a900; border-color: #f2a900; color: #17171f; }
+
+  /* 얼굴 쓰는 안: 사진 자리 */
+  .photo { position: absolute; left: 80px; right: 80px; top: 470px; bottom: 150px; border: 6px dashed #4f3bb8; border-radius: 40px; background: #ece9fb; display: grid; place-items: center; text-align: center; font-size: 40px; font-weight: 700; color: #4f3bb8; line-height: 1.5; }
+  .card.face h1 { font-size: 72px; }
+
+  /* 공유 미리보기 1200×630 */
+  #og { width: 1200px; height: 630px; background-color: #f8f5ee; }
+  #og .text { top: 70px; left: 70px; right: 560px; }
+  #og h1 { font-size: 66px; }
+  #og .sub { font-size: 32px; }
+  #og .art { position: absolute; right: 30px; bottom: -40px; width: 520px; height: 650px; background: url('../그림/01-통화가-카드로.png') center 70% / cover no-repeat; }
+  #og .foot { left: 70px; bottom: 44px; right: auto; font-size: 26px; }
+</style>
+</head>
+<body>
+
+<!-- c1 · 1번 게시물 · 얼굴 안 쓰는 안 · 표지 -->
+<section class="card" id="c1" style="background-image:url('../그림/02-쌓이는-녹음과-메모.png')">
+  <div class="text">
+    <span class="chip">자동차 부품 대리점 · 정비소</span>
+    <h1>주문 전화,<br>녹음만 쌓이고<br><em>다시 찾기 어렵죠?</em></h1>
+  </div>
+  <div class="foot"><span><span class="mark"><i></i><i></i><i></i><i></i></span>T07 팀 · 만드는 과정 #1</span><span class="pill">넘겨 보기 →</span></div>
+</section>
+
+<!-- c2 · 1번 게시물 · 해결 -->
+<section class="card" id="c2" style="background-image:url('../그림/01-통화가-카드로.png')">
+  <div class="text">
+    <h1>통화는 <em>글로</em>,<br>주문은 <em>카드로</em>.</h1>
+    <p class="sub">받아쓰기 · 주문 카드 · 통화 찾기<br>품번 확정은 담당자가 합니다.</p>
+  </div>
+  <div class="foot"><span><span class="mark"><i></i><i></i><i></i><i></i></span>T07 팀 · 만드는 과정 #1</span><span class="pill">2 / 3</span></div>
+</section>
+
+<!-- c3 · 1번 게시물 · 누가 · 신청 -->
+<section class="card solid" id="c3">
+  <div class="text">
+    <span class="chip">무료 체험 신청 받는 중</span>
+    <h1>대학 수업 팀 4명이<br>만들고 있습니다</h1>
+    <ul class="list">
+      <li>만드는 과정을 모두 공개합니다</li>
+      <li>데모는 팀이 만든 <br>가짜 통화로 움직입니다</li>
+      <li>팀원 한 명이 대리점 업무 프로그램<br>회사를 운영해 현장에서 시험합니다</li>
+      <li>체험판 목표: 12월 초</li>
+    </ul>
+  </div>
+  <div class="foot"><span><span class="mark"><i></i><i></i><i></i><i></i></span>T07 팀</span><span class="pill">프로필 링크에서 신청</span></div>
+</section>
+
+<!-- c4 · 1번 게시물 · 얼굴 쓰는 안 · 표지 (사진은 본인이 찍어 넣는다) -->
+<section class="card face" id="c4">
+  <div class="text">
+    <span class="chip">만드는 과정 #1</span>
+    <h1>마케팅 맡은 금*현입니다.<br><em>주문 전화를 정리하는 AI</em>를<br>만들고 있어요.</h1>
+  </div>
+  <div class="photo">금*현 님 사진 자리<br><span style="font-size:32px;font-weight:500">본인이 찍은 사진으로 바꾼다<br>(AI 로 얼굴을 만들지 않는다)</span></div>
+  <div class="foot"><span><span class="mark"><i></i><i></i><i></i><i></i></span>T07 팀</span><span class="pill">넘겨 보기 →</span></div>
+</section>
+
+<!-- c5 · 2번 게시물 · 현장 말 사전 -->
+<section class="card" id="c5" style="background-image:url('../그림/03-현장-말-사전.png')">
+  <div class="text">
+    <span class="chip">AI 가 알아들을까?</span>
+    <h1>휀다? 쇼바?<br><em>라지에다?</em></h1>
+    <p class="sub">현장에서 쓰는 부품 이름을 알려 주세요.<br>음성 인식이 알아듣게 낱말 사전을 만듭니다.</p>
+  </div>
+  <div class="foot"><span><span class="mark"><i></i><i></i><i></i><i></i></span>T07 팀 · 만드는 과정 #2</span><span class="pill">댓글로 알려 주세요</span></div>
+</section>
+
+<!-- og · 소개 페이지 공유 미리보기(카톡 · 문자에 링크를 붙이면 뜨는 그림) 1200×630 -->
+<section class="card" id="og">
+  <div class="text">
+    <h1>주문 전화를<br><em>글로, 카드로.</em></h1>
+    <p class="sub">자동차 부품 대리점 · 정비소용<br>무료 체험 신청 받는 중</p>
+  </div>
+  <div class="art"></div>
+  <div class="foot"><span><span class="mark"><i></i><i></i><i></i><i></i></span>대학 수업 T07 팀 · 시안</span></div>
+</section>
+
+</body>
+</html>

@@ -244,15 +244,15 @@
           <span>통화 · 오후 2:42 · 3분 24초</span>
           <span class="tag fake">예시 화면 · 가짜 데이터</span>
         </div>
-        <p class="bubble them"><small>정비소</small>그 <mark>아반떼</mark> <mark>앞범퍼 하나</mark>요. <mark>급해요</mark>.</p>
+        <p class="bubble them"><small>정비소</small>새한카센터인데요, <mark>아반떼</mark> <mark>앞범퍼 두 개</mark>, <mark>급해요</mark>.</p>
         <p class="bubble me"><small>대리점</small>CN7 맞으시죠? 오늘 5시 전에 보낼게요.</p>
         <div class="card">
           <h4>주문 카드 <span class="tag plan">AI 초안</span></h4>
           <dl>
-            <dt>거래처</dt><dd>가나다모터스(가짜)</dd>
+            <dt>거래처</dt><dd>새한카센터(가짜)</dd>
             <dt>차종</dt><dd>아반떼 CN7</dd>
             <dt>부품</dt><dd>앞범퍼</dd>
-            <dt>수량</dt><dd>1개</dd>
+            <dt>수량</dt><dd>2개 <span style="font-weight:500;font-size:15px;color:var(--accent)">▶ 들어 보기</span></dd>
             <dt>급한지</dt><dd>오늘 중</dd>
             <dt>품번</dt><dd class="check">담당자가 확인</dd>
           </dl>
@@ -309,19 +309,36 @@
         </div>
         <div class="box">
           <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></div>
-          <h3>3. 찾기</h3>
-          <p>「범퍼」, 「지난주 그 공업사」처럼 찾으면 그 통화의 그 대목으로 바로 갑니다.</p>
+          <h3>3. 통화 찾기</h3>
+          <p>「범퍼」, 「새한카센터」처럼 찾으면 그 낱말이 나온 통화만 남고, 누르면 그 대목으로 바로 갑니다.</p>
           <div class="search-demo" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>범퍼</div>
-          <div class="result">11/11 오후 2:42 · 가나다모터스(가짜)<br>「아반떼 앞범퍼 하나요」 <span class="tag fake">예시</span></div>
+          <div class="result">11/11 오후 2:42 · 새한카센터(가짜)<br>「아반떼 <strong>앞범퍼</strong> 두 개, 급해요」 <span class="tag fake">예시</span></div>
         </div>
       </div>
+
+      <h3 style="margin-top:40px">그리고</h3>
+      <div class="grid three">
+        <div class="box">
+          <h3>들어 보기</h3>
+          <p>카드의 「수량 2개」를 누르면 그 말을 한 문장이 표시되고, 녹음이 그 대목부터 나옵니다. 「두 개라고 했다 / 안 했다」를 바로 확인합니다.</p>
+        </div>
+        <div class="box">
+          <h3>지난 통화에 묻기</h3>
+          <p>「새한카센터가 이번 주에 범퍼 몇 번 시켰지?」처럼 물으면, 저장된 통화만 근거로 답하고 근거 통화를 붙입니다. 없으면 「찾지 못했어요」라고 합니다.</p>
+        </div>
+        <div class="box">
+          <h3>오늘 브리핑</h3>
+          <p>오늘 통화 수, 확인이 필요한 주문, 다시 전화할 곳을 한 화면에 모읍니다.</p>
+        </div>
+      </div>
+      <p class="note" style="margin-top:12px" data-live-mic-line hidden>데모에서는 마이크 단추를 누르고 「아반떼 앞범퍼 두 개, 급해요」라고 직접 말해 볼 수도 있습니다(크롬 · 엣지).</p>
 
       <h3 style="margin-top:40px">이렇게 씁니다</h3>
       <ol class="steps">
         <li><div><strong>평소처럼 전화를 받습니다.</strong><br><span class="note">녹음 파일을 올리거나, 녹음이 저장되는 폴더를 연결하는 방식을 시험하고 있습니다. <span class="tag plan">시험 중</span></span></div></li>
         <li><div><strong>받아쓴 글과 주문 카드 초안이 생깁니다.</strong></div></li>
         <li><div><strong>담당자가 확인하고 고쳐서 확정합니다.</strong><br><span class="note">AI 는 초안까지만 만듭니다.</span></div></li>
-        <li><div><strong>나중에 말로 찾습니다.</strong><br><span class="note">다툼이 생기면 그 통화의 글과 녹음을 바로 엽니다.</span></div></li>
+        <li><div><strong>나중에 찾거나 묻습니다.</strong><br><span class="note">말이 엇갈리면 그 통화의 글과 녹음을 바로 엽니다.</span></div></li>
       </ol>
     </div>
   </section>
@@ -520,6 +537,7 @@ const CONFIG = {
   retentionUntil: '2026년 12월 31일',     // 신청 정보 보관 마감(가정)
   trialWhen: '2026년 12월 초',            // 체험판 목표 시기(목표)
   repoUrl: 'https://github.com/iiankeum/T07-genai-project',
+  demoHasLiveMic: false,                 // 데모에 「실시간 받아쓰기 체험」(마이크)이 되면 true — 안내 한 줄이 켜진다
   pageVersion: 'intro-draft-2026-11-12'
 };
 /* ============================== */
@@ -541,6 +559,7 @@ const CONFIG = {
   $$('[data-retention]').forEach(el => { el.textContent = CONFIG.retentionUntil; });
   $$('[data-trial-when]').forEach(el => { el.textContent = CONFIG.trialWhen; });
   $$('[data-repo-link]').forEach(el => { el.href = CONFIG.repoUrl; });
+  $$('[data-live-mic-line]').forEach(el => { el.hidden = !CONFIG.demoHasLiveMic; });
   $$('[data-demo-link]').forEach(el => {
     try {
       const u = new URL(CONFIG.demoUrl, location.href);
