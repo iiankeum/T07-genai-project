@@ -30,7 +30,9 @@ DIET_WORDS: list[tuple[str, str]] = [
     (r"(?<![가-힣])고기|육류", "고기"),
 ]
 DIET_NEG = re.compile(r"못\s*먹|안\s*먹|못\s*드|안\s*드|먹지\s*(?:못|않|말)|알레르기|알러지|드시면\s*안|먹으면\s*안")
-VEGETARIAN = re.compile(r"채식|비건|베지테리언|비건이|고기를?\s*안\s*먹")
+VEGAN = re.compile(r"비건|vegan|완전\s*채식", re.I)
+VEGETARIAN = re.compile(r"채식|베지테리언|vegetarian", re.I)
+MEATLESS = re.compile(r"고기[는를]?\s*(?:안|못)\s*먹|육류[는를]?\s*(?:안|못)\s*먹|페스코")
 SPICY_WEAK = re.compile(r"맵찔이|매운\s*거?\s*약|매운\s*걸?\s*잘\s*못")
 
 # 업종 (like / avoid) — data/restaurants.csv의 '업종'과 맞춘다
@@ -151,7 +153,14 @@ def extract_clause(clause: str, author: str, stations: list[str], today: date | 
 
     # 못 먹는 음식 (필수)
     diet_done: set[str] = set()
-    if VEGETARIAN.search(clause):
+    # 식단: 비건(동물성 전부) > 채식(고기·해산물) > 고기만 안 먹음 — 서로 다르게 다룬다
+    if VEGAN.search(clause):
+        hits.append(Hit(C(type="diet", value="비건", kind="must"), self_report=is_self))
+        diet_done |= {"비건", "고기"}
+    elif VEGETARIAN.search(clause):
+        hits.append(Hit(C(type="diet", value="채식", kind="must"), self_report=is_self))
+        diet_done |= {"채식", "고기"}
+    elif MEATLESS.search(clause):
         hits.append(Hit(C(type="diet", value="고기", kind="must"), self_report=is_self))
         diet_done.add("고기")
     if SPICY_WEAK.search(clause):

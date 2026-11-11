@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .models import KIND_LABEL, WEIGHT_LABEL, Condition
+from .models import KIND_LABEL, WEIGHT_LABEL, Condition, diet_who
 
 SHORT = {"room": "룸", "walk": "역 거리", "one_table": "한 테이블", "quiet": "조용함", "parking": "주차",
          "budget": "예산", "_tiebreak": "예산 여유·거리"}
@@ -25,7 +25,7 @@ def _josa_ro(word: str) -> str:
 def _short(key: str) -> str:
     if ":" in key:
         t, v = key.split(":", 1)
-        return {"like": f"{v} 희망", "avoid": f"{v} 기피", "diet": f"{v} 못 먹음"}.get(t, key)
+        return {"like": f"{v} 희망", "avoid": f"{v} 기피", "diet": diet_who(v)}.get(t, key)
     return SHORT.get(key, key)
 
 

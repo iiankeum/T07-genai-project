@@ -12,7 +12,7 @@ def test_llm_output_is_validated(settings, stations, monkeypatch):
     fake = {"conditions": [
         {"type": "area", "value": ["강남역", "판교역"], "kind": "must"},     # 데이터에 없는 역은 버림
         {"type": "budget", "value": "40,000", "kind": "must"},
-        {"type": "diet", "value": "채식", "kind": "must", "count": 1},       # 채식 → 고기
+        {"type": "diet", "value": "채식", "kind": "must", "count": 1},       # 채식(고기·해산물 X)
         {"type": "like", "value": "랍스터 전문점", "kind": "prefer"},        # 없는 업종은 버림
         {"type": "restaurant", "value": "지어낸 식당"},                      # 없는 type은 버림
         {"type": "room", "value": True, "kind": "prefer", "weight": 9},     # 중요도는 1~3으로
@@ -22,7 +22,7 @@ def test_llm_output_is_validated(settings, stations, monkeypatch):
     c = {x.key: x for x in out.conditions}
     assert out.parser == "anthropic"
     assert c["area"].value == ["강남역"] and c["budget"].value == 40000
-    assert "diet:고기" in c and c["room"].weight == 3
+    assert "diet:채식" in c and c["room"].weight == 3
     assert not any(k.startswith("like:") for k in c) and "drinks" in c
     assert out.unmatched[0]["text"] == "케이크 가져가도 되나요?"
 

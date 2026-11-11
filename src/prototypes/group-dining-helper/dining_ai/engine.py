@@ -8,7 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from .models import DIET_LABEL, Condition, Restaurant, won
+from .models import NEEDS_STORE_CHECK, Condition, Restaurant, diet_who, diet_without, won
 
 TOP_N = 3
 
@@ -91,14 +91,18 @@ def evaluate(r: Restaurant, conds: list[Condition]) -> Evaluation:
         elif t == "slot":
             add(c, 1.0 if (r.lunch if v == "점심" else r.dinner) else 0.0, fail=f"{v} 영업 안 함")
         elif t == "diet":
-            label = DIET_LABEL.get(v, v)
+            who, without = diet_who(v), diet_without(v)
             edible = r.edible_mains(v)
             names = ", ".join(m.name for m in edible[:3]) + (" 등" if len(edible) > 3 else "")
-            add(c, 1.0 if edible else 0.0,
-                good=f"{label} 못 먹는 분도 고를 메인 {len(edible)}가지 ({names})" if edible else "",
-                bad=f"{label} 없이 먹을 메인 메뉴가 없음", fail=f"{label} 없이 먹을 메인 메뉴가 없음")
+            unsure = v in NEEDS_STORE_CHECK
+            good = (f"{who}도 고를 수 있어 보이는 메인 {len(edible)}가지 ({names})" if unsure
+                    else f"{who}도 고를 메인 {len(edible)}가지 ({names})") if edible else ""
+            add(c, 1.0 if edible else 0.0, good=good,
+                bad=f"{without} 먹을 메인 메뉴가 없음", fail=f"{without} 먹을 메인 메뉴가 없음")
+            if edible and unsure:
+                e.checks.append(f"{who}: {NEEDS_STORE_CHECK[v]} — 매장 확인 필요")
             if len(edible) == 1:
-                e.checks.append(f"{label} 못 먹는 분이 고를 메인이 '{edible[0].name}' 하나뿐")
+                e.checks.append(f"{who}이 고를 메인이 '{edible[0].name}' 하나뿐")
         elif t == "room":
             fitting = [x for x in r.rooms if not n or x >= n]
             if fitting:
