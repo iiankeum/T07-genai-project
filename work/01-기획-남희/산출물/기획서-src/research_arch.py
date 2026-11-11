@@ -17,10 +17,10 @@ def ref_svg():
     n = len(STAGES)
     gap = 6
     bw = (W - 20 - gap * (n - 1)) / n
-    o = [f'<svg viewBox="0 0 {W} 400" xmlns="http://www.w3.org/2000/svg" font-family="SUIT, Malgun Gothic, sans-serif">',
+    o = [f'<svg viewBox="0 0 {W} 470" xmlns="http://www.w3.org/2000/svg" font-family="SUIT, Malgun Gothic, sans-serif">',
          '<defs><marker id="ra" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1E6E6E"/></marker></defs>',
          '<text x="10" y="18" font-size="12.5" font-weight="800" fill="#5F6B76">업계에서 흔한 방식 (조사)</text>',
-         '<text x="10" y="226" font-size="12.5" font-weight="800" fill="#1E6E6E">우리 데모</text>']
+         '<text x="10" y="262" font-size="13" font-weight="800" fill="#1E6E6E">우리 데모</text>']
 
     def wrap(t, n):
         out, cur = [], ""
@@ -37,12 +37,12 @@ def ref_svg():
         o.append(f'<text x="{x+bw/2:.1f}" y="49" font-size="13" font-weight="800" fill="#fff" text-anchor="middle">{name}</text>')
         if i < n - 1:
             o.append(f'<line x1="{x+bw:.1f}" y1="44" x2="{x+bw+gap:.1f}" y2="44" stroke="#1E6E6E" stroke-width="2" marker-end="url(#ra)"/>')
-        o.append(f'<rect x="{x:.1f}" y="68" width="{bw:.1f}" height="140" rx="8" fill="#F6F7F8" stroke="#D5DAE0"/>')
-        for k, ln in enumerate(wrap(ind, 9)[:8]):
-            o.append(f'<text x="{x+7:.1f}" y="{88+k*16}" font-size="11" fill="#1F2933">{ln}</text>')
-        o.append(f'<rect x="{x:.1f}" y="234" width="{bw:.1f}" height="156" rx="8" fill="#E3F1EF" stroke="#BFDCD8"/>')
-        for k, ln in enumerate(wrap(ours, 9)[:9]):
-            o.append(f'<text x="{x+7:.1f}" y="{254+k*16}" font-size="11" fill="#1E6E6E" font-weight="600">{ln}</text>')
+        o.append(f'<rect x="{x:.1f}" y="68" width="{bw:.1f}" height="180" rx="8" fill="#F6F7F8" stroke="#D5DAE0"/>')
+        for k, ln in enumerate(wrap(ind, 7)[:9]):
+            o.append(f'<text x="{x+6:.1f}" y="{90+k*18}" font-size="13" fill="#1F2933">{ln}</text>')
+        o.append(f'<rect x="{x:.1f}" y="270" width="{bw:.1f}" height="196" rx="8" fill="#E3F1EF" stroke="#BFDCD8"/>')
+        for k, ln in enumerate(wrap(ours, 7)[:10]):
+            o.append(f'<text x="{x+6:.1f}" y="{292+k*18}" font-size="13" fill="#1E6E6E" font-weight="600">{ln}</text>')
     o.append('</svg>')
     return "".join(o)
 
