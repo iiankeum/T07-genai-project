@@ -8,9 +8,14 @@
     - productNameNote  : 이름 옆 작은 표시. 이름이 정해지면 '' 로 비운다.
     - demoUrl          : 「데모 체험」 버튼이 가는 곳
     - signupEndpoint   : 무료 체험 신청을 보내는 곳(개발 방이 만든다)
-    - contactEmail     : 개인정보 문의처(정해지면 적는다)
+    - contactEmail     : 개인정보 문의 · 삭제 요청 받을 팀 공용 메일(정해지면 적는다)
+    - privacyOfficer   : 개인정보 담당 직함(정해지면 적는다)
+    - storage          : 저장 위치(AWS 지역 확인되면 적는다)
     - retentionUntil   : 신청 정보 보관 마감일(가정)
+    - demoHasLiveMic   : 데모에 마이크 받아쓰기 체험이 되면 true
   주소 뒤에 ?src=채널이름 을 붙이면 신청서와 데모 링크에 그 값이 실려, 어느 채널에서 왔는지 셀 수 있다.
+  같은 폴더: privacy.html(개인정보 처리방침 시안) · og.png(카톡 · 문자 공유 미리보기 1200×630)
+  동의 문구 근거: work/02-마케팅-강현/자료/조사-소개페이지-개인정보동의.md — 변호사 검토 전이다.
 -->
 <html lang="ko">
 <head>
@@ -21,6 +26,10 @@
 <meta property="og:title" content="주문 전화, 녹음만 쌓이고 다시 찾기 어렵죠?">
 <meta property="og:description" content="통화를 글로 받아쓰고 주문을 카드로 정리하는 도구 — 대학 수업 팀 프로젝트, 무료 체험 신청 받는 중">
 <meta property="og:type" content="website">
+<!-- 카톡 미리보기는 절대 주소가 안전하다. 올린 주소에 맞게 바꾼다(가정: /intro/og.png). -->
+<meta property="og:image" content="https://t07.3-39-67-126.sslip.io/intro/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <meta name="theme-color" content="#4f3bb8">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -51,7 +60,7 @@
     background: var(--bg);
     color: var(--ink);
     font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
-    font-size: 18px;
+    font-size: 19px;         /* 14pt ≈ 18.7px 이상(서울디지털재단 고령층 표준) */
     line-height: 1.65;
     word-break: keep-all;
     overflow-wrap: break-word;
@@ -169,6 +178,17 @@
   .consent table { width: 100%; border-collapse: collapse; font-size: 16px; margin-top: 8px; }
   .consent th, .consent td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
   .consent th { background: var(--bg-soft); width: 32%; font-weight: 700; }
+  .consent-title { font-size: 19px; margin: 0 0 4px; }
+  .consent > .choice { margin-top: 12px; }
+  .linkish { background: none; border: 0; padding: 4px 0; font: inherit; color: var(--accent); text-decoration: underline; cursor: pointer; min-height: 32px; }
+  .more { border: 2px solid var(--line); border-radius: 14px; padding: 4px 16px; background: #fff; }
+  .more > summary { cursor: pointer; font-weight: 700; font-size: 19px; min-height: var(--tap); display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+  .more-body { display: grid; gap: 22px; padding: 8px 0 18px; }
+  .who { font-size: 16px; color: var(--ink-soft); border-top: 1px solid var(--line); padding-top: 16px; }
+  .who p { margin: 0 0 6px; }
+  .sticky-cta { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); background: rgba(255,255,255,.97); border-top: 1px solid var(--line); transition: transform .2s; }
+  .sticky-cta.hide { transform: translateY(110%); }
+  @media (min-width: 720px) { .sticky-cta { display: none; } }
   .error { color: var(--red); font-weight: 700; font-size: 16px; margin-top: 6px; }
   .error:empty { display: none; }
   .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
@@ -192,7 +212,7 @@
   footer p { margin: 0 0 8px; }
 
   @media (min-width: 720px) {
-    body { font-size: 19px; }
+    body { font-size: 20px; }
     h1 { font-size: 44px; }
     h2 { font-size: 32px; }
     section { padding: 80px 0; }
@@ -236,7 +256,7 @@
           <a class="btn" href="#signup">무료 체험 신청</a>
           <a class="btn ghost" data-demo-link href="https://t07.3-39-67-126.sslip.io/">데모 먼저 눌러 보기</a>
         </div>
-        <p class="status"><span>지금은 만드는 중입니다. 데모는 팀원이 만든 <strong>가짜 주문 통화</strong>로 움직입니다.</span></p>
+        <p class="status"><span>대학 수업 팀이 만드는 시험판입니다 · 무료 · 카드 등록 없음. 데모는 팀원이 만든 <strong>가짜 주문 통화</strong>로 움직입니다.</span></p>
       </div>
 
       <div class="phone" role="img" aria-label="예시 화면: 받아쓴 통화와 주문 카드. 가짜 데이터입니다.">
@@ -359,80 +379,100 @@
   <section id="signup" aria-labelledby="signup-title">
     <div class="wrap narrow">
       <h2 id="signup-title">무료 체험 신청</h2>
-      <p class="lead">체험판이 준비되면 먼저 연락드립니다. 비용은 받지 않습니다.</p>
+      <p class="lead">출시 전에 먼저 써 보고 의견을 주실 분을 찾습니다. 체험판이 준비되면 먼저 연락드립니다.</p>
+      <p><span class="tag plan">결제 없음</span> <span class="tag plan">카드 등록 없음</span> <span class="tag plan">1분이면 끝</span></p>
       <p class="note">체험판 목표 시기: <strong data-trial-when>2026년 12월 초</strong> <span class="tag plan">목표</span> · 쓰시는 환경에 맞는지 먼저 여쭤보고 안내합니다.</p>
 
       <form id="trialForm" novalidate>
         <div>
-          <label class="lbl" for="f-name">성함 또는 호칭<span class="req">필수</span></label>
-          <input id="f-name" name="name" type="text" autocomplete="name" maxlength="40" placeholder="예: 김 부장">
+          <label class="lbl" for="f-name">연락드릴 때 부를 이름<span class="req">필수</span></label>
+          <input id="f-name" name="name" type="text" autocomplete="name" maxlength="40">
+          <p class="hint">실명이 아니어도 됩니다. 예: 김 부장</p>
           <div class="error" id="e-name"></div>
         </div>
 
-        <div class="two">
-          <div>
-            <label class="lbl" for="f-phone">휴대폰 번호</label>
-            <input id="f-phone" name="phone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="13" placeholder="010-0000-0000">
-          </div>
-          <div>
-            <label class="lbl" for="f-email">이메일</label>
-            <input id="f-email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="80" placeholder="name@example.com">
-          </div>
+        <div id="phoneWrap">
+          <label class="lbl" for="f-phone">휴대폰 번호<span class="req">필수</span></label>
+          <input id="f-phone" name="phone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="13">
+          <p class="hint">숫자만 적으셔도 됩니다. 예: 010-1234-5678 · <button type="button" class="linkish" id="useEmail">이메일이 더 편해요</button></p>
         </div>
-        <p class="hint" style="margin-top:-12px">휴대폰이나 이메일 중 <strong>하나만</strong> 적어 주셔도 됩니다.<span class="req">필수</span></p>
-        <div class="error" id="e-contact" style="margin-top:-16px"></div>
+        <div id="emailWrap" hidden>
+          <label class="lbl" for="f-email">이메일<span class="req">필수</span></label>
+          <input id="f-email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="80">
+          <p class="hint">예: name@example.com · <button type="button" class="linkish" id="usePhone">휴대폰 번호로 할게요</button></p>
+        </div>
+        <div class="error" id="e-contact"></div>
 
         <fieldset>
-          <legend>하시는 일<span class="req">필수</span></legend>
+          <legend>하시는 일<span class="opt">선택</span></legend>
           <div class="choices cols">
             <label class="choice"><input type="radio" name="industry" value="parts-dealer"> 부품 대리점 · 도매</label>
             <label class="choice"><input type="radio" name="industry" value="repair-shop"> 정비소(공업사 · 카센터)</label>
             <label class="choice"><input type="radio" name="industry" value="other-wholesale"> 전화 주문 받는 다른 도매업</label>
             <label class="choice"><input type="radio" name="industry" value="other"> 그 밖의 일</label>
           </div>
-          <div class="error" id="e-industry"></div>
         </fieldset>
 
-        <div class="two">
-          <div>
-            <label class="lbl" for="f-calls">하루 주문 전화<span class="opt">선택</span></label>
-            <select id="f-calls" name="callsPerDay">
-              <option value="">고르지 않음</option>
-              <option value="lt10">10통 미만</option>
-              <option value="10-30">10~30통</option>
-              <option value="30-50">30~50통</option>
-              <option value="50+">50통 넘게</option>
-              <option value="unknown">잘 모름</option>
-            </select>
-          </div>
-          <div>
-            <label class="lbl" for="f-region">지역<span class="opt">선택</span></label>
-            <select id="f-region" name="region">
-              <option value="">고르지 않음</option>
-              <option>서울</option><option>부산</option><option>대구</option><option>인천</option><option>광주</option>
-              <option>대전</option><option>울산</option><option>세종</option><option>경기</option><option>강원</option>
-              <option>충북</option><option>충남</option><option>전북</option><option>전남</option><option>경북</option>
-              <option>경남</option><option>제주</option>
-            </select>
-          </div>
-        </div>
+        <details class="more">
+          <summary>더 알려 주시면 도움이 돼요 <span class="opt">선택 · 건너뛰어도 됩니다</span></summary>
+          <div class="more-body">
+            <fieldset>
+              <legend>하루 주문 전화</legend>
+              <div class="choices cols">
+                <label class="choice"><input type="radio" name="callsPerDay" value="lt10"> 10통 미만</label>
+                <label class="choice"><input type="radio" name="callsPerDay" value="10-30"> 10~30통</label>
+                <label class="choice"><input type="radio" name="callsPerDay" value="30-100"> 30~100통</label>
+                <label class="choice"><input type="radio" name="callsPerDay" value="100+"> 100통 넘게</label>
+                <label class="choice"><input type="radio" name="callsPerDay" value="unknown"> 잘 모름</label>
+              </div>
+            </fieldset>
 
-        <div>
-          <label class="lbl" for="f-rec">지금 통화 녹음은 어떻게 하세요?<span class="opt">선택</span></label>
-          <select id="f-rec" name="recordingSetup">
-            <option value="">고르지 않음</option>
-            <option value="office-phone">사무실 전화기 · PC 에 녹음이 저장된다</option>
-            <option value="mobile-auto">휴대폰 자동 녹음을 쓴다</option>
-            <option value="none">녹음하지 않는다</option>
-            <option value="unknown">잘 모르겠다</option>
-          </select>
-        </div>
+            <div>
+              <label class="lbl" for="f-region">지역(시 · 도)</label>
+              <select id="f-region" name="region">
+                <option value="">고르지 않음</option>
+                <option>서울</option><option>부산</option><option>대구</option><option>인천</option><option>광주</option>
+                <option>대전</option><option>울산</option><option>세종</option><option>경기</option><option>강원</option>
+                <option>충북</option><option>충남</option><option>전북</option><option>전남</option><option>경북</option>
+                <option>경남</option><option>제주</option>
+              </select>
+            </div>
 
-        <div>
-          <label class="lbl" for="f-msg">하고 싶은 말<span class="opt">선택</span></label>
-          <textarea id="f-msg" name="message" maxlength="500" placeholder="예: 이런 기능이 있으면 좋겠다, 이런 점이 걱정된다"></textarea>
-          <p class="hint">거래처 이름이나 다른 분의 연락처는 적지 말아 주세요.</p>
-        </div>
+            <fieldset>
+              <legend>지금 통화 녹음은 어떻게 하세요?</legend>
+              <div class="choices">
+                <label class="choice"><input type="radio" name="recordingSetup" value="office-phone"> 사무실 전화기 · PC 에 녹음이 저장된다</label>
+                <label class="choice"><input type="radio" name="recordingSetup" value="mobile-auto"> 휴대폰 자동 녹음을 쓴다</label>
+                <label class="choice"><input type="radio" name="recordingSetup" value="none"> 녹음하지 않는다</label>
+                <label class="choice"><input type="radio" name="recordingSetup" value="unknown"> 잘 모르겠다</label>
+              </div>
+            </fieldset>
+
+            <div>
+              <label class="lbl" for="f-heard">어디서 보고 오셨어요?</label>
+              <select id="f-heard" name="heardFrom">
+                <option value="">고르지 않음</option>
+                <option value="instagram">인스타그램</option>
+                <option value="threads">스레드</option>
+                <option value="kakao-openchat">카톡 오픈채팅</option>
+                <option value="naver-cafe">네이버 카페</option>
+                <option value="band">밴드</option>
+                <option value="referral">아는 분 소개</option>
+                <option value="offline">직접 만나서</option>
+                <option value="search">검색</option>
+                <option value="other">그 밖</option>
+              </select>
+            </div>
+
+            <label class="choice"><input type="checkbox" id="f-interview" name="interviewOk"> 15분 전화 인터뷰도 괜찮아요</label>
+
+            <div>
+              <label class="lbl" for="f-msg">하고 싶은 말</label>
+              <textarea id="f-msg" name="message" maxlength="500" rows="3"></textarea>
+              <p class="hint">거래처 이름이나 다른 분의 이름 · 전화번호는 적지 말아 주세요.</p>
+            </div>
+          </div>
+        </details>
 
         <!-- 스팸 막기: 사람에게는 안 보이는 칸. 채워져 오면 서버가 버린다. -->
         <div class="hp" aria-hidden="true">
@@ -440,52 +480,68 @@
           <input id="f-website" name="website" type="text" tabindex="-1" autocomplete="off">
         </div>
 
+        <!-- 동의: 고지 내용은 접지 않고 펼쳐 둔다(통합 안내서 p.28 · 대법원 2014두2638). 두 칸 모두 체크 안 된 상태로 시작한다. -->
         <div class="consent">
-          <label class="choice"><input type="checkbox" id="f-consent" name="consentPrivacy"> [필수] 개인정보 수집 · 이용에 동의합니다</label>
-          <details>
-            <summary>무엇을, 왜, 언제까지 보관하는지 보기</summary>
-            <table>
-              <tr><th scope="row">누가</th><td>대학 수업 「인간-인공지능협업제품서비스설계」 T07 팀(학생 4명)</td></tr>
-              <tr><th scope="row">왜</th><td>무료 체험 신청 확인, 체험 안내 연락, 보내 주신 의견 확인</td></tr>
-              <tr><th scope="row">무엇을</th><td>필수: 성함 또는 호칭, 휴대폰 번호 또는 이메일, 하시는 일<br>선택: 하루 주문 전화 수, 지역, 녹음 방식, 하고 싶은 말</td></tr>
-              <tr><th scope="row">언제까지</th><td><strong data-retention>2026년 12월 31일</strong>까지 보관하고, 그 뒤 바로 지웁니다. 그 전이라도 지워 달라고 하시면 바로 지웁니다.</td></tr>
-              <tr><th scope="row">어디에</th><td>팀이 쓰는 클라우드 서버에 저장합니다. 다른 곳에 팔거나 넘기지 않습니다.</td></tr>
-              <tr><th scope="row">거부할 권리</th><td>동의하지 않으셔도 됩니다. 다만 동의하지 않으시면 무료 체험 신청을 받을 수 없습니다.</td></tr>
-            </table>
-            <p class="hint">수업 과제 결과에는 신청 수 같은 숫자만 쓰고, 누구인지 알아볼 수 있는 정보는 쓰지 않습니다. 만 14세 미만은 신청할 수 없습니다.</p>
-          </details>
+          <h3 class="consent-title">[필수] 체험 신청을 위한 개인정보 수집 · 이용 동의</h3>
+          <table>
+            <tr><th scope="row">무엇에 쓰나요</th><td>① 무료 체험 안내 연락과 체험 진행<br>② (고르신 경우) 15분 전화 인터뷰 연락<br>③ 신청 현황 집계 — 이름 · 연락처를 뺀 <strong>숫자로만</strong> 수업 과제 보고서에 씁니다</td></tr>
+            <tr><th scope="row">무엇을 받나요</th><td>꼭 적을 것: 이름(호칭도 됨), 휴대폰 번호 또는 이메일 중 하나<br>적고 싶으면: 하시는 일, 하루 주문 전화, 지역(시 · 도), 녹음 방식, 어디서 보셨는지, 인터뷰 가능 여부, 하고 싶은 말</td></tr>
+            <tr><th scope="row">언제까지 갖고 있나요</th><td><strong>체험과 수업 과제가 끝나는 <span data-retention>2026년 12월 31일</span>까지. 그 뒤 바로 지웁니다.</strong> 그 전에라도 지워 달라고 하시면 바로 지웁니다.</td></tr>
+            <tr><th scope="row">동의하지 않으면</th><td>동의하지 않으셔도 됩니다. 다만 연락드릴 방법이 없어 체험 신청이 접수되지 않습니다. 「적고 싶으면」 칸은 비워 두셔도 신청됩니다.</td></tr>
+          </table>
+          <label class="choice"><input type="checkbox" id="f-consent" name="consentPrivacy"> 위 내용을 읽었고, 개인정보 수집 · 이용에 동의합니다 <span class="req">필수</span></label>
           <div class="error" id="e-consent"></div>
         </div>
 
         <div class="consent">
-          <label class="choice"><input type="checkbox" id="f-marketing" name="consentMarketing"> [선택] 개발 소식 · 체험 일정 안내를 받겠습니다</label>
-          <details>
-            <summary>자세히 보기</summary>
-            <table>
-              <tr><th scope="row">왜</th><td>개발 소식과 체험 일정을 문자나 이메일로 알려 드리기 위해</td></tr>
-              <tr><th scope="row">무엇을</th><td>휴대폰 번호 또는 이메일</td></tr>
-              <tr><th scope="row">언제까지</th><td>그만 받겠다고 하실 때까지, 늦어도 <span data-retention>2026년 12월 31일</span>까지</td></tr>
-              <tr><th scope="row">거부할 권리</th><td>동의하지 않으셔도 무료 체험 신청은 그대로 됩니다.</td></tr>
-            </table>
-          </details>
+          <h3 class="consent-title">[선택] 새 소식 받기 동의(홍보 목적 연락)</h3>
+          <table>
+            <tr><th scope="row">무엇에 쓰나요</th><td><strong><span data-product>콜노트</span><span data-product-note-inline>(가칭)</span> 정식 공개 · 새 기능 소식과 설문 안내를 문자 또는 이메일로 보내 드립니다.</strong></td></tr>
+            <tr><th scope="row">무엇을 받나요</th><td>이름(호칭), 휴대폰 번호 또는 이메일</td></tr>
+            <tr><th scope="row">언제까지</th><td><strong>그만 받겠다고 하실 때, 또는 <span data-retention>2026년 12월 31일</span> 중 먼저 오는 날까지</strong></td></tr>
+            <tr><th scope="row">동의하지 않으면</th><td>체험 신청에는 아무 불이익이 없습니다. 받으신 뒤에도 「그만」이라고 답하시면 바로 멈춥니다. 밤 9시부터 아침 8시까지는 보내지 않습니다.</td></tr>
+          </table>
+          <label class="choice"><input type="checkbox" id="f-marketing" name="consentMarketing"> 새 소식을 문자 · 이메일로 받겠습니다 <span class="opt">선택</span></label>
         </div>
 
         <button class="btn block" type="submit" id="submitBtn">무료 체험 신청하기</button>
         <div class="form-status" id="formStatus" role="status" aria-live="polite"></div>
-        <p class="note" data-contact-line>개인정보 문의 · 삭제 요청: <span data-contact>문의처는 정해지면 적습니다(시안)</span></p>
+        <div id="shareBox" class="box" hidden>
+          <p><strong>주변에 전화 주문 받는 분이 계신가요?</strong><br>이 페이지를 보내 주시면 큰 도움이 됩니다.</p>
+          <button class="btn ghost block" type="button" id="shareBtn">다른 분께 이 페이지 보내기</button>
+        </div>
+
+        <div class="who">
+          <p>신청 정보를 받는 곳: 대학 수업 「인간-인공지능협업제품서비스설계」 T07 팀 · 개인정보 담당 <span data-privacy-officer>정해지면 적습니다(시안)</span> · 문의 · 삭제 요청 <span data-contact>정해지면 적습니다(시안)</span></p>
+          <p>신청 정보는 팀 안에서만 씁니다. 다른 회사나 다른 사람에게 주지 않습니다.</p>
+          <p>정보는 <span data-storage>팀이 쓰는 클라우드 서버(Amazon Web Services)</span>에 저장합니다.</p>
+          <p>만 14세 미만은 신청할 수 없습니다. · <a data-privacy-link href="privacy.html">개인정보 처리방침</a></p>
+        </div>
       </form>
     </div>
   </section>
 
-  <!-- 6. 안심 -->
+  <!-- 6. 안심: 녹음은 어디로 가나요 -->
   <section class="soft" aria-labelledby="trust-title">
     <div class="wrap">
-      <h2 id="trust-title">통화 녹음은 민감하니까요</h2>
-      <div class="grid three">
-        <div class="box"><h3>가짜 통화로만 공개</h3><p>데모와 공개 자료에는 팀원이 만든 가짜 통화만 씁니다. 실제 고객 통화 · 이름 · 번호는 공개하지 않습니다.</p></div>
-        <div class="box"><h3>PC 안에서 받아쓰기 <span class="tag plan">계획</span></h3><p>현장에서는 녹음이 PC 밖으로 나가지 않도록, PC 안에서 받아쓰는 방식도 함께 시험할 계획입니다.</p></div>
-        <div class="box"><h3>확정은 사람이</h3><p>AI 는 받아쓰기와 주문 카드 초안까지만 만듭니다. 품번 · 수량 확정은 담당자가 합니다.</p></div>
+      <h2 id="trust-title">녹음은 어디로 가나요?</h2>
+      <p class="note">통화 녹음은 민감합니다. 정해진 것과 아직 정하는 것을 그대로 적습니다.</p>
+      <div class="grid two-col">
+        <div class="box">
+          <h3>데모 <span class="tag fake">지금</span></h3>
+          <p>팀원이 정비소 · 대리점 역할을 나눠 만든 <strong>가짜 통화만</strong> 씁니다. 실제 고객 통화 · 이름 · 번호는 쓰지도, 공개하지도 않습니다.</p>
+        </div>
+        <div class="box">
+          <h3>실제 체험 <span class="tag plan">정하는 중</span></h3>
+          <p>녹음을 어디서 받아쓸지(가게 PC 안 / 팀 서버), 얼마나 보관하고 언제 지우는지를 정하는 중입니다. <strong>체험 전에 단계별로 설명드리고, 동의를 받은 뒤에만</strong> 시작합니다.</p>
+        </div>
       </div>
+      <ol class="steps" style="margin-top:16px" aria-label="녹음 처리 단계">
+        <li><div><strong>녹음</strong> — 지금 쓰시는 방식 그대로</div></li>
+        <li><div><strong>받아쓰기</strong> — 어디서 하는지 체험 전에 알려 드립니다 <span class="tag plan">정하는 중</span></div></li>
+        <li><div><strong>주문 카드</strong> — AI 는 초안까지, 확정은 담당자가</div></li>
+        <li><div><strong>보관 · 삭제</strong> — 기간을 정해 알려 드리고, 지워 달라고 하시면 지웁니다 <span class="tag plan">정하는 중</span></div></li>
+      </ol>
     </div>
   </section>
 
@@ -518,6 +574,8 @@
   </section>
 </main>
 
+<div class="sticky-cta" id="stickyCta"><a class="btn block" href="#signup">무료 체험 신청</a></div>
+
 <footer>
   <div class="wrap">
     <p><strong><span data-product>콜노트</span><span data-product-note-inline>(가칭)</span></strong> · 제품명은 팀 투표로 정할 예정입니다.</p>
@@ -533,7 +591,10 @@ const CONFIG = {
   productNameNote: '가칭',               // 이름이 정해지면 '' 로 비운다
   demoUrl: 'https://t07.3-39-67-126.sslip.io/',   // 데모 주소(개발 방과 맞춘다)
   signupEndpoint: '/api/trial-signup',   // 무료 체험 신청을 받는 곳(개발 방이 만든다)
-  contactEmail: '',                      // 개인정보 문의처 — 정해지면 적는다
+  contactEmail: '',                      // 개인정보 문의 · 삭제 요청 받을 팀 공용 메일 — 정해지면 적는다
+  privacyOfficer: '',                    // 개인정보 담당(직함, 예: 'T07 팀 총괄') — 정해지면 적는다
+  storage: '',                           // 저장 위치, 예: 'Amazon Web Services 서울 리전(대한민국) 서버' — 확인되면 적는다
+  privacyUrl: 'privacy.html',            // 개인정보 처리방침 주소
   retentionUntil: '2026년 12월 31일',     // 신청 정보 보관 마감(가정)
   trialWhen: '2026년 12월 초',            // 체험판 목표 시기(목표)
   repoUrl: 'https://github.com/iiankeum/T07-genai-project',
@@ -546,20 +607,23 @@ const CONFIG = {
   const $ = (s, el = document) => el.querySelector(s);
   const $$ = (s, el = document) => Array.from(el.querySelectorAll(s));
 
-  // 어느 채널에서 왔는지: ?src=insta-1 처럼 붙인다(utm_source 도 읽는다)
+  // 어느 채널에서 왔는지: ?src=ig-1116 처럼 붙인다(utm_source 도 읽는다)
   const params = new URLSearchParams(location.search);
   const source = (params.get('src') || params.get('utm_source') || 'direct').slice(0, 40);
 
   // 제품명 · 표시 · 링크를 CONFIG 로 채운다
+  const note = CONFIG.productNameNote ? '(' + CONFIG.productNameNote + ')' : '';
   $$('[data-product]').forEach(el => { el.textContent = CONFIG.productName; });
   $$('[data-product-note]').forEach(el => { el.textContent = CONFIG.productNameNote; });
-  $$('[data-product-note-inline]').forEach(el => { el.textContent = CONFIG.productNameNote ? '(' + CONFIG.productNameNote + ')' : ''; });
-  const suffix = CONFIG.productNameNote ? '(' + CONFIG.productNameNote + ')' : '';
-  document.title = CONFIG.productName + suffix + ' — 주문 전화를 글로, 주문 카드로';
+  $$('[data-product-note-inline]').forEach(el => { el.textContent = note; });
+  document.title = CONFIG.productName + note + ' — 주문 전화를 글로, 주문 카드로';
   $$('[data-retention]').forEach(el => { el.textContent = CONFIG.retentionUntil; });
   $$('[data-trial-when]').forEach(el => { el.textContent = CONFIG.trialWhen; });
   $$('[data-repo-link]').forEach(el => { el.href = CONFIG.repoUrl; });
+  $$('[data-privacy-link]').forEach(el => { el.href = CONFIG.privacyUrl; });
   $$('[data-live-mic-line]').forEach(el => { el.hidden = !CONFIG.demoHasLiveMic; });
+  if (CONFIG.privacyOfficer) $$('[data-privacy-officer]').forEach(el => { el.textContent = CONFIG.privacyOfficer; });
+  if (CONFIG.storage) $$('[data-storage]').forEach(el => { el.textContent = CONFIG.storage; });
   $$('[data-demo-link]').forEach(el => {
     try {
       const u = new URL(CONFIG.demoUrl, location.href);
@@ -570,7 +634,7 @@ const CONFIG = {
   });
   if (CONFIG.contactEmail) {
     $$('[data-contact]').forEach(el => {
-      el.innerHTML = '';
+      el.textContent = '';
       const a = document.createElement('a');
       a.href = 'mailto:' + CONFIG.contactEmail;
       a.textContent = CONFIG.contactEmail;
@@ -578,12 +642,45 @@ const CONFIG = {
     });
   }
 
-  // 휴대폰 번호에 하이픈 자동으로
+  // 휴대폰에서 아래 고정 「무료 체험 신청」 — 신청서가 보이면 숨긴다
+  const sticky = $('#stickyCta');
+  const signup = $('#signup');
+  if ('IntersectionObserver' in window && sticky && signup) {
+    new IntersectionObserver(es => es.forEach(e => sticky.classList.toggle('hide', e.isIntersecting)), { threshold: 0.05 }).observe(signup);
+  }
+
+  // 휴대폰 ↔ 이메일 바꾸기
   const phone = $('#f-phone');
+  const email = $('#f-email');
+  let contactMode = 'phone';
+  function setMode(m) {
+    contactMode = m;
+    $('#phoneWrap').hidden = m !== 'phone';
+    $('#emailWrap').hidden = m !== 'email';
+    (m === 'phone' ? phone : email).focus();
+    $('#e-contact').textContent = '';
+  }
+  $('#useEmail').addEventListener('click', () => setMode('email'));
+  $('#usePhone').addEventListener('click', () => setMode('phone'));
+
+  // 휴대폰 번호에 붙임표 자동으로(띄어쓰기 · 붙임표가 섞여도 받는다)
   phone.addEventListener('input', () => {
     const d = phone.value.replace(/\D/g, '').slice(0, 11);
     phone.value = d.length < 4 ? d : d.length < 8 ? d.slice(0, 3) + '-' + d.slice(3)
       : d.slice(0, 3) + '-' + d.slice(3, d.length - 4) + '-' + d.slice(-4);
+  });
+
+  // 신청 뒤 「다른 분께 보내기」 — 받은 사람은 ?src=referral 로 들어온다
+  $('#shareBtn').addEventListener('click', async () => {
+    const url = location.origin + location.pathname + '?src=referral';
+    const text = '전화 주문을 글로 받아쓰고 주문 카드로 정리해 주는 도구 — 무료 체험 신청 받는 중';
+    try {
+      if (navigator.share) { await navigator.share({ title: document.title, text, url }); return; }
+      await navigator.clipboard.writeText(text + '\n' + url);
+      $('#shareBtn').textContent = '주소를 복사했어요. 카톡에 붙여 넣어 보내 주세요';
+    } catch (e) {
+      window.prompt('이 주소를 복사해 보내 주세요', url);
+    }
   });
 
   const form = $('#trialForm');
@@ -591,48 +688,51 @@ const CONFIG = {
   const btn = $('#submitBtn');
   const setErr = (id, msg) => { $('#' + id).textContent = msg || ''; };
   const showStatus = (kind, msg) => { status.className = 'form-status ' + kind; status.textContent = msg; };
+  const radio = name => { const r = $('input[name="' + name + '"]:checked'); return r ? r.value : ''; };
 
   function validate() {
     let first = null;
     const name = $('#f-name').value.trim();
-    const phoneDigits = phone.value.replace(/\D/g, '');
-    const email = $('#f-email').value.trim();
-    const industry = $('input[name=industry]:checked');
+    const phoneDigits = contactMode === 'phone' ? phone.value.replace(/\D/g, '') : '';
+    const mail = contactMode === 'email' ? email.value.trim() : '';
     const consent = $('#f-consent').checked;
 
-    setErr('e-name', name ? '' : '성함이나 호칭을 적어 주세요.');
+    setErr('e-name', name ? '' : '연락드릴 때 부를 이름을 적어 주세요. 호칭도 됩니다.');
     if (!name) first = first || $('#f-name');
 
     let contactMsg = '';
-    if (!phoneDigits && !email) contactMsg = '휴대폰 번호나 이메일 중 하나를 적어 주세요.';
-    else if (phoneDigits && !/^01[016789]\d{7,8}$/.test(phoneDigits)) contactMsg = '휴대폰 번호를 다시 확인해 주세요. 예: 010-1234-5678';
-    else if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) contactMsg = '이메일 주소를 다시 확인해 주세요.';
+    if (contactMode === 'phone') {
+      if (!phoneDigits) contactMsg = '휴대폰 번호를 적어 주세요. 이메일이 편하시면 「이메일이 더 편해요」를 누르세요.';
+      else if (!/^01[016789]\d{7,8}$/.test(phoneDigits)) contactMsg = '휴대폰 번호를 다시 확인해 주세요(예: 010-1234-5678).';
+    } else {
+      if (!mail) contactMsg = '이메일을 적어 주세요.';
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) contactMsg = '이메일 주소를 다시 확인해 주세요(예: name@example.com).';
+    }
     setErr('e-contact', contactMsg);
-    if (contactMsg) first = first || (phoneDigits || !email ? phone : $('#f-email'));
+    if (contactMsg) first = first || (contactMode === 'phone' ? phone : email);
 
-    setErr('e-industry', industry ? '' : '하시는 일을 골라 주세요.');
-    if (!industry) first = first || $('input[name=industry]');
-
-    setErr('e-consent', consent ? '' : '신청하시려면 개인정보 수집 · 이용에 동의해 주셔야 합니다.');
+    setErr('e-consent', consent ? '' : '신청하시려면 위 개인정보 수집 · 이용에 동의해 주셔야 합니다.');
     if (!consent) first = first || $('#f-consent');
 
-    return { ok: !first, first, phoneDigits, email, name, industry: industry && industry.value, consent };
+    return { ok: !first, first, phoneDigits, mail, name };
   }
 
   form.addEventListener('submit', async (ev) => {
     ev.preventDefault();
     showStatus('', '');
     const v = validate();
-    if (!v.ok) { v.first.focus(); showStatus('bad', '빨간 글씨로 표시된 곳을 확인해 주세요.'); return; }
+    if (!v.ok) { v.first.focus(); showStatus('bad', '빨간 글씨로 표시된 곳을 확인해 주세요. 적으신 내용은 그대로 남아 있습니다.'); return; }
 
     const payload = {
       name: v.name,
-      phone: v.phoneDigits || '',
-      email: v.email || '',
-      industry: v.industry,
-      callsPerDay: $('#f-calls').value,
+      phone: v.phoneDigits,
+      email: v.mail,
+      industry: radio('industry'),
+      callsPerDay: radio('callsPerDay'),
       region: $('#f-region').value,
-      recordingSetup: $('#f-rec').value,
+      recordingSetup: radio('recordingSetup'),
+      heardFrom: $('#f-heard').value,
+      interviewOk: $('#f-interview').checked,
       message: $('#f-msg').value.trim(),
       consentPrivacy: true,
       consentMarketing: $('#f-marketing').checked,
@@ -657,14 +757,16 @@ const CONFIG = {
       try { data = await res.json(); } catch (e) {}
       if (res.ok && data.ok !== false) {
         form.reset();
-        showStatus('ok', '신청이 접수됐습니다. 고맙습니다! 체험판이 준비되면 적어 주신 연락처로 먼저 연락드리겠습니다.');
+        setMode('phone');
+        showStatus('ok', '신청이 접수됐습니다. 고맙습니다! 체험판이 준비되면(' + CONFIG.trialWhen + ' 목표) 적어 주신 연락처로 먼저 연락드리겠습니다.');
+        $('#shareBox').hidden = false;
       } else if (res.status === 404) {
         showStatus('warn', '아직 신청 받는 곳이 연결되지 않았습니다(시안). 조금 뒤 다시 시도해 주세요.');
       } else {
-        showStatus('bad', (data && data.message) || '보내지 못했습니다. 잠시 뒤 다시 시도해 주세요.');
+        showStatus('bad', (data && data.message) || '보내지 못했습니다. 잠시 뒤 다시 시도해 주세요. 적으신 내용은 그대로 남아 있습니다.');
       }
     } catch (e) {
-      showStatus('bad', '인터넷 연결을 확인하고 다시 시도해 주세요.');
+      showStatus('bad', '인터넷 연결을 확인하고 다시 시도해 주세요. 적으신 내용은 그대로 남아 있습니다.');
     } finally {
       btn.disabled = false; btn.textContent = '무료 체험 신청하기';
     }
