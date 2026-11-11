@@ -6,7 +6,8 @@ DATE = "2026-11-12"
 P1_NOTE = """<div class="box gray" style="margin-top:4mm"><h4>P1 을 P0 와 나눈 까닭</h4>
 <ul><li>F11 은 받아쓰기로 가장 자주 틀리는 거래처 이름을 확실히 하는 길이지만, 현장 녹음 파일에 번호가 남는지부터 확인해야 한다(아침 질문).</li>
 <li>F12 는 현장 도입의 핵심이지만 데모에서는 F01(손으로 올리기)로 같은 흐름을 볼 수 있다.</li>
-<li>F13 · F14 · F15 는 P0 화면 위에 얹는 보기 기능이라 순서를 뒤로 뒀다.</li></ul></div>"""
+<li>F13 · F14 · F15 는 P0 화면 위에 얹는 보기 기능이라 순서를 뒤로 뒀다.</li></ul></div>
+<div class="box teal"><h4>기능 외 데모 화면</h4>사이트에는 기능 목록 밖의 화면이 둘 더 있다 — <b>무료 체험 신청</b>(프리마케팅용, 최소 항목 + 개인정보 동의)과 <b>관리자</b>(암호로 데모 초기화 · 통화 지우기 · 신청 보기). 사용자 기능이 아니라서 기능 번호를 붙이지 않았다.</div>"""
 
 
 def front_pages(page, img):
@@ -44,13 +45,14 @@ def front_pages(page, img):
  <div class="box teal"><h4>데모에서 진짜로 되는 것</h4>녹음 올리기 → PC GPU 받아쓰기(Whisper) → Claude 카드 정리 → 근거 재생 → 확정 → 찾기 · 묻기 · 브리핑. 휴대폰 · 태블릿 · PC 어디서나, 로그인 없이. 통화는 모두 <b>가짜</b>다.</div>
  <div class="box gray"><h4>이번 데모 밖 (부록)</h4>전화기 · 교환기 연동(통화 중 받아쓰기), 양쪽 목소리 나누기, 부품 카탈로그 · 품번 자동 조회, 대리점 전산 자동 입력, 알림톡, PC 안 AI, 여러 대리점 계정.</div>
 </div>
+@@TOC@@
 <div class="box yellow"><b>원칙</b> — AI 는 초안까지, 사람이 확정한다 · 품번은 AI 가 지어내지 않는다 · 틀릴 수 있는 값은 숨기지 않고 「들어 보기」로 표시한다 · 글씨는 크게, 말은 현장 말로.</div>
 """, foot="한 장 요약")
 
     people = page(f"""
 <div class="kicker">문제와 사용자</div><h2 class="sec">누가, 어떤 순간에 곤란한가</h2>
 <p class="lead">세 사람 모두 가짜 인물이다. 기능 쪽의 장면 그림에 같은 모습으로 다시 나온다.</p>
-<figure><img src="{img('char-sheet')}" alt="" style="max-height:88mm;object-fit:contain;background:#FBF8F2"></figure>
+<figure><img src="{img('char-sheet')}" alt="" style="height:112mm;object-fit:contain;background:#FBF8F2"></figure>
 <div class="persona">
  <div class="card"><h4>박 부장 (61)</h4><div class="role">부품 대리점 접수 담당 · 20년</div>
   <ul><li>하루 종일 정비소 주문 전화를 받아 메모하고 전산에 옮긴다.</li><li>전화가 몰리는 아침 · 점심 뒤에 메모가 빠진다.</li><li>작은 글씨와 복잡한 화면이 부담이다.</li><li><b>바라는 것</b>: 메모 빠짐 없이, 「아까 몇 개라 했지」를 바로 확인.</li></ul></div>
@@ -63,10 +65,8 @@ def front_pages(page, img):
 
     problem = page(f"""
 <div class="kicker">문제와 사용자</div><h2 class="sec">지금의 전화 주문 — 두 장면</h2>
-<div class="grid2">
- <figure><img src="{img('s01-rush')}" alt=""><figcaption>아침 주문이 몰릴 때. 전화를 받으며 메모지에 적고, 끊은 뒤 전산에 다시 옮긴다.</figcaption></figure>
- <figure><img src="{img('s02-dispute')}" alt=""><figcaption>「하나만 시켰는데요?」 — 수량을 두고 기억이 엇갈린다. 녹음은 있어도 찾아 듣기 어렵다.</figcaption></figure>
-</div>
+<figure><img src="{img('s01-rush')}" alt="" style="height:80mm;object-fit:cover"><figcaption>① 아침 주문이 몰릴 때. 전화를 받으며 메모지에 적고, 끊은 뒤 전산에 다시 옮긴다. 메모가 빠지고, 글씨를 못 알아본다.</figcaption></figure>
+<figure><img src="{img('s02-dispute')}" alt="" style="height:80mm;object-fit:cover"><figcaption>② 「하나만 시켰는데요?」 — 수량을 두고 기억이 엇갈린다. 녹음은 PC 에 있어도 파일 이름만으로는 어느 통화인지 몰라 찾아 듣기 어렵다.</figcaption></figure>
 {research.PROBLEM_EVIDENCE}
 """, foot="문제와 사용자")
     return [cover, summary, people, problem]
@@ -77,16 +77,17 @@ def research_pages(page, img):
 
 
 def overview_pages(page, img, FEATURES, P1):
+    from features import SCREEN
     rows = "".join(
-        f"<tr><td><b>{f['id']}</b></td><td><b>{f['name']}</b></td><td>{f['purpose']}</td><td class='c'><span class='chip p0'>P0</span></td><td class='c'><span class='chip real'>{f['demo']}</span></td></tr>"
+        f"<tr><td><b>{f['id']}</b></td><td><b>{f['name']}</b></td><td>{f['purpose']}</td><td class='c'><span class='chip p0'>P0</span></td><td class='c'><span class='chip real'>{f['demo']}</span></td><td class='small'>{SCREEN.get(f['id'], '')}</td></tr>"
         for f in FEATURES)
     rows += "".join(
-        f"<tr><td><b>{p['id']}</b></td><td><b>{p['name']}</b></td><td>{p['purpose']}</td><td class='c'><span class='chip p1'>P1</span></td><td class='c'><span class='chip {'real' if p['demo'].startswith('실제') else 'fake'}'>{p['demo']}</span></td></tr>"
+        f"<tr><td><b>{p['id']}</b></td><td><b>{p['name']}</b></td><td>{p['purpose']}</td><td class='c'><span class='chip p1'>P1</span></td><td class='c'><span class='chip {'real' if p['demo'].startswith('실제') else 'fake'}'>{p['demo']}</span></td><td class='small'>{SCREEN.get(p['id'], '')}</td></tr>"
         for p in P1)
     ov = page(f"""
 <div class="kicker">기능 한눈에</div><h2 class="sec">기능 목록</h2>
 <p class="lead">P0 는 아침 데모 사이트에 꼭 있어야 하는 것, P1 은 있으면 좋은 것이다. ID 는 개발 쪽 구현-대조표와 같다.</p>
-<table><tr><th style="width:8%">ID</th><th style="width:22%">이름</th><th>한 줄 목적</th><th class="c" style="width:8%">순위</th><th class="c" style="width:17%">데모 범위</th></tr>{rows}</table>
+<table><tr><th style="width:7%">ID</th><th style="width:19%">이름</th><th>한 줄 목적</th><th class="c" style="width:7%">순위</th><th class="c" style="width:15%">데모 범위</th><th style="width:14%">사이트 화면</th></tr>{rows}</table>
 <div class="box gray" style="margin-top:4mm"><h4>모든 화면에 공통</h4>
 <ul><li>휴대폰 · 태블릿 · PC 어디서나 열린다. 로그인 없이 누구나 데모를 본다.</li>
 <li>AI 가 채운 칸은 「AI 초안」으로 보이고, 사람이 고치거나 확정하면 표시가 바뀐다.</li>
@@ -120,9 +121,9 @@ SYSTEM_SVG = """<svg viewBox="0 0 900 600" xmlns="http://www.w3.org/2000/svg" fo
 <rect x="640" y="40" width="250" height="150" rx="16" fill="#FDEBD8" stroke="#F2C08D"/>
 <text x="658" y="70" font-size="16" font-weight="800" fill="#B5600F">받아쓰기 일꾼</text><text x="658" y="92" font-size="12.5" fill="#1F2933">대표님 PC 의 GPU</text><text x="658" y="112" font-size="12.5" fill="#1F2933">Whisper large-v3 (PC 안)</text><text x="658" y="134" font-size="11.5" fill="#5F6B76">일꾼이 서버에 접속만 한다</text><text x="658" y="152" font-size="11.5" fill="#5F6B76">(방화벽을 열지 않는다)</text><text x="658" y="174" font-size="11.5" fill="#5F6B76">사전 → 받아쓰기 힌트</text>
 <path d="M640 110 C 610 120, 600 150, 582 158" stroke="#F28C28" stroke-width="2.4" fill="none" marker-end="url(#o)"/>
-<text x="588" y="128" font-size="11" fill="#B5600F">일감 가져가기</text>
+
 <path d="M582 170 C 610 190, 630 180, 640 160" stroke="#F28C28" stroke-width="2.4" fill="none" marker-end="url(#o)"/>
-<text x="600" y="205" font-size="11" fill="#B5600F">받아쓴 글 · 시각 보내기</text>
+<text x="640" y="210" font-size="11.5" fill="#B5600F">⇄ 일감을 가져가고, 받아쓴 글 · 시각을 돌려준다</text>
 <rect x="640" y="240" width="250" height="150" rx="16" fill="#E8ECF4" stroke="#C3CCDD"/>
 <text x="658" y="270" font-size="16" font-weight="800" fill="#23395B">Claude API</text><text x="658" y="292" font-size="12.5" fill="#1F2933">카드 정리 · 요약 · 질문 답</text><text x="658" y="314" font-size="11.5" fill="#5F6B76">글만 보낸다(소리는 안 감)</text><text x="658" y="334" font-size="11.5" fill="#5F6B76">사전 · 거래처 목록을 함께 준다</text><text x="658" y="354" font-size="11.5" fill="#5F6B76">답은 정해진 칸(JSON)으로</text><text x="658" y="374" font-size="11.5" fill="#5F6B76">해외 서버 → 실제 녹음은 미결</text>
 <path d="M582 320 L638 320" stroke="#23395B" stroke-width="2.4" marker-end="url(#a)" marker-start="url(#a)"/>
@@ -148,6 +149,7 @@ def back_pages(page, img):
  <div class="box teal"><h4>나눈 까닭</h4><ul><li>받아쓰기는 GPU 가 있어야 빠르다(통화 10건 4분 41초 → 17초). CPU 로는 24초 통화 한 건에 28초.</li><li>음성 받아쓰기는 Claude API 로 할 수 없다. 카드 정리 · 요약 · 질문 답만 Claude 가 한다.</li><li>일꾼이 서버에 접속만 하므로 대표님 PC 는 밖에서 들어오는 길을 열지 않는다.</li></ul></div>
  <div class="box gray"><h4>현장으로 갈 때 바뀌는 것</h4><ul><li>녹음은 대리점 PC 의 보내기 프로그램(F12)이 자동으로 보낸다.</li><li>받아쓰기 일꾼을 대리점 PC 나 회사 서버에 둘 수 있다(PC 안 처리).</li><li>카드 정리 AI 를 국내 서비스나 PC 안 모델로 바꾸는 선택지(데이터 쪽 참고).</li></ul></div>
 </div>
+<div class="box yellow"><h4>실시간 체험(F03)은 다른 길로 간다</h4>브라우저 음성 인식(Web Speech API)은 브라우저 회사의 서버가 받아쓴다(크롬이면 구글). 받아쓴 글만 우리 서버를 거쳐 Claude 로 가서 카드가 된다. 그래서 체험에서는 지어낸 주문만 말하게 안내하고, 현장의 통화 녹음은 이 길로 보내지 않는다.</div>
 <p class="src">근거: 태림(개발) 방 「받아쓰기 일꾼 API · 녹음 넣기 API v1」, 대표님 프로토타입 평가(2026-11-11 · 합성 가짜 통화 10건).</p>
 """, foot="전체 시스템 구조")
 
@@ -193,10 +195,11 @@ def back_pages(page, img):
 </ul>
 """ + research.MORNING_QUESTIONS, foot="일정 · 미결 · 아침 질문")
 
-    nxt = page("""
+    nxt = page(f"""
 <div class="kicker">부록 A</div><h2 class="sec">다음 단계 기능 (이번 데모 밖)</h2>
 <p class="lead">지금 사이트로 만들 수 없어서 본문 기능에 넣지 않았다. 필요한 것과 먼저 확인할 것을 함께 적었다.</p>
-<table><tr><th style="width:25%">기능</th><th>왜 · 언제</th><th style="width:30%">필요한 것 · 먼저 확인할 것</th></tr>
+<figure><img src="{img('n01-next')}" alt="" style="height:70mm;object-fit:cover"><figcaption>다음 단계의 모습 — 통화하는 동안 카드가 채워지고, 품번 후보 · 배송 · 확인 메시지가 한 화면에 붙는다(확정은 여전히 사람).</figcaption></figure>
+<table class="tight"><tr><th style="width:25%">기능</th><th>왜 · 언제</th><th style="width:30%">필요한 것 · 먼저 확인할 것</th></tr>
 <tr><td><b>통화 중 실시간 받아쓰기</b></td><td>통화하는 동안 카드가 채워져, 끊기 전에 빠진 것(좌우 · 연식)을 되묻는다.</td><td>전화기 · 교환기(인터넷 전화) 연동, 소리를 가져올 장치, 시작 기준</td></tr>
 <tr><td><b>양쪽 목소리 나누기</b></td><td>누가 말했는지(대리점 / 정비소)를 정확히 나눠 다툼 확인을 더 확실히.</td><td>녹음이 두 채널인지, 화자 분리 모델(GPU)</td></tr>
 <tr><td><b>품번 · 호환 자동 조회</b></td><td>카드의 차종 · 연식 · 부품으로 품번 후보를 보여 준다(확정은 사람).</td><td>부품 카탈로그 · 전산 연동 권한, 차대번호 조회</td></tr>

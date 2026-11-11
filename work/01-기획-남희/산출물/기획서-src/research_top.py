@@ -56,3 +56,59 @@ def pages(page, img):
     except ImportError:
         pass
     return out
+
+
+SOURCES = [
+    ("국내 서비스", [
+        ("티로 도움말 · 통화 녹음(갤럭시 녹음 파일 읽기 · 자동 변환)", "https://docs.tiro.ooo/en/guide/recording/call-recording"),
+        ("티로 보안(AWS 서울 · 학습 안 함)", "https://tiro.ooo/security"),
+        ("네이버웍스 클로바노트 요금(자주 쓰는 단어 2,000개 · 화자 식별)", "https://naver.worksmobile.com/pricing/clovanote/"),
+        ("LG유플러스 익시오(AI 대화 검색 · 기기 안 받아쓰기)", "https://www.lguplus.com/ixi-O"),
+        ("LG유플러스 AI비즈콜 · 통화 매니저(요금)", "https://www.lguplus.com/biz/all/telecom/lines/biz-call/B000000130"),
+        ("LG유플러스 AI 대화록(키워드 검색 · 구간 청취)", "https://www.lguplus.com/biz/all/telecom/phones-others/aicc/B000000150"),
+        ("리턴제로 STT 옵션(keywords · domain CALL · 화자 분리)", "https://developers.rtzr.ai/docs/stt-file/"),
+        ("삼성 Galaxy AI(통화 · 기기 안 처리)", "https://www.samsung.com/sec/galaxy-ai/"),
+        ("다글로 개인정보처리방침(국외 위탁)", "https://daglo.ai/privacy"),
+    ]),
+    ("해외 서비스", [
+        ("Gong AI Data Extractor(추출기 20개 · 기존 칸만)", "https://help.gong.io/docs/ai-data-extractor"),
+        ("Fireflies Autofill CRM(승인 뒤 반영)", "https://guide.fireflies.ai/articles/1729159683-autofill-crm-for-salesforce-automatically-extract-and-sync-meeting-data-to-contacts-accounts-and-opportunities"),
+        ("Outreach Deal Agent(근거 없으면 제안 안 함)", "https://support.outreach.io/hc/en-us/articles/39330939992859-Deal-Agent-Overview"),
+        ("Dialpad AI Recap(할 일 → 일정)", "https://help.dialpad.com/docs/AI-recap"),
+        ("Aircall 요약 → CRM", "https://support.aircall.io/en-gb/articles/13480661185309"),
+        ("RingCentral RingSense", "https://www.ringcentral.com/ringsense.html"),
+        ("Otter 요금(사용자 단어 800개)", "https://otter.ai/pricing"),
+        ("Plaud Intelligence(답을 원음까지)", "https://ca.plaud.ai/pages/plaud-intelligence"),
+    ]),
+    ("주문 접수 · 부품", [
+        ("Choco OrderAgent", "https://choco.com/us/orderagent"),
+        ("Canals 유통 주문 입력", "https://www.canals.ai/products/distributor-order-entry"),
+        ("PartsTech 요금", "https://partstech.com/pricing/"),
+        ("Partly(딜러 부품 주문 AI)", "https://www.partly.com/solutions/dealerships"),
+    ]),
+    ("부품 대리점", [
+        ("현대차그룹 뉴스 — 영남물류센터(사업소 22 · 팀 40 · 대리점 1천+)", "https://www.hyundaimotorgroup.com/ko/news/CONT0000000000177810"),
+        ("현대차그룹 — Hyundai Mobis Overhauls the Global Parts Game", "https://www.hyundaimotorgroup.com/en/story/hyundai-mobis-global-parts-overhaul"),
+        ("현대모비스 지속가능성보고서 2025(프론트 부장 교육 · 130~131쪽)", "https://www.mobis.com/upload/202506241133228380.pdf"),
+        ("현대차그룹 뉴스 — 2025 대리점 컨퍼런스", "https://www.hyundaimotorgroup.com/ko/news/CONT0000000000179659"),
+        ("현대모비스 A/S 부품 — 대리점 찾기", "https://www.mobis-as.com/shop_agent.do"),
+        ("공정위 2019 대리점 서면실태조사(정책브리핑)", "https://www.korea.kr/briefing/policyBriefingView.do?newsId=156363142"),
+        ("경향신문 2023-02 — 부품 대리점 보험 5% 감액", "https://www.khan.co.kr/article/202302082151005"),
+        ("Ratchet+Wrench 2026-06 — OEC 정비소 설문", "https://www.ratchetandwrench.com/running-a-shop/operations/article/55379580/oec-general-auto-repair-shop-survey-puts-spotlight-on-industry-hurdles"),
+        ("더모빌리언스 — 2024년 4분기 정비업체 36,184곳", "http://www.themobilians.com/news/articleView.html?idxno=3063"),
+    ]),
+]
+
+
+def appendix(page):
+    blocks = ""
+    for title, items in SOURCES:
+        lis = "".join(f'<li>{t}<br><a class="src" href="{u}">{u}</a></li>' for t, u in items)
+        blocks += f'<div><h4>{title}</h4><ul class="srclist">{lis}</ul></div>'
+    body = f"""
+<div class="kicker">부록 B</div><h2 class="sec">출처 (주요 30개)</h2>
+<p class="lead">조사 파일 여섯 개에 고유 출처 URL 약 330개가 있다. 이 기획서 본문에 직접 쓴 것만 골랐다. 모두 2026-11-11 조회.</p>
+<div class="grid2">{blocks}</div>
+<p class="src">전체 출처와 [확인] · [기사] · [후기] · [추정] 표시는 work/01-기획-남희/자료/조사-*.md 에 있다. 대리점 이름이 드러나는 구인 공고 · 온라인몰 주소는 공개 저장소 규칙에 따라 뺐다.</p>
+"""
+    return [page(body, foot="부록 B · 출처")]

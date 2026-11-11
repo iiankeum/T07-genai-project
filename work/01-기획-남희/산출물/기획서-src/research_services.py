@@ -16,6 +16,12 @@ METHOD = """
  <div class="st"><b>V2 반박 검증</b>숫자 · 구조 다시 확인</div><div class="ar">→</div>
  <div class="st hot"><b>E 기획</b>세 프로토타입 · 회의록 기능 후보 + 차별점</div>
 </div>
+<div class="tiles">
+ <div class="tile"><div class="big-number">8</div><div class="lbl">조사 · 검증 에이전트</div><span class="src">Workflow 한 번 · 병렬</span></div>
+ <div class="tile"><div class="big-number">60+</div><div class="lbl">살펴본 서비스</div><span class="src">국내 20여 · 해외 30 · 주문 · 부품 20여</span></div>
+ <div class="tile"><div class="big-number">약 330</div><div class="lbl">출처 URL</div><span class="src">조사 파일 여섯 개의 고유 주소</span></div>
+ <div class="tile"><div class="big-number">2회</div><div class="lbl">반박 검증</div><span class="src">서비스(V1) · 대리점(V2)</span></div>
+</div>
 <div class="grid2">
 <div class="box teal"><h4>표시 규칙</h4><ul>
 <li><b>[확인]</b> 공식 사이트 · 도움말 · 개발자 문서 · 보고서 · 구인 공고 원문</li>
@@ -72,6 +78,11 @@ def compare(page, rows):
 <div class="kicker">조사 요약 ② 비교표</div><h2 class="sec">주요 서비스 기능 비교</h2>
 <p class="lead">○ 있음 · △ 일부 · 조건부 · × 없음 · ? 공식 자료로 확인 못 함. 우리 서비스(맨 아래)는 이번 데모 기준이다.</p>
 <table class="tight cmp">{th}{trs}</table>
+<div class="grid3" style="margin-top:3mm">
+<div class="box teal"><h4>받아쓰기 · 요약은 기본</h4>표의 거의 모든 서비스가 받아쓰기 · 요약을 한다. 값이 무료(갤럭시 · 익시오)부터 있다. 차별점이 될 수 없다.</div>
+<div class="box teal"><h4>차이는 「업무 칸」과 「근거」</h4>정해진 칸을 채우는 곳(Gong · Fireflies · Choco)은 영업 · 유통용이다. 전화 주문 카드에 칸별 근거를 붙이는 곳은 없다.</div>
+<div class="box teal"><h4>한국어 · 전화 · 대리점</h4>해외 제품은 한국어 지원이 불확실하고(Otter · Dialpad · Aircall), 국내 제품은 휴대폰 · 회의 중심이다. 대리점 유선 녹음 파일을 다루는 곳이 비어 있다.</div>
+</div>
 <p class="src">출처는 자료/조사-서비스지도-국내.md · 해외.md · 조사-주문접수-부품플랫폼.md 의 표. 반박 검증 결과는 자료/조사-검증-서비스.md.</p>
 """
     return page(body, foot="조사 요약 · 비교표")

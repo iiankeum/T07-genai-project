@@ -72,6 +72,23 @@ def p1_page():
     return page(body, foot="P1 기능")
 
 
+def toc(pages):
+    import re
+    want = [("문제와 사용자", "문제와 사용자"), ("조사 요약", "조사: 서비스"), ("대리점 생태계", "조사: 부품 대리점"), ("차별점", "차별점"),
+            ("기능 한눈에", "기능 목록"), ("F01 녹음 올리기", "기능 쪽 F01~F10"), ("P1 기능", "P1 기능 F11~F15"),
+            ("전체 시스템 구조", "시스템 구조"), ("데이터 · 보안 · 개인정보", "데이터 · 보안"), ("일정 · 미결 · 아침 질문", "일정 · 아침 질문"),
+            ("부록 A · 다음 단계", "부록 A 다음 단계"), ("부록 B · 출처", "부록 B 출처")]
+    feet = [re.search(r'<div class="foot"><span>(.*?)</span>', x) for x in pages]
+    feet = [m.group(1) if m else "" for m in feet]
+    items = []
+    for key, label in want:
+        for i, f in enumerate(feet):
+            if f == key:
+                items.append(f"<div><span>{label}</span><b>{i + 1}</b></div>")
+                break
+    return '<h3>목차</h3><div class="toc2">' + "".join(items) + "</div><div style='height:3mm'></div>"
+
+
 def prepare_images():
     from PIL import Image
     out = BUILD / "img"
@@ -93,6 +110,7 @@ def build_html():
     if P1:
         pages.append(p1_page())
     pages += sections.back_pages(page, img)
+    pages = [x.replace("@@TOC@@", toc(pages)) for x in pages]
     doc = f"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>AI 전화 주문 받아쓰기 기획서 {VERSION}</title>
 <link rel="stylesheet" href="style.css"></head><body>{''.join(pages)}</body></html>"""
     BUILD.mkdir(exist_ok=True)
