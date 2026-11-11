@@ -27,11 +27,9 @@ import importlib.util
 import io
 import json
 import os
-import platform
 import random
 import re
 import shutil
-import socket
 import subprocess
 import sys
 import threading
@@ -577,7 +575,7 @@ class Watcher:
 # ───────────────────────── 실행 ─────────────────────────
 
 def default_name() -> str:
-    return re.sub(r"[^A-Za-z0-9_\-]", "-", f"pc-{socket.gethostname()}")[:40]
+    return "pc-agent-1"  # 컴퓨터 이름을 서버에 보내지 않는다(여러 대면 --name 으로 나눈다)
 
 
 def cmd_check(cfg: Config) -> int:
@@ -624,7 +622,7 @@ def main(argv=None) -> int:
     _log_file = STATE_DIR / "agent.log"
     api = Api(cfg.server_url)
     stop = threading.Event()
-    log(f"콜노트 PC 프로그램 {VERSION} · {args.mode} · 서버 {cfg.server_url} · {platform.node()}")
+    log(f"콜노트 PC 프로그램 {VERSION} · {args.mode} · 서버 {cfg.server_url}")
 
     if args.mode == "send":
         if not args.target:
