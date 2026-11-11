@@ -9,7 +9,7 @@ IMG_SRC = HERE.parent.parent / "자료" / "그림"
 # 한글 경로를 Edge 가 못 다뤄서 임시 폴더(영문 경로)에서 굽는다
 BUILD = Path(tempfile.gettempdir()) / "t07-plan-build"
 sys.path.insert(0, str(HERE))
-from features import FEATURES, P1  # noqa: E402
+from features import FEATURES, P1, SEEN  # noqa: E402
 import sections  # noqa: E402
 
 VERSION = sys.argv[1] if len(sys.argv) > 1 else "v1"
@@ -37,13 +37,14 @@ def feature_page(f):
     flow = "".join(f"<li>{esc(s)}</li>" for s in f["flow"])
     done = "".join(f"<li>{esc(d)}</li>" for d in f["done"])
     demo_cls = "real" if f["demo"].startswith("실제") else "fake"
+    seen = "".join(f"<li>{esc(x)}</li>" for x in SEEN.get(f["id"], []))
     body = f"""
 <div class="kicker">기능 {f['id'][1:]} / P0 {len(FEATURES)}개</div>
 <div class="fhead"><span class="fid">{f['id']}</span><span class="fname">{esc(f['name'])}</span>
 <span class="chip p0">{f['pri']} 데모 필수</span><span class="chip {demo_cls}">데모: {esc(f['demo'])}</span></div>
 <p class="fpurpose">{esc(f['purpose'])}</p>
 <div class="fimg"><img src="{img(f['img'])}" alt=""></div>
-<div class="fcap">장면 그림 — 박 부장(접수) · 김 사장(정비소) · 이 기사(출고)는 가짜 인물이다. 그림 속 화면은 모양만 나타낸 것이다.</div>
+<div class="fcap">장면 그림 — 박 부장(접수) · 김 사장(정비소) · 이 기사(출고)와 장면 속 거래처 · 차 정보는 모두 지어낸 것이다. 그림 속 화면은 모양만 나타낸 것이다.</div>
 <div class="fcols">
   <div>
     <h4>왜 필요한가</h4><ul class="why">{why}</ul>
@@ -54,6 +55,7 @@ def feature_page(f):
     <h4>완료 기준 (눈으로 확인)</h4><ul class="checks">{done}</ul>
   </div>
 </div>
+<div class="box gray seen"><h4>조사에서 본 것</h4><ul>{seen}</ul></div>
 <div class="refline">{esc(f['ref'])}</div>"""
     return page(body, foot=f"{f['id']} {f['name']}")
 

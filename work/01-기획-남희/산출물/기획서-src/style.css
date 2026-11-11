@@ -12,7 +12,7 @@
 @page { size: A4; margin: 0; }
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
-body { font-family: SUIT, 'Malgun Gothic', sans-serif; color: var(--ink); font-size: 9.6pt; line-height: 1.55; counter-reset: pg; -webkit-print-color-adjust: exact; print-color-adjust: exact; word-break: keep-all; overflow-wrap: anywhere; }
+body { font-family: SUIT, 'Malgun Gothic', sans-serif; color: var(--ink); font-size: 10.2pt; line-height: 1.55; counter-reset: pg; -webkit-print-color-adjust: exact; print-color-adjust: exact; word-break: keep-all; overflow-wrap: anywhere; }
 
 .page { width: 210mm; height: 297mm; padding: 15mm 15mm 13mm; position: relative; overflow: hidden; page-break-after: always; break-after: page; background: #fff; counter-increment: pg; }
 .page:last-child { page-break-after: auto; break-after: auto; }
@@ -37,11 +37,11 @@ a { color: var(--teal); text-decoration: none; }
 .src a { color: #7A858F; }
 
 /* 표 */
-table { width: 100%; border-collapse: collapse; font-size: 8.3pt; line-height: 1.4; }
+table { width: 100%; border-collapse: collapse; font-size: 8.9pt; line-height: 1.4; }
 th { background: var(--teal); color: #fff; font-weight: 700; text-align: left; padding: 1.4mm 1.6mm; }
 td { border-bottom: .3mm solid var(--gray-l); padding: 1.3mm 1.6mm; vertical-align: top; }
 tr:nth-child(even) td { background: #FAFBFB; }
-table.tight td, table.tight th { padding: 1mm 1.3mm; font-size: 7.6pt; }
+table.tight td, table.tight th { padding: 1.1mm 1.4mm; font-size: 8.3pt; }
 td.c, th.c { text-align: center; }
 .y { color: var(--green); font-weight: 800; } .n { color: #B9C0C6; } .p { color: var(--orange); font-weight: 700; }
 
@@ -114,3 +114,11 @@ figcaption { font-size: 7.8pt; color: var(--gray); margin-top: 1.2mm; }
 .big-number { font-size: 22pt; font-weight: 800; color: var(--teal); line-height: 1.1; }
 .note { font-size: 8pt; color: var(--gray); }
 .q li { margin-bottom: 1.6mm; }
+
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm; margin: 0 0 3mm; }
+.tile { background: var(--teal-ll); border: .3mm solid #CFE5E2; border-radius: 3mm; padding: 2.4mm 3mm; }
+.tile .big-number { font-size: 19pt; }
+.tile .lbl { font-size: 8.4pt; color: var(--ink); font-weight: 600; }
+.tile .src { display: block; margin-top: .6mm; }
+.seen { margin-top: 2.5mm; } .seen li { font-size: 8.6pt; }
+table.cmp td, table.cmp th { font-size: 7.5pt; padding: .9mm 1mm; line-height: 1.35; } table.cmp { table-layout: fixed; }

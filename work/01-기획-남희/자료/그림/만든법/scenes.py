@@ -40,6 +40,11 @@ SCENES = [
     ("f10-brief", ["PARK", "LEE"], "Feature: today's briefing. Late afternoon, warm sunset light through the window. PARK and LEE stand side by side in front of a large wall monitor showing a clean dashboard: four big number tiles (shown only as big dot clusters and icons: phone, card, yellow warning, orange flame), a list of 'call back' items each with a phone icon and a yellow question chip, and a small paragraph block of text bars with a copy icon. PARK holds his phone ready to paste the summary into a messenger (a generic chat app, no logo). LEE checks her clipboard of deliveries. Relaxed end-of-day mood, the counter is tidy, no sticky notes."),
 ]
 
+SCENES += [
+    ("d01-day", ["PARK", "KIM", "LEE"], "A four-panel comic strip in a 2x2 grid with thin white gutters, showing one working day at the dealership (no text, no clocks with numbers). Panel 1 (early morning, cool light): PARK and LEE unboxing and checking newly arrived parts boxes at the back door, a small white delivery van behind. Panel 2 (late morning rush): PARK at the counter with a phone on each ear area (one handset and the headset), several empty speech bubbles, a stack of sticky notes. Panel 3 (afternoon): LEE handing a parts box to KIM at his garage next to a lifted car, a small pickup truck parked behind her. Panel 4 (evening, warm sunset light): PARK alone at the tidy counter, stretching his back, tired but relieved, the monitor showing a simple summary screen with icons."),
+    ("n01-next", ["PARK", "KIM"], "Vision of the next stage (future features, slightly dreamy soft glow). PARK is ON A LIVE CALL with KIM (KIM shown in a round inset at top-left in his garage); on PARK's big monitor an order card fills in WHILE they talk, a small parts-diagram panel (an exploded line drawing of a car front with one part highlighted) suggests part-number candidates with a question-mark chip for human confirmation, a tiny delivery-truck icon with a route line, and a chat-bubble icon for sending a confirmation message. PARK nods calmly, not stressed. Keep the composition clean and optimistic."),
+]
+
 
 def brief(sid, chars, scene):
     who = "\n".join("- " + CHARS[c] for c in chars)
