@@ -75,7 +75,7 @@ def p1_page():
 def toc(pages):
     import re
     want = [("문제와 사용자", "문제와 사용자"), ("조사 요약", "조사: 서비스"), ("대리점 생태계", "조사: 부품 대리점"), ("차별점", "차별점"),
-            ("기능 한눈에", "기능 목록"), ("F01 녹음 올리기", "기능 쪽 F01~F10"), ("P1 기능", "P1 기능 F11~F15"),
+            ("기능 한눈에", "기능 목록"), ("F01 녹음 올리기", "기능 쪽 F01~F10"), ("P1 기능", "P1 기능 F11~F15"), ("사이트에서 확인", "사이트에서 확인"),
             ("전체 시스템 구조", "시스템 구조"), ("데이터 · 보안 · 개인정보", "데이터 · 보안"), ("일정 · 미결 · 아침 질문", "일정 · 아침 질문"),
             ("부록 A · 다음 단계", "부록 A 다음 단계"), ("부록 B · 출처", "부록 B 출처"), ("부록 C · 만든 과정", "부록 C 만든 과정")]
     feet = [re.search(r'<div class="foot"><span>(.*?)</span>', x) for x in pages]
@@ -99,6 +99,9 @@ def prepare_images():
         if im.width > w:
             im = im.resize((w, round(im.height * w / im.width)), Image.LANCZOS)
         im.save(out / f"{p.stem}.jpg", quality=80, optimize=True, progressive=True)
+    for p in (IMG_SRC / "사이트").glob("*.png"):
+        im = Image.open(p).convert("RGB")
+        im.save(out / f"site-{p.stem}.jpg", quality=85, optimize=True, progressive=True)
 
 
 def build_html():
@@ -109,6 +112,8 @@ def build_html():
     pages += [feature_page(f) for f in FEATURES]
     if P1:
         pages.append(p1_page())
+    import sitepages  # 사이트에서 확인 쪽 (대조표 · 화면)
+    pages += sitepages.pages(page)
     pages += sections.back_pages(page, img)
     pages = [x.replace("@@TOC@@", toc(pages)) for x in pages]
     doc = f"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>AI 전화 주문 받아쓰기 기획서 {VERSION}</title>
