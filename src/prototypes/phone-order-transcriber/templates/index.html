@@ -13,6 +13,13 @@
   </form>
 </section>
 
+{% if failed %}
+<section class="panel failed">
+  <b>폴더 감시에서 처리하지 못한 파일 {{ failed|length }}개</b> <span class="muted small">— 원인을 고치면 다음 확인 때 다시 시도합니다 (최대 5회)</span>
+  <ul>{% for f in failed %}<li><code>{{ f.path }}</code> · {{ f.attempts }}회 실패 · {{ f.error }}</li>{% endfor %}</ul>
+</section>
+{% endif %}
+
 <section class="toolbar">
   <form method="get">
     <select name="date" onchange="this.form.submit()">

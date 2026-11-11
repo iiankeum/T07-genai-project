@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import json
+import os
+import secrets
 import uuid
 from datetime import date, datetime
 from pathlib import Path
@@ -13,13 +15,36 @@ from order_ai.models import STATUS_LABELS, OrderCard, OrderItem
 from order_ai.pipeline import Pipeline
 from order_ai.stt import AUDIO_EXTS, TEXT_EXTS
 from order_ai.summary import summarize
+from order_ai.verify import carry_flags
 
 SAMPLES_DIR = BASE_DIR / "samples"
+
+# 상태 바꾸기: 버튼 → (허용되는 이전 상태, 새 상태, 안내)
+TRANSITIONS = {
+    "ship": ({"confirmed"}, "shipped", "출고 완료로 표시했습니다"),
+    "cancel": ({"draft", "confirmed"}, "canceled", "취소했습니다"),
+    "reopen": ({"confirmed", "shipped", "canceled"}, "draft", "다시 '확인 필요'로 돌렸습니다"),
+}
+
+
+def confirm_problems(card: OrderCard) -> list[str]:
+    """확정 전에 반드시 채워져야 하는 것. 비어 있으면 확정 가능."""
+    problems: list[str] = []
+    if not card.items:
+        problems.append("부품이 하나도 없음")
+    for it in card.items:
+        if not it.part_number:
+            problems.append(f"{it.part} 품번 없음")
+        if it.quantity is None or it.quantity < 1:
+            problems.append(f"{it.part} 수량 없음(1 이상)")
+    if card.follow_ups:
+        problems.append(f"다시 물어볼 것 {len(card.follow_ups)}개가 남아 있음 — 확인했으면 지워 주세요")
+    return problems
 
 
 def create_app(pipeline: Pipeline | None = None) -> Flask:
     app = Flask(__name__)
-    app.secret_key = "prototype-only"  # 로컬 데모용
+    app.secret_key = os.getenv("SECRET_KEY") or secrets.token_hex(32)  # 저장소에 고정 비밀키를 두지 않음
     app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024
     pipe = pipeline or Pipeline()
     app.config["PIPELINE"] = pipe
@@ -40,7 +65,8 @@ def create_app(pipeline: Pipeline | None = None) -> Flask:
         dates = pipe.store.dates()
         if day not in dates:
             dates = [day, *dates]
-        return render_template("index.html", records=records, day=day, status=status, dates=dates)
+        return render_template("index.html", records=records, day=day, status=status, dates=dates,
+                               failed=pipe.store.failed_files())
 
     @app.post("/upload")
     def upload():
@@ -90,6 +116,25 @@ def create_app(pipeline: Pipeline | None = None) -> Flask:
     def save_card(card_id: int):
         rec = pipe.store.get(card_id) or abort(404)
         form = request.form
+        action = form.get("action", "save")
+        back = redirect(url_for("card", card_id=rec.id))
+
+        # 상태만 바꾸는 버튼: 서버에서 이전 상태를 검사한다
+        if action in TRANSITIONS:
+            allowed, new_status, msg = TRANSITIONS[action]
+            if rec.status not in allowed:
+                flash(f"'{STATUS_LABELS[rec.status]}' 상태에서는 할 수 없는 작업입니다", "error")
+                return back
+            pipe.store.update(rec.id, status=new_status)
+            flash(msg, "ok")
+            return redirect(url_for("index", date=rec.call_date)) if new_status == "shipped" else back
+
+        if action not in ("save", "confirm"):
+            abort(400)
+        if rec.status != "draft":
+            flash("확정·출고·취소된 주문은 '다시 열기' 후에 고칠 수 있습니다", "error")
+            return back
+
         items: list[OrderItem] = []
         i = 0
         while f"items-{i}-part" in form:
@@ -109,20 +154,18 @@ def create_app(pipeline: Pipeline | None = None) -> Flask:
             follow_ups=[ln.strip() for ln in form.get("follow_ups", "").splitlines() if ln.strip()],
             memo=form.get("memo", "").strip(),
         )
-        action = form.get("action", "save")
-        status = {"confirm": "confirmed", "ship": "shipped", "cancel": "canceled", "reopen": "draft"}.get(action)
-        if action == "confirm":
-            missing = [it.part for it in card.items if not it.part_number]
-            if missing:
-                flash("품번이 비어 있는 부품이 있어 확정할 수 없습니다: " + ", ".join(missing), "error")
-                pipe.store.update(rec.id, card=card)
-                return redirect(url_for("card", card_id=rec.id))
-        pipe.store.update(rec.id, card=card, status=status)
-        flash({"confirmed": "확정했습니다", "shipped": "출고 완료로 표시했습니다",
-               "canceled": "취소했습니다", "draft": "다시 '확인 필요'로 돌렸습니다"}.get(status, "저장했습니다"), "ok")
-        if status in ("confirmed", "shipped"):
-            return redirect(url_for("index", date=rec.call_date))
-        return redirect(url_for("card", card_id=rec.id))
+        card = carry_flags(rec.ai_card, card)  # 값을 안 바꾼 '원문 미확인' 표시는 유지
+        pipe.store.update(rec.id, card=card)
+        if action == "save":
+            flash("저장했습니다", "ok")
+            return back
+        problems = confirm_problems(card)
+        if problems:
+            flash("확정할 수 없습니다 — " + " · ".join(problems), "error")
+            return back
+        pipe.store.update(rec.id, status="confirmed")
+        flash("확정했습니다", "ok")
+        return redirect(url_for("index", date=rec.call_date))
 
     @app.post("/cards/<int:card_id>/delete")
     def delete_card(card_id: int):
@@ -148,6 +191,5 @@ def create_app(pipeline: Pipeline | None = None) -> Flask:
 
 
 if __name__ == "__main__":
-    import os
-
-    create_app().run(host="127.0.0.1", port=int(os.getenv("PORT", "5000")), debug=True)
+    # 디버그 모드는 FLASK_DEBUG=1일 때만 켠다 (켜진 채로 다른 사람에게 열면 위험)
+    create_app().run(host="127.0.0.1", port=int(os.getenv("PORT", "5000")), debug=os.getenv("FLASK_DEBUG") == "1")

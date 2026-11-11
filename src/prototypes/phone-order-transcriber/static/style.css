@@ -56,3 +56,7 @@ pre.raw { font-size:12px; color:var(--muted); } .warnings { font-size:12px; colo
 .stat b { font-size:28px; } .stat span { color:var(--muted); }
 .stat.warn b { color:var(--warn); } .stat.danger b { color:var(--danger); }
 textarea[readonly] { font-family: ui-monospace, monospace; font-size:13px; background:#f8f9fb; }
+.flag { color:var(--danger); font-size:12px; font-weight:600; margin-left:4px; white-space:nowrap; }
+.items-table .qty { width:64px; }
+input[readonly], textarea[readonly] { background:#f6f7f9; color:#555; }
+.failed { margin-top:12px; border-color:#f3c3bd; background:#fff8f7; } .failed ul { margin:6px 0 0; font-size:13px; }

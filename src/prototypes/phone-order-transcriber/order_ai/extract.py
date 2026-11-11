@@ -5,9 +5,10 @@ from dataclasses import dataclass, field
 
 from .config import Settings
 from .glossary import Glossary
-from .llm import LLMError, chat, parse_json
+from .llm import chat, parse_json
 from .models import OrderCard
 from .rules import check_missing, rule_extract
+from .verify import verify_card
 
 SYSTEM_PROMPT = """너는 자동차 부품 대리점의 전화 주문 접수 보조다.
 정비소(공업사)와 대리점 담당자의 통화 받아쓰기를 읽고 주문 카드 초안을 만든다.
@@ -30,16 +31,17 @@ JSON 하나만 출력한다. 형식:
   "vehicle_model": "차종", "vehicle_year": "연식 (예: 19년식)", "plate": "차번호",
   "items": [{"part": "부품명", "quantity": 1, "position": "앞/뒤/좌/우/운전석/조수석", "part_number": "", "evidence": "근거 발화"}],
   "urgent": true, "due": "언제까지 (예: 오늘 오후)", "delivery": "퀵/배달/직접 수령/빈 문자열",
-  "follow_ups": ["다시 물어봐야 할 것"], "memo": "기타 메모"
+  "follow_ups": ["다시 물어볼 것"], "memo": "기타 메모"
 }"""
 
 
 @dataclass
 class ExtractResult:
     card: OrderCard
-    transcript: str            # 고친 통화 글
+    transcript: str            # 원문 + 낱말 사전 교정 (코드가 고친 글, 대조 기준)
     extractor: str             # rule | anthropic | openai | ollama
     warnings: list[str] = field(default_factory=list)
+    ai_transcript: str = ""    # AI가 다듬은 통화 글 (참고용, 원문과 다를 수 있음)
 
 
 def extract(raw_text: str, settings: Settings, glossary: Glossary) -> ExtractResult:
@@ -61,10 +63,15 @@ def extract(raw_text: str, settings: Settings, glossary: Glossary) -> ExtractRes
             card = OrderCard.from_dict(data)
             for it in card.items:  # 규칙 2를 코드로도 강제
                 it.part_number = ""
-            transcript = str(data.get("corrected_transcript") or corrected)
-            return ExtractResult(check_missing(card), transcript, provider, warnings)
-        except LLMError as e:
-            warnings.append(f"AI 추출 실패로 규칙 기반 추출을 썼습니다: {e}")
+                it.unverified = []
+            card.unverified = []
+            card = verify_card(card, corrected, raw_text)  # 원문에 없는 값은 미확인 표시
+            if card.flag_count:
+                warnings.append(f"원문에서 확인되지 않은 값 {card.flag_count}개를 ⚠로 표시했습니다")
+            return ExtractResult(check_missing(card), corrected, provider, warnings,
+                                 ai_transcript=str(data.get("corrected_transcript") or ""))
+        except Exception as e:  # 시간 초과·응답 형식 오류 등 무엇이든 규칙 기반으로 대체
+            warnings.append(f"AI 추출 실패로 규칙 기반 추출을 썼습니다 ({type(e).__name__}: {e})")
 
     card = check_missing(rule_extract(corrected))
     return ExtractResult(card, corrected, "rule", warnings)

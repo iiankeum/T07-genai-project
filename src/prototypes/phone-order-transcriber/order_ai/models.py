@@ -12,6 +12,12 @@ STATUS_LABELS = {
 }
 
 
+def _str_list(v: Any) -> list[str]:
+    if isinstance(v, str):
+        v = [v]
+    return [str(x) for x in (v or []) if str(x).strip()]
+
+
 @dataclass
 class OrderItem:
     part: str                       # 부품명 (표준 이름)
@@ -19,6 +25,7 @@ class OrderItem:
     position: str = ""              # 앞/뒤/좌/우/운전석/조수석 등
     part_number: str = ""           # 품번 — 사람이 채운다 (AI는 비워 둔다)
     evidence: str = ""              # 근거가 된 발화 (분쟁 시 확인용)
+    unverified: list[str] = field(default_factory=list)  # 원문에서 확인 안 된 값: part · quantity · evidence
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> "OrderItem":
@@ -33,6 +40,7 @@ class OrderItem:
             position=str(d.get("position") or "").strip(),
             part_number=str(d.get("part_number") or "").strip(),
             evidence=str(d.get("evidence") or "").strip(),
+            unverified=_str_list(d.get("unverified")),
         )
 
 
@@ -48,6 +56,11 @@ class OrderCard:
     delivery: str = ""              # 퀵 / 배달 / 직접 수령
     follow_ups: list[str] = field(default_factory=list)  # 다시 물어봐야 할 것
     memo: str = ""
+    unverified: list[str] = field(default_factory=list)  # 원문에서 확인 안 된 값: customer · vehicle_model · vehicle_year · plate
+
+    @property
+    def flag_count(self) -> int:
+        return len(self.unverified) + sum(len(i.unverified) for i in self.items)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -73,4 +86,5 @@ class OrderCard:
             delivery=str(d.get("delivery") or "").strip(),
             follow_ups=[str(f).strip() for f in follow if str(f).strip()],
             memo=str(d.get("memo") or "").strip(),
+            unverified=_str_list(d.get("unverified")),
         )

@@ -18,7 +18,8 @@ CREATE TABLE IF NOT EXISTS cards (
     source_name TEXT NOT NULL,        -- 원래 파일 이름
     audio_path TEXT,                  -- 녹음 파일 (있으면)
     transcript_raw TEXT NOT NULL,     -- 음성 인식 결과 그대로
-    transcript TEXT NOT NULL,         -- 고친 글
+    transcript TEXT NOT NULL,         -- 원문 + 낱말 사전 교정 (코드가 고친 글)
+    ai_transcript TEXT NOT NULL DEFAULT '', -- AI가 다듬은 글 (참고용)
     ai_card_json TEXT NOT NULL,       -- AI가 처음 만든 카드 (수정 전, 비교용)
     card_json TEXT NOT NULL,          -- 담당자가 고친 현재 카드
     extractor TEXT NOT NULL,
@@ -29,9 +30,22 @@ CREATE TABLE IF NOT EXISTS cards (
 CREATE TABLE IF NOT EXISTS processed_files (
     path TEXT PRIMARY KEY,
     mtime REAL NOT NULL,
-    card_id INTEGER
+    card_id INTEGER,
+    status TEXT NOT NULL DEFAULT 'done',  -- done | failed
+    error TEXT NOT NULL DEFAULT '',
+    attempts INTEGER NOT NULL DEFAULT 0,
+    last_try TEXT
 );
 """
+
+# 예전 버전 DB에 없던 열 (있으면 건너뜀)
+MIGRATIONS = [
+    ("cards", "ai_transcript", "TEXT NOT NULL DEFAULT ''"),
+    ("processed_files", "status", "TEXT NOT NULL DEFAULT 'done'"),
+    ("processed_files", "error", "TEXT NOT NULL DEFAULT ''"),
+    ("processed_files", "attempts", "INTEGER NOT NULL DEFAULT 0"),
+    ("processed_files", "last_try", "TEXT"),
+]
 
 
 @dataclass
@@ -44,6 +58,7 @@ class CardRecord:
     audio_path: str | None
     transcript_raw: str
     transcript: str
+    ai_transcript: str
     ai_card: OrderCard
     card: OrderCard
     extractor: str
@@ -62,6 +77,10 @@ class Store:
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         with self._conn() as c:
             c.executescript(SCHEMA)
+            for table, col, decl in MIGRATIONS:
+                cols = {r["name"] for r in c.execute(f"PRAGMA table_info({table})")}
+                if col not in cols:
+                    c.execute(f"ALTER TABLE {table} ADD COLUMN {col} {decl}")
 
     def _conn(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path)
@@ -73,22 +92,23 @@ class Store:
         return CardRecord(
             id=r["id"], call_date=r["call_date"], call_time=r["call_time"], status=r["status"],
             source_name=r["source_name"], audio_path=r["audio_path"], transcript_raw=r["transcript_raw"],
-            transcript=r["transcript"], ai_card=OrderCard.from_dict(json.loads(r["ai_card_json"])),
+            transcript=r["transcript"], ai_transcript=r["ai_transcript"], ai_card=OrderCard.from_dict(json.loads(r["ai_card_json"])),
             card=OrderCard.from_dict(json.loads(r["card_json"])), extractor=r["extractor"],
             warnings=json.loads(r["warnings"]), created_at=r["created_at"], updated_at=r["updated_at"],
         )
 
     def add(self, *, call_at: datetime, source_name: str, audio_path: str | None, transcript_raw: str,
-            transcript: str, card: OrderCard, extractor: str, warnings: list[str]) -> int:
+            transcript: str, card: OrderCard, extractor: str, warnings: list[str], ai_transcript: str = "") -> int:
         now = datetime.now().isoformat(timespec="seconds")
         js = json.dumps(card.to_dict(), ensure_ascii=False)
         with self._conn() as c:
             cur = c.execute(
                 "INSERT INTO cards (call_date, call_time, source_name, audio_path, transcript_raw, transcript,"
-                " ai_card_json, card_json, extractor, warnings, created_at, updated_at)"
-                " VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                " ai_transcript, ai_card_json, card_json, extractor, warnings, created_at, updated_at)"
+                " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (call_at.strftime("%Y-%m-%d"), call_at.strftime("%H:%M"), source_name, audio_path,
-                 transcript_raw, transcript, js, js, extractor, json.dumps(warnings, ensure_ascii=False), now, now),
+                 transcript_raw, transcript, ai_transcript, js, js, extractor,
+                 json.dumps(warnings, ensure_ascii=False), now, now),
             )
             return int(cur.lastrowid)
 
@@ -128,13 +148,24 @@ class Store:
         with self._conn() as c:
             c.execute("DELETE FROM cards WHERE id=?", (card_id,))
 
-    # 폴더 감시용: 이미 처리한 파일인지
-    def is_processed(self, path: str, mtime: float) -> bool:
+    # 폴더 감시용: 처리 기록 (성공한 것만 'done', 실패는 'failed'로 남겨 다시 시도)
+    def file_state(self, path: str) -> dict | None:
         with self._conn() as c:
-            r = c.execute("SELECT mtime FROM processed_files WHERE path=?", (path,)).fetchone()
-        return bool(r) and abs(r["mtime"] - mtime) < 1e-6
+            r = c.execute("SELECT * FROM processed_files WHERE path=?", (path,)).fetchone()
+        return dict(r) if r else None
 
-    def mark_processed(self, path: str, mtime: float, card_id: int | None) -> None:
+    def mark_done(self, path: str, mtime: float, card_id: int) -> None:
         with self._conn() as c:
-            c.execute("INSERT OR REPLACE INTO processed_files (path, mtime, card_id) VALUES (?,?,?)",
-                      (path, mtime, card_id))
+            c.execute("INSERT OR REPLACE INTO processed_files (path, mtime, card_id, status, error, attempts, last_try)"
+                      " VALUES (?,?,?,'done','',0,?)", (path, mtime, card_id, datetime.now().isoformat(timespec="seconds")))
+
+    def mark_failed(self, path: str, mtime: float, error: str, attempts: int) -> None:
+        with self._conn() as c:
+            c.execute("INSERT OR REPLACE INTO processed_files (path, mtime, card_id, status, error, attempts, last_try)"
+                      " VALUES (?,?,NULL,'failed',?,?,?)",
+                      (path, mtime, error[:500], attempts, datetime.now().isoformat(timespec="seconds")))
+
+    def failed_files(self) -> list[dict]:
+        with self._conn() as c:
+            return [dict(r) for r in c.execute(
+                "SELECT * FROM processed_files WHERE status='failed' ORDER BY last_try DESC")]

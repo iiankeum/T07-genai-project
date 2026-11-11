@@ -65,7 +65,8 @@ def summarize(date: str, records: list[CardRecord]) -> DaySummary:
     pending = [r for r in live if r.status == "draft"]
     urgent_pending = [r for r in live if r.card.urgent and r.status in ("draft", "confirmed")]
     callbacks: "OrderedDict[str, list[str]]" = OrderedDict()
-    for r in sorted(pending, key=lambda x: x.call_time):
+    # 확정했더라도 물어볼 것이 남아 있으면 재통화 대상에 남긴다 (출고·취소된 건은 제외)
+    for r in sorted((x for x in live if x.status in ("draft", "confirmed")), key=lambda x: x.call_time):
         if r.card.follow_ups:
             key = f"{r.card.customer or '거래처 미상'} (#{r.id} {r.call_time})"
             callbacks[key] = list(r.card.follow_ups)
