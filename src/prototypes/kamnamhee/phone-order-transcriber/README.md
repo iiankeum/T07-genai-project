@@ -1,7 +1,7 @@
 # AI 전화 주문 받아쓰기 — 프로토타입
 
 자동차 부품 대리점에 걸려 온 주문 전화 녹음을 **주문 카드**로 정리한다.
-아이디어 문서: [docs/ideas/한결-AI-전화-주문-받아쓰기.md](../../../docs/ideas/한결-AI-전화-주문-받아쓰기.md)
+아이디어 문서: [docs/ideas/한결-AI-전화-주문-받아쓰기.md](../../../../docs/ideas/한결-AI-전화-주문-받아쓰기.md)
 
 ```
 통화 녹음 ──▶ 음성 인식 ──▶ 낱말 사전 교정 ──▶ 생성형 AI 추출 ──▶ 주문 카드 ──▶ 담당자 확인·품번 입력 ──▶ 확정 / 출고
@@ -11,7 +11,7 @@
 ## 바로 실행 (API 키 없이 3분)
 
 ```bash
-cd src/prototypes/phone-order-transcriber
+cd src/prototypes/kamnamhee/phone-order-transcriber
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 python app.py
