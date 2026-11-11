@@ -15,6 +15,8 @@
 | [calls.json](calls.json) | **54건**의 대본(화자 구분) · 정답 주문 카드 · 날짜 · 시각 · 거래처 · 시나리오 태그 · 이어지는 통화. 이것이 기준이다 |
 | [validate.py](validate.py) | calls.json 검사(합성 음성이 못 읽는 글자, 카드 형식, 이어지는 통화) |
 | [make_audio.py](make_audio.py) | calls.json → 전화 음질 음성 파일(저장소 밖에 만든다) |
+| [site-seed.json](site-seed.json) · [make_site_seed.py](make_site_seed.py) | 데모 사이트 시드(태림 방 시드 로더 형식). 정답 카드를 「사람이 확인한 카드」로, 근거 문장 · 칠할 대목(highlights)은 대본 글에 그대로 있는 대목만. 시각은 `offsetMin`(오늘 09:00 KST 기준 분) |
+| [send_ingest.py](send_ingest.py) | 음성을 데모 서버 `/api/ingest` 로 보내 받아쓰기 → 카드 흐름을 실제로 태운다. 토큰은 `~/.t07-secrets/ingest.env` |
 | [build_dataset.py](build_dataset.py) | 처음 만들 때 대본 조각과 META(시각 · 거래처 · 태그)를 합친 스크립트. META 표가 시간표의 기준 |
 | [scenario-design.md](scenario-design.md) | 54건 설계표와 대본 작성 지침 |
 | [glossary.txt](glossary.txt) · [customers.txt](customers.txt) · [car_models.txt](car_models.txt) | 현장 말 사전 · 거래처 목록(비슷한 이름 일부러 섞음) · 차종 코드. 대표님 프로토타입 것을 잇고 늘렸다 |
@@ -91,6 +93,8 @@ python make_audio.py --out ~/.t07-demo-audio
 ```
 
 ffmpeg 가 PATH 에 있어야 한다. 합성 결과는 `_cache/` 에 남아 두 번째부터는 빠르다. 대본을 고치면 고친 턴만 다시 합성한다.
+
+**선로 잡음을 너무 작게 하지 말 것**: 처음에 0.006 으로 만들었더니 Whisper 의 무음 거르기(`vad_filter=True`, Silero VAD 기본 0.5)가 깨끗한 협대역 음성을 무음으로 보고 54건 중 절반을 첫 마디만 남기고 버렸다. 지금은 0.025. 실제 녹음도 조용한 협대역이면 같은 일이 날 수 있어, 받아쓰기 일꾼은 VAD 문턱을 낮추거나 남은 말이 너무 적으면 VAD 없이 다시 받아쓰는 것이 안전하다.
 
 목소리: edge-tts 의 한국어 목소리 3개(InJoon · SunHi · Hyunsu)에 다국어 목소리 7개를 섞고, 사람마다 높낮이 · 빠르기를 달리했다(`make_audio.py` 의 `VOICES`). Whisper large-v3 로 모두 알아듣는 것을 확인했다.
 

@@ -8,7 +8,8 @@
     python send_ingest.py --all                           # 54건 전부(빈도 제한을 지키며 천천히)
     python send_ingest.py --only c02 --dry-run            # 보낼 내용만 출력
 
-토큰은 환경변수 INGEST_TOKEN, 또는 --token-file 로 준 파일의 `INGEST_TOKEN=...` 줄에서 읽는다.
+토큰은 환경변수 INGEST_TOKEN, 또는 --token-file(기본 ~/.t07-secrets/ingest.env)의 `INGEST_TOKEN=...` 줄에서 읽는다.
+그 파일에 `SERVER_URL=...` 이 있으면 --url 을 주지 않았을 때 그 주소로 보낸다.
 """
 import argparse
 import json
@@ -27,14 +28,17 @@ KST = timezone(timedelta(hours=9))
 DEFAULT_URL = "https://t07.3-39-67-126.sslip.io"
 
 
-def read_token(token_file: str | None) -> str:
+def read_env(token_file: str | None) -> dict:
+    env = {}
+    path = Path(token_file) if token_file else Path.home() / ".t07-secrets" / "ingest.env"
+    if path.exists():
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if "=" in line and not line.strip().startswith("#"):
+                k, v = line.split("=", 1)
+                env[k.strip()] = v.strip().strip('"').strip("'")
     if os.environ.get("INGEST_TOKEN"):
-        return os.environ["INGEST_TOKEN"].strip()
-    if token_file:
-        for line in Path(token_file).read_text(encoding="utf-8").splitlines():
-            if line.strip().startswith("INGEST_TOKEN="):
-                return line.split("=", 1)[1].strip().strip('"').strip("'")
-    raise SystemExit("INGEST_TOKEN 이 없습니다(환경변수 또는 --token-file).")
+        env["INGEST_TOKEN"] = os.environ["INGEST_TOKEN"].strip()
+    return env
 
 
 def multipart(fields: dict, file_field: str, path: Path) -> tuple[bytes, str]:
@@ -58,7 +62,7 @@ def recorded_at(call: dict, today) -> str:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--url", default=DEFAULT_URL)
+    ap.add_argument("--url", default="")
     ap.add_argument("--audio", default=str(Path.home() / ".t07-demo-audio"), help="make_audio.py 의 --out")
     ap.add_argument("--kind", default="phone", choices=["phone", "noisy", "web", "clean"])
     ap.add_argument("--only", default="")
@@ -75,7 +79,11 @@ def main() -> None:
         keep = set(args.only.split(","))
         calls = [c for c in calls if c["id"] in keep]
     today = datetime.now(KST).date()
-    token = None if args.dry_run else read_token(args.token_file)
+    env = read_env(args.token_file)
+    url = args.url or env.get("SERVER_URL") or DEFAULT_URL
+    token = env.get("INGEST_TOKEN")
+    if not token and not args.dry_run:
+        raise SystemExit("INGEST_TOKEN 이 없습니다(환경변수 또는 --token-file).")
     ext = "mp3" if args.kind == "web" else "wav"
 
     for c in calls:
@@ -94,7 +102,7 @@ def main() -> None:
             print(c["id"], path.name, fields)
             continue
         body, ctype = multipart(fields, "file", path)
-        req = urllib.request.Request(f"{args.url.rstrip('/')}/api/ingest", data=body, method="POST",
+        req = urllib.request.Request(f"{url.rstrip('/')}/api/ingest", data=body, method="POST",
                                      headers={"Authorization": f"Bearer {token}", "Content-Type": ctype})
         for attempt in range(4):
             try:
