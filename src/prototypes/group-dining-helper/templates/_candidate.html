@@ -1,0 +1,29 @@
+{# 후보 카드 하나. c: 후보, i: 순위(0부터), mode: 'organizer' | 'vote' #}
+<article class="cand {{ 'picked' if m.decided_id == c.id }}">
+  <div class="cand-head">
+    <span class="rank">{{ i + 1 }}</span>
+    <div>
+      <h3>{{ c.name }}</h3>
+      <p class="muted">{{ c.category }} · {{ c.station }} 도보 {{ c.walk_min }}분</p>
+    </div>
+  </div>
+  <div class="price">
+    {% if c.total %}<b>총 {{ c.total|won }}</b> <span>인당 {{ c.per_person|won }}</span>
+    {% else %}<b>인당 {{ c.per_person|won }}</b> <span>인원 미정</span>{% endif %}
+    <p class="basis">기준 메뉴: {{ c.basis }}{% if c.drinks %} + 주류 인당 {{ c.drinks_pp|won }}{% endif %}
+      <br><span class="muted">가격 {{ c.price_as_of }} 기준</span></p>
+  </div>
+  {% if c.reasons %}<ul class="reasons">{% for x in c.reasons %}<li>{{ x }}</li>{% endfor %}</ul>{% endif %}
+  {% if c.cons %}<ul class="cons">{% for x in c.cons %}<li>{{ x }}</li>{% endfor %}</ul>{% endif %}
+  {% if c.checks %}<div class="checks"><b>확인 필요</b><ul>{% for x in c.checks %}<li>{{ x }}</li>{% endfor %}</ul></div>{% endif %}
+  {% set voters = tally.by.get(c.id, []) %}
+  {% if mode == 'organizer' %}
+    <p class="votes">🗳 {{ voters|length }}표{% if voters %} · {{ voters|join(', ') }}{% endif %}</p>
+    {% if m.status != 'decided' %}
+      <form method="post" action="{{ url_for('decide', mid=m.id) }}"><input type="hidden" name="rid" value="{{ c.id }}">
+        <button class="primary wide">이 식당으로 결정</button></form>
+    {% elif m.decided_id == c.id %}<p class="decided-mark">✔ 결정한 식당</p>{% endif %}
+  {% else %}
+    <label class="pick"><input type="radio" name="rid" value="{{ c.id }}" required> 여기 갈래요 <span class="muted">({{ voters|length }}표)</span></label>
+  {% endif %}
+</article>

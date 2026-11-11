@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}단체 식사 예약 도우미{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="{% block bodyclass %}{% endblock %}">
+<header class="top">
+  {% block header %}
+  <a class="brand" href="{{ url_for('index') }}">🍽 단체 식사 예약 도우미 <small>프로토타입</small></a>
+  <span class="engine" title=".env에서 바꿀 수 있음">의견 정리: <b>{{ settings.llm_provider }}</b></span>
+  {% endblock %}
+</header>
+<main>
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in msgs %}<div class="flash {{ cat }}">{{ msg }}</div>{% endfor %}
+  {% endwith %}
+  {% block body %}{% endblock %}
+</main>
+<script>
+  function copyFrom(id, btn) {
+    const el = document.getElementById(id);
+    el.select();
+    (navigator.clipboard ? navigator.clipboard.writeText(el.value) : Promise.reject())
+      .catch(() => document.execCommand('copy'))
+      .finally(() => { const t = btn.textContent; btn.textContent = '복사됨'; setTimeout(() => btn.textContent = t, 1200); });
+  }
+</script>
+</body>
+</html>

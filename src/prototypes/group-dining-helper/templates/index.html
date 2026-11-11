@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block body %}
+<section class="hero">
+  <h1>회식 장소, 단체방 의견만 붙여 넣으세요</h1>
+  <p>“회 못 먹어요”, “역에서 가까우면 좋겠어요” 같은 의견을 모아 <b>필수 조건</b>과 <b>선호 조건</b>으로 나누고,
+     식당 후보 3곳의 예상 총액·추천 이유·확인할 것을 보여 줍니다. 팀원은 공유 링크로 투표하고, 예약은 담당자가 캐치테이블이나 매장에서 확정합니다.</p>
+</section>
+
+<div class="two">
+  <section class="panel">
+    <h3>새 모임</h3>
+    <form method="post" action="{{ url_for('create_meeting') }}">
+      <label>모임 이름 <input name="title" placeholder="예: 11월 팀 회식"></label>
+      <label>조건과 의견 (한 줄에 하나, “이름: 내용” 또는 카톡 대화 그대로)
+        <textarea name="request" rows="6" placeholder="목요일 저녁 강남역 근처 8명, 인당 4만 원 이하, 한 명은 회를 못 먹고 룸이면 좋겠어&#10;민수: 저 회는 진짜 못 먹어요&#10;지영: 역에서 가까우면 좋겠어요"></textarea></label>
+      <label>이름 없는 줄은 누구 의견으로 볼까요 <input name="author" placeholder="담당자"></label>
+      <button class="primary">후보 고르기</button>
+    </form>
+  </section>
+  <section class="panel">
+    <h3>예시 모임으로 해 보기</h3>
+    <p class="muted small">식당·사람·대화는 모두 지어낸 것입니다.</p>
+    {% for s in samples %}
+      <form method="post" action="{{ url_for('load_sample', name=s.file) }}" class="sample">
+        <div><b>{{ s.title }}</b><br><span class="muted small">{{ s.opinions[0].text }}</span></div>
+        <button>불러오기</button>
+      </form>
+    {% endfor %}
+    {% if meetings %}
+      <h3>내 모임</h3>
+      <ul class="meetings">
+      {% for m in meetings %}
+        <li><a href="{{ url_for('meeting', mid=m.id) }}">{{ m.title }}</a>
+          <span class="badge {{ m.status }}">{{ '결정됨' if m.status == 'decided' else '고르는 중' }}</span>
+          <span class="muted small">{{ m.created_at[5:16].replace('T', ' ') }}</span></li>
+      {% endfor %}
+      </ul>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

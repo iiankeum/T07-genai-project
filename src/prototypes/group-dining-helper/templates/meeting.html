@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}{{ m.title }}{% endblock %}
+{% block body %}
+<div class="page-head">
+  <div>
+    <p><a href="{{ url_for('index') }}">← 모임 목록</a></p>
+    <h1>{{ m.title }} <span class="badge {{ m.status }}">{{ '결정됨' if m.status == 'decided' else '고르는 중' }}</span></h1>
+  </div>
+  <div class="share">
+    <label>팀원 투표 링크 (단체방에 공유)</label>
+    <div class="copy"><input id="vote-url" value="{{ vote_url }}" readonly><button type="button" onclick="copyFrom('vote-url', this)">복사</button></div>
+    <span class="muted small">투표 {{ tally.total }}명{% if tally.stale %} · 빠진 후보에 투표한 {{ tally.stale|length }}명은 다시 투표 필요{% endif %}</span>
+  </div>
+</div>
+
+{% if booking %}
+{% set r = booking.restaurant %}
+<section class="panel booking">
+  <div class="booking-main">
+    <h2>예약하기 — {{ r.name }}</h2>
+    <p>{{ booking.when }} · {{ booking.headcount or '?' }}명 · 예상 {% if booking.total %}총 {{ booking.total|won }} (인당 {{ booking.per_person|won }}){% else %}인당 {{ booking.per_person|won }}{% endif %}</p>
+    {% if r.catchtable %}
+      <a class="button primary" href="{{ r.catchtable }}" target="_blank" rel="noopener">캐치테이블에서 좌석 확인·예약</a>
+    {% else %}
+      <p class="note">이 식당은 캐치테이블 주소가 등록되어 있지 않습니다(가상 데이터). <code>data/restaurants.csv</code>의 ‘캐치테이블’ 열에 매장 페이지 주소를 넣으면 여기에 예약 버튼이 생깁니다.</p>
+    {% endif %}
+    <h4>예약할 때 확인할 것</h4>
+    <ul class="checklist">{% for x in booking.checks %}<li><label><input type="checkbox"> {{ x }}</label></li>{% endfor %}</ul>
+    <form method="post" action="{{ url_for('decide', mid=m.id) }}"><button class="ghost">결정 취소</button></form>
+  </div>
+  <div class="booking-side">
+    <h4>단체방 공지 문구</h4>
+    <textarea id="notice" rows="8" readonly>{{ booking.notice }}</textarea>
+    <button type="button" onclick="copyFrom('notice', this)">복사</button>
+    <p class="metrics">모임을 만들고 <b>{{ booking.metrics.minutes }}분</b> 만에 결정 · 의견 {{ booking.metrics.opinions }}개 · 반영한 조건 {{ booking.metrics.conditions }}개 · 후보 조정 {{ booking.metrics.rounds }}회 · 투표 {{ booking.metrics.votes }}명</p>
+  </div>
+</section>
+{% endif %}
+
+<div class="layout">
+  <aside>
+    <section class="panel">
+      <h3>의견 {{ opinions|length }}</h3>
+      <ul class="opinions">
+        {% for o in opinions %}
+          <li><b>{{ o.author }}</b>{% if o.source == 'vote' %} <span class="badge small">투표 의견</span>{% endif %}
+            <span>{{ o.text }}</span>
+            <form method="post" action="{{ url_for('delete_opinion', mid=m.id, oid=o.id) }}" class="x"><button title="이 의견 빼기">×</button></form></li>
+        {% endfor %}
+      </ul>
+      <form method="post" action="{{ url_for('add_opinion', mid=m.id) }}" class="add">
+        <textarea name="text" rows="3" placeholder="지영: 룸이 없어도 걸어서 갈 수 있는 곳이 좋아요&#10;(카톡 대화를 그대로 붙여 넣어도 됩니다)" required></textarea>
+        <div class="row"><input name="author" placeholder="이름 없는 줄은 '담당자'"><button class="primary">의견 반영</button></div>
+      </form>
+      {% if m.suggestions %}
+        <p class="muted small">예시로 이어서 넣어 볼 의견</p>
+        {% for s in m.suggestions %}
+          <form method="post" action="{{ url_for('use_suggestion', mid=m.id, i=loop.index0) }}"><button class="suggest">+ {{ s }}</button></form>
+        {% endfor %}
+      {% endif %}
+    </section>
+
+    <section class="panel">
+      <h3>AI가 정리한 조건</h3>
+      <p class="muted small">필수는 하나라도 안 맞으면 뺍니다. 선호는 중요도만큼 점수를 줍니다. 버튼으로 직접 바꿀 수 있습니다.</p>
+      <table class="conds">
+        {% for c in conds %}
+          {% set ov = m.overrides.get(c.key) %}
+          <tr class="k-{{ c.kind }}">
+            <td><span class="chip {{ c.kind }}">{{ KIND_LABEL[c.kind] }}{% if c.kind == 'prefer' %}·{{ WEIGHT_LABEL[c.weight] }}{% endif %}</span></td>
+            <td><span class="label">{{ c.label() }}</span>
+              {% if c.author %}<span class="src" title="{{ c.quote }}">{{ c.author }}{% if c.quote and c.author != '자동' %} 「{{ c.quote|truncate(28, true, '…') }}」{% elif c.author == '자동' %} · {{ c.quote }}{% endif %}</span>{% endif %}</td>
+            <td class="ctl">
+              <form method="post" action="{{ url_for('override', mid=m.id) }}">
+                <input type="hidden" name="key" value="{{ c.key }}">
+                {% if c.type == 'drinks' %}
+                  <button name="value" value="{{ 'false' if c.value else 'true' }}">{{ '주류 빼기' if c.value else '주류 넣기' }}</button>
+                {% else %}
+                  {% if c.kind != 'must' %}<button name="value" value="must">필수</button>{% endif %}
+                  {% if c.kind != 'prefer' %}<button name="value" value="prefer">선호</button>{% endif %}
+                  {% if c.kind != 'off' %}<button name="value" value="off">빼기</button>{% endif %}
+                {% endif %}
+                {% if ov %}<button name="value" value="reset" class="ghost" title="의견대로 되돌리기">↺</button>{% endif %}
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </table>
+      {% if data and data.unmatched %}
+        <div class="unmatched"><b>조건으로 못 바꾼 의견 — 직접 확인</b>
+          <ul>{% for u in data.unmatched %}<li>{{ u.author }}: {{ u.text }}</li>{% endfor %}</ul></div>
+      {% endif %}
+      {% if data %}<p class="muted small">정리: {{ data.parser }}{% for w in data.warnings %} · ⚠ {{ w }}{% endfor %}</p>{% endif %}
+    </section>
+  </aside>
+
+  <section class="right">
+    {% if data %}
+    {% set ch = data.changes %}
+    <section id="changes" class="panel changes">
+      <p class="muted small">{{ round.n }}번째 결과 · {{ round.trigger }}</p>
+      <h3>{{ ch.headline }}</h3>
+      {% if ch.conditions %}<ul class="diff">{% for x in ch.conditions %}<li>{{ x }}</li>{% endfor %}</ul>{% endif %}
+      {% if ch.ranking %}<ul class="diff rankdiff">{% for x in ch.ranking %}<li>{{ x }}</li>{% endfor %}</ul>{% endif %}
+    </section>
+
+    {% if cands %}
+      <div class="cands">
+        {% for c in cands %}{% set i = loop.index0 %}{% set mode = 'organizer' %}{% include "_candidate.html" %}{% endfor %}
+      </div>
+    {% else %}
+      <p class="empty">필수 조건을 모두 맞추는 식당이 없습니다. 아래 ‘빠진 식당’을 보고 조건 하나를 선호로 바꾸거나 빼 보세요.</p>
+    {% endif %}
+    <p class="muted small notice">가격·좌석은 {{ data.ranking.price_as_of }} 기준 식당 데이터로 계산한 예상입니다. 실제 예약 가능 여부와 금액은 캐치테이블이나 매장에서 최종 확인하세요.
+      전체 {{ data.ranking.considered }}곳 중 조건을 모두 맞춘 곳 {{ data.ranking.order|length }}곳.</p>
+
+    {% if data.ranking.near_misses %}
+      <section class="panel near"><b>예산을 조금만 올리면 갈 수 있는 곳</b>
+        <ul>{% for n in data.ranking.near_misses %}<li>{{ n.name }} — 인당 {{ n.per_person|won }} ({{ n.over|won }} 초과)</li>{% endfor %}</ul></section>
+    {% endif %}
+
+    {% if tally.comments %}
+      <section class="panel"><h3>투표하며 남긴 의견</h3>
+        <ul class="comments">{% for v in tally.comments %}
+          <li><b>{{ v.voter }}</b> {{ v.comment }}
+            <form method="post" action="{{ url_for('adopt', mid=m.id, vid=v.id) }}" class="inline"><button>조건에 반영</button></form></li>
+        {% endfor %}</ul></section>
+    {% endif %}
+
+    <details class="panel"><summary>조건 때문에 빠진 식당 {{ data.ranking.excluded|length }}곳</summary>
+      <table class="excluded">{% for x in data.ranking.excluded %}
+        <tr><td>{{ x.name }} <span class="muted small">{{ x.category }}</span></td><td>{{ x.reasons|join(' · ') }}</td></tr>
+      {% endfor %}</table>
+    </details>
+
+    <details class="panel"><summary>결과 기록 {{ rounds|length }}회</summary>
+      <ol class="history">{% for rd in rounds|reverse %}
+        <li><b>{{ rd.n }}.</b> {{ rd.trigger }} — {{ rd.data.changes.headline }}
+          <span class="muted small">({{ rd.data.ranking.candidates|map(attribute='name')|join(' / ') or '후보 없음' }})</span></li>
+      {% endfor %}</ol>
+    </details>
+    {% endif %}
+    <form method="post" action="{{ url_for('delete_meeting', mid=m.id) }}" onsubmit="return confirm('이 모임을 지울까요?')"><button class="link danger">모임 지우기</button></form>
+  </section>
+</div>
+{% endblock %}
