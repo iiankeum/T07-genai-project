@@ -125,3 +125,4 @@ table.cmp td, table.cmp th { font-size: 7.5pt; padding: .9mm 1mm; line-height: 1
 .srclist { padding-left: 4mm; } .srclist li { font-size: 8pt; margin-bottom: 1.2mm; line-height: 1.35; } .srclist a.src { font-size: 6.6pt; word-break: break-all; }
 .toc2 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5mm 5mm; font-size: 9pt; } .toc2 div { border-bottom: .3mm dotted #CBD2D9; display: flex; justify-content: space-between; padding: .6mm 0; } .toc2 b { color: var(--teal); }
 tr.top td { background: #FFF6EC !important; }
+code { font-family: Consolas, monospace; font-size: .92em; background: #F2F4F6; padding: 0 .6mm; border-radius: .6mm; word-break: break-all; }

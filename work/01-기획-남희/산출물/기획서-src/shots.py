@@ -11,11 +11,12 @@ EDGE = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
 
 DETAIL = os.environ.get("DETAIL", "fx-c43")      # 카드 · 근거가 잘 보이는 가짜 통화
 CUSTOMER = os.environ.get("CUSTOMER", "새한카센터")
-CROP_Y = {"F02-F05-call": (560, 1560)}
+CROP_Y = {"F02-F05-call": (560, 1560), "F05-listen": (600, 1560)}
 SHOTS = [  # (파일 이름, 해시 주소, 가로, 세로)
     ("F10-today", "#/", 1280, 1000),
     ("F08-calls", "#/calls?q=" + urllib.parse.quote("앞범퍼"), 1280, 1000),
     ("F02-F05-call", f"#/calls/{DETAIL}", 1280, 1700),
+    ("F05-listen", "#/calls/fx-c51", 1280, 1900),
     ("F06-board", "#/board", 1280, 1000),
     ("F03-live", "#/live", 1280, 1000),
     ("F01-upload", "#/upload", 1280, 1000),
@@ -53,6 +54,8 @@ def shot(name, route, w, h):
     print(name, im.size, dst.stat().st_size // 1024, "KB")
 
 
+# 주의: 미리 넣은 가짜 통화는 서버가 날마다 「오늘」로 다시 잡는다. 자정 직후에는 오늘 브리핑이 0건으로 보이니
+#       F10-today · M-today 는 낮이나 저녁에 찍는다(python shots.py F10-today M-today).
 if __name__ == "__main__":
     only = sys.argv[1:]
     for s in SHOTS:

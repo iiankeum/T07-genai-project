@@ -66,7 +66,7 @@ def p1_page():
         f"<td>{esc(p['scene'])}</td><td>{esc(p['demo'])}</td><td>{esc(p['done'])}</td></tr>" for p in P1)
     body = f"""
 <div class="kicker">기능 · P1</div><h2 class="sec">있으면 좋은 기능 (P1)</h2>
-<p class="lead">P0 를 받쳐 주는 기능이다. 사이트에 들어간 것만 이 쪽에 남기고, 못 들어간 것은 부록 「다음 단계」로 옮긴다.</p>
+<p class="lead">P0 를 받쳐 주는 기능이다. 다섯 개 모두 데모 사이트에서 동작한다(개발 방 구현-대조표 · 「사이트에서 확인」 쪽).</p>
 <table><tr><th style="width:9%">ID</th><th style="width:22%">기능 · 목적</th><th style="width:27%">장면</th><th style="width:14%">데모 범위</th><th>완료 기준</th></tr>{rows}</table>
 {sections.P1_NOTE}"""
     return page(body, foot="P1 기능")
@@ -89,7 +89,7 @@ def toc(pages):
     return '<h3>목차</h3><div class="toc2">' + "".join(items) + "</div><div style='height:3mm'></div>"
 
 
-SHOT_OF = {"F01": "F01-upload", "F02": "F02-F05-call", "F03": "F03-live", "F04": "F02-F05-call", "F05": "F02-F05-call",
+SHOT_OF = {"F01": "F01-upload", "F02": "F02-F05-call", "F03": "F03-live", "F04": "F02-F05-call", "F05": "F05-listen",
            "F06": "F06-board", "F07": "F07-glossary", "F08": "F08-calls", "F09": "F09-ask", "F10": "F10-today"}
 
 
@@ -135,7 +135,7 @@ def build_html():
     import sitepages  # 사이트에서 확인 쪽 (대조표 · 화면)
     pages += sitepages.pages(page)
     pages += sections.back_pages(page, img)
-    pages = [x.replace("@@TOC@@", toc(pages)) for x in pages]
+    pages = [x.replace("@@TOC@@", toc(pages)).replace("버전: v1 ·", f"버전: {VERSION} ·") for x in pages]
     pages = site_refs(pages)
     doc = f"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>AI 전화 주문 받아쓰기 기획서 {VERSION}</title>
 <link rel="stylesheet" href="style.css"></head><body>{''.join(pages)}</body></html>"""
