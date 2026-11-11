@@ -1,0 +1,19 @@
+{
+  "name": "callnote-demo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "T07 7번 아이템 「AI 전화 주문 받아쓰기」(가칭 콜노트) 데모 서버 — 빌드 단계 없음",
+  "type": "module",
+  "main": "server.mjs",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test test/"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "1.8.0"
+  }
+}
