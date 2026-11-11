@@ -178,6 +178,33 @@ class TestPieces(unittest.TestCase):
         ], 10.0)
         self.assertEqual([s["text"] for s in segs], ["네 좋아요, 두 개 주세요"])
 
+    def test_vad_guard_falls_back_when_vad_drops_speech(self):
+        import types
+
+        class FakeModel:
+            def __init__(self, kept):
+                self.kept, self.calls = kept, []
+
+            def transcribe(self, audio, vad_filter, **kw):
+                self.calls.append((vad_filter, kw.get("vad_parameters") if vad_filter else None))
+                n = len(audio) / 16000
+                seg = types.SimpleNamespace(start=0.0, end=1.0, text="네 부품입니다" if vad_filter else "네 부품입니다 앞범퍼 하나요")
+                info = types.SimpleNamespace(duration=n, duration_after_vad=self.kept if vad_filter else n)
+                return iter([seg]), info
+
+        import numpy as np
+        audio = np.zeros(16000 * 20, dtype=np.float32)
+        m = FakeModel(kept=1.5)                      # 20초 중 1.5초만 남김 → 다시
+        out, fb = ca.transcribe_with_vad_guard(m, audio, "휀다")
+        self.assertTrue(fb)
+        self.assertEqual([c[0] for c in m.calls], [True, False])
+        self.assertEqual(m.calls[0][1], ca.VAD_PARAMS)
+        self.assertEqual(out["text"], "네 부품입니다 앞범퍼 하나요")
+        m2 = FakeModel(kept=15.0)                    # 충분히 남김 → 그대로
+        out2, fb2 = ca.transcribe_with_vad_guard(m2, audio, None)
+        self.assertFalse(fb2)
+        self.assertEqual(len(m2.calls), 1)
+
     def test_api_refuses_other_origin_and_redirect(self):
         srv = FakeServer()
         try:

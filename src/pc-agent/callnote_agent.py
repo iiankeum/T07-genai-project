@@ -277,6 +277,7 @@ class WhisperTranscriber:
 
         _add_cuda_dlls()
         self.model_name, self.beam_size = model_name, beam_size
+        self.last_vad_fallback = False
         self.device, self.compute = "cpu", "int8"
         model = None
         if device in ("auto", "cuda"):
@@ -297,21 +298,40 @@ class WhisperTranscriber:
         self.gpu = gpu_name() if self.device == "cuda" else "CPU"
 
     def transcribe(self, audio, initial_prompt: str | None, language: str = "ko") -> dict:
-        audio_sec = len(audio) / 16000
         started = time.time()
-        segments, info = self.model.transcribe(
-            audio, language=language or "ko", beam_size=self.beam_size, vad_filter=True,
-            initial_prompt=(initial_prompt or None), condition_on_previous_text=False,
-        )
+        out, self.last_vad_fallback = transcribe_with_vad_guard(
+            self.model, audio, initial_prompt, language, self.beam_size)
+        out["elapsedSec"] = round(time.time() - started, 1)
+        return out
+
+
+VAD_PARAMS = {"threshold": 0.35}   # 기본 0.5 는 조용한 협대역 전화 목소리를 무음으로 보는 일이 있다
+VAD_MIN_KEEP = 0.5                 # VAD 가 말의 절반 넘게를 지웠으면 VAD 없이 다시 받아쓴다
+
+
+def transcribe_with_vad_guard(model, audio, initial_prompt, language="ko", beam_size=5) -> tuple[dict, bool]:
+    """VAD 로 무음을 걸러 받아쓰되, VAD 가 말을 지나치게 지웠으면 VAD 를 끄고 다시 받아쓴다.
+
+    해결사 방 실측: 잡음이 아주 작은 깨끗한 협대역 음성을 Silero VAD(기본 0.5)가 무음으로 봐서
+    54건 중 절반이 첫 마디만 남았다. 실제 조용한 회선 녹음에서도 같은 일이 날 수 있어 두 겹으로 막는다.
+    """
+    audio_sec = len(audio) / 16000
+    kw = dict(language=language or "ko", beam_size=beam_size,
+              initial_prompt=(initial_prompt or None), condition_on_previous_text=False)
+    segments, info = model.transcribe(audio, vad_filter=True, vad_parameters=VAD_PARAMS, **kw)
+    raw = [{"start": s.start, "end": s.end, "text": s.text} for s in segments]
+    kept = getattr(info, "duration_after_vad", None)
+    fallback = bool(audio_sec > 5 and kept is not None and kept < VAD_MIN_KEEP * audio_sec)
+    if fallback:
+        segments, info = model.transcribe(audio, vad_filter=False, **kw)
         raw = [{"start": s.start, "end": s.end, "text": s.text} for s in segments]
-        segs = clean_segments(raw, audio_sec)
-        return {
-            "text": " ".join(s["text"] for s in segs)[:20000],
-            "segments": segs,
-            "durationSec": round(info.duration or audio_sec, 1),
-            "elapsedSec": round(time.time() - started, 1),
-            "language": language or "ko",
-        }
+    segs = clean_segments(raw, audio_sec)
+    return {
+        "text": " ".join(s["text"] for s in segs)[:20000],
+        "segments": segs,
+        "durationSec": round(getattr(info, "duration", None) or audio_sec, 1),
+        "language": language or "ko",
+    }, fallback
 
 
 # ───────────────────────── 일꾼 ─────────────────────────
@@ -361,21 +381,28 @@ class Worker:
                 backoff = min(backoff * 2, 60)
                 continue
             backoff = 5.0
-            if r.status == 204:
-                self.stop.wait(self.idle_sec)
-                continue
-            if r.status == 200:
-                self.process(r.json())
+            if r.status in (200, 204):
+                self._claim_note(f"일감 기다리는 중(서버 연결 정상)")
+                if r.status == 204:
+                    self.stop.wait(self.idle_sec)
+                else:
+                    self.process(r.json())
                 continue
             if r.status == 401:
-                log("토큰이 맞지 않는다(401) · 60초 뒤 다시", "일꾼")
+                self._claim_note("토큰이 맞지 않는다(401) · 60초마다 다시")
                 self.stop.wait(60)
             elif r.status in (404, 503):
-                log(f"서버에 일꾼 API 가 아직 없거나 꺼져 있다({r.status}) · 30초 뒤 다시", "일꾼")
+                self._claim_note(f"서버에 일꾼 API 가 아직 없거나 꺼져 있다({r.status}) · 30초마다 다시")
                 self.stop.wait(30)
             else:
-                log(f"claim 응답 {r.status} · 15초 뒤 다시", "일꾼")
+                self._claim_note(f"claim 응답 {r.status} · 15초마다 다시")
                 self.stop.wait(15)
+
+    def _claim_note(self, msg: str):
+        """같은 상태를 30초마다 찍지 않고, 바뀔 때만 찍는다."""
+        if msg != getattr(self, "_last_claim_note", None):
+            log(msg, "일꾼")
+            self._last_claim_note = msg
 
     def _fail(self, job_id: str, error: str, retryable: bool):
         try:

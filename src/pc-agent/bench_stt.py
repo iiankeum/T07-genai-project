@@ -105,7 +105,8 @@ def main():
             out = tr.transcribe(audios[c["id"]], prompt)
             s = score(out["text"], c["gold"])
             rows.append({"id": c["id"], "noise": c.get("audio_noise"), "dur": out["durationSec"],
-                         "elapsed": out["elapsedSec"], **s})
+                         "elapsed": out["elapsedSec"], "vadFallback": tr.last_vad_fallback,
+                         "chars": len(out["text"]), **s})
             dur += out["durationSec"]
             el += out["elapsedSec"]
         ph = sum(r["parts_hit"] for r in rows)
@@ -117,6 +118,7 @@ def main():
             "rtf": round(el / dur, 3) if dur else None,
             "vramMB": (after - before) if (before is not None and after is not None) else None,
             "parts": f"{ph}/{pt}", "car": f"{sum(cars)}/{len(cars)}", "customer": f"{sum(custs)}/{len(custs)}",
+            "vadFallback": sum(1 for r in rows if r["vadFallback"]),
         }
         results["models"][m] = {"summary": summ, "rows": rows}
         print(json.dumps({m: summ}, ensure_ascii=False), flush=True)
