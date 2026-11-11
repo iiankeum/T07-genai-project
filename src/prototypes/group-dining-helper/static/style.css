@@ -92,3 +92,5 @@ details summary { cursor:pointer; font-weight:600; }
 .vote-page main { max-width:1000px; } .lead { color:var(--muted); }
 .vote-form { max-width:520px; margin:0 auto; }
 .decided { border:2px solid var(--ok); }
+.admin-link { margin-top:6px; font-size:12.5px; } .admin-link summary { color:var(--muted); font-weight:500; }
+.admin-link .copy { margin-top:6px; }

@@ -10,6 +10,9 @@
     <label>팀원 투표 링크 (단체방에 공유)</label>
     <div class="copy"><input id="vote-url" value="{{ vote_url }}" readonly><button type="button" onclick="copyFrom('vote-url', this)">복사</button></div>
     <span class="muted small">투표 {{ tally.total }}명{% if tally.stale %} · 빠진 후보에 투표한 {{ tally.stale|length }}명은 다시 투표 필요{% endif %}</span>
+    <details class="admin-link"><summary>담당자 링크 (다른 기기에서 이 화면을 열 때 — 남에게 보내지 마세요)</summary>
+      <div class="copy"><input id="admin-url" value="{{ admin_url }}" readonly><button type="button" onclick="copyFrom('admin-url', this)">복사</button></div>
+    </details>
   </div>
 </div>
 

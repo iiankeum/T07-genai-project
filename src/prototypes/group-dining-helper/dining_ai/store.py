@@ -12,7 +12,8 @@ SCHEMA = """
 CREATE TABLE IF NOT EXISTS meetings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
-    token TEXT NOT NULL UNIQUE,          -- 투표 공유 링크용
+    token TEXT NOT NULL UNIQUE,          -- 투표 공유 링크용 (팀원에게 공유)
+    admin_token TEXT NOT NULL DEFAULT '', -- 담당자 화면용 (공유하지 않음)
     status TEXT NOT NULL DEFAULT 'planning',  -- planning | decided
     decided_id TEXT,
     overrides TEXT NOT NULL DEFAULT '{}', -- 담당자가 직접 바꾼 조건 {key: must|prefer|off}
@@ -39,11 +40,12 @@ CREATE TABLE IF NOT EXISTS rounds (
 CREATE TABLE IF NOT EXISTS votes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     meeting_id INTEGER NOT NULL,
-    voter TEXT NOT NULL,
+    voter_key TEXT NOT NULL,             -- 브라우저마다 무작위로 만든 ID (쿠키). 이름이 같아도 사람을 구분
+    voter TEXT NOT NULL,                 -- 화면에 보일 이름
     restaurant_id TEXT NOT NULL,
     comment TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL,
-    UNIQUE (meeting_id, voter)
+    UNIQUE (meeting_id, voter_key)
 );
 """
 
@@ -57,7 +59,27 @@ class Store:
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         with self._conn() as c:
+            self._migrate(c)
             c.executescript(SCHEMA)
+            for r in c.execute("SELECT id FROM meetings WHERE admin_token=''").fetchall():
+                c.execute("UPDATE meetings SET admin_token=? WHERE id=?", (secrets.token_urlsafe(16), r["id"]))
+
+    @staticmethod
+    def _migrate(c: sqlite3.Connection) -> None:
+        """예전 버전 DB 고치기: 관리 토큰 열 추가, 투표를 '이름 기준'에서 '브라우저 기준'으로."""
+        tables = {r["name"] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        if "meetings" in tables:
+            cols = {r["name"] for r in c.execute("PRAGMA table_info(meetings)")}
+            if "admin_token" not in cols:
+                c.execute("ALTER TABLE meetings ADD COLUMN admin_token TEXT NOT NULL DEFAULT ''")
+        if "votes" in tables:
+            cols = {r["name"] for r in c.execute("PRAGMA table_info(votes)")}
+            if "voter_key" not in cols:
+                c.execute("ALTER TABLE votes RENAME TO votes_old")
+                c.executescript(SCHEMA)
+                c.execute("INSERT INTO votes (id, meeting_id, voter_key, voter, restaurant_id, comment, created_at)"
+                          " SELECT id, meeting_id, 'legacy-' || id, voter, restaurant_id, comment, created_at FROM votes_old")
+                c.execute("DROP TABLE votes_old")
 
     def _conn(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path)
@@ -67,8 +89,9 @@ class Store:
     # 모임
     def create_meeting(self, title: str, suggestions: list[str] | None = None) -> int:
         with self._conn() as c:
-            cur = c.execute("INSERT INTO meetings (title, token, suggestions, created_at) VALUES (?,?,?,?)",
-                            (title, secrets.token_urlsafe(8), json.dumps(suggestions or [], ensure_ascii=False), _now()))
+            cur = c.execute("INSERT INTO meetings (title, token, admin_token, suggestions, created_at) VALUES (?,?,?,?,?)",
+                            (title, secrets.token_urlsafe(8), secrets.token_urlsafe(16),
+                             json.dumps(suggestions or [], ensure_ascii=False), _now()))
             return int(cur.lastrowid)
 
     def meeting(self, mid: int) -> dict[str, Any] | None:
@@ -148,13 +171,18 @@ class Store:
             r = c.execute("SELECT * FROM rounds WHERE meeting_id=? ORDER BY n DESC LIMIT 1", (mid,)).fetchone()
         return {**dict(r), "data": json.loads(r["data"])} if r else None
 
-    # 투표 (한 사람 한 표, 다시 투표하면 바뀜)
-    def vote(self, mid: int, voter: str, rid: str, comment: str = "") -> None:
+    # 투표 (브라우저 하나에 한 표, 같은 브라우저에서 다시 투표하면 바뀜)
+    def vote(self, mid: int, voter_key: str, voter: str, rid: str, comment: str = "") -> None:
         with self._conn() as c:
-            c.execute("INSERT INTO votes (meeting_id, voter, restaurant_id, comment, created_at) VALUES (?,?,?,?,?)"
-                      " ON CONFLICT(meeting_id, voter) DO UPDATE SET restaurant_id=excluded.restaurant_id,"
-                      " comment=excluded.comment, created_at=excluded.created_at",
-                      (mid, voter, rid, comment, _now()))
+            c.execute("INSERT INTO votes (meeting_id, voter_key, voter, restaurant_id, comment, created_at)"
+                      " VALUES (?,?,?,?,?,?) ON CONFLICT(meeting_id, voter_key) DO UPDATE SET voter=excluded.voter,"
+                      " restaurant_id=excluded.restaurant_id, comment=excluded.comment, created_at=excluded.created_at",
+                      (mid, voter_key, voter, rid, comment, _now()))
+
+    def vote_of(self, mid: int, voter_key: str) -> dict[str, Any] | None:
+        with self._conn() as c:
+            r = c.execute("SELECT * FROM votes WHERE meeting_id=? AND voter_key=?", (mid, voter_key)).fetchone()
+        return dict(r) if r else None
 
     def votes(self, mid: int) -> list[dict[str, Any]]:
         with self._conn() as c:

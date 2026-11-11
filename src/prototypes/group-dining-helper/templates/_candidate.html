@@ -24,6 +24,6 @@
         <button class="primary wide">이 식당으로 결정</button></form>
     {% elif m.decided_id == c.id %}<p class="decided-mark">✔ 결정한 식당</p>{% endif %}
   {% else %}
-    <label class="pick"><input type="radio" name="rid" value="{{ c.id }}" required> 여기 갈래요 <span class="muted">({{ voters|length }}표)</span></label>
+    <label class="pick"><input type="radio" name="rid" value="{{ c.id }}" required {{ 'checked' if mine and mine.restaurant_id == c.id }}> 여기 갈래요 <span class="muted">({{ voters|length }}표)</span></label>
   {% endif %}
 </article>
