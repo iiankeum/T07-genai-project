@@ -154,12 +154,16 @@ export function buildTodos(entries) {
   return out.slice(0, 30).map(({ _at, ...t }) => t);
 }
 
-function getBriefing(day) {
+/** 숫자가 바뀌었는지 알아보는 열쇠(브리핑을 만든 때의 숫자와 지금 숫자가 다르면 stale) */
+const statsKey = (s) => JSON.stringify(s || {});
+
+function getBriefing(day, currentStats) {
   const r = db().prepare('SELECT content, model, created_at FROM briefings WHERE day = ?').get(day);
   if (!r) return null;
   const c = parseJson(r.content, null);
   if (!c || typeof c.paragraph !== 'string') return null;
-  return { paragraph: c.paragraph, todos: Array.isArray(c.todos) ? c.todos : [], createdAt: r.created_at, model: r.model ?? null };
+  const stale = currentStats ? c.statsKey !== statsKey(currentStats) : false;
+  return { paragraph: c.paragraph, todos: Array.isArray(c.todos) ? c.todos : [], createdAt: r.created_at, model: r.model ?? null, stale };
 }
 
 export function buildDashboard(day) {
@@ -188,7 +192,7 @@ export function buildDashboard(day) {
     drafts,
     todos: buildTodos(entries),
     recent: entries.slice(0, 8).map((e) => callView(e.row, { card: e.card })),
-    briefing: getBriefing(day),
+    briefing: getBriefing(day, stats),
   };
 }
 
@@ -253,12 +257,13 @@ function cardSummaryForAi(e) {
 }
 
 async function makeBriefing(day, ip) {
-  const cached = getBriefing(day);
-  if (cached && Date.now() - Date.parse(cached.createdAt) < BRIEFING_FRESH_MS) return cached;
-  const ai = await requireAi('writeBriefing');
   const entries = loadDay(day);
   const ids = new Set(entries.map((e) => e.row.id));
   const stats = computeStats(entries);
+  // 숫자가 그대로이고 10분 안에 만든 것이면 그대로 쓴다(숫자가 바뀌었으면 다시 만든다)
+  const cached = getBriefing(day, stats);
+  if (cached && !cached.stale && Date.now() - Date.parse(cached.createdAt) < BRIEFING_FRESH_MS) return cached;
+  const ai = await requireAi('writeBriefing');
   let paragraph;
   let todos = [];
   let model = null;
@@ -282,8 +287,8 @@ async function makeBriefing(day, ip) {
   const createdAt = nowIso();
   db().prepare(`INSERT INTO briefings(day, content, model, created_at) VALUES(?, ?, ?, ?)
     ON CONFLICT(day) DO UPDATE SET content = excluded.content, model = excluded.model, created_at = excluded.created_at`)
-    .run(day, JSON.stringify({ paragraph, todos }), model, createdAt);
-  return { paragraph, todos, createdAt, model };
+    .run(day, JSON.stringify({ paragraph, todos, statsKey: statsKey(stats) }), model, createdAt);
+  return { paragraph, todos, createdAt, model, stale: false };
 }
 
 // ── 지난 통화에 묻기 ──────────────────────────────────────────────

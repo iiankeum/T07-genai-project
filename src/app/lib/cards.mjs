@@ -227,6 +227,8 @@ export function buildCardFromAi(callRow, aiOut) {
     let loc = u?.quote ? locateQuote(u.quote, segs, prepared) : null;
     if (!loc && item != null && items[item].at != null) loc = { at: items[item].at, seg: items[item].seg };
     if (!loc && field && evidence[field]) loc = { at: evidence[field].at, seg: evidence[field].seg };
+    // 같은 칸(같은 부품 줄)에 이미 「들어 보기」가 있으면 하나로 둔다(서버 검사가 먼저 붙인 것 우선)
+    if (field && unsure.some((x) => x.field === field && (x.item ?? null) === item)) continue;
     unsure.push({ field, item, reason, at: loc?.at ?? null, seg: loc?.seg ?? null });
   }
 

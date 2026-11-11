@@ -96,7 +96,7 @@ export default {
       return html`<div class="metrics today-metrics">
         ${box(s.calls, '건', d.isToday === false ? '그날 통화' : '오늘 통화', 'metric-brand', href('/calls', { ...range, status: 'all' }))}
         ${box(s.cards, '장', '주문 카드', '', '#/board')}
-        ${box(s.draft, '장', '확인 필요', 'metric-warn', href('/calls', { ...range, status: 'draft' }))}
+        ${box(s.draft, '건', '확인 필요 통화', 'metric-warn', href('/calls', { ...range, status: 'draft' }))}
         <button type="button" class="metric metric-urgent ${num(s.urgentOpen) === 0 ? 'is-zero' : ''}" data-act="jump" data-to="today-urgent"><span class="metric-num">${num(s.urgentOpen)}<small>건</small></span><span class="metric-label">급한데 출고 전</span></button>
         ${box(s.callbacks, '곳', '다시 전화할 곳', 'metric-callback', href('/calls', { ...range, status: 'callback' }))}
       </div>
@@ -210,7 +210,7 @@ export default {
       if (!list.length) return emptyBox('최근 통화가 없습니다.');
       return html`<div class="list-wrap">${list.map((c) => html`<a class="list-item" href="${callHref(c.id)}">
         <span class="li-top"><strong class="li-title-strong">${c.title || c.customer || '통화'}</strong>${callChip(c)}</span>
-        <span class="li-meta">${fmtWhen(c.recordedAt)}${c.card ? ` · ${partsText(c.card.items, 2)}` : c.summary ? ` · ${c.summary}` : ''}</span>
+        <span class="li-meta">${fmtWhen(c.recordedAt)}${c.card ? ` · ${partsText(c.card.items, 2, c.card.callType)}` : c.summary ? ` · ${c.summary}` : ''}</span>
       </a>`)}</div>`;
     }
 
@@ -288,7 +288,7 @@ export default {
 
     function maybeAutoBrief() {
       const d = st.data;
-      if (!d || d.briefing || st.meta?.aiEnabled !== true) return;
+      if (!d || (d.briefing && !d.briefing.stale) || st.meta?.aiEnabled !== true) return;
       if (num(d.stats?.calls) === 0) return;
       if (AUTO_TRIED.has(st.day) || st.brief === 'loading') return;
       AUTO_TRIED.add(st.day);

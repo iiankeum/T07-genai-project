@@ -11,7 +11,7 @@ function callItem(call) {
   const meta = [fmtClock(call.recordedAt), SOURCE_LABEL[call.source] || '', call.durationSec ? `${fmtSec(call.durationSec)} 길이` : ''].filter(Boolean).join(' · ');
   return html`<a class="list-item cust-call" href="${callHref(call.id)}">
     <span class="cc-top"><strong class="cc-title">${call.title || '통화'}</strong>${callChip(call)}</span>
-    ${c ? html`<span class="cc-parts">${partsText(c.items)}${carText(c) ? html`<span class="cc-car"> · ${carText(c)}</span>` : ''}</span>`
+    ${c ? html`<span class="cc-parts">${partsText(c.items, 3, c.callType)}${carText(c) ? html`<span class="cc-car"> · ${carText(c)}</span>` : ''}</span>`
       : html`<span class="cc-parts muted">${call.summary || call.statusLabel || ''}</span>`}
     ${c?.urgent || c?.callback ? html`<span class="cc-flags">${c.urgent ? html`<span class="chip chip-urgent">급함</span>` : ''}${c.callback ? html`<span class="chip chip-callback">다시 전화</span>` : ''}</span>` : ''}
     ${ask.length ? html`<span class="cc-ask"><span class="cc-ask-label">되물을 것</span>${ask.map((q) => html`<span class="cc-q">「${q}」</span>`)}</span>` : ''}

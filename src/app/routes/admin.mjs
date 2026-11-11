@@ -8,12 +8,12 @@ import { HttpError, readJson } from '../lib/http.mjs';
 import {
   limit, adminLogin, adminCookie, adminLogout, adminLogoutCookie, isAdmin, requireAdmin, kstDay, usageCount,
 } from '../lib/security.mjs';
-import { seedDemo, rollSeedToToday } from '../lib/seed.mjs';
+import { seedDemo, placeSeed } from '../lib/seed.mjs';
 import { workerStatus } from './system.mjs';
 import { visitStats } from '../lib/visits.mjs';
 import { parseJson } from '../lib/db.mjs';
 
-const ROLL_EVERY_MS = 3600_000;
+const ROLL_EVERY_MS = 10 * 60_000; // 10분마다(새벽에 미래가 된 시드 통화를 고치려고)
 let rollTimer = null;
 
 /** 서버가 뜰 때: 비어 있으면 가짜 데모 데이터를 넣고, 오늘 통화가 없으면 시드 날짜를 오늘로 */
@@ -27,8 +27,8 @@ export async function start() {
   }
   const roll = () => {
     try {
-      const n = rollSeedToToday();
-      if (n) console.log(`[seed] 시드 통화 날짜를 ${n}일 옮겼습니다`);
+      const n = placeSeed();
+      if (n) console.log(`[seed] 시드 통화 ${n}건의 날짜 · 시각을 다시 잡았습니다`);
     } catch (e) {
       console.error('[seed] 날짜 옮기기 실패:', e?.message || e);
     }

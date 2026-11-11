@@ -5,9 +5,9 @@ import { html, render, fmtWhen, toast, confirmBox, errorBox, href } from '../ui.
 
 // ── 함께 쓰는 작은 도우미 ─────────────────────────────────────────
 /** 부품 줄 요약: 「앞범퍼 1개 · 휀다(운전석) 2개 외 1가지」 */
-export function partsText(items, max = 3) {
+export function partsText(items, max = 3, callType) {
   const list = (Array.isArray(items) ? items : []).filter((i) => i && i.part);
-  if (!list.length) return '부품 정리 전';
+  if (!list.length) return callType && callType !== '주문' ? `${callType} — 부품 없음` : '부품 정리 전';
   const bits = list.slice(0, max).map((i) => `${i.part}${i.side ? `(${i.side})` : ''} ${qtyText(i.qty)}`);
   if (list.length > max) bits.push(`외 ${list.length - max}가지`);
   return bits.join(' · ');
@@ -57,7 +57,7 @@ function cardPiece(call, busy) {
     <a class="bcard-main" href="${callHref(call.id)}">
       <span class="bcard-top"><strong class="bcard-customer">${who}</strong>${c.urgent ? html`<span class="chip chip-urgent">급함</span>` : ''}</span>
       ${car ? html`<span class="bcard-car">${car}</span>` : html`<span class="bcard-car muted">차 정보 없음</span>`}
-      <span class="bcard-parts">${partsText(c.items)}</span>
+      <span class="bcard-parts">${partsText(c.items, 3, c.callType)}</span>
       ${askN || unsureN || c.callback || (c.edited && c.edited.length) || c.customerByPhone ? html`<span class="bcard-flags">
         ${askN ? html`<span class="chip chip-ask">되물을 것 ${askN}</span>` : ''}
         ${unsureN ? html`<span class="listen-flag">들어 보기 ${unsureN}</span>` : ''}

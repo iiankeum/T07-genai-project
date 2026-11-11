@@ -3,7 +3,7 @@
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { APP_DIR, config } from './config.mjs';
-import { db, tx, newId, nowIso } from './db.mjs';
+import { db, tx, newId, nowIso, getMeta, setMeta } from './db.mjs';
 import { kstDay } from './security.mjs';
 import { makeTitle } from './repo.mjs';
 
@@ -368,12 +368,8 @@ function insertGlossary(d, glossary, customers) {
  */
 export async function seedDemo({ reset = false, dir = SEED_DIR, now = new Date() } = {}) {
   const data = loadSeedFiles(dir);
-  let anchorMs = seedAnchorMs(now);
-  // 가장 늦은 시드 통화가 「미래」가 되지 않게(지금 - 5분보다 늦으면 전체를 앞으로 당긴다)
-  const maxOff = Math.max(0, ...data.calls.map((c) => Number(c?.offsetMin) || 0));
-  const limitMs = now.getTime() - 5 * MIN;
-  if (anchorMs + maxOff * MIN > limitMs) anchorMs = limitMs - maxOff * MIN;
-  return tx((d) => {
+  const anchorMs = seedAnchorMs(now);
+  const inserted = tx((d) => {
     if (reset) {
       for (const t of ['jobs', 'cards', 'calls', 'briefings', 'recommendations', 'glossary']) d.exec(`DELETE FROM ${t}`);
     }
@@ -397,6 +393,59 @@ export async function seedDemo({ reset = false, dir = SEED_DIR, now = new Date()
     }
     return n;
   });
+  placeSeed({ now, dir, force: true });
+  return inserted;
+}
+
+/**
+ * 시드 통화 자리 잡기(결정적): 시드 파일의 offsetMin(오늘 09:00 KST 기준 분)으로 시각을 다시 계산한다.
+ * - 05:05 KST 뒤: 기준은 오늘 09:00. 지금 - 5분보다 늦은(미래) 통화는 [max(05:00, 지금-60분), 지금-5분] 안에 순서대로 놓는다(한밤중 시각을 만들지 않음).
+ * - 05:05 KST 전(한밤중): 기준을 어제 09:00 으로(어제 하루 그대로 보이고 오늘은 아직 비어 있음).
+ * 같은 날 · 같은 모드로 이미 잡았고 미래 통화가 없으면 아무것도 하지 않는다(10분마다 불러도 시각이 흔들리지 않게).
+ * 카드의 확정 · 출고 시각과 제목 안 시각도 같은 만큼 옮긴다.
+ * @returns {number} 옮긴 통화 수
+ */
+export function placeSeed({ now = new Date(), dir = SEED_DIR, force = false } = {}) {
+  const d = db();
+  const limitMs = now.getTime() - 5 * MIN;
+  const today = kstDay(now);
+  const dayStartMs = Date.parse(`${today}T00:00:00.000Z`) - 9 * 3600_000;
+  const early = now.getTime() < dayStartMs + 5 * 3600_000 + 5 * MIN;
+  const key = `${today}|${early ? 'yesterday' : 'today'}`;
+  const futureCount = d.prepare("SELECT COUNT(*) AS n FROM calls WHERE source = 'seed' AND recorded_at > ?").get(new Date(limitMs).toISOString()).n;
+  if (!force && getMeta('seedPlaced') === key && futureCount === 0) return 0;
+
+  const offsets = new Map(loadSeedFiles(dir).calls.map((c) => [String(c.id), Number(c.offsetMin) || 0]));
+  const anchorMs = seedAnchorMs(now) - (early ? 86_400_000 : 0);
+  const rows = d.prepare("SELECT id, recorded_at, created_at, title FROM calls WHERE source = 'seed'").all()
+    .filter((r) => offsets.has(r.id))
+    .map((r) => ({ ...r, target: anchorMs + offsets.get(r.id) * MIN }))
+    .sort((a, b) => a.target - b.target);
+  const future = rows.filter((r) => r.target > limitMs);
+  if (future.length) {
+    const winStart = Math.max(dayStartMs + 5 * 3600_000, limitMs - 60 * MIN);
+    future.forEach((r, i) => { r.target = winStart + Math.round(((i + 0.5) * (limitMs - winStart)) / future.length); });
+  }
+  const mv = (iso, delta) => (iso ? new Date(Date.parse(iso) + delta).toISOString() : iso);
+  let moved = 0;
+  tx((db2) => {
+    const upCall = db2.prepare('UPDATE calls SET recorded_at = ?, created_at = ?, title = ? WHERE id = ?');
+    const getCard = db2.prepare('SELECT created_at, updated_at, confirmed_at, shipped_at FROM cards WHERE call_id = ?');
+    const upCard = db2.prepare('UPDATE cards SET created_at = ?, updated_at = ?, confirmed_at = ?, shipped_at = ? WHERE call_id = ?');
+    for (const r of rows) {
+      const delta = r.target - Date.parse(r.recorded_at);
+      if (!delta) continue;
+      const at = new Date(r.target).toISOString();
+      const hhmm = new Date(r.target + 9 * 3600_000).toISOString().slice(11, 16);
+      const title = String(r.title || '').replace(/\b\d{2}:\d{2}\b/, hhmm);
+      upCall.run(at, mv(r.created_at, delta), title, r.id);
+      const k = getCard.get(r.id);
+      if (k) upCard.run(mv(k.created_at, delta), mv(k.updated_at, delta), mv(k.confirmed_at, delta), mv(k.shipped_at, delta), r.id);
+      moved++;
+    }
+  });
+  setMeta('seedPlaced', key);
+  return moved;
 }
 
 // ── 날짜 굴리기 ────────────────────────────────────────────────────
@@ -417,11 +466,7 @@ export function rollSeedToToday(now = new Date()) {
   if (!latest) return 0;
   const days = Math.round((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${kstDay(new Date(latest))}T00:00:00Z`)) / 86_400_000);
   if (days <= 0) return 0;
-  let shift = days * 86_400_000;
-  // 옮긴 뒤 가장 늦은 통화가 미래가 되면(새벽) 지금 - 5분에 맞춘다
-  const limitMs = now.getTime() - 5 * MIN;
-  if (Date.parse(latest) + shift > limitMs) shift = limitMs - Date.parse(latest);
-  if (shift <= 0) return 0;
+  const shift = days * 86_400_000;
   const mv = (iso) => (iso ? new Date(Date.parse(iso) + shift).toISOString() : iso);
   tx((db2) => {
     const calls = db2.prepare("SELECT id, recorded_at, created_at FROM calls WHERE source = 'seed'").all();
