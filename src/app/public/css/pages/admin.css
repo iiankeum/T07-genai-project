@@ -1,0 +1,23 @@
+/* 관리자 화면 — 로그인 · 숫자 · 체험 신청 목록 · 초기화 */
+.admin-page .card + .card { margin-top: 14px; }
+.admin-page .card-title h2 { margin: 0; }
+.admin-login h2 { margin-bottom: 12px; }
+.admin-group { margin: 14px 0 8px; font-size: 1rem; color: var(--ink-2); }
+.admin-group:first-child { margin-top: 0; }
+.admin-metrics { margin-bottom: 4px; }
+.admin-metrics .metric-num { font-size: 1.6rem; }
+@media (min-width: 720px) { .admin-metrics { grid-template-columns: repeat(4, 1fr); } }
+
+.admin-trial { padding: 12px 14px; }
+.admin-trial-name { font-size: 1.05rem; }
+.admin-dl { margin: 6px 0 0; }
+.admin-dl > div { display: grid; grid-template-columns: 5em minmax(0, 1fr); gap: 8px; padding: 3px 0; }
+.admin-dl dt { color: var(--muted); font-size: .95rem; font-weight: 700; }
+.admin-dl dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.admin-msg { white-space: pre-wrap; }
+
+.admin-danger { border-color: #f2c2bd; }
+.admin-danger h2 { color: var(--danger); }
+.admin-danger p { margin: 0 0 12px; }
+.admin-stat-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 0 0 8px; }
+.admin-trial-del { margin-top: 8px; min-height: var(--tap); font-size: .92rem; }

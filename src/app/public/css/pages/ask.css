@@ -1,0 +1,38 @@
+/* F09 지난 통화에 묻기 화면 — 예시 질문 · 말풍선 · 근거 카드 · 아래 입력칸 */
+.ask-rule { font-weight: 600; }
+.ask-examples { margin-bottom: 14px; }
+.ask-examples .field-label { margin-bottom: 6px; }
+.ask-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.ask-chip { min-height: var(--tap); padding: 8px 14px; border-radius: 14px; border: 1px solid var(--brand-line); background: var(--brand-soft); color: var(--brand-ink); font-weight: 700; font-size: .95rem; text-align: left; cursor: pointer; max-width: 100%; }
+.ask-chip:hover { background: #e8e1fb; }
+.ask-chip[disabled] { opacity: .5; cursor: not-allowed; }
+
+.ask-thread { display: flex; flex-direction: column; gap: 12px; margin: 6px 0 12px; min-height: 80px; }
+.ask-empty { color: var(--muted); text-align: center; margin: 18px 0; }
+.ask-msg { display: flex; flex-direction: column; max-width: 100%; scroll-margin-bottom: 170px; }
+.ask-msg.is-user { align-items: flex-end; }
+.ask-msg.is-bot { align-items: flex-start; }
+.ask-bubble { max-width: min(92%, 640px); padding: 12px 14px; border-radius: 16px; font-size: 1.05rem; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
+.is-user .ask-bubble { background: var(--brand); color: #fff; border-bottom-right-radius: 6px; }
+.is-bot .ask-bubble { background: #fff; border: 1px solid var(--line); border-bottom-left-radius: 6px; box-shadow: var(--shadow); }
+.ask-bubble.is-notfound { background: #f0f0f4; border-color: #e2e2ea; color: var(--ink-2); box-shadow: none; }
+.ask-bubble.is-error { background: var(--danger-soft); border-color: #f4c7c1; color: var(--danger); box-shadow: none; }
+.ask-bubble.is-wait { color: var(--muted); }
+
+.ask-cites { width: min(92%, 640px); margin-top: 8px; display: flex; flex-direction: column; gap: 8px; }
+.ask-cites-head { margin: 0; font-size: .9rem; font-weight: 700; color: var(--muted); }
+.ask-cite { display: block; padding: 10px 12px; min-height: var(--tap); border: 1px solid var(--brand-line); border-left: 4px solid var(--brand); border-radius: var(--radius-sm); background: #fbfaff; color: var(--ink); text-decoration: none; }
+.ask-cite:hover { background: var(--brand-soft); }
+.ask-cite-title { display: block; font-weight: 800; }
+.ask-cite-when { display: block; font-size: .95rem; color: var(--muted); }
+.ask-cite-at { font-weight: 700; color: var(--ink-2); }
+.ask-cite-quote { display: block; margin-top: 4px; font-size: .98rem; color: var(--ink-2); }
+.ask-cite-go { display: block; margin-top: 4px; font-size: .95rem; font-weight: 800; color: var(--brand-ink); }
+
+.ask-compose { position: sticky; bottom: calc(70px + env(safe-area-inset-bottom)); z-index: 5; display: flex; gap: 8px; align-items: flex-end; background: var(--paper); border: 1px solid var(--brand-line); border-radius: var(--radius); padding: 8px; box-shadow: 0 6px 20px rgba(40, 30, 90, .10); }
+.ask-input { flex: 1; min-width: 0; min-height: var(--tap); max-height: 180px; resize: none; border: 0; box-shadow: none; padding: 10px; font-size: 1.05rem; line-height: 1.5; }
+.ask-input:focus { box-shadow: none; }
+.ask-compose:focus-within { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft), 0 6px 20px rgba(40, 30, 90, .10); }
+.ask-send { flex: none; min-width: 84px; }
+.ask-help { margin: 6px 2px 0; }
+@media (min-width: 900px) { .ask-compose { bottom: 14px; } }

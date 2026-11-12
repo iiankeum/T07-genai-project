@@ -1,0 +1,11 @@
+# 1분마다 origin/dev 를 확인한다 — /etc/systemd/system/callnote-deploy.timer
+[Unit]
+Description=callnote T07 demo auto-deploy every minute
+
+[Timer]
+OnBootSec=45s
+OnUnitInactiveSec=60s
+AccuracySec=5s
+
+[Install]
+WantedBy=timers.target

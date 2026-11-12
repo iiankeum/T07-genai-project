@@ -1,0 +1,503 @@
+{
+ "_설명": "가짜 데모 데이터 — 낱말 사전 기본 항목(현장말 · 오인식 · 차종). 팀 프로토타입 두 곳(call-order-card, phone-order-transcriber)의 사전과 차종 목록을 합쳤다. 실제 회사 자료가 아니다.",
+ "items": [
+  {
+   "kind": "현장말",
+   "term": "휀다",
+   "standard": "펜더",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "쇼바",
+   "standard": "쇼크업소버",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "라지에다",
+   "standard": "라디에이터",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "본네트",
+   "standard": "후드",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "활대링크",
+   "standard": "스태빌라이저 링크",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "세루모터",
+   "standard": "스타트모터",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "제네레다",
+   "standard": "알터네이터(발전기)",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "마후라",
+   "standard": "머플러",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "데후",
+   "standard": "디퍼렌셜",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "로아암",
+   "standard": "로어암",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "백미러",
+   "standard": "사이드미러",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "후미등",
+   "standard": "테일램프",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "데루등",
+   "standard": "테일램프",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "다마",
+   "standard": "전구",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "크락숀",
+   "standard": "경음기",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "몰딩",
+   "standard": "몰딩",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "콘덴서",
+   "standard": "에어컨 콘덴서",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "품번",
+   "standard": "부품 번호",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "차번호",
+   "standard": "차량 번호",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "년식",
+   "standard": "연식",
+   "note": null
+  },
+  {
+   "kind": "오인식",
+   "term": "아반대",
+   "standard": "아반떼",
+   "note": null
+  },
+  {
+   "kind": "오인식",
+   "term": "아반태",
+   "standard": "아반떼",
+   "note": null
+  },
+  {
+   "kind": "오인식",
+   "term": "아방떼",
+   "standard": "아반떼",
+   "note": null
+  },
+  {
+   "kind": "오인식",
+   "term": "쏘나다",
+   "standard": "쏘나타",
+   "note": null
+  },
+  {
+   "kind": "오인식",
+   "term": "소나타",
+   "standard": "쏘나타",
+   "note": null
+  },
+  {
+   "kind": "오인식",
+   "term": "그랜져",
+   "standard": "그랜저",
+   "note": null
+  },
+  {
+   "kind": "오인식",
+   "term": "산타페",
+   "standard": "싼타페",
+   "note": null
+  },
+  {
+   "kind": "오인식",
+   "term": "스포티쥐",
+   "standard": "스포티지",
+   "note": null
+  },
+  {
+   "kind": "오인식",
+   "term": "쏘렌또",
+   "standard": "쏘렌토",
+   "note": null
+  },
+  {
+   "kind": "오인식",
+   "term": "스타랙스",
+   "standard": "스타렉스",
+   "note": null
+  },
+  {
+   "kind": "오인식",
+   "term": "카니벌",
+   "standard": "카니발",
+   "note": null
+  },
+  {
+   "kind": "오인식",
+   "term": "투산",
+   "standard": "투싼",
+   "note": null
+  },
+  {
+   "kind": "오인식",
+   "term": "케이파이브",
+   "standard": "K5",
+   "note": null
+  },
+  {
+   "kind": "오인식",
+   "term": "케이세븐",
+   "standard": "K7",
+   "note": null
+  },
+  {
+   "kind": "오인식",
+   "term": "케이에잇",
+   "standard": "K8",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "휀더",
+   "standard": "펜더",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "쇼버",
+   "standard": "쇼크업소버",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "브레끼",
+   "standard": "브레이크",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "빠따리",
+   "standard": "배터리",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "밧데리",
+   "standard": "배터리",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "빳데리",
+   "standard": "배터리",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "다시방",
+   "standard": "대시보드",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "보닛",
+   "standard": "후드",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "라지에타",
+   "standard": "라디에이터",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "셀모터",
+   "standard": "스타터모터",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "다이나모",
+   "standard": "발전기",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "에어크리너",
+   "standard": "에어필터",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "데루램프",
+   "standard": "테일램프",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "후론트 범퍼",
+   "standard": "앞범퍼",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "후론트범퍼",
+   "standard": "앞범퍼",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "리어 범퍼",
+   "standard": "뒷범퍼",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "리어범퍼",
+   "standard": "뒷범퍼",
+   "note": null
+  },
+  {
+   "kind": "현장말",
+   "term": "빽미러",
+   "standard": "사이드미러",
+   "note": "현장에서는 보통 사이드미러를 뜻함"
+  },
+  {
+   "kind": "현장말",
+   "term": "밋션",
+   "standard": "미션",
+   "note": "변속기"
+  },
+  {
+   "kind": "현장말",
+   "term": "앗세이",
+   "standard": "ASSY",
+   "note": "어셈블리(통째 교환)"
+  },
+  {
+   "kind": "현장말",
+   "term": "아세이",
+   "standard": "ASSY",
+   "note": "어셈블리(통째 교환)"
+  },
+  {
+   "kind": "현장말",
+   "term": "와샤",
+   "standard": "와셔",
+   "note": null
+  },
+  {
+   "kind": "차종",
+   "term": "아반떼 AD",
+   "standard": null,
+   "note": null
+  },
+  {
+   "kind": "차종",
+   "term": "아반떼 CN7",
+   "standard": null,
+   "note": null
+  },
+  {
+   "kind": "차종",
+   "term": "쏘나타 LF",
+   "standard": null,
+   "note": null
+  },
+  {
+   "kind": "차종",
+   "term": "쏘나타 DN8",
+   "standard": null,
+   "note": null
+  },
+  {
+   "kind": "차종",
+   "term": "그랜저 IG",
+   "standard": null,
+   "note": null
+  },
+  {
+   "kind": "차종",
+   "term": "그랜저 GN7",
+   "standard": null,
+   "note": null
+  },
+  {
+   "kind": "차종",
+   "term": "싼타페 TM",
+   "standard": null,
+   "note": null
+  },
+  {
+   "kind": "차종",
+   "term": "싼타페 MX5",
+   "standard": null,
+   "note": null
+  },
+  {
+   "kind": "차종",
+   "term": "투싼 TL",
+   "standard": null,
+   "note": null
+  },
+  {
+   "kind": "차종",
+   "term": "투싼 NX4",
+   "standard": null,
+   "note": null
+  },
+  {
+   "kind": "차종",
+   "term": "팰리세이드 LX2",
+   "standard": null,
+   "note": null
+  },
+  {
+   "kind": "차종",
+   "term": "포터2",
+   "standard": null,
+   "note": null
+  },
+  {
+   "kind": "차종",
+   "term": "스타리아 US4",
+   "standard": null,
+   "note": null
+  },
+  {
+   "kind": "차종",
+   "term": "K3 BD",
+   "standard": null,
+   "note": null
+  },
+  {
+   "kind": "차종",
+   "term": "K5 JF",
+   "standard": null,
+   "note": null
+  },
+  {
+   "kind": "차종",
+   "term": "K5 DL3",
+   "standard": null,
+   "note": null
+  },
+  {
+   "kind": "차종",
+   "term": "K8 GL3",
+   "standard": null,
+   "note": null
+  },
+  {
+   "kind": "차종",
+   "term": "쏘렌토 UM",
+   "standard": null,
+   "note": null
+  },
+  {
+   "kind": "차종",
+   "term": "쏘렌토 MQ4",
+   "standard": null,
+   "note": null
+  },
+  {
+   "kind": "차종",
+   "term": "스포티지 QL",
+   "standard": null,
+   "note": null
+  },
+  {
+   "kind": "차종",
+   "term": "스포티지 NQ5",
+   "standard": null,
+   "note": null
+  },
+  {
+   "kind": "차종",
+   "term": "카니발 YP",
+   "standard": null,
+   "note": null
+  },
+  {
+   "kind": "차종",
+   "term": "카니발 KA4",
+   "standard": null,
+   "note": null
+  },
+  {
+   "kind": "차종",
+   "term": "모닝 JA",
+   "standard": null,
+   "note": null
+  },
+  {
+   "kind": "차종",
+   "term": "레이 TAM",
+   "standard": null,
+   "note": null
+  },
+  {
+   "kind": "차종",
+   "term": "봉고3",
+   "standard": null,
+   "note": null
+  }
+ ]
+}
