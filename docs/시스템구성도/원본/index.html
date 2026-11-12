@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>콜노트(가칭) 시스템 구성도</title>
+<style>
+@font-face{font-family:SUIT;src:url(fonts/SUIT-Regular.woff2) format('woff2');font-weight:400}
+@font-face{font-family:SUIT;src:url(fonts/SUIT-Medium.woff2) format('woff2');font-weight:500}
+@font-face{font-family:SUIT;src:url(fonts/SUIT-Bold.woff2) format('woff2');font-weight:700}
+@font-face{font-family:SUIT;src:url(fonts/SUIT-ExtraBold.woff2) format('woff2');font-weight:800}
+@page{size:420mm 297mm;margin:0}
+:root{--teal:#1E6E6E;--teal2:#2B8A85;--tealbg:#E8F3F1;--orange:#F28C28;--orangebg:#FDF0E2;--navy:#23395B;--ink:#1F2733;--sub:#5B6573;--line:#D9DEE3;--bg:#FBF8F3;--card:#FFFFFF;--yellow:#F6C343}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:420mm;height:297mm;background:var(--bg);font-family:SUIT,'Malgun Gothic',sans-serif;color:var(--ink);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.page{width:420mm;height:297mm;padding:8mm 10mm 6mm;display:flex;flex-direction:column;gap:3.2mm;overflow:hidden}
+b,strong{font-weight:700}
+code{font-family:Consolas,monospace;font-size:.92em;background:#EEF1F4;padding:0 .6mm;border-radius:.8mm;color:var(--navy)}
+
+/* 머리 */
+.head{display:grid;grid-template-columns:150mm 1fr;gap:6mm;height:38mm}
+.title .kicker{font-size:8.5pt;font-weight:700;color:var(--teal);letter-spacing:.2mm}
+.title h1{font-size:23pt;font-weight:800;color:var(--navy);line-height:1.12;margin:1mm 0 1.6mm}
+.title h1 span{color:var(--teal)}
+.title p{font-size:8.6pt;color:var(--sub);line-height:1.45}
+.badges{display:flex;gap:1.6mm;margin-top:1.8mm;flex-wrap:wrap}
+.badge{font-size:7.4pt;font-weight:700;border-radius:4mm;padding:.7mm 2.4mm;background:var(--orangebg);color:#B5601A}
+.badge.t{background:var(--tealbg);color:var(--teal)}
+.badge.n{background:#E7EBF2;color:var(--navy)}
+.hero{position:relative;background:var(--card);border-radius:4mm;border:.3mm solid var(--line);padding:1.2mm 3mm 0;display:flex;flex-direction:column;align-items:center}
+.hero .in{width:160mm}
+.hero img{width:100%;height:auto;display:block}
+.hero .steps{display:grid;grid-template-columns:repeat(6,1fr);text-align:center;font-size:7.6pt;font-weight:700;color:var(--navy);margin-top:.2mm}
+.hero .steps small{display:block;font-weight:500;color:var(--sub);font-size:6.6pt}
+
+/* 가운데 큰 그림 */
+.main{display:grid;grid-template-columns:96mm 40mm 1fr 38mm 86mm;gap:0;height:147mm}
+.zone-label{font-size:8pt;font-weight:800;color:var(--sub);letter-spacing:.3mm;margin-bottom:1.4mm}
+.colA{display:flex;flex-direction:column}
+.colA .cards{display:flex;flex-direction:column;gap:2.4mm;flex:1}
+.node{background:var(--card);border:.35mm solid var(--line);border-radius:3.5mm;display:grid;grid-template-columns:30mm 1fr;gap:2mm;padding:2mm 2.6mm 2mm 1.4mm;flex:1;align-items:center}
+.node img{width:30mm;height:30mm;object-fit:contain}
+.node h3{font-size:10pt;font-weight:800;color:var(--navy);line-height:1.2}
+.node h3 em{font-style:normal;font-size:7.2pt;font-weight:700;color:var(--teal);display:block;margin-bottom:.4mm}
+.node ul{list-style:none;margin-top:1mm}
+.node li{font-size:7.7pt;line-height:1.42;color:var(--ink);padding-left:2.6mm;position:relative}
+.node li:before{content:'';position:absolute;left:.4mm;top:1.55mm;width:1.1mm;height:1.1mm;border-radius:50%;background:var(--teal2)}
+.node li.o:before{background:var(--orange)}
+
+.arrows{display:flex;flex-direction:column;padding-top:5.4mm;gap:2.4mm}
+.arrows .slot{flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 1.6mm}
+.arrows.one{justify-content:center;padding-top:0}
+.arrows.one .slot{flex:0 0 auto}
+.lbl{font-size:7.2pt;line-height:1.32;color:var(--ink);text-align:center}
+.lbl b{color:var(--navy)}
+.lbl .tok{display:inline-block;font-size:6.2pt;font-weight:700;color:#8A4A0E;background:var(--orangebg);border-radius:1.2mm;padding:0 1mm;margin-top:.4mm}
+.arrow{position:relative;height:5mm;margin:1mm 0}
+.arrow:before{content:'';position:absolute;left:1.5mm;right:1.5mm;top:2.2mm;border-top:.55mm dashed var(--teal)}
+.arrow.r:after,.arrow.both:after{content:'';position:absolute;right:0;top:.75mm;border-left:2.4mm solid var(--teal);border-top:1.7mm solid transparent;border-bottom:1.7mm solid transparent}
+.arrow.both i{position:absolute;left:0;top:.75mm;border-right:2.4mm solid var(--teal);border-top:1.7mm solid transparent;border-bottom:1.7mm solid transparent}
+.arrow.org:before{border-color:var(--orange)}
+.arrow.org.both:after{border-left-color:var(--orange)}
+.arrow.org.both i{border-right-color:var(--orange)}
+
+.server{background:linear-gradient(180deg,#F3FAF8 0%,#FFFFFF 40%);border:.6mm solid var(--teal);border-radius:5mm;padding:2.6mm 3.4mm 3mm;display:flex;flex-direction:column;position:relative}
+.server .top{display:grid;grid-template-columns:30mm 1fr;gap:2.4mm;align-items:center}
+.server .top img{width:30mm;height:30mm;object-fit:contain}
+.server h2{font-size:12.5pt;font-weight:800;color:var(--teal);line-height:1.2}
+.server h2 small{display:block;font-size:7.6pt;font-weight:700;color:var(--sub);margin-top:.6mm}
+.server .url{margin-top:1.4mm;font-size:8.6pt;font-weight:800;color:var(--navy)}
+.server .url span{font-weight:500;color:var(--sub);font-size:7pt}
+.blocks{display:grid;grid-template-columns:1fr 1fr;gap:2mm;margin-top:2.2mm;flex:1}
+.blk{border-radius:2.6mm;padding:1.8mm 2.2mm;background:var(--card);border:.3mm solid var(--line)}
+.blk h4{font-size:8.2pt;font-weight:800;color:var(--navy);margin-bottom:.6mm;display:flex;align-items:center;gap:1.2mm}
+.blk h4 .dot{width:2.2mm;height:2.2mm;border-radius:.6mm;background:var(--teal)}
+.blk h4 .dot.o{background:var(--orange)}.blk h4 .dot.n{background:var(--navy)}.blk h4 .dot.g{background:#9AA3AE}
+.blk p,.blk li{font-size:7.4pt;line-height:1.42;color:var(--ink)}
+.blk ul{list-style:none}
+.blk li{padding-left:2.2mm;position:relative}
+.blk li:before{content:'·';position:absolute;left:.4mm;color:var(--teal);font-weight:800}
+.blk.wide{grid-column:1 / -1}
+.blk.iso{background:#F4F5F7;border-style:dashed}
+.chips{display:flex;flex-wrap:wrap;gap:.8mm;margin-top:.6mm}
+.chip{font-size:6.7pt;font-weight:700;background:var(--tealbg);color:var(--teal);border-radius:1.2mm;padding:.2mm 1.2mm}
+
+.ai{background:var(--card);border:.6mm solid var(--navy);border-radius:5mm;padding:2.6mm 3.2mm;display:flex;flex-direction:column}
+.ai .top{display:grid;grid-template-columns:30mm 1fr;gap:2mm;align-items:center}
+.ai .top img{width:30mm;height:30mm;object-fit:contain}
+.ai h2{font-size:12.5pt;font-weight:800;color:var(--navy);line-height:1.2}
+.ai h2 small{display:block;font-size:7.4pt;font-weight:700;color:var(--sub);margin-top:.6mm}
+.ai .spec{margin-top:1.6mm;font-size:7.4pt;line-height:1.5;background:#F2F4F8;border-radius:2.4mm;padding:1.6mm 2.2mm}
+.ai .spec b{color:var(--navy)}
+.jobs{display:flex;flex-direction:column;gap:1.6mm;margin-top:2mm;flex:1}
+.job{border-left:1.2mm solid var(--teal);background:#FAFBFC;border-radius:0 2mm 2mm 0;padding:1.3mm 2mm}
+.job h4{font-size:8.4pt;font-weight:800;color:var(--navy)}
+.job h4 span{font-size:6.6pt;font-weight:700;color:var(--teal);margin-left:1mm}
+.job p{font-size:7.2pt;line-height:1.4;color:var(--ink);margin-top:.3mm}
+.job.o{border-left-color:var(--orange)}.job.n{border-left-color:var(--navy)}
+.nostt{margin-top:1.6mm;font-size:7.1pt;color:#8A4A0E;background:var(--orangebg);border-radius:2mm;padding:1.2mm 2mm;line-height:1.4}
+
+/* 아래 */
+.bottom{display:grid;grid-template-columns:104mm 118mm 84mm 1fr;gap:3mm;flex:1;min-height:0}
+.panel{background:var(--card);border:.35mm solid var(--line);border-radius:3.5mm;padding:2.4mm 3mm;display:flex;flex-direction:column;min-height:0}
+.panel h3{font-size:9.6pt;font-weight:800;color:var(--navy);margin-bottom:1.4mm;display:flex;align-items:center;gap:1.6mm}
+.panel h3 .n{display:inline-flex;align-items:center;justify-content:center;width:4.6mm;height:4.6mm;border-radius:50%;background:var(--teal);color:#fff;font-size:7pt}
+.flow{list-style:none;counter-reset:s;display:flex;flex-direction:column;gap:1.3mm}
+.flow li{counter-increment:s;font-size:7.6pt;line-height:1.42;padding-left:5.6mm;position:relative}
+.flow li:before{content:counter(s);position:absolute;left:0;top:.2mm;width:4mm;height:4mm;border-radius:50%;background:var(--tealbg);color:var(--teal);font-weight:800;font-size:6.4pt;display:flex;align-items:center;justify-content:center}
+.flow li .w{display:inline-block;font-size:6pt;font-weight:800;border-radius:1mm;padding:0 1mm;margin-right:.8mm;vertical-align:.2mm}
+.w.b{background:#E7EBF2;color:var(--navy)}.w.s{background:var(--tealbg);color:var(--teal)}.w.g{background:#FDE9D4;color:#B5601A}.w.c{background:#E9E4F7;color:#5B3FA8}.w.p{background:#FFF6D6;color:#8A6A00}
+.time{margin-top:auto;font-size:7.6pt;background:var(--tealbg);color:var(--teal);font-weight:700;border-radius:2mm;padding:1.2mm 2mm;line-height:1.4}
+
+table.feat{width:100%;border-collapse:collapse;font-size:7.1pt}
+table.feat th{font-size:6.4pt;color:var(--sub);text-align:left;font-weight:700;padding:.5mm .8mm;border-bottom:.3mm solid var(--line)}
+table.feat td{padding:.5mm .8mm;border-bottom:.2mm solid #EEF0F2;vertical-align:middle;line-height:1.25}
+table.feat td.id{font-weight:800;color:var(--teal);width:7mm}
+table.feat td.nm{font-weight:700;color:var(--ink);width:30mm}
+table.feat td.wh .w{font-size:5.8pt}
+.legend{display:flex;gap:1.6mm;flex-wrap:wrap;margin-top:1mm;font-size:6.2pt;color:var(--sub)}
+.legend .w{display:inline-block;font-weight:800;border-radius:1mm;padding:0 1mm;font-size:5.8pt}
+
+.dep{display:grid;grid-template-columns:24mm 1fr;gap:2mm;align-items:start}
+.dep img{width:24mm;height:24mm;object-fit:contain}
+.mini{list-style:none;display:flex;flex-direction:column;gap:.5mm}
+.mini li{font-size:7.3pt;line-height:1.42;padding-left:2.4mm;position:relative}
+.mini li:before{content:'';position:absolute;left:.2mm;top:1.45mm;width:1.1mm;height:1.1mm;border-radius:50%;background:var(--teal2)}
+.mini li.o:before{background:var(--orange)}
+.who{margin-top:auto;font-size:7.2pt;line-height:1.45;background:#F2F4F8;border-radius:2mm;padding:1.2mm 2mm}
+
+.sec{display:grid;grid-template-columns:22mm 1fr;gap:2mm;align-items:start}
+.sec img{width:22mm;height:22mm;object-fit:contain}
+.real{margin-top:1.6mm;border-top:.3mm dashed var(--line);padding-top:1.4mm;display:grid;grid-template-columns:30mm 1fr;gap:2mm;align-items:center}
+.real img{width:30mm;height:20mm;object-fit:contain}
+.real h4{font-size:8pt;font-weight:800;color:#B5601A}
+.real p{font-size:7.1pt;line-height:1.4}
+
+.foot{display:flex;justify-content:space-between;font-size:6.4pt;color:var(--sub);height:4mm;align-items:center}
+.foot b{color:var(--navy)}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- 머리 -->
+  <section class="head">
+    <div class="title">
+      <div class="kicker">T07 · 인간-인공지능협업제품서비스설계 · 7번 아이템</div>
+      <h1>콜노트(가칭) <span>시스템 구성도</span></h1>
+      <p>서버 · 사이트 기능 · AI 모델 · 음성 처리가 어떻게 이어져 도는지 한 장에 모았다.<br>
+      전화 주문 녹음이 들어오면 <b>PC 의 Whisper 가 받아쓰고</b>, <b>서버의 Claude 가 주문 카드로 정리</b>하고, <b>사람이 확인 · 확정</b>한다.</p>
+      <div class="badges">
+        <span class="badge">AI 초안 · 돌린 사람: 배*결 · 검토 전</span>
+        <span class="badge t">2026-11-12 기준 · dev 가지</span>
+        <span class="badge n">데모는 가짜 통화만 쓴다</span>
+      </div>
+    </div>
+    <div class="hero">
+      <div class="in"><img src="web/hero.jpg" alt="">
+      <div class="steps">
+        <div>전화 주문<small>정비소 → 대리점</small></div>
+        <div>녹음<small>통화가 파일로</small></div>
+        <div>받아쓰기<small>Whisper · 문장마다 시각</small></div>
+        <div>AI 정리<small>Claude</small></div>
+        <div>주문 카드<small>사람이 고치고 확정</small></div>
+        <div>출고<small>출고 목록 · CSV</small></div>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- 가운데: 현장 → 서버 → AI -->
+  <section class="main">
+
+    <div class="colA">
+      <div class="zone-label">① 쓰는 곳 — 현장의 기기</div>
+      <div class="cards">
+        <div class="node">
+          <img src="web/user-devices.jpg" alt="">
+          <div>
+            <h3><em>누구나 · 브라우저만 있으면</em>휴대폰 · 태블릿 · PC</h3>
+            <ul>
+              <li>설치 없이 주소로 접속(홈 화면 추가 가능)</li>
+              <li>통화 목록 · 카드 · 찾기 · 묻기 · 브리핑을 본다</li>
+              <li class="o"><b>실시간 받아쓰기 체험</b>은 브라우저 음성 인식(Web Speech, 크롬 계열) — 음성은 브라우저 회사 서버가 처리</li>
+            </ul>
+          </div>
+        </div>
+        <div class="node">
+          <img src="web/shop-pc.jpg" alt="">
+          <div>
+            <h3><em>대리점 · 녹음이 쌓이는 PC</em>PC 프로그램 (폴더 감시)</h3>
+            <ul>
+              <li><code>src/pc-agent</code> 의 <b>watch</b> 모드</li>
+              <li>녹음 폴더에 새 파일이 생기면 서버로 올림</li>
+              <li>파일 이름은 중립 이름으로 바꿔 보냄 · 이미 보낸 파일은 다시 안 보냄(처음 켤 때 <code>--skip-existing</code> 이면 있던 파일 건너뜀)</li>
+              <li class="o">걸려 온 번호는 안 보냄 → 이 길로 온 녹음은 번호로 거래처 맞추기(F11) 안 됨</li>
+            </ul>
+          </div>
+        </div>
+        <div class="node">
+          <img src="web/gpu-worker.jpg" alt="">
+          <div>
+            <h3><em>그래픽카드 있는 PC · 지금은 배*결 PC</em>받아쓰기 일꾼 (Whisper)</h3>
+            <ul>
+              <li><b>faster-whisper large-v3</b> · GPU(RTX 5060 Ti) · float16</li>
+              <li>서버에서 일감을 <b>가져가서</b> 받아쓰고 결과를 돌려줌(서버가 PC 로 못 들어옴)</li>
+              <li>낱말 사전(현장 말)을 힌트로 씀 · 20초마다 「살아 있음」 신호</li>
+              <li class="o">3분 통화 약 12.6초 · PC 가 꺼지면 받아쓰기는 줄 서서 기다림</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrows">
+      <div class="slot">
+        <div class="lbl"><b>HTTPS</b> 화면 · API</div>
+        <div class="arrow both"><i></i></div>
+        <div class="lbl">녹음 올리기 · 카드 고치기 · 찾기 · 묻기</div>
+      </div>
+      <div class="slot">
+        <div class="lbl"><b>녹음 파일 보내기</b></div>
+        <div class="arrow r org"></div>
+        <div class="lbl"><code>POST /api/ingest</code><br><span class="tok">올리기 토큰</span></div>
+      </div>
+      <div class="slot">
+        <div class="lbl"><b>일감 가져가기</b> → 16kHz WAV</div>
+        <div class="arrow both"><i></i></div>
+        <div class="lbl">받아쓴 글 · 문장 시각 돌려줌<br><span class="tok">일꾼 토큰</span></div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column">
+      <div class="zone-label">② 데모 서버 — 모든 데이터와 화면이 사는 곳</div>
+      <div class="server" style="flex:1">
+        <div class="top">
+          <img src="web/server.jpg" alt="">
+          <div>
+            <h2>AWS Lightsail · 서울 리전<small>2 vCPU · RAM 1GB · Ubuntu 24.04 · 같은 서버에 다른 실서비스가 함께 돈다</small></h2>
+            <div class="url">https://t07.3-39-67-126.sslip.io <span>— Caddy 가 HTTPS 인증서를 자동으로 받는다</span></div>
+          </div>
+        </div>
+        <div class="blocks">
+          <div class="blk">
+            <h4><span class="dot"></span>웹 앱 <code>src/app</code></h4>
+            <ul>
+              <li>Node 24 · 빌드 없음 · 직접 의존성은 Claude SDK 하나</li>
+              <li>화면(<code>public/</code>)과 API(<code>routes/</code>)를 함께 냄</li>
+              <li>전용 사용자로 가둠 · 메모리 300MB 상한</li>
+            </ul>
+          </div>
+          <div class="blk">
+            <h4><span class="dot o"></span>녹음 변환 · 일감 줄</h4>
+            <ul>
+              <li>올라온 녹음을 <b>ffmpeg</b> 로 16kHz 모노 WAV 로 바꾸고 원본은 지움</li>
+              <li>받아쓸 일감을 줄 세우고 일꾼에게 빌려줌 · 10분 안에 답이 없으면 다시 줄로(3번까지)</li>
+            </ul>
+          </div>
+          <div class="blk">
+            <h4><span class="dot n"></span>데이터베이스 <code>node:sqlite</code></h4>
+            <div class="chips">
+              <span class="chip">calls 통화</span><span class="chip">cards 카드</span><span class="chip">jobs 일감</span><span class="chip">workers 일꾼</span><span class="chip">glossary 낱말 사전</span><span class="chip">briefings 브리핑</span><span class="chip">trials 체험 신청</span><span class="chip">usage 사용량</span>
+            </div>
+            <p style="margin-top:.8mm">오디오 WAV 도 서버 디스크에 · 시각은 UTC 로 저장, 「오늘」은 한국 시간</p>
+          </div>
+          <div class="blk">
+            <h4><span class="dot"></span>데모 데이터</h4>
+            <ul>
+              <li><b>가짜 통화 61건</b>(대본 → 합성 음성 → 전화 음질)</li>
+              <li>10분마다 날짜를 오늘에 맞춰 다시 놓음 · 08:05 전에는 「어제 흐름」을 보임</li>
+              <li>관리자 「데모 초기화」로 처음 상태로</li>
+            </ul>
+          </div>
+          <div class="blk wide iso">
+            <h4><span class="dot g"></span>서로 막아 둔 것</h4>
+            <p>공개 저장소의 코드를 자동으로 실행하므로, 앱은 따로 만든 사용자 · 정해진 폴더(<code>/var/lib/callnote</code>)에만 쓰게 가뒀다. 같은 서버의 다른 실서비스는 손대지 않는다. 녹음 보관용 <b>비공개 S3 버킷</b>은 만들어 두었지만 데모는 쓰지 않는다(실제 녹음 칸은 아무 키도 권한 없음).</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrows one">
+      <div class="slot">
+        <div class="lbl"><b>받아쓴 글 + 낱말 사전 · 거래처 · 차종 목록</b></div>
+        <div class="arrow both"><i></i></div>
+        <div class="lbl">정해진 모양의 <b>JSON 카드</b>로 받음<br>(카드 · 브리핑 · 답)</div>
+        <div class="lbl" style="margin-top:3mm;color:var(--sub)">데모 사이트의 AI 호출은 <b>서버에서만</b> 한다. 브라우저에는 키가 없다.<br>(실제 녹음 시험만 PC 가 <b>가린 글</b>을 직접 보냄 — D)</div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column">
+      <div class="zone-label">③ AI — 글을 읽고 정리하는 곳</div>
+      <div class="ai" style="flex:1">
+        <div class="top">
+          <img src="web/ai.jpg" alt="">
+          <div>
+            <h2>Claude API<small>Anthropic · 해외 서버</small></h2>
+          </div>
+        </div>
+        <div class="spec">
+          모델 <b>claude-opus-5-5</b> · 생각 깊이 <b>low</b> (빠르고 싸게)<br>
+          <b>구조화 출력</b>: 정해진 JSON 모양으로만 답하게 함<br>
+          안전 정책으로 거절하면 서버 쪽 <b>대체 모델</b>로 넘어감<br>
+          상한: <b>하루 400번</b> · 기기(IP)당 하루 40번 · 10분 12번
+        </div>
+        <div class="jobs">
+          <div class="job">
+            <h4>주문 카드 정리<span>F04 · F05 · F07</span></h4>
+            <p>거래처 · 차종 · 연식 · 차번호 · 부품 · 수량 · 급함 · 다시 물어볼 것. 칸마다 <b>그 말을 한 대목</b>을 근거로 붙임. <b>품번은 불러 준 것만</b>, 지어내지 않음.</p>
+          </div>
+          <div class="job o">
+            <h4>오늘 브리핑 · 할 일<span>F10</span></h4>
+            <p>숫자는 서버가 세고, AI 는 한 단락 요약과 「먼저 할 일」만 쓴다.</p>
+          </div>
+          <div class="job n">
+            <h4>지난 통화에 묻기<span>F09</span></h4>
+            <p>저장된 통화 글 · 카드만 근거로 답하고 <b>근거 통화 · 문장</b>을 붙인다. 없으면 「찾지 못했어요」.</p>
+          </div>
+        </div>
+        <div class="nostt">Claude 는 <b>음성을 직접 받아쓰지 못한다</b> → 받아쓰기는 PC 의 Whisper(①) 또는 브라우저 음성 인식이 맡는다.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 아래 -->
+  <section class="bottom">
+
+    <div class="panel">
+      <h3><span class="n">A</span>녹음 한 건이 카드가 되기까지</h3>
+      <ol class="flow">
+        <li><span class="w b">브라우저</span><span class="w p">PC 프로그램</span>녹음을 올린다(오디오만 · 10MB · 5분 이하)</li>
+        <li><span class="w s">서버</span>ffmpeg 로 16kHz WAV 로 바꾸고 일감 줄에 넣는다 — 화면에 「받아쓰기 기다리는 중」, 일꾼이 가져가면 「받아쓰는 중」</li>
+        <li><span class="w g">일꾼</span>일감을 가져가 Whisper 로 받아쓴다(문장마다 시작 · 끝 시각)</li>
+        <li><span class="w c">Claude</span>받아쓴 글 + 낱말 사전 · 거래처 · 차종 목록으로 카드를 만든다</li>
+        <li><span class="w s">서버</span>검사: 품번(통화에서 불렀는지 · 자릿수) · 차번호 형식 → 노란 「들어 보기」, 걸려 온 번호로 거래처 맞추기. 비슷한 거래처는 Claude 가 「들어 보기」로 표시</li>
+        <li><span class="w b">브라우저</span>사람이 칸을 누르면 그 대목부터 녹음 재생 → 고치고 <b>확정</b>(되물을 것이 남으면 확정 막힘) → 출고</li>
+      </ol>
+      <div class="time">실측(배포 주소): 1분 안팎 통화 하나를 올리면 <b>약 12~20초</b> 뒤 카드가 뜬다.</div>
+    </div>
+
+    <div class="panel">
+      <h3><span class="n">B</span>기능 15개는 어디서 도나 <span style="font-size:6.6pt;font-weight:600;color:var(--sub)">— 기획서 v1.3 · 구현-대조표 모두 「동작」</span></h3>
+      <table class="feat">
+        <tr><th>ID</th><th>기능</th><th>도는 곳</th></tr>
+        <tr><td class="id">F01</td><td class="nm">녹음 올리기</td><td class="wh"><span class="w b">브라우저</span> <span class="w s">서버</span> <span class="w g">일꾼</span></td></tr>
+        <tr><td class="id">F02</td><td class="nm">받아쓰기(통화 글)</td><td class="wh"><span class="w g">일꾼</span> Whisper · 문장 누르면 그 대목 재생</td></tr>
+        <tr><td class="id">F03</td><td class="nm">실시간 받아쓰기 체험</td><td class="wh"><span class="w b">브라우저</span> Web Speech → <span class="w c">Claude</span></td></tr>
+        <tr><td class="id">F04</td><td class="nm">주문 카드 자동 정리</td><td class="wh"><span class="w c">Claude</span> 구조화 출력</td></tr>
+        <tr><td class="id">F05</td><td class="nm">근거 표시 · 들어 보기</td><td class="wh"><span class="w s">서버</span> 근거 문장 → 시각 · <span class="w b">브라우저</span> 재생</td></tr>
+        <tr><td class="id">F06</td><td class="nm">카드 고치기 · 확정</td><td class="wh"><span class="w s">서버</span> DB · 확인 필요 → 확정 → 출고</td></tr>
+        <tr><td class="id">F07</td><td class="nm">낱말 사전</td><td class="wh"><span class="w s">서버</span> → <span class="w g">일꾼</span> 힌트(현장 말) · <span class="w c">Claude</span> 기준</td></tr>
+        <tr><td class="id">F08</td><td class="nm">통화 찾기</td><td class="wh"><span class="w s">서버</span> 글 · 카드 검색 · 맞은 문장 굵게</td></tr>
+        <tr><td class="id">F09</td><td class="nm">지난 통화에 묻기</td><td class="wh"><span class="w c">Claude</span> 근거 인용</td></tr>
+        <tr><td class="id">F10</td><td class="nm">오늘 브리핑 · 할 일</td><td class="wh"><span class="w s">서버</span> 집계 + <span class="w c">Claude</span> 한 단락</td></tr>
+        <tr><td class="id">F11</td><td class="nm">번호로 거래처 맞추기</td><td class="wh"><span class="w s">서버</span> 거래처 목록과 번호 대조</td></tr>
+        <tr><td class="id">F12</td><td class="nm">녹음 폴더 자동 보내기</td><td class="wh"><span class="w p">PC 프로그램</span> → <span class="w s">서버</span></td></tr>
+        <tr><td class="id">F13</td><td class="nm">거래처별 모아 보기</td><td class="wh"><span class="w s">서버</span> DB</td></tr>
+        <tr><td class="id">F14</td><td class="nm">출고 목록 내보내기</td><td class="wh"><span class="w b">브라우저</span> 인쇄 · <span class="w s">서버</span> CSV</td></tr>
+        <tr><td class="id">F15</td><td class="nm">큰 글씨</td><td class="wh"><span class="w b">브라우저</span> 설정 기억</td></tr>
+      </table>
+    </div>
+
+    <div class="panel">
+      <h3><span class="n">C</span>배포 — dev 에 푸시하면 끝</h3>
+      <div class="dep">
+        <img src="web/deploy.jpg" alt="">
+        <ul class="mini">
+          <li>팀원은 <b>dev 가지에 푸시</b>만 한다(서버 접속 불필요)</li>
+          <li>서버가 <b>1분마다</b> GitHub 의 dev 를 확인해 새 커밋을 당겨 옴</li>
+          <li><code>npm ci</code> → 앱 다시 켜기 → <code>/healthz</code> 를 30초 안에 확인</li>
+          <li class="o">실패하면 <b>앞 버전으로 자동 되돌림</b></li>
+          <li>결과: <code>/_deploy/status.json</code></li>
+        </ul>
+      </div>
+      <div class="who">GitHub 에는 비밀값 · 배포 키가 <b>하나도 없다</b>(서버가 공개 저장소를 당겨 가는 방식). 푸시마다 <b>gitleaks</b> 가 비밀값이 섞였는지 검사한다. <code>dev → main</code> 은 PR 로, 팀원 확인 뒤 합친다.</div>
+    </div>
+
+    <div class="panel">
+      <h3><span class="n">D</span>비밀값 · 실제 녹음</h3>
+      <div class="sec">
+        <img src="web/security.jpg" alt="">
+        <ul class="mini">
+          <li>Claude 키 · 토큰은 서버 설정 파일(관리자만 읽음)과 배*결 PC 비밀 폴더에만</li>
+          <li>브라우저 · 응답 · 로그 · 저장소에 키가 나가지 않음</li>
+          <li>HTTPS 강제 · 보안 헤더 · 빈도 제한 · 위험한 동작은 관리자 암호</li>
+          <li class="o">공개 데모는 <b>가짜 통화만</b> — 실제 녹음은 올리지 않음</li>
+        </ul>
+      </div>
+      <div class="real">
+        <img src="web/real-path.jpg" alt="">
+        <div>
+          <h4>실제 녹음 처리 — 코드 완료 · 가짜 61건 평가 · 실제 녹음은 아직</h4>
+          <p>PC 안에서 받아쓰고 → <b>이름 · 전화 · 차번호 · 거래처 · 주소 · 계좌 · 메일을 PC 안에서 가명으로 가린 뒤</b> 가린 글만 Claude 로 → PC 안에서 원래 값으로 되돌림. 처음엔 <code>real_mode.py preview</code>(안 보냄)로 눈으로 확인. 결과 · 가명 대응표는 사이트 · 서버 · 저장소에 안 올림.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="foot">
+    <div>근거 문서: <b>src/app/docs/설계.md</b> · <b>src/app/docs/worker-api.md</b> · <b>work/00-총괄-한결/서버-안내.md</b> · <b>work/03-개발-태림/산출물/구현-대조표.md</b> · 그림: Codex(ChatGPT) 생성 · 글은 한국어 SUIT 글꼴</div>
+    <div>T07 · 콜노트(가칭) · 제품명은 투표로 정함</div>
+  </div>
+</div>
+</body>
+</html>
