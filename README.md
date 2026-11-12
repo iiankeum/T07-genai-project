@@ -6,10 +6,7 @@
 (아이디어 확정 후 작성) 누구를 위해, 어떤 문제를, 어떤 생성형 AI로 해결하는가.
 
 ## 🚨 Up Next 🚨
-**[ 11/11(수) 22:00 ]** 킥오프 미팅 · 최종 아이템 결정
-- 투표 결과: 7번 [AI 전화 주문 받아쓰기](docs/ideas/한결-AI-전화-주문-받아쓰기.md) 선정 ([Discussions #1](https://github.com/iiankeum/T07-genai-project/discussions/1))
-- 4번 [단체 식사 예약 도우미 AI](docs/ideas/남희-단체%20식사%20예약%20도우미%20AI.md)도 수요가 있어, **두 아이템을 각자 구체화 + 프로토타입 제작 후 킥오프에서 최종 결정**
-- 프로토타입은 `src/prototypes/`에 커밋
+**[ 11/18(수) 22:00 ]** Weekly Meeting
 
 ## 팀원
 | 이름 | GitHub | 역할 |
