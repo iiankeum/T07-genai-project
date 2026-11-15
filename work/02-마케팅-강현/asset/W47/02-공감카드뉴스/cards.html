@@ -1,0 +1,99 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><link rel="stylesheet" href="../../_tools/base.css">
+<style>
+.time{font-size:120px;font-weight:900;color:var(--accent);letter-spacing:-3px;line-height:1}
+.ring{font-size:40px;font-weight:700;color:var(--ink-2);margin-top:14px}
+.files{background:#fff;border:3px solid var(--line);border-radius:26px;padding:20px 34px;margin-top:50px}
+.files div{display:flex;justify-content:space-between;font-family:"Noto Sans Mono CJK KR","Noto Sans CJK KR",monospace;font-size:34px;padding:16px 0;border-bottom:2px solid var(--line);color:var(--ink-2)}
+.files div:last-child{border-bottom:0}
+.files span{color:var(--muted)}
+.note{position:absolute;left:96px;bottom:110px;font-size:24px;color:var(--muted)}
+.slide.chat .bubble{font-size:48px;padding:32px 44px}
+.slide.chat .stack{margin-top:46px}
+.cover-bub{font-size:66px;line-height:1.3;font-weight:900;padding:40px 50px}
+</style></head><body>
+
+<!-- 1 cover -->
+<div class="slide memo-top">
+  <div class="kicker mt-s">부품 대리점의 흔한 하루</div>
+  <h1>「두 개라고<br>했잖아요!」</h1>
+  <div class="stack mt-l">
+    <div class="who">정비소</div>
+    <div class="bubble left cover-bub">두 개 시켰는데<br>하나 왔어요 😤</div>
+    <div class="who right">대리점</div>
+    <div class="bubble right cover-bub">분명 하나라고<br>하셨는데… 😥</div>
+  </div>
+  <div class="swipe">넘겨 보기 →</div>
+  <div class="foot"><span><b>@callcard.lab</b></span><span>1 / 6</span></div>
+</div>
+
+<!-- 2 morning rush -->
+<div class="slide chat">
+  <div class="time">08:30</div>
+  <div class="ring">☎ ☎ ☎ 아침 주문 전화가 몰린다</div>
+  <div class="stack mt-m">
+    <div class="who">정비소 A</div>
+    <div class="bubble left">그 아반떼 앞범퍼 하나, 급해요!</div>
+    <div class="who">정비소 B</div>
+    <div class="bubble left">쏘렌토 앞 패드 한 세트요~</div>
+    <div class="who right">대리점</div>
+    <div class="bubble right">네네, 잠시만요! ✍️</div>
+  </div>
+  <div class="note">※ 이해를 돕기 위한 가상 장면입니다</div>
+  <div class="foot"><span><b>@callcard.lab</b></span><span>2 / 6</span></div>
+</div>
+
+<!-- 3 memo -->
+<div class="slide">
+  <div class="kicker">그렇게 남은 메모</div>
+  <h2>받아 적는 손보다<br>말이 더 빠르다</h2>
+  <div class="memo mt-l">
+    <div class="row"><span class="k">거래처</span><span class="v">새한? 세안?</span></div>
+    <div class="row"><span class="k">차</span><span class="v">아반떼 앞범..</span></div>
+    <div class="row"><span class="k">수량</span><span class="v">하나? 둘??</span></div>
+    <div class="row"><span class="k">언제</span><span class="v">급함!!</span></div>
+  </div>
+  <p class="lead mt-l">끊고 나서 다시 전산에 옮기려니<br>글씨도, 기억도 흐릿하다.</p>
+  <div class="foot"><span><b>@callcard.lab</b></span><span>3 / 6</span></div>
+</div>
+
+<!-- 4 dispute -->
+<div class="slide chat">
+  <div class="time">15:10</div>
+  <div class="ring">☎ 다시 걸려 온 전화</div>
+  <div class="stack mt-m">
+    <div class="who">정비소 A</div>
+    <div class="bubble left">사장님, 두 개 시켰는데 하나만 왔어요</div>
+    <div class="who right">대리점</div>
+    <div class="bubble right">아침에 하나라고 하신 것 같은데…</div>
+    <div class="who">정비소 A</div>
+    <div class="bubble left">아니에요, 분명 두 개라고 했어요!</div>
+  </div>
+  <div class="note">※ 이해를 돕기 위한 가상 장면입니다</div>
+  <div class="foot"><span><b>@callcard.lab</b></span><span>4 / 6</span></div>
+</div>
+
+<!-- 5 recordings -->
+<div class="slide">
+  <div class="kicker">녹음은 있다. 그런데…</div>
+  <h2>어느 통화였더라? 🤔</h2>
+  <div class="files">
+    <div>2026_1112_0828.m4a<span>0:41</span></div>
+    <div>2026_1112_0831.m4a<span>0:37</span></div>
+    <div>2026_1112_0833.m4a<span>1:02</span></div>
+    <div>2026_1112_0836.m4a<span>0:29</span></div>
+    <div>2026_1112_0840.m4a<span>0:47</span></div>
+    <div>2026_1112_0844.m4a<span>0:53</span></div>
+  </div>
+  <p class="lead">파일은 시간순으로만 쌓이고,<br>찾으려면 처음부터 하나씩 들어야 한다.</p>
+  <div class="foot"><span><b>@callcard.lab</b></span><span>5 / 6</span></div>
+</div>
+
+<!-- 6 CTA -->
+<div class="slide navy">
+  <div class="kicker mt-m">그래서 만들고 있어요</div>
+  <h1>통화가 끝나면<br><em>주문 카드</em> 한 장,<br>누르면 그 녹음.</h1>
+  <p class="lead">「몇 개라고 했지?」를 3초 만에 확인하는 도구를 만들고 있습니다.</p>
+  <p class="lead" style="margin-top:60px;color:#fff;font-weight:700">이런 일, 겪어 보셨나요?<br>댓글로 이야기 들려주세요 💬</p>
+  <div class="foot"><span><b>@callcard.lab</b> 팔로우하고 과정 보기</span><span>6 / 6</span></div>
+</div>
+</body></html>

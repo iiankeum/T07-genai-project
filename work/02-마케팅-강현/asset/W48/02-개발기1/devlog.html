@@ -1,0 +1,105 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><link rel="stylesheet" href="../../_tools/base.css">
+<style>
+.team{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:60px}
+.team div{background:#fff;border-radius:26px;padding:36px;font-size:36px;line-height:1.45}
+.team b{display:block;font-size:44px;margin-bottom:8px}
+.vote{display:flex;flex-direction:column;gap:14px;margin-top:50px}
+.vote div{display:flex;align-items:center;gap:20px;font-size:34px}
+.vote .bar{height:30px;border-radius:15px;background:var(--line)}
+.vote .on .bar{background:var(--accent)}
+.vote .on{font-weight:900}
+.vote .lbl{flex:0 0 520px}
+.flow{display:flex;flex-direction:column;gap:10px;margin-top:44px}
+.flow div{display:flex;align-items:center;gap:26px;background:var(--paper);border-radius:24px;padding:24px 34px;font-size:40px;font-weight:700}
+.flow div.down{background:none;padding:0;justify-content:center}
+.flow i{font-style:normal;font-size:54px;width:70px;text-align:center}
+.flow small{display:block;font-size:28px;font-weight:500;color:var(--muted);margin-top:4px}
+.down{text-align:center;font-size:36px;color:var(--accent);font-weight:900;line-height:1}
+.gap{display:flex;gap:24px;margin-top:60px;align-items:stretch}
+.gap div{flex:1;background:#fff;border-radius:26px;padding:34px;font-size:36px;line-height:1.5}
+.gap b{display:block;font-size:42px;margin-bottom:12px}
+.hole{background:var(--accent)!important;color:#fff;text-align:center;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:40px!important;flex:0 0 200px!important}
+.shot{flex-shrink:0;border-radius:24px;overflow:hidden;border:3px solid var(--line);box-shadow:0 18px 40px rgba(27,42,74,.14);background:#fff}
+.shot img{display:block;width:100%}
+</style></head><body>
+
+<div class="slide memo-top">
+  <div class="kicker mt-s">개발기 #1</div>
+  <h1>왜 하필<br><em>부품 주문 전화</em><br>였을까?</h1>
+  <p class="lead">아이디어 7개 중에서 이걸 고른 이유, 그리고 첫 데모가 나오기까지.</p>
+  <div class="swipe">넘겨 보기 →</div>
+  <div class="foot"><span><b>@callcard.lab</b></span><span>1 / 7</span></div>
+</div>
+
+<div class="slide">
+  <div class="kicker">우리는</div>
+  <h2>각자 다른 일을 하는<br>4명이 만들어요</h2>
+  <div class="team">
+    <div><b>📐 기획</b>무엇을 만들지 정리</div>
+    <div><b>📣 마케팅</b>이 계정을 운영 중</div>
+    <div><b>💻 개발</b>데모 화면을 만듦</div>
+    <div><b>🧭 총괄</b>서버 · 음성 인식</div>
+  </div>
+  <p class="lead mt-m">목표는 하나, 「현장에서 실제로 쓸 수 있는 생성형 AI 서비스」 만들기예요.</p>
+  <div class="foot"><span><b>@callcard.lab</b></span><span>2 / 7</span></div>
+</div>
+
+<div class="slide white">
+  <div class="kicker">아이디어 투표</div>
+  <h2>7개 중에 3표 모두<br>이 아이템에 🗳️</h2>
+  <div class="vote">
+    <div><span class="lbl">AI 가상 소비자 패널</span><span class="bar" style="width:20px"></span></div>
+    <div><span class="lbl">단말 인증 · 규제 Q&amp;A</span><span class="bar" style="width:20px"></span></div>
+    <div><span class="lbl">감사 지적 사전점검</span><span class="bar" style="width:20px"></span></div>
+    <div><span class="lbl">단체 식사 예약 도우미</span><span class="bar" style="width:20px"></span></div>
+    <div><span class="lbl">현장 계장 업무 지원</span><span class="bar" style="width:20px"></span></div>
+    <div><span class="lbl">카드뉴스 제작 도우미</span><span class="bar" style="width:20px"></span></div>
+    <div class="on"><span class="lbl">AI 전화 주문 받아쓰기</span><span class="bar" style="width:300px"></span></div>
+  </div>
+  <p class="lead">팀원 한 명이 실제로 부품 대리점용 업무 프로그램을 만드는 회사를 운영하고 있어서, 현장 문제가 가장 또렷했어요.</p>
+  <div class="foot"><span><b>@callcard.lab</b></span><span>3 / 7</span></div>
+</div>
+
+<div class="slide">
+  <div class="kicker">들여다보니</div>
+  <h2>통화에서 오간 말은<br><em>어디에도</em> 남지 않았다</h2>
+  <div class="gap">
+    <div><b>☎ 주문 받기</b>전화 · 메모지</div>
+    <div class="hole">빈칸</div>
+    <div><b>🖥 주문 처리</b>전산 · 전표 · 출고</div>
+  </div>
+  <p class="lead mt-m">주문을 받는 일과 처리하는 일이 따로 돌아서, 연식 · 좌우 · 「내일 들어오면 보내 줄게요」 같은 약속은 녹음 파일 속에만 남아요.</p>
+  <div class="foot"><span><b>@callcard.lab</b></span><span>4 / 7</span></div>
+</div>
+
+<div class="slide white">
+  <div class="kicker">그래서 이렇게 만들었어요</div>
+  <h2>녹음에서 카드까지</h2>
+  <div class="flow">
+    <div><i>🎙</i><span>녹음 파일<small>대리점 PC에 쌓이는 통화 녹음</small></span></div>
+    <div class="down">↓</div>
+    <div><i>✍️</i><span>받아쓰기<small>음성 인식 AI가 글로 옮김</small></span></div>
+    <div class="down">↓</div>
+    <div><i>📋</i><span>주문 카드<small>생성형 AI가 주문 내용을 칸에 정리</small></span></div>
+    <div class="down">↓</div>
+    <div><i>✅</i><span>사람이 확인 · 확정<small>헷갈리면 「들어 보기」</small></span></div>
+  </div>
+  <div class="foot"><span><b>@callcard.lab</b></span><span>5 / 7</span></div>
+</div>
+
+<div class="slide white">
+  <span class="fake" style="position:absolute;top:56px;right:96px">가짜 통화 데모</span>
+  <div class="kicker">첫 데모 화면</div>
+  <h2>하루 주문 흐름을<br>한 화면에</h2>
+  <div class="shot mt-m"><img src="../../_crops/today-numbers.png"></div>
+  <div class="shot mt-s" style="width:700px;align-self:center"><img src="../../_crops/today-ai.png"></div>
+  <div class="foot"><span><b>@callcard.lab</b></span><span>6 / 7</span></div>
+</div>
+
+<div class="slide navy">
+  <div class="kicker mt-m">다음 개발기에서는</div>
+  <h1>전화 음질에서<br>AI는 얼마나<br><em>알아들을까?</em></h1>
+  <p class="lead">현장 말 · 차번호 · 수량을 제대로 받아 적는지, 직접 시험해 본 이야기를 들고 올게요.</p>
+  <div class="foot"><span><b>@callcard.lab</b> 팔로우하고 다음 편 보기</span><span>7 / 7</span></div>
+</div>
+</body></html>
