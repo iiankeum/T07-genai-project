@@ -37,7 +37,7 @@
 .today-top { display: grid; gap: 14px; margin-bottom: 20px; }
 .today-top .card + .card { margin-top: 0; }
 @media (min-width: 1100px) { .today-top { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); align-items: start; } }
-.today-brief { border-color: var(--brand-line); background: linear-gradient(180deg, #fbfaff, #fff 60%); }
+.today-brief { border-color: var(--brand-line); background: linear-gradient(180deg, var(--brand-wash), #fff 60%); }
 .today-brief .card-title h2, .today-close .card-title h2 { margin: 0; font-size: 1.15rem; }
 .brief-text { margin: 0 0 12px; font-size: 1.08rem; line-height: 1.85; white-space: pre-line; }
 .brief-wait { display: flex; align-items: center; gap: 10px; margin: 8px 0; color: var(--brand-ink); font-weight: 600; }
@@ -52,7 +52,7 @@
 .brief-meta { margin: 0; color: var(--muted); font-size: .95rem; flex: 1 1 220px; }
 .close-help { margin: 0 0 12px; color: var(--muted); font-size: .92rem; }
 .close-toggle { margin-top: 6px; }
-.sum-text { margin: 10px 0 0; max-height: 360px; overflow: auto; white-space: pre-wrap; word-break: keep-all; overflow-wrap: anywhere; font-family: inherit; font-size: .95rem; line-height: 1.7; background: #f7f6fc; border: 1px solid var(--line); border-radius: 10px; padding: 12px; user-select: text; -webkit-user-select: text; }
+.sum-text { margin: 10px 0 0; max-height: 360px; overflow: auto; white-space: pre-wrap; word-break: keep-all; overflow-wrap: anywhere; font-family: inherit; font-size: .95rem; line-height: 1.7; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px; user-select: text; -webkit-user-select: text; }
 
 /* 목록들 */
 .today-lists { display: grid; gap: 22px; }
@@ -74,11 +74,11 @@
 .li-title { margin-top: 2px; color: var(--ink-2); }
 .li-meta { margin-top: 4px; color: var(--muted); font-size: .9rem; }
 .today-sec .list-item .li-flags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
-.chip-ask { color: #7a5200; background: #fff1c7; border-color: #f0d9a8; }
+.chip-ask { color: #7a5200; background: #fff1c7; border-color: var(--warn-line); }
 
 /* 할 일 */
 .today-sec .todo-item { display: flex; align-items: flex-start; gap: 12px; }
-.todo-icon { flex: none; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; font-size: 1.2rem; font-weight: 800; background: #f0f0f4; color: var(--ink-2); }
+.todo-icon { flex: none; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; font-size: 1.2rem; font-weight: 800; background: #f4f4f5; color: var(--ink-2); }
 .todo-callback .todo-icon { background: var(--brand-soft); color: var(--brand-ink); }
 .todo-confirm .todo-icon { background: var(--warn-soft); color: var(--warn); }
 .todo-ship .todo-icon { background: var(--ok-soft); color: var(--ok); }

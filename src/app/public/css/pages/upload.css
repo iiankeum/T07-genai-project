@@ -2,25 +2,25 @@
 .upload-page .card + .card, .upload-page .card + .grid-2, .upload-page .grid-2 + .card { margin-top: 14px; }
 .upload-side > .card + .card { margin-top: 0; }
 
-.upload-drop { border: 2px dashed var(--brand-line); border-radius: var(--radius); background: #fbfaff; padding: 26px 16px; text-align: center; transition: background .15s, border-color .15s; }
+.upload-drop { border: 2px dashed var(--brand-line); border-radius: var(--radius); background: var(--brand-wash); padding: 26px 16px; text-align: center; transition: background .15s, border-color .15s; }
 .upload-drop.is-drag { background: var(--brand-soft); border-color: var(--brand); }
 .upload-drop-icon { color: var(--brand); }
 .upload-drop-title { margin: 6px 0 2px; font-size: 1.15rem; font-weight: 800; }
 .upload-drop-or { margin: 0 0 10px; color: var(--muted); font-size: .9rem; }
 .upload-pick { cursor: pointer; }
-.upload-pick:focus-within { outline: 3px solid #a993f2; outline-offset: 2px; }
+.upload-pick:focus-within { outline: 3px solid var(--brand-ink); outline-offset: 2px; }
 .upload-drop .help { margin: 12px 0 0; }
 
 .upload-rows { list-style: none; margin: 14px 0 0; padding: 0; }
 .upload-rows:empty { display: none; }
 .upload-row { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px 12px; background: #fff; }
 .upload-row + .upload-row { margin-top: 8px; }
-.upload-row.is-blocked, .upload-row.is-error { border-color: #f4c7c1; background: #fffafa; }
+.upload-row.is-blocked, .upload-row.is-error { border-color: var(--danger-line); background: #fffafa; }
 .upload-row-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .upload-name { font-weight: 700; min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .upload-size { flex: none; }
 .upload-remove { flex: none; }
-.upload-bar { height: 10px; border-radius: 999px; background: #eeedf5; overflow: hidden; margin: 8px 0 4px; }
+.upload-bar { height: 10px; border-radius: 999px; background: var(--bg); overflow: hidden; margin: 8px 0 4px; }
 .upload-bar i { display: block; height: 100%; background: var(--brand); border-radius: 999px; transition: width .2s; }
 .upload-row.is-done .upload-bar i, .upload-row.is-duplicate .upload-bar i { background: var(--ok); }
 .upload-row-msg { font-size: .92rem; margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; }

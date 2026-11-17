@@ -37,7 +37,7 @@
 
 .help-list { margin: 0; padding-left: 1.2em; }
 .help-list li { margin: 0 0 10px; line-height: 1.7; }
-.help-now { display: inline-block; padding: 4px 12px; border-radius: 999px; background: #f3f2f9; color: var(--ink-2); font-size: .88rem; font-weight: 600; }
+.help-now { display: inline-block; padding: 4px 12px; border-radius: 999px; background: var(--bg); color: var(--ink-2); font-size: .88rem; font-weight: 600; }
 
 /* 홈 화면에 추가 */
 .help-two { display: grid; gap: 12px; }

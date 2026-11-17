@@ -13,7 +13,7 @@ const { db } = await import('../lib/db.mjs');
 const { Router } = await import('../lib/http.mjs');
 const { kstDay } = await import('../lib/security.mjs');
 const { createApp } = await import('../server.mjs');
-const { addDays } = await import('../routes/calls.mjs');
+const { addDays, deleteCall } = await import('../routes/calls.mjs');
 const { kstTime } = await import('../lib/repo.mjs');
 const insights = await import('../routes/insights.mjs');
 
@@ -201,6 +201,42 @@ test('브리핑: AI 꺼짐 503 · 10분 캐시 · 없는 callId 는 null', async
   assert.equal(calls, 1);
   assert.equal(db().prepare('SELECT COUNT(*) AS n FROM briefings').get().n, 1, '통화 있는 오늘 것만 남는다');
   insights.setAiForTest(null);
+});
+
+test('브리핑 생성 중 통화를 지우면 답과 캐시를 폐기한다', async () => {
+  const day = addDays(today, -10);
+  const callId = 'deleted-briefing-call';
+  const customer = '가짜삭제정비소';
+  addCall({ id: callId, recordedAt: at(day, '10:00'), customer, card: { items: [{ part: '활대링크', qty: 1 }] } });
+  const entered = Promise.withResolvers();
+  const provider = Promise.withResolvers();
+  insights.setAiForTest({
+    aiEnabled: () => true,
+    writeBriefing: async ({ cards }) => {
+      entered.resolve(cards);
+      return provider.promise;
+    },
+  });
+  const creating = post('/api/briefing', { day });
+  try {
+    const cards = await Promise.race([
+      entered.promise,
+      creating.then(({ res }) => { throw new Error(`브리핑이 제공자 호출 전에 응답함: ${res.status}`); }),
+    ]);
+    assert.deepEqual(cards.map((card) => card.callId), [callId]);
+    deleteCall(callId);
+    provider.resolve({ paragraph: `${customer} 카드를 확인해 주세요.`, todos: [{ title: customer, callId }] });
+    const { res, body } = await creating;
+    assert.equal(res.status, 409);
+    assert.equal(body.error, 'deleted_context');
+    assert.doesNotMatch(JSON.stringify(body), new RegExp(customer));
+    const saved = await get(`/api/briefing?day=${day}`);
+    assert.equal(saved.body.briefing, null);
+  } finally {
+    provider.resolve();
+    await creating.catch(() => {});
+    insights.setAiForTest(null);
+  }
 });
 
 test('묻기: 거래처 · 날짜로 좁히고 ref 를 통화 · 문장으로 바꾼다', async () => {

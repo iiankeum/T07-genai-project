@@ -9,7 +9,7 @@ import http from 'node:http';
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'cn-'));
 const PASS = 'test-only-passcode-9';
 process.env.ADMIN_PASSCODE = PASS;
-const { db, nowIso } = await import('../lib/db.mjs');
+const { dataDir, db, globalDb, nowIso } = await import('../lib/db.mjs');
 const { Router } = await import('../lib/http.mjs');
 const { createApp } = await import('../server.mjs');
 const { config } = await import('../lib/config.mjs');
@@ -148,7 +148,7 @@ test('체험 신청: 동의 · 입력 검사', async () => {
   }
   const noConsent = await req('POST', '/api/trial', { body: { ...good, consent: false } });
   assert.equal(noConsent.json.message, '개인정보 수집 · 이용에 동의해 주세요.');
-  assert.equal(n('SELECT COUNT(*) AS n FROM trials'), 0, '잘못된 신청은 저장하지 않는다');
+  assert.equal(globalDb().prepare('SELECT COUNT(*) AS n FROM trials').get().n, 0, '잘못된 신청은 저장하지 않는다');
 });
 
 test('체험 신청: 저장 · 개인정보는 응답 · 로그에 없음 · IP 는 해시로만 · 같은 IP 1시간 3건', async () => {
@@ -162,8 +162,8 @@ test('체험 신청: 저장 · 개인정보는 응답 · 로그에 없음 · IP 
   }
   const blocked = await req('POST', '/api/trial', { body, ip });
   assert.equal(blocked.status, 429);
-  assert.equal(n('SELECT COUNT(*) AS n FROM trials'), 3);
-  const row = db().prepare('SELECT * FROM trials LIMIT 1').get();
+  assert.equal(globalDb().prepare('SELECT COUNT(*) AS n FROM trials').get().n, 3);
+  const row = globalDb().prepare('SELECT * FROM trials LIMIT 1').get();
   assert.match(row.ip_hash, /^[0-9a-f]{16}$/);
   assert.ok(!JSON.stringify(row).includes(ip));
   assert.ok(row.consent_at);
@@ -188,9 +188,9 @@ test('관리자: 체험 신청 보기(최신순) · 하나 지우기 · 사용�
   const id = list.json.trials.at(-1).id;
   assert.equal((await req('DELETE', `/api/admin/trials/${id}`, { cookie })).status, 200);
   assert.equal((await req('DELETE', `/api/admin/trials/${id}`, { cookie })).status, 404);
-  assert.equal(n('SELECT COUNT(*) AS n FROM trials'), 3);
+  assert.equal(globalDb().prepare('SELECT COUNT(*) AS n FROM trials').get().n, 3);
 
-  db().prepare("INSERT INTO usage(day, kind, count) VALUES(?, 'ai', 7)").run(kstDay());
+  globalDb().prepare("INSERT INTO usage(day, kind, count) VALUES(?, 'ai', 7)").run(kstDay());
   const st = await req('GET', '/api/admin/stats', { cookie });
   assert.equal(st.status, 200);
   assert.equal(st.json.day, kstDay());
@@ -213,7 +213,7 @@ test('관리자: 체험 신청 보기(최신순) · 하나 지우기 · 사용�
 
 test('관리자: 통화 지우기(카드 · 일감 · 녹음 파일 함께)', async () => {
   const cookie = await login('10.2.6.6');
-  const audioDir = path.join(config.dataDir, 'audio');
+  const audioDir = path.join(dataDir(), 'audio');
   fs.mkdirSync(audioDir, { recursive: true });
   const wav = path.join(audioDir, 'up_del1.wav');
   fs.writeFileSync(wav, 'RIFF');
@@ -231,7 +231,7 @@ test('관리자: 통화 지우기(카드 · 일감 · 녹음 파일 함께)', as
   assert.equal(s.status, 200);
   assert.equal(n("SELECT COUNT(*) AS n FROM cards WHERE call_id = 'fx-c02'"), 0);
   // DATA_DIR/audio 밖을 가리키는 경로는 지우지 않는다
-  const outside = path.join(config.dataDir, 'keep.txt');
+  const outside = path.join(dataDir(), 'keep.txt');
   fs.writeFileSync(outside, 'x');
   db().prepare("INSERT INTO calls(id, created_at, recorded_at, source, status, is_fake, audio_file) VALUES('up_del2', ?, ?, 'upload', 'ready', 1, 'keep.txt')").run(now, now);
   assert.equal((await req('DELETE', '/api/calls/up_del2', { cookie })).status, 200);
@@ -244,7 +244,7 @@ test('관리자: 데모 초기화(확인 글자 필요) → 시드 다시 · 체
   db().prepare("INSERT INTO calls(id, created_at, recorded_at, source, status, is_fake) VALUES('live_r1', ?, ?, 'live', 'ready', 1)").run(now, now);
   db().prepare("INSERT INTO glossary(id, kind, term, status, source, created_at, updated_at) VALUES('g_r1', '현장말', '사용자말', 'approved', '사용자', ?, ?)").run(now, now);
   // 올린 녹음 파일 · 시드 음성 파일
-  const audioDir = path.join(config.dataDir, 'audio');
+  const audioDir = path.join(dataDir(), 'audio');
   fs.mkdirSync(audioDir, { recursive: true });
   const upWav = path.join(audioDir, 'call_up_r1.wav');
   const seedWav = path.join(audioDir, 'fx-c01.wav');
@@ -264,7 +264,7 @@ test('관리자: 데모 초기화(확인 글자 필요) → 시드 다시 · 체
   assert.equal(n('SELECT COUNT(*) AS n FROM calls'), SEED_COUNT);
   assert.equal(n("SELECT COUNT(*) AS n FROM calls WHERE id = 'fx-c02'"), 1, '지웠던 시드도 돌아온다');
   assert.equal(n("SELECT COUNT(*) AS n FROM glossary WHERE source = '사용자'"), 0);
-  assert.equal(n('SELECT COUNT(*) AS n FROM trials'), 3);
+  assert.equal(globalDb().prepare('SELECT COUNT(*) AS n FROM trials').get().n, 3);
   assert.ok(logs.includes('[admin] reset'));
   // 올린 녹음 파일은 함께 지우고, 시드 음성은 남아 다시 붙는다
   assert.equal(fs.existsSync(upWav), false, '올린 녹음 파일도 지운다');

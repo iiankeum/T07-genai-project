@@ -111,6 +111,7 @@ export function groupUnsure(card, items) {
   const rows = Array.isArray(items) ? items : [];
   list.forEach((u, idx) => {
     if (!u) return;
+    if (Number.isInteger(u.item) && rows[u.item]) { add('item:' + u.item, { u, idx }); return; }
     const p = parseUnsureField(u.field);
     if (p.field === 'items') {
       if (p.index !== null && p.index < rows.length) { add(`item:${p.index}`, { u, idx }); return; }
@@ -185,7 +186,8 @@ export function transcriptText(call) {
 /** 부품 줄을 화면용으로 복사(품번은 partNo 하나로) */
 export function cloneItems(items) {
   return (Array.isArray(items) ? items : []).map((it) => ({
-    part: it?.part ?? '',
+    id: it?.id,
+    part: it?.part === '(부품 이름 없음)' ? '' : it?.part ?? '',
     side: it?.side ?? '',
     qty: num(it?.qty),
     partNo: it?.partNo ?? it?.part_no ?? '',
@@ -219,12 +221,13 @@ export function itemMark(draftItems, item) {
 /** 서버에 보낼 부품 줄(빈 줄은 뺀다) */
 export function itemsForSave(items) {
   return (Array.isArray(items) ? items : [])
-    .filter((it) => String(it.part || '').trim() || String(it.partNo || '').trim())
+    .filter((it) => it.id || it.part || it.partNo || it.side || it.qty != null)
     .map((it) => {
       const out = {
+        id: it.id,
         part: String(it.part || '').trim() || null,
         side: String(it.side || '').trim() || null,
-        qty: num(it.qty) === null ? null : Math.min(999, Math.max(1, Math.round(num(it.qty)))),
+        qty: it.qty === '' ? null : it.qty ?? null,
         partNo: String(it.partNo || '').trim() || null,
       };
       if (it.quote) out.quote = it.quote;

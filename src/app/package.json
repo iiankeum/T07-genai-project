@@ -10,10 +10,16 @@
   },
   "scripts": {
     "start": "node server.mjs",
-    "test": "node --test"
+    "start:offline": "node --import ./tools/fixture-mode.mjs server.mjs",
+    "test": "node --import ./tools/no-paid-ai.mjs --test",
+    "test:offline": "node --test test/ai-offline.test.mjs",
+    "test:e2e": "node tools/browser-e2e.mjs"
   },
   "license": "MIT",
   "dependencies": {
     "@anthropic-ai/sdk": "1.8.0"
+  },
+  "devDependencies": {
+    "playwright": "1.64.1"
   }
 }

@@ -1,10 +1,11 @@
 // 통화 목록 · 찾기(F08): 글 · 카드 검색, 상태 · 날짜 · 거래처 거르기, 맞은 문장 굵게 → 누르면 그 대목으로.
 import { api } from '../api.js';
+import { CALL_TYPES } from '../domain.js';
 import { html, render, fmtWhen, fmtSec, callChip, SOURCE_LABEL, highlight, errorBox, href, kstDay } from '../ui.js';
 
 const STATUS_TABS = [
   ['all', '전체'], ['draft', '확인 필요'], ['callback', '다시 전화'], ['confirmed', '확정'],
-  ['shipped', '출고 완료'], ['working', '받아쓰는 중'], ['failed', '실패'],
+  ['shipped', '출고 완료'], ['cancelled', '취소'], ['working', '받아쓰는 중'], ['failed', '실패'],
 ];
 const RANGES = [['today', '오늘'], ['yesterday', '어제'], ['week', '이번 주'], ['all', '전체']];
 const PAGE = 30;
@@ -47,6 +48,8 @@ export function stateFromQuery(q = {}, now = new Date()) {
     from: custom && isDay(q.from) ? q.from : undefined,
     to: custom && isDay(q.to) ? q.to : undefined,
     customer: String(q.customer || '').trim(),
+    callType: CALL_TYPES.includes(q.callType) ? q.callType : '',
+    callback: ['true', 'false'].includes(q.callback) ? q.callback : '',
   };
 }
 
@@ -59,6 +62,8 @@ export function hashFor(s) {
     from: s.range === 'custom' ? s.from : undefined,
     to: s.range === 'custom' ? s.to : undefined,
     customer: s.customer || undefined,
+    callType: s.callType || undefined,
+    callback: s.callback || undefined,
   });
 }
 
@@ -139,6 +144,27 @@ export default {
               ${custList.map((c) => html`<option value="${c.name}" ${c.name === state.customer ? html`selected` : ''}>${c.name}${c.calls ? ` (${c.calls}건)` : ''}</option>`)}
             </select>
           </div>
+        </div>
+        <div class="cl-row2">
+          <div class="cl-group">
+            <label class="cl-group-label" for="cl-type">통화 종류</label>
+            <select id="cl-type" class="select">
+              <option value="">모든 유형</option>
+              ${CALL_TYPES.map((type) => html`<option value="${type}" ${state.callType === type ? html`selected` : ''}>${type}</option>`)}
+            </select>
+          </div>
+          <div class="cl-group">
+            <label class="cl-group-label" for="cl-callback">재연락 표시</label>
+            <select id="cl-callback" class="select">
+              <option value="">전체</option>
+              <option value="true" ${state.callback === 'true' ? html`selected` : ''}>다시 전화</option>
+              <option value="false" ${state.callback === 'false' ? html`selected` : ''}>표시 없음</option>
+            </select>
+          </div>
+        </div>
+        <div class="cl-row2">
+          <label class="cl-group"><span class="cl-group-label">시작일</span><input id="cl-from" class="input" type="date" value="${state.range === 'custom' ? state.from || '' : rangeDates(state.range).from || ''}"></label>
+          <label class="cl-group"><span class="cl-group-label">종료일</span><input id="cl-to" class="input" type="date" value="${state.range === 'custom' ? state.to || '' : rangeDates(state.range).to || ''}"></label>
         </div>`);
     }
 
@@ -166,6 +192,7 @@ export default {
           <a class="cl-title" href="#/calls/${encodeURIComponent(c.id)}">${c.title || '제목 없는 통화'}</a>
           <span class="cl-chips">
             ${callChip(c)}
+            ${card?.callType ? html`<span class="chip">${card.callType}</span>` : ''}
             ${card?.urgent ? html`<span class="chip chip-urgent">급함</span>` : ''}
             ${card?.callback ? html`<span class="chip chip-callback">다시 전화</span>` : ''}
           </span>
@@ -182,7 +209,7 @@ export default {
       </li>`;
     }
     function filtersOn() {
-      return Boolean(state.q || state.status !== 'all' || state.range !== 'all' || state.customer);
+      return Boolean(state.q || state.status !== 'all' || state.range !== 'all' || state.customer || state.callType || state.callback);
     }
     function emptyView() {
       if (filtersOn()) {
@@ -197,6 +224,20 @@ export default {
         <div class="row cl-empty-actions"><a class="btn btn-primary" href="#/upload">녹음 올리기</a><a class="btn" href="#/live">실시간 받아쓰기 체험</a></div>
       </div>`;
     }
+    function rowsByDate() {
+      const groups = new Map();
+      for (const call of calls) {
+        const day = kstDay(new Date(call.recordedAt));
+        if (!groups.has(day)) groups.set(day, []);
+        groups.get(day).push(call);
+      }
+      return [...groups].map(([day, rows]) => html`
+        <section aria-label="${day}">
+          <h2 class="cl-group-label"><time datetime="${day}">${day}</time></h2>
+          <ul class="list-wrap cl-list">${rows.map(rowView)}</ul>
+        </section>`);
+    }
+
     function renderResults() {
       const working = calls.filter((c) => WORKING.has(c.status)).length;
       render(slot('results'), html`
@@ -204,7 +245,7 @@ export default {
           <span><strong>${total}</strong>건${state.q ? html` · 「${state.q}」 찾음` : ''}</span>
           ${working ? html`<span class="cl-working"><span class="spinner" aria-hidden="true"></span> 받아쓰는 중 ${working}건 — 10초마다 새로 봅니다</span>` : ''}
         </div>
-        ${calls.length ? html`<ul class="list-wrap cl-list">${calls.map(rowView)}</ul>` : emptyView()}
+        ${calls.length ? rowsByDate() : emptyView()}
         ${calls.length < total ? html`<button type="button" class="btn btn-block cl-more" data-act="more">더 보기 (${total - calls.length}건 남음)</button>` : ''}
       `);
     }
@@ -217,6 +258,8 @@ export default {
         status: state.status !== 'all' ? state.status : undefined,
         from, to,
         customer: state.customer || undefined,
+        callType: state.callType || undefined,
+        callback: state.callback || undefined,
         limit, offset,
       };
     }
@@ -236,7 +279,8 @@ export default {
         const r = await api.get('/api/calls', apiQuery(append ? calls.length : 0, limit), { signal: my.signal });
         if (!alive || my !== ctrl) return;
         const list = Array.isArray(r?.calls) ? r.calls : [];
-        calls = append ? calls.concat(list) : list;
+        const ids = new Set(calls.map((call) => call.id));
+        calls = append ? calls.concat(list.filter((call) => !ids.has(call.id))) : list;
         total = Number.isFinite(Number(r?.total)) ? Number(r.total) : calls.length;
         renderResults();
       } catch (e) {
@@ -318,7 +362,7 @@ export default {
           input.focus();
           break;
         case 'reset':
-          Object.assign(state, { q: '', status: 'all', range: 'all', from: undefined, to: undefined, customer: '' });
+          Object.assign(state, { q: '', status: 'all', range: 'all', from: undefined, to: undefined, customer: '', callType: '', callback: '' });
           input.value = '';
           root.querySelector('[data-act="clear-q"]')?.classList.add('hidden');
           changed();
@@ -329,7 +373,17 @@ export default {
       }
     }
     function onChange(e) {
-      if (e.target?.id === 'cl-cust') { state.customer = e.target.value; changed(); }
+      const id = e.target?.id;
+      const filters = { 'cl-cust': 'customer', 'cl-type': 'callType', 'cl-callback': 'callback' };
+      if (filters[id]) {
+        state[filters[id]] = e.target.value;
+        changed();
+      } else if (id === 'cl-from' || id === 'cl-to') {
+        state.from = root.querySelector('#cl-from').value || undefined;
+        state.to = root.querySelector('#cl-to').value || undefined;
+        state.range = state.from || state.to ? 'custom' : 'all';
+        changed();
+      }
     }
 
     input.addEventListener('input', onInput);

@@ -7,6 +7,7 @@ import { limit, checkDaily, addDaily, ipHash } from '../lib/security.mjs';
 import { callView, getCallRow } from '../lib/repo.mjs';
 import { audioFromForm, audioPath } from '../lib/audio.mjs';
 import { acceptRecording, findCallBySha, retryIfFailed, normalizePhone, parseRecordedAt } from '../lib/jobs.mjs';
+import { requestAccess } from '../lib/auth.mjs';
 
 const MAX_SAMPLES = 6;
 
@@ -15,8 +16,14 @@ export function register(router) {
   router.post('/api/calls/upload', ({ req, res, ip }) => withUploadSlot(req, async () => {
     limit('uploadTry', ip); // 넉넉한 시도 한도(실패도 셈): 본문 읽기 · 형식 검사를 지킨다
     const form = await readForm(req, config.maxUploadBytes);
-    if (String(form.get('fakeConfirm') ?? '').trim().toLowerCase() !== 'yes') {
+    const demo = requestAccess().demo;
+    const fake = String(form.get('fakeConfirm') ?? '').trim().toLowerCase() === 'yes';
+    const consent = String(form.get('recordingConsent') ?? '').trim().toLowerCase() === 'yes';
+    if (demo && !fake) {
       throw new HttpError(400, 'fake_confirm_required', '가짜(연습) 녹음만 올린다는 확인에 체크해 주세요');
+    }
+    if (!demo && !fake && !consent) {
+      throw new HttpError(400, 'recording_consent_required', '녹음 처리에 필요한 고지와 동의를 확인해 주세요.');
     }
     const file = await audioFromForm(form);
 
@@ -35,7 +42,7 @@ export function register(router) {
       deviceName: null,
       originalName: file.name,
       uploader: ipHash(ip),
-      isFake: true,
+      isFake: fake,
     });
     const call = callView(getCallRow(out.callId));
     if (out.duplicate) return { callId: out.callId, status: 'duplicate', call };

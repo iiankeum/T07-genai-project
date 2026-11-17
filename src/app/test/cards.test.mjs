@@ -17,6 +17,7 @@ const { getCallRow, getCardRow, cardView } = await import('../lib/repo.mjs');
 const ai = await import('../lib/ai.mjs');
 const cards = await import('../lib/cards.mjs');
 const pipeline = await import('../lib/pipeline.mjs');
+const { confirmationIssues } = await import('../public/js/domain.js');
 const cardRoutes = await import('../routes/cards.mjs');
 const liveRoutes = await import('../routes/live.mjs');
 const { createApp } = await import('../server.mjs');
@@ -82,7 +83,7 @@ const AI4 = {
   highlights: [{ text: '앞 브레이크 패드', kind: 'part' }], summary: '앞 브레이크 패드 2개, 급함',
 };
 
-const textResp = (obj) => ({ model: 'claude-opus-5-5', stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify(obj) }] });
+const textResp = (obj) => ({ model: 'claude-opus-5-5', stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify({ call_type: '주문', ...obj, highlights: obj.highlights?.filter((h) => h.kind !== 'nope') }) }] });
 function fakeClient(handler) {
   const calls = [];
   const make = (plain) => async (params) => { calls.push({ params, plain }); return handler(params); };
@@ -133,7 +134,10 @@ test('buildCardFromAi: 품번을 불러 줬으면 대문자로 남기고, 자릿
   let v = cards.buildCardFromAi(getCallRow('c4'), AI4);
   assert.equal(v.items[0].partNo, '58101-D4A25');
   assert.equal(v.unsure.length, 0);
-  v = cards.buildCardFromAi(getCallRow('c4'), { ...AI4, items: [{ ...AI4.items[0], part_no: '58101-D4AE1599' }] });
+  const odd = '58101-D4AE1599';
+  v = cards.buildCardFromAi({ ...getCallRow('c4'), transcript: '품번은 ' + odd + '예요.' }, {
+    ...AI4, items: [{ ...AI4.items[0], part_no: odd }],
+  });
   assert.equal(v.items[0].partNo, '58101-D4AE1599');
   assert.equal(v.unsure[0].reason, '자릿수가 보통과 다릅니다 — 들어 보세요');
   assert.equal(v.unsure[0].field, 'partNo');
@@ -172,12 +176,15 @@ test('buildCardFromAi: 「품번」 낱말이 있어도 그 품번 숫자를 불
   assert.equal(v.items[1].partNo, null);
   assert.deepEqual(v.unsure.filter((x) => x.field === 'partNo').map((x) => x.item), [1]);
 
-  // 도우미: 숫자 4자리 이상 덩어리가 없으면 검사하지 않는다
-  const hay = cards.partNoHaystacks('품번은 공일이삼사 다시 오');
-  assert.deepEqual(hay, ['품번은공일이삼사다시오', '품번은012345']);
-  assert.equal(cards.partNoHeard('X1234-AB', hay), true);
+  const hay = cards.partNoHaystacks('품번은 공일이삼사 다시 오, 또 ABC-12입니다.');
+  assert.equal(cards.partNoHeard('01234-5', hay), true);
+  assert.equal(cards.partNoHeard('X1234-AB', hay), false);
   assert.equal(cards.partNoHeard('ABC-12', hay), true);
+  assert.equal(cards.partNoHeard('ABC-1', hay), false);
   assert.equal(cards.partNoHeard('99999-AB', hay), false);
+  const samePrefix = cards.buildCardFromAi(getCallRow('c4'), { ...AI4, items: [{ ...AI4.items[0], part_no: '58101-D4A99' }] });
+  assert.equal(samePrefix.items[0].partNo, null);
+  assert.equal(samePrefix.unsure[0].reason, cards.MSG.partNoNotHeard);
 });
 
 test('buildCardFromAi: 차번호 형식 검사 · 근거 시각(공백 · 문장부호 무시) · 칠하기 대목 거르기', () => {
@@ -268,7 +275,7 @@ test('onTranscript: AI 꺼짐 · 실패 · 빈 글이어도 throw 없이 빈 카
   insertCall('p2', { status: 'transcribing', transcript: '' });
   await pipeline.onTranscript('p2', { text: joinText(SEGS4), segments: SEGS4 });
   assert.equal(getCallRow('p2').status, 'ready');
-  assert.equal(getCardRow('p2').ai_error, 'AI 키 없음');
+  assert.equal(getCardRow('p2').ai_error, '자동 정리가 꺼져 있습니다.');
   assert.equal(JSON.parse(getCardRow('p2').items).length, 0);
 
   const orig = console.error;
@@ -304,7 +311,7 @@ test('resumeStuck: 카드 정리 중에 멈춘 통화를 다시 정리', async (
 });
 
 // ── 3. 상태 흐름 · 고치기(라우트) ──────────────────────────────────
-test('확정: 되물을 것이 남으면 409 ask_back_left → 지우면 확정(품번 빈 줄 경고) → 출고', async () => {
+test('확정: 다시 물어볼 것, 재확인, 품번을 해결하면 확정하고 출고', async () => {
   let r = await req('POST', '/api/cards/p1/confirm');
   assert.equal(r.status, 409);
   assert.equal(r.data.error, 'ask_back_left');
@@ -321,11 +328,30 @@ test('확정: 되물을 것이 남으면 409 ask_back_left → 지우면 확정(
   assert.equal(r.data.error, 'not_confirmed');
 
   r = await req('POST', '/api/cards/p1/confirm');
+  assert.equal(r.status, 409);
+  assert.equal(r.data.error, 'unsure_left');
+  const beforeReview = cardView(getCardRow('p1'));
+  for (const warning of beforeReview.unsure) {
+    const review = await req('POST', '/api/cards/p1/review', { id: warning.id });
+    assert.equal(review.status, 200);
+    assert.ok(review.data.card.unsure.every((entry) => entry.id !== warning.id));
+  }
+  r = await req('POST', '/api/cards/p1/confirm');
+  assert.equal(r.data.error, 'missing_part_no');
+  const reviewed = cardView(getCardRow('p1'));
+  assert.ok(reviewed.fieldReviews.carModel.at);
+  r = await req('PATCH', '/api/cards/p1', {
+    items: reviewed.items.map((item, index) => ({ ...item, partNo: '99999-TEST' + index })),
+    plate: '형식이 다른 번호',
+  });
+  assert.equal(r.status, 200);
+  assert.equal(r.data.card.domainVersion, 'automotive@1');
+  r = await req('POST', '/api/cards/p1/confirm');
   assert.equal(r.status, 200);
   assert.equal(r.data.card.status, 'confirmed');
   assert.equal(r.data.card.statusLabel, '확정');
-  assert.ok(r.data.card.confirmedAt);
-  assert.deepEqual(r.data.warnings, ['품번이 빈 부품이 2줄 있습니다']);
+  const confirmedAt = r.data.card.confirmedAt;
+  assert.ok(confirmedAt);
 
   // 확정된 카드는 고칠 수 없다
   r = await req('PATCH', '/api/cards/p1', { note: '고침' });
@@ -344,18 +370,38 @@ test('확정: 되물을 것이 남으면 409 ask_back_left → 지우면 확정(
   r = await req('POST', '/api/cards/p1/cancel');
   assert.equal(r.status, 409);
 
-  r = await req('POST', '/api/cards/p1/reopen');
+  r = await req('POST', '/api/cards/p1/reopen', { reason: '수량 변경' });
+  assert.equal(r.status, 409);
+  assert.equal(r.data.error, 'already_shipped');
+
+  r = await req('POST', '/api/cards/p1/callback', { on: true, reason: '배송 장소' });
+  assert.equal(r.data.card.status, 'shipped');
+  assert.equal(r.data.card.callback, true);
+  r = await req('POST', '/api/cards/p1/unship');
+  assert.equal(r.data.card.status, 'confirmed');
+  assert.equal(r.data.card.confirmedAt, confirmedAt);
+  assert.equal(r.data.card.shippedAt, null);
+  assert.equal(r.data.card.callback, true);
+  assert.equal((await req('POST', '/api/cards/p1/reopen')).data.error, 'reason_required');
+  r = await req('POST', '/api/cards/p1/reopen', { reason: '수량 변경' });
   assert.equal(r.status, 200);
   assert.equal(r.data.card.status, 'draft');
   assert.equal(r.data.card.confirmedAt, null);
   assert.equal(r.data.card.shippedAt, null);
 
-  r = await req('POST', '/api/cards/p1/cancel');
+  r = await req('POST', '/api/cards/p1/cancel', { reason: '주문 철회' });
   assert.equal(r.status, 200);
   assert.equal(r.data.card.status, 'cancelled');
+  assert.equal((await req('PATCH', '/api/cards/p1', { note: '고침' })).data.error, 'locked');
+  assert.equal((await req('POST', '/api/calls/p1/reextract')).data.error, 'locked');
   r = await req('POST', '/api/cards/p1/confirm');
   assert.equal(r.status, 409);
-  assert.equal(r.data.error, 'bad_state');
+  assert.equal(r.data.error, 'locked');
+  const audit = db().prepare("SELECT actor_id, occurred_at, before_json, after_json FROM audit_log WHERE entity_id = 'p1' AND action = 'reopen' ORDER BY id LIMIT 1").get();
+  assert.equal(audit.actor_id, 'demo');
+  assert.ok(audit.occurred_at);
+  assert.equal(JSON.parse(audit.before_json).status, 'confirmed');
+  assert.equal(JSON.parse(audit.after_json).reason, '수량 변경');
   r = await req('POST', '/api/cards/p1/reopen');
   assert.equal(r.data.card.status, 'draft');
 });
@@ -363,6 +409,9 @@ test('확정: 되물을 것이 남으면 409 ask_back_left → 지우면 확정(
 test('확정: 주문 전화에 부품이 한 줄도 없으면 409 no_items · 배송 문의는 부품 없이 확정', async () => {
   let r = await req('POST', '/api/cards/p2/confirm');
   assert.equal(r.status, 409);
+  assert.equal(r.data.error, 'required_field');
+  await req('PATCH', '/api/cards/p2', { customer: '가짜 거래처', carModel: '가짜 쏘나타' });
+  r = await req('POST', '/api/cards/p2/confirm');
   assert.equal(r.data.error, 'no_items');
   r = await req('PATCH', '/api/cards/p2', { callType: '배송 문의' });
   assert.equal(r.status, 200);
@@ -373,13 +422,13 @@ test('확정: 주문 전화에 부품이 한 줄도 없으면 409 no_items · �
   assert.equal(r.status, 200);
   assert.equal(r.data.card.status, 'confirmed');
   assert.equal(r.data.warnings, undefined);
-  await req('POST', '/api/cards/p2/reopen');
+  await req('POST', '/api/cards/p2/reopen', { reason: '통화 종류 수정' });
   r = await req('PATCH', '/api/cards/p2', { callType: '아무거나' });
   assert.equal(r.status, 400);
   assert.equal(r.data.error, 'bad_call_type');
 });
 
-test('PATCH: 값 정리 · 수량 0~999 · 30줄 · 고친 칸 표시 · 번호 확인 표시 · 제목 갱신', async () => {
+test('PATCH: 값 정리 · 수량 1~999 · 30줄 · 고친 칸 표시 · 번호 확인 표시 · 제목 갱신', async () => {
   let r = await req('PATCH', '/api/cards/p1', {
     customer: '  새한카센터  ', plate: '12가 3456', urgent: true,
     items: [{ part: '앞범퍼', side: null, qty: '2', partNo: ' 86511-f2000 ', quote: '앞범퍼', at: 3.5 }, { part: '', partNo: '' }],
@@ -408,6 +457,8 @@ test('PATCH: 값 정리 · 수량 0~999 · 30줄 · 고친 칸 표시 · 번호 
   r = await req('PATCH', '/api/cards/p1', { items: [{ part: '쇼바', qty: 1000 }] });
   assert.equal(r.status, 400);
   assert.equal(r.data.error, 'bad_qty');
+  assert.equal((await req('PATCH', '/api/cards/p1', { items: [{ part: '쇼바', qty: 0 }] })).data.error, 'bad_qty');
+  assert.equal((await req('PATCH', '/api/cards/p1', { items: [{ part: '쇼바', qty: 1, partNo: '가짜' }] })).data.error, 'bad_part_no');
   r = await req('PATCH', '/api/cards/p1', { items: [{ part: '쇼바', qty: 1.5 }] });
   assert.equal(r.status, 400);
   r = await req('PATCH', '/api/cards/p1', { items: Array.from({ length: 31 }, (_, i) => ({ part: `부품${i}`, qty: 1 })) });
@@ -426,6 +477,71 @@ test('PATCH: 값 정리 · 수량 0~999 · 30줄 · 고친 칸 표시 · 번호 
   r = await req('PATCH', '/api/cards/p1', { note: '<script>alert(1)</script>' });
   assert.equal(r.data.card.note, '<script>alert(1)</script>'); // 저장은 그대로, 그릴 때 화면이 이스케이프
   assert.equal(getCardRow('p1').edits, before + 1);
+});
+
+test('카드 입력 길이와 네 자리 연식을 검증하고 기존 값은 유지한다', async () => {
+  const id = 'field-bounds';
+  const url = '/api/cards/' + id;
+  insertCall(id, { segs: SEGS4 });
+  const initial = cards.saveCard(id, cards.buildCardFromAi(getCallRow(id), AI4));
+  const item = initial.items[0];
+  const limit = { customer: 50, contact: 30, carModel: 30, note: 500 };
+  for (const [field, max] of Object.entries(limit)) {
+    const value = '가'.repeat(max + 1);
+    const response = await req('PATCH', url, { [field]: value });
+    assert.equal(response.status, 400, field);
+    assert.equal(response.data.error, 'text_too_long', field);
+    assert.ok(confirmationIssues({ ...initial, [field]: value }).some((issue) => issue.code === 'text_too_long' && issue.field === field));
+  }
+  const invalidPart = { ...item, part: '가'.repeat(51) };
+  assert.equal((await req('PATCH', url, { items: [invalidPart] })).data.error, 'text_too_long');
+  for (const invalidYear of ['123', '2017년', '20170', '20ㄱ7']) {
+    const response = await req('PATCH', url, { modelYear: invalidYear });
+    assert.equal(response.status, 400);
+    assert.equal(response.data.error, 'bad_year');
+  }
+  assert.equal(cardView(getCardRow(id)).revision, initial.revision);
+  const valid = await req('PATCH', url, {
+    ...Object.fromEntries(Object.entries(limit).map(([field, max]) => [field, '가'.repeat(max)])),
+    modelYear: 2017,
+    items: [{ ...item, part: '가'.repeat(50) }],
+  });
+  assert.equal(valid.status, 200);
+  assert.equal(valid.data.card.modelYear, '2017');
+  assert.equal(valid.data.card.items[0].part.length, 50);
+  assert.deepEqual(confirmationIssues(valid.data.card), []);
+
+  db().prepare('UPDATE cards SET customer = ?, items = ? WHERE call_id = ?')
+    .run('가'.repeat(55), JSON.stringify([invalidPart]), id);
+  const update = await req('PATCH', url, { items: [{ ...invalidPart, qty: 3 }], modelYear: null });
+  assert.equal(update.status, 200);
+  assert.equal(update.data.card.customer.length, 55);
+  assert.equal(update.data.card.items[0].part.length, 51);
+  assert.equal(update.data.card.items[0].qty, 3);
+  assert.equal(update.data.card.modelYear, null);
+});
+
+test('동시 수정: 버전 충돌은 다른 값 덮어쓰기를 막고 같은 요청의 재시도는 한 번만 저장한다', async () => {
+  const original = cardView(getCardRow('p1'));
+  const changed = await req('PATCH', '/api/cards/p1', { expectedRevision: original.revision, note: '먼저 저장한 변경' });
+  assert.equal(changed.status, 200);
+  const retry = await req('PATCH', '/api/cards/p1', { expectedRevision: original.revision, note: '먼저 저장한 변경' });
+  assert.equal(retry.data.card.revision, changed.data.card.revision);
+  const stale = await req('PATCH', '/api/cards/p1', { expectedRevision: original.revision, note: '나중에 저장한 변경' });
+  assert.equal(stale.status, 409);
+  assert.equal(stale.data.error, 'card_conflict');
+  assert.equal(getCardRow('p1').note, '먼저 저장한 변경');
+});
+
+test('품목 삭제 후 재확인 대상은 원래 품목을 따라간다', () => {
+  insertCall('review-move', { segs: SEGS2 });
+  const card = cards.saveCard('review-move', cards.buildCardFromAi(getCallRow('review-move'), AI2));
+  const warning = card.unsure.find((entry) => entry.field === 'qty');
+  const moved = cards.updateCardFields('review-move', { items: [card.items[1]] });
+  assert.deepEqual(moved.unsure.map((entry) => entry.id), [
+    card.unsure.find((entry) => entry.field === 'carModel').id, warning.id,
+  ]);
+  assert.equal(moved.unsure.find((entry) => entry.id === warning.id).item, 0);
 });
 
 test('다시 전화 표시 켜기 · 끄기', async () => {
@@ -478,7 +594,7 @@ test('다시 정리: AI 를 기다리는 동안 확정 · 출고되면 409 locke
     await assert.rejects(pipeline.reextract('rx1'), (e) => {
       assert.equal(e.status, 409);
       assert.equal(e.code, 'locked');
-      assert.match(e.publicMessage, /다시 정리하는 동안 카드가 확정\(또는 출고\)됐습니다/);
+      assert.match(e.publicMessage, /다시 정리하는 동안 카드 상태가 바뀌었습니다/);
       return true;
     });
     const row = getCardRow('rx1');
@@ -563,7 +679,7 @@ test('POST /api/live/save: 새 통화(source=live, 오디오 없음) + 카드 �
   ai.setClientForTest(null);
   r = await req('POST', '/api/live/save', { text: '아반떼 앞범퍼 두 개 급해요' });
   assert.equal(r.status, 200);
-  assert.equal(r.data.call.card.aiError, 'AI 키 없음');
+  assert.equal(r.data.call.card.aiError, '자동 정리가 꺼져 있습니다.');
   assert.equal(r.data.call.status, 'ready');
   assert.ok(r.data.call.title.startsWith('실시간 체험'));
   assert.equal(r.data.call.durationSec, null); // 길이를 안 보내면 비움

@@ -1,26 +1,30 @@
 // 받아쓴 글 → 카드 추출 → 저장. 일꾼 결과(onTranscript) · 다시 정리(reextract) · 실시간 저장(processLive) 공통.
-import { db, newId, nowIso } from './db.mjs';
-import { config } from './config.mjs';
+import { db, newId, nowIso, parseJson, tx } from './db.mjs';
 import { HttpError, cleanText } from './http.mjs';
-import { takeDaily, ipHash } from './security.mjs';
+import { ipHash } from './security.mjs';
 import { getCallRow, getCardRow, cardView, makeTitle, dictionaryForAi } from './repo.mjs';
-import { aiEnabled, extractCard, AiError, aiHttpError } from './ai.mjs';
+import { aiEnabled, extractCard, AiError, aiHttpError, takeAiDaily } from './ai.mjs';
 import { buildCardFromAi, emptyCardValues, saveCard, normalizeSegments } from './cards.mjs';
 
-const NO_KEY = 'AI 키 없음';
+import { domainFor, extractionDomain } from '../public/js/domain.js';
+import { recordAudit } from './auth.mjs';
+
+const AI_DISABLED = '자동 정리가 꺼져 있습니다.';
 
 function setStatus(callId, status, error = null) {
   db().prepare('UPDATE calls SET status = ?, error = ? WHERE id = ?').run(status, error, callId);
 }
 
 function aiInput(call) {
-  const dict = dictionaryForAi();
+  const version = domainFor(getCardRow(call?.id)?.domain_version || process.env.AHMATDA_DOMAIN).id;
+  const dict = dictionaryForAi(version);
   return {
     transcript: call.transcript || '',
     segments: normalizeSegments(call.segments),
     glossary: dict.glossary,
     customers: dict.customers.map((c) => c.name),
     carModels: dict.carModels,
+    domain: extractionDomain(version),
   };
 }
 
@@ -43,9 +47,9 @@ async function extractAndSave(callId, { countDaily = true, keepStatus = false } 
     if (!String(call.transcript || '').trim()) {
       values = emptyCardValues(call, '받아쓴 글이 비어 있습니다');
     } else if (!aiEnabled()) {
-      values = emptyCardValues(call, NO_KEY);
+      values = emptyCardValues(call, AI_DISABLED);
     } else {
-      if (countDaily) takeDaily('ai', config.dailyAiLimit);
+      if (countDaily) takeAiDaily();
       const out = await extractCard(aiInput(call));
       values = buildCardFromAi(getCallRow(callId) || call, out);
     }
@@ -103,9 +107,7 @@ export async function reextract(callId, { beforeAi } = {}) {
   }
   if (!String(call.transcript || '').trim()) throw new HttpError(409, 'no_transcript', '받아쓴 글이 없어 정리할 수 없습니다.');
   const card = getCardRow(callId);
-  if (card && (card.status === 'confirmed' || card.status === 'shipped')) {
-    throw new HttpError(409, 'locked', '확정(또는 출고)된 카드는 다시 정리할 수 없습니다. 먼저 「다시 열기」를 눌러 주세요.');
-  }
+  if (card && card.status !== 'draft') throw new HttpError(409, 'locked', '확인 필요 상태의 카드만 다시 정리할 수 있습니다.');
   if (!aiEnabled()) throw aiHttpError(new AiError('no_key'));
   if (beforeAi) beforeAi();
   let out;
@@ -114,26 +116,37 @@ export async function reextract(callId, { beforeAi } = {}) {
   } catch (e) {
     throw aiHttpError(e);
   }
-  const fresh = getCallRow(callId);
-  if (!fresh) throw new HttpError(404, 'not_found', '통화를 찾지 못했습니다.');
-  // AI 를 기다리는 동안(10~30초) 다른 단추 · 탭에서 확정 · 출고했으면 저장하지 않는다(확정 · 출고 기록을 지우지 않게)
-  const prevRow = getCardRow(callId);
-  if (prevRow && (prevRow.status === 'confirmed' || prevRow.status === 'shipped')) {
-    throw new HttpError(409, 'locked', '다시 정리하는 동안 카드가 확정(또는 출고)됐습니다. 다시 정리는 반영하지 않았습니다.');
-  }
-  const values = buildCardFromAi(fresh, out);
-  // 사람이 고친 칸은 다시 정리해도 덮어쓰지 않는다(빈칸 · AI 초안 칸만 새 값). AI 초안(ai_draft)은 새 값으로.
-  if (prevRow) {
-    const prev = cardView(prevRow);
-    const COL = { callType: 'call_type', customer: 'customer', contact: 'contact', carModel: 'car_model', modelYear: 'model_year', plate: 'plate', items: 'items', urgent: 'urgent', due: 'due', delivery: 'delivery', askBack: 'ask_back', note: 'note' };
-    for (const f of prev.edited || []) {
-      if (COL[f]) values[COL[f]] = prev[f];
+  return tx(() => {
+    const fresh = getCallRow(callId);
+    if (!fresh) throw new HttpError(404, 'not_found', '통화를 찾지 못했습니다.');
+    const prevRow = getCardRow(callId);
+    if (prevRow && prevRow.status !== 'draft') {
+      throw new HttpError(409, 'locked', '다시 정리하는 동안 카드 상태가 바뀌었습니다.');
     }
-    if ((prev.edited || []).includes('customer')) values.customer_by_phone = prev.customerByPhone;
-  }
-  saveCard(callId, values, { keepStatus: false });
-  setStatus(callId, 'ready');
-  return cardView(getCardRow(callId));
+    const values = buildCardFromAi(fresh, out);
+    const prev = cardView(prevRow);
+    if (prev) {
+      const cols = {
+        callType: 'call_type', customer: 'customer', contact: 'contact', carModel: 'car_model',
+        modelYear: 'model_year', plate: 'plate', items: 'items', urgent: 'urgent', due: 'due',
+        delivery: 'delivery', askBack: 'ask_back', note: 'note',
+      };
+      const preserved = new Set([...prev.edited, ...Object.keys(prev.fieldReviews).map((key) => key.startsWith('item:') ? 'items' : key)]);
+      for (const field of preserved) {
+        if (cols[field]) values[cols[field]] = prev[field];
+        if (prev.evidence[field]) values.evidence[field] = prev.evidence[field];
+      }
+      const preservedWarning = (warning) => preserved.has(Number.isInteger(warning.item) ? 'items' : warning.field || 'other');
+      values.unsure = values.unsure.filter((warning) => !preservedWarning(warning))
+        .concat(parseJson(prevRow.unsure, []).filter((warning) => warning && preservedWarning(warning)));
+      if (preserved.has('customer')) values.customer_by_phone = prev.customerByPhone;
+      values.field_reviews = prev.fieldReviews;
+    }
+    const after = saveCard(callId, values);
+    setStatus(callId, 'ready');
+    recordAudit({ entity: 'card', entityId: callId, action: 'reextract', before: prev, after });
+    return after;
+  });
 }
 
 /**

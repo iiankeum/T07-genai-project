@@ -1,4 +1,8 @@
 // 서버 API 부르기. 실패하면 ApiError(한국어 message) 를 던진다.
+// 세션 쿠키는 탭 사이에 공유되지만 열린 화면의 작업공간은 페이지를 다시 열 때까지 고정한다.
+let viewWorkspace = null;
+const workspaceChanged = () => window.dispatchEvent(new CustomEvent('ahmatda:workspace-changed'));
+const productRequest = (path) => path.startsWith('/api/') && path !== '/api/meta' && !path.startsWith('/api/auth/') && !path.startsWith('/api/admin/');
 
 export class ApiError extends Error {
   constructor(status, code, message) {
@@ -15,6 +19,7 @@ async function request(method, path, { query, body, signal } = {}) {
     if (qs) url += (url.includes('?') ? '&' : '?') + qs;
   }
   const opts = { method, headers: { Accept: 'application/json' }, credentials: 'same-origin', signal };
+  if (viewWorkspace && productRequest(path)) opts.headers['X-Ahmatda-Workspace'] = viewWorkspace;
   if (body !== undefined) {
     opts.headers['Content-Type'] = 'application/json';
     opts.body = JSON.stringify(body);
@@ -31,13 +36,24 @@ async function request(method, path, { query, body, signal } = {}) {
   const data = type.includes('application/json') ? await res.json().catch(() => null) : await res.text();
   if (!res.ok) {
     const code = data?.error || 'http_' + res.status;
+    if (code === 'workspace_changed') workspaceChanged();
     const msg = data?.message || (res.status === 429 ? '잠시 뒤에 다시 해 주세요.' : res.status >= 500 ? '서버에서 문제가 생겼습니다. 잠시 뒤 다시 해 주세요.' : '요청을 처리하지 못했습니다.');
+    if (res.status === 401 && !path.startsWith('/api/auth/')) {
+      window.dispatchEvent(new CustomEvent('ahmatda:session-expired', { detail: { returnTo: location.hash.slice(1) || '/today' } }));
+    }
     throw new ApiError(res.status, code, msg);
   }
   return data;
 }
 
 export const api = {
+  /** audio·다운로드 링크는 헤더를 넣을 수 없어 같은 작업공간 기대값을 URL에 넣는다. */
+  url(path) {
+    const url = new URL(path, location.origin);
+    if (url.origin !== location.origin || !productRequest(url.pathname)) return path;
+    if (viewWorkspace) url.searchParams.set('workspace', viewWorkspace);
+    return url.pathname + url.search + url.hash;
+  },
   get: (path, query, opts) => request('GET', path, { query, ...opts }),
   post: (path, body, opts) => request('POST', path, { body: body ?? {}, ...opts }),
   patch: (path, body, opts) => request('PATCH', path, { body: body ?? {}, ...opts }),
@@ -47,14 +63,21 @@ export const api = {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open('POST', path);
+      xhr.timeout = 120_000;
       xhr.setRequestHeader('Accept', 'application/json');
+      if (viewWorkspace && productRequest(path)) xhr.setRequestHeader('X-Ahmatda-Workspace', viewWorkspace);
       xhr.upload.onprogress = (e) => { if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total); };
       xhr.onerror = () => reject(new ApiError(0, 'network', '인터넷 연결을 확인해 주세요.'));
+      xhr.ontimeout = () => reject(new ApiError(0, 'timeout', '전송이 지연되고 있습니다. 연결을 확인한 뒤 다시 시도해 주세요.'));
       xhr.onload = () => {
         let data = null;
         try { data = JSON.parse(xhr.responseText); } catch { data = null; }
         if (xhr.status >= 200 && xhr.status < 300) resolve(data);
-        else reject(new ApiError(xhr.status, data?.error || 'http_' + xhr.status, data?.message || '올리지 못했습니다.'));
+        else {
+          if (data?.error === 'workspace_changed') workspaceChanged();
+          if (xhr.status === 401) window.dispatchEvent(new CustomEvent('ahmatda:session-expired', { detail: { returnTo: location.hash.slice(1) || '/upload' } }));
+          reject(new ApiError(xhr.status, data?.error || 'http_' + xhr.status, data?.message || '올리지 못했습니다.'));
+        }
       };
       xhr.send(formData);
     });
@@ -67,7 +90,14 @@ let metaAt = 0;
 export async function getMeta(force = false) {
   if (!force && metaCache && Date.now() - metaAt < 15_000) return metaCache;
   try {
-    metaCache = await api.get('/api/meta');
+    const incoming = await api.get('/api/meta');
+    const incomingWorkspace = incoming.access?.workspace?.id;
+    if (viewWorkspace && incomingWorkspace && incomingWorkspace !== viewWorkspace) {
+      workspaceChanged();
+      return metaCache;
+    }
+    if (!viewWorkspace && incomingWorkspace) viewWorkspace = incomingWorkspace;
+    metaCache = incoming;
     metaAt = Date.now();
   } catch {
     metaCache = metaCache || { aiEnabled: false, worker: { online: false, queue: { waiting: 0, working: 0 } } };

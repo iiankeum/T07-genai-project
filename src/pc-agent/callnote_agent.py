@@ -613,7 +613,7 @@ def cmd_check(cfg: Config) -> int:
     api = Api(cfg.server_url)
     for path in ("/healthz", "/api/worker/status"):
         try:
-            r = api.request("GET", path)
+            r = api.request("GET", path, token=cfg.worker_token if path == "/api/worker/status" else None)
             print(f"GET {path} → {r.status} {r.body[:160].decode('utf-8', 'replace')}")
         except Exception as e:  # noqa: BLE001
             print(f"GET {path} → 연결 실패({type(e).__name__})")

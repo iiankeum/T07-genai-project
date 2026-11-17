@@ -2,11 +2,12 @@
 import { statSync, createReadStream, rmSync, existsSync } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import path from 'node:path';
-import { config } from '../lib/config.mjs';
-import { db, tx, parseJson } from '../lib/db.mjs';
+import { dataDir, db, tx, parseJson } from '../lib/db.mjs';
 import { HttpError, cleanText } from '../lib/http.mjs';
 import { requireAdmin, kstDay } from '../lib/security.mjs';
-import { callView, getCallRow, maskPhone } from '../lib/repo.mjs';
+import { CALL_TYPES, callView, getCallRow, maskPhone } from '../lib/repo.mjs';
+import { purgeCallReferences } from '../lib/call-retention.mjs';
+import { recordAudit, requestAccess, requireRole } from '../lib/auth.mjs';
 
 // ── 함께 쓰는 도구(insights.mjs 도 쓴다) ─────────────────────────────
 
@@ -150,14 +151,35 @@ export function listCalls(query = {}) {
   const customer = cleanText(query.customer, 100);
   if (customer) { where.push(`${EFF_CUSTOMER} = ?`); args.push(customer); }
 
-  const limit = intParam(query.limit, 50, 1, 200);
+  const callType = cleanText(query.callType, 30);
+  if (callType) {
+    if (!CALL_TYPES.includes(callType)) throw new HttpError(400, 'bad_call_type', '통화 종류가 올바르지 않습니다.');
+    where.push('k.call_type = ?');
+    args.push(callType);
+  }
+  if (query.callback !== undefined && query.callback !== '') {
+    const flag = String(query.callback);
+    if (!['true', 'false', '1', '0'].includes(flag)) throw new HttpError(400, 'bad_callback', '재연락 조건이 올바르지 않습니다.');
+    where.push('COALESCE(k.callback, 0) = ?');
+    args.push(flag === 'true' || flag === '1' ? 1 : 0);
+  }
+
+  const orders = {
+    board: status === 'shipped' ? 'COALESCE(k.shipped_at, k.updated_at) DESC, ' : 'k.urgent DESC, ',
+    due: "NULLIF(TRIM(k.due), '') IS NULL, k.due, ",
+    customer: EFF_CUSTOMER + ' IS NULL, ' + EFF_CUSTOMER + ', ',
+  };
+  const sort = cleanText(query.sort, 20);
+  if (sort && !Object.hasOwn(orders, sort)) throw new HttpError(400, 'bad_sort', '정렬 기준이 올바르지 않습니다.');
+  const orderBy = (sort ? orders[sort] : '') + 'c.recorded_at DESC, c.id DESC';
+  const limit = intParam(query.limit, 30, 1, 200);
   const offset = intParam(query.offset, 0, 0, 1_000_000);
   const whereSql = where.length ? 'WHERE ' + where.join(' AND ') : '';
   const from = 'FROM calls c LEFT JOIN cards k ON k.call_id = c.id';
 
   const d = db();
   const total = d.prepare(`SELECT COUNT(*) AS n ${from} ${whereSql}`).get(...args).n;
-  const rows = d.prepare(`SELECT c.* ${from} ${whereSql} ORDER BY c.recorded_at DESC, c.id DESC LIMIT ? OFFSET ?`).all(...args, limit, offset);
+  const rows = d.prepare(`SELECT c.* ${from} ${whereSql} ORDER BY ${orderBy} LIMIT ? OFFSET ?`).all(...args, limit, offset);
   const calls = rows.map((row) => {
     const view = callView(row);
     if (terms.length) view.matches = findMatches(parseJson(row.segments, []), row.transcript, terms);
@@ -177,7 +199,7 @@ function audioModule() {
   return audioModPromise;
 }
 
-const audioDir = () => path.resolve(config.dataDir, 'audio');
+const audioDir = () => path.resolve(dataDir(), 'audio');
 function isInside(dir, file) {
   const rel = path.relative(dir, file);
   return Boolean(rel) && !rel.startsWith('..') && !path.isAbsolute(rel);
@@ -185,7 +207,7 @@ function isInside(dir, file) {
 
 /** calls.audio_file(DATA_DIR 기준 상대 경로) → 절대 경로. DATA_DIR/audio 밖이면 400. */
 export async function resolveAudioFile(rel) {
-  const own = path.resolve(config.dataDir, String(rel));
+  const own = path.resolve(dataDir(), String(rel));
   if (!isInside(audioDir(), own)) throw new HttpError(400, 'bad_audio_path', '녹음 파일 위치가 올바르지 않습니다.');
   const mod = await audioModule();
   if (typeof mod?.audioPath === 'function') {
@@ -228,10 +250,10 @@ async function sendAudio({ req, res, params, query }) {
   if (!st || !st.isFile()) throw new HttpError(404, 'no_audio', '녹음 파일을 찾지 못했습니다.');
 
   const size = st.size;
-  const headers = { 'Content-Type': 'audio/wav', 'Accept-Ranges': 'bytes', 'Cache-Control': 'private, max-age=300' };
+  const headers = { 'Content-Type': 'audio/wav', 'Accept-Ranges': 'bytes', 'Cache-Control': 'no-store' };
   if (query.download === '1') {
     const safeId = String(row.id).replace(/[^A-Za-z0-9_-]/g, '');
-    headers['Content-Disposition'] = `attachment; filename="callnote-fake-${safeId}.wav"`;
+    headers['Content-Disposition'] = `attachment; filename="ahmatda-${row.is_fake ? 'fake-' : ''}${safeId}.wav"`;
   }
   const range = parseRange(req.headers.range, size);
   if (range === 'unsatisfiable') {
@@ -327,13 +349,13 @@ export function deleteCall(id) {
   const row = getCallRow(id);
   if (!row) throw new HttpError(404, 'not_found', '통화를 찾지 못했습니다.');
   tx((d) => {
-    d.prepare('DELETE FROM jobs WHERE call_id = ?').run(id);
-    d.prepare('DELETE FROM cards WHERE call_id = ?').run(id);
+    purgeCallReferences(d, [id]);
     d.prepare('DELETE FROM calls WHERE id = ?').run(id);
+    recordAudit({ entity: 'call', entityId: id, action: 'delete' });
   });
   let audioDeleted = false;
-  if (row.audio_file) {
-    const f = path.resolve(config.dataDir, String(row.audio_file));
+  if (row.audio_file && !db().prepare('SELECT 1 FROM calls WHERE audio_file = ? LIMIT 1').get(row.audio_file)) {
+    const f = path.resolve(dataDir(), String(row.audio_file));
     if (isInside(audioDir(), f)) {
       try { if (existsSync(f)) { rmSync(f, { force: true }); audioDeleted = true; } } catch { /* 파일은 남아도 DB 는 지워졌다 */ }
     }
@@ -357,7 +379,8 @@ export function register(router) {
   // routes/admin.mjs 도 같은 주소를 단다. 먼저 달린 것이 있으면 겹치지 않게 건너뛴다(주인 정하기는 총괄에게 요청).
   if (!router.match('DELETE', '/api/calls/x')?.route) {
     router.delete('/api/calls/:id', ({ req, params }) => {
-      requireAdmin(req);
+      if (requestAccess().demo) requireAdmin(req);
+      else requireRole('admin');
       return deleteCall(params.id);
     });
   }
