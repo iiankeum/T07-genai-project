@@ -28,6 +28,13 @@ const DONE_MSG = {
   cancel: '주문 카드를 취소했습니다.',
 };
 const askText = (q) => (typeof q === 'string' ? q : q?.text ?? q?.question ?? JSON.stringify(q));
+const ICONS = {
+  evidence: html`<path d="M10 13a4 4 0 0 0 6 0l3-3a4 4 0 1 0-6-6l-1.5 1.5m2.5 5.5a4 4 0 0 0-6 0l-3 3a4 4 0 1 0 6 6l1.5-1.5"/>`,
+  play: html`<path d="m9 5 11 7-11 7Z"/>`,
+  warning: html`<path d="M12 4 3 20h18L12 4Zm0 6v4m0 3h.01"/>`,
+  phone: html`<path d="M8 3H4a1 1 0 0 0-1 1 17 17 0 0 0 17 17 1 1 0 0 0 1-1v-4l-5-2-2 2a12 12 0 0 1-6-6l2-2-2-5Z"/>`,
+};
+const icon = (name) => html`<svg class="cd-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${ICONS[name]}</svg>`;
 
 /**
  * 주문 카드를 그리고 사용자 동작을 처리한다.
@@ -87,8 +94,8 @@ export function mountCard(el, o) {
   // 확정 · 출고된 카드는 사람이 확인을 마친 것이라 「AI 초안」 대신 「사람이 확인」으로 바꿔 보인다(기획서 공통 기준)
   const humanChecked = () => card && (card.status === 'confirmed' || card.status === 'shipped');
   const aiChip = (checked = false) => (checked || humanChecked()
-    ? html`<span class="chip chip-confirmed">사람이 확인</span>`
-    : html`<span class="chip chip-ai">AI 초안</span>`);
+    ? html`<span class="chip chip-confirmed cd-provenance" title="사람이 확인">사람이 확인</span>`
+    : html`<span class="chip chip-ai cd-provenance" title="AI 초안"><span class="sr-only">AI 초안</span></span>`);
   const editedChip = () => html`<span class="chip chip-edited">사람이 고침</span>`;
   function chipFor(key) {
     if (!card) return '';
@@ -114,7 +121,7 @@ export function mountCard(el, o) {
     if (!r || (r.at === null && r.segIndex < 0)) return '';
     const t = r.at !== null ? fmtSec(r.at) : '';
     const what = o.hasAudio ? `${label} 근거 대목${t ? ` ${t}부터` : ''} 듣기` : `${label} 근거 문장 보기`;
-    return html`<button type="button" class="btn cd-evbtn ev-play" aria-label="${what}" title="${what}">${o.hasAudio ? '▶' : '근거'}${t ? html` <span class="cd-evtime">${t}</span>` : ''}</button>`;
+    return html`<button type="button" class="btn cd-evbtn ev-play" aria-label="${what}" title="${what}">${icon(o.hasAudio ? 'play' : 'evidence')}${t ? html`<span class="cd-evtime">${t}</span>` : ''}</button>`;
   }
 
   function quoteBox(r) {
@@ -122,14 +129,14 @@ export function mountCard(el, o) {
     return html`<div class="cd-quote">
       <span class="cd-quote-label">근거</span>
       <q class="cd-quote-text">${r.quote}</q>${r.at !== null ? html` <span class="cd-quote-time">${fmtSec(r.at)}</span>` : ''}
-      <button type="button" class="btn btn-ghost cd-to-trans" data-act="to-trans">통화 글에서 보기</button>
+      <button type="button" class="btn btn-ghost cd-to-trans" data-act="to-trans">대화에서 보기</button>
     </div>`;
   }
 
   function flagsView(list) {
     if (!list || !list.length) return '';
     return html`<div class="cd-flags">${list.map(({ u }) => html`<div class="cd-flag-row">
-      <button type="button" class="listen-flag cd-flag" data-flag="${u.id}" aria-label="받아쓰기가 틀렸을 수 있는 곳 들어 보기">⚠ 들어 보기${num(u.at) !== null ? ` ${fmtSec(u.at)}` : ''}</button>
+      <button type="button" class="listen-flag cd-flag" data-flag="${u.id}" aria-label="받아쓰기가 틀렸을 수 있는 곳 ${o.hasAudio ? '들어 보기' : '근거 보기'}">${icon('warning')} ${o.hasAudio ? '들어 보기' : '근거 보기'}${num(u.at) !== null ? ` ${fmtSec(u.at)}` : ''}</button>
       <span class="cd-flag-why">${u.reason || '받아쓰기가 틀렸을 수 있습니다. 녹음으로 확인해 주세요.'}</span>
       ${editable() && u.id ? html`<button type="button" class="btn cd-reviewed" data-review="${u.id}">확인 완료</button>` : ''}
     </div>`)}</div>`;
@@ -227,11 +234,12 @@ export function mountCard(el, o) {
 
   function itemsSection(groups) {
     return html`<section class="cd-sec cd-items" aria-labelledby="cd-items-h">
-      <div class="cd-sec-top"><h3 id="cd-items-h">부품</h3><span data-chip="items">${chipFor('items')}</span><span class="cd-saved" data-saved="items" aria-live="polite"></span></div>
+      <div class="cd-sec-top">
+        <h3 id="cd-items-h">부품</h3><span data-chip="items">${chipFor('items')}</span><span class="cd-saved" data-saved="items" aria-live="polite"></span>
+        ${editable() ? html`<button type="button" class="btn btn-sm cd-add" data-act="item-add">부품 추가</button>` : ''}
+      </div>
       ${flagsView(groups.get('items'))}
       <ol class="cd-item-list" data-slot="items">${itemsList(groups)}</ol>
-      ${editable() ? html`<button type="button" class="btn btn-block cd-add" data-act="item-add">+ 부품 줄 추가</button>` : ''}
-      <p class="help">품번은 통화에서 불러 준 것만 AI 가 적습니다. 비어 있으면 담당자가 넣어 주세요.</p>
     </section>`;
   }
 
@@ -259,38 +267,41 @@ export function mountCard(el, o) {
     const list = card.askBack || [];
     const ed = editable();
     return html`<div class="cd-sec-top"><h3 id="cd-ask-h">다시 물어볼 것</h3><span data-chip="askBack">${chipFor('askBack')}</span><span class="cd-saved" data-saved="askBack" aria-live="polite"></span></div>
-      <p class="help">통화에서 묻고 답이 정해지지 않은 것입니다. 거래처에 확인했으면 「해결함」을 누르세요.</p>
       ${list.length
     ? html`<ul class="cd-ask-list">${list.map((q, i) => html`<li><span class="cd-ask-text">${askText(q)}</span>${ed ? html`<button type="button" class="btn cd-ask-done" data-resolve="${i}">해결함</button>` : ''}</li>`)}</ul>`
     : html`<p class="cd-ask-none">남은 것이 없습니다.</p>`}
       ${ed ? html`<div class="cd-ask-add"><label class="sr-only" for="cd-ask-new">새로 물어볼 것</label><input id="cd-ask-new" class="input" placeholder="새로 물어볼 것 (예: LED 인지 일반인지)" autocomplete="off"><button type="button" class="btn" data-act="ask-add">추가</button></div>` : ''}`;
   }
 
-  function actionsView() {
+  function actionsView(issuesOpen = false) {
     const s = card.status;
     if (s === 'draft' && canEdit) {
       const issues = confirmationIssues(localCard());
       const why = issues.length
-        ? html`<ul class="notice notice-warn cd-why" id="cd-confirm-why">${issues.map((issue) => html`<li>${issue.message}</li>`)}</ul>`
-        : html`<p class="cd-why-ok">${nothingToShip() ? '확정하면 처리한 통화로 표시됩니다.' : '확정한 주문은 출고 대기에 표시됩니다.'}</p>`;
-      return html`${why}
-        <button type="button" class="btn btn-ok btn-lg btn-block" data-act="confirm" ${issues.length || busy ? html`disabled aria-describedby="cd-confirm-why"` : ''}>확인하고 확정</button>
-        <button type="button" class="btn btn-block" data-act="cancel">카드 취소</button>`;
+        ? html`<details class="cd-confirm-issues" ${issuesOpen ? html`open` : ''}>
+          <summary id="cd-confirm-why">확정 전 확인 ${issues.length}건</summary>
+          <ul class="cd-why">${issues.map((issue) => html`<li>${issue.message}</li>`)}</ul>
+        </details>`
+        : html`<p class="cd-action-state">${nothingToShip() ? '확정하면 처리가 완료됩니다.' : '확정하면 출고 대기로 이동합니다.'}</p>`;
+      return html`${why}<div class="cd-action-buttons">
+        <button type="button" class="btn btn-ghost btn-sm" data-act="cancel">카드 취소</button>
+        <button type="button" class="btn btn-primary cd-primary" data-act="confirm" ${issues.length || busy ? html`disabled` : ''} ${issues.length ? html`aria-describedby="cd-confirm-why"` : ''}>확인하고 확정</button>
+      </div>`;
     }
     if (s === 'confirmed') {
-      return html`<p class="notice notice-ok">확정됨${card.confirmedAt ? ' · ' + fmtWhen(card.confirmedAt) : ''} · ${nothingToShip() ? '통화 처리 완료' : '출고 대기'}</p>
-        <div class="cd-act-row">
-          ${canShip && !nothingToShip() ? html`<button type="button" class="btn btn-primary btn-lg" data-act="ship">${shipWord()}</button>` : ''}
-          ${canEdit ? html`<button type="button" class="btn btn-lg" data-act="reopen">확정 취소 및 수정</button>` : ''}
-          ${canEdit ? html`<button type="button" class="btn" data-act="cancel">카드 취소</button>` : ''}
+      return html`<p class="cd-action-state">${nothingToShip() ? '통화 처리 완료' : '출고 대기'}${card.confirmedAt ? ' · 확정 ' + fmtWhen(card.confirmedAt) : ''}</p>
+        <div class="cd-action-buttons">
+          ${canEdit ? html`<button type="button" class="btn btn-ghost btn-sm" data-act="cancel">카드 취소</button>` : ''}
+          ${canEdit ? html`<button type="button" class="btn btn-sm" data-act="reopen">확정 취소 및 수정</button>` : ''}
+          ${canShip && !nothingToShip() ? html`<button type="button" class="btn btn-primary cd-primary" data-act="ship">${shipWord()}</button>` : ''}
         </div>`;
     }
     if (s === 'shipped') {
-      return html`<p class="notice notice-ok">${shipWord()}${card.shippedAt ? ' · ' + fmtWhen(card.shippedAt) : ''}</p>
-        ${canShip ? html`<button type="button" class="btn btn-lg btn-block" data-act="unship">출고 되돌리기</button>` : ''}`;
+      return html`<p class="cd-action-state">${shipWord()}${card.shippedAt ? ' · ' + fmtWhen(card.shippedAt) : ''}</p>
+        ${canShip ? html`<div class="cd-action-buttons"><button type="button" class="btn btn-sm" data-act="unship">출고 되돌리기</button></div>` : ''}`;
     }
     if (s === 'cancelled') {
-      return html`<p class="notice">취소된 카드입니다.</p>${canEdit ? html`<button type="button" class="btn btn-lg btn-block" data-act="reopen">취소 되돌리기</button>` : ''}`;
+      return html`<p class="cd-action-state">취소된 카드</p>${canEdit ? html`<div class="cd-action-buttons"><button type="button" class="btn btn-sm" data-act="reopen">취소 되돌리기</button></div>` : ''}`;
     }
     return '';
   }
@@ -306,7 +317,7 @@ export function mountCard(el, o) {
       return html`<label class="field"><span>왜 다시 전화하나요?</span><input id="cd-cb-reason" class="input" value="${first ? askText(first) : ''}" placeholder="예: 품번 확인" autocomplete="off"></label>
         <div class="cd-act-row"><button type="button" class="btn btn-primary" data-act="cb-on">넣기</button><button type="button" class="btn" data-act="cb-cancel">그만두기</button></div>`;
     }
-    return html`<button type="button" class="btn btn-block" data-act="cb-open">☎ 다시 전화할 곳에 넣기</button>`;
+    return html`<button type="button" class="btn btn-sm" data-act="cb-open">${icon('phone')} 다시 전화할 곳에 넣기</button>`;
   }
 
   function reexView() {
@@ -314,12 +325,14 @@ export function mountCard(el, o) {
     const locked = card && card.status !== 'draft';
     const ai = o.meta?.aiEnabled !== false;
     const hasText = Boolean(call.transcript || (call.segments || []).length);
-    return html`<h3>AI 로 다시 정리</h3>
-      <p class="help">낱말 사전(현장 말 · 거래처 · 차종)을 고친 뒤 누르면, 고친 낱말을 반영해 카드를 새로 만듭니다. 손으로 고친(「사람이 고침」) 칸은 그대로 두고, 빈칸과 AI 초안 칸만 새로 채웁니다. <a href="#/glossary">낱말 사전 열기</a></p>
-      ${locked ? html`<p class="notice notice-warn">${card.statusLabel || '확정'} 상태의 카드는 먼저 위의 「${({ confirmed: '확정 취소 및 수정', shipped: '출고 되돌리기', cancelled: '취소 되돌리기' })[card.status] || '되돌리기'}」로 확인 필요 상태로 돌린 뒤 다시 정리할 수 있습니다.</p>` : ''}
-      ${!ai ? html`<p class="notice notice-warn">지금은 AI로 다시 정리할 수 없습니다.</p>` : ''}
-      ${!hasText ? html`<p class="notice">받아쓴 글이 없어 다시 정리할 수 없습니다.</p>` : ''}
-      <button type="button" class="btn btn-block" data-act="reextract" ${locked || !ai || !hasText || reexBusy ? html`disabled` : ''}>${reexBusy ? html`<span class="spinner" aria-hidden="true"></span> 다시 정리하는 중… (10~30초)` : 'AI 로 다시 정리'}</button>`;
+    return html`<button type="button" class="btn btn-sm" data-act="reextract" ${locked || !ai || !hasText || reexBusy ? html`disabled` : ''}>${reexBusy ? html`<span class="spinner" aria-hidden="true"></span> 다시 정리하는 중…` : 'AI로 다시 정리'}</button>
+      ${locked ? html`<p class="help">확인 필요 상태로 되돌리면 다시 정리할 수 있습니다.</p>` : ''}
+      ${!ai ? html`<p class="help">지금은 AI로 다시 정리할 수 없습니다.</p>` : ''}
+      ${!hasText ? html`<p class="help">받아쓴 글이 없어 다시 정리할 수 없습니다.</p>` : ''}
+      <details class="cd-card-guide">
+        <summary>다시 정리 안내</summary>
+        <p>낱말 사전을 반영해 빈칸과 AI 초안 칸을 새로 채웁니다. 사람이 고친 칸은 유지합니다. <a href="#/glossary">낱말 사전 열기</a></p>
+      </details>`;
   }
 
   function otherReason(u) {
@@ -327,42 +340,65 @@ export function mountCard(el, o) {
     return `${label ? `[${label}] ` : ''}${u.reason || '받아쓰기가 틀렸을 수 있습니다. 녹음으로 확인해 주세요.'}`;
   }
 
-  function lockNotice() {
-    if (card.status === 'confirmed') return html`<p class="notice notice-ok cd-lock">확정된 카드입니다. 고치려면 아래 「확정 취소 및 수정」을 누르세요.</p>`;
-    if (card.status === 'shipped') return html`<p class="notice notice-ok cd-lock">출고까지 끝난 카드입니다. 고치려면 아래 「출고 되돌리기」를 누르세요.</p>`;
-    if (card.status === 'cancelled') return html`<p class="notice cd-lock">취소된 주문입니다. 고치려면 아래 「취소 되돌리기」를 누르세요.</p>`;
-    return '';
+  function saveIndicator() {
+    if (failure) return html`<button type="button" class="cd-save-link" data-act="save-error">저장 오류 보기</button>`;
+    if (!editable()) return html`<span>읽기 전용</span>`;
+    return html`<span>${pending.size ? '저장 중…' : '자동 저장'}</span>`;
   }
 
   function renderAll() {
     evMap = new Map();
     if (!card) {
-      render(el, html`<div class="cd-card-head"><h2 id="cd-card-h">주문 카드</h2></div>
-        <p class="notice notice-warn">이 통화에는 아직 주문 카드가 없습니다.${call.error ? ` (${call.error})` : ''}</p>
-        <div class="cd-sec cd-reex" data-slot="reex">${reexView()}</div>`);
+      render(el, html`<header class="cd-card-head cd-pane-title"><h2 id="cd-card-h">주문 카드</h2></header>
+        <div class="cd-card-scroll" tabindex="0" role="region" aria-label="주문 카드 내용">
+          <p class="notice notice-warn">이 통화에는 아직 주문 카드가 없습니다.${call.error ? ` (${call.error})` : ''}</p>
+          <div class="cd-sec cd-reex" data-slot="reex">${reexView()}</div>
+        </div>`);
       return;
     }
     const groups = groupUnsure(localCard(), items);
     const other = groups.get('other') || [];
+    const scrollTop = el.querySelector('.cd-card-scroll')?.scrollTop || 0;
+    const guideOpen = Boolean(el.querySelector('.cd-origin-guide[open]'));
+    const actions = actionsView();
     render(el, html`
-      <div class="cd-card-head"><h2 id="cd-card-h">주문 카드</h2><span data-slot="status">${cardChip(card.status)}</span></div>
-      <p class="cd-card-sub">AI 가 채운 칸은 <span class="chip chip-ai">AI 초안</span>, 사람이 고친 칸은 <span class="chip chip-edited">사람이 고침</span>, 확정한 뒤에는 <span class="chip chip-confirmed">사람이 확인</span> 입니다. 칸을 누르면 그 말을 한 대목이 ${o.hasAudio ? '들리고 ' : ''}통화 글에 표시됩니다.</p>
-      ${card.aiError ? html`<p class="notice notice-warn" role="note">카드를 AI 가 만들지 못했습니다(${card.aiError}) — 직접 채워 주세요.</p>` : ''}
-      ${lockNotice()}
-      ${other.length ? html`<div class="cd-sec cd-other-flags"><h3>들어 볼 곳</h3>${flagsView(other.map((x) => ({ ...x, u: { ...x.u, reason: otherReason(x.u) } })))}</div>` : ''}
-      <div class="cd-grid">${typeBlock()}${TOP_FIELDS.map((f) => fieldBlock(f, groups))}</div>
-      ${itemsSection(groups)}
-      <div class="cd-grid">${urgentBlock(groups)}${WHEN_FIELDS.map((f) => fieldBlock(f, groups))}</div>
-      <datalist id="cd-delivery-list">${DELIVERY_OPTIONS.map((d) => html`<option value="${d}"></option>`)}</datalist>
-      <section class="cd-sec cd-ask" aria-labelledby="cd-ask-h" data-slot="ask">${askView()}</section>
-      <div class="cd-grid">${fieldBlock(NOTE_FIELD, groups)}</div>
-      ${card.aiModel ? html`<p class="cd-model">AI 초안: ${card.aiModel}${card.updatedAt ? ` · 마지막 저장 ${fmtWhen(card.updatedAt)}` : ''}</p>` : ''}
-      <div data-slot="save-status" aria-live="polite">${saveStatus()}</div>
-      <section class="cd-sec cd-actions" aria-label="카드 상태 바꾸기" data-slot="actions">${actionsView()}</section>
-      <section class="cd-sec cd-callback" aria-label="다시 전화할 곳" data-slot="callback">${callbackView()}</section>
-      <section class="cd-sec cd-reex" data-slot="reex">${reexView()}</section>
+      <header class="cd-card-head">
+        <div class="cd-pane-title"><h2 id="cd-card-h">주문 카드</h2><span data-slot="status">${cardChip(card.status)}</span></div>
+        <div class="cd-card-toolbar">
+          <div class="cd-save-indicator" data-slot="save-indicator" aria-live="polite">${saveIndicator()}</div>
+          ${actions ? html`<button type="button" class="cd-actions-jump" data-act="status-jump" aria-controls="cd-card-actions">처리 버튼 보기</button>` : ''}
+        </div>
+      </header>
+      <div class="cd-card-scroll" tabindex="0" role="region" aria-label="주문 카드 내용">
+        <div data-slot="save-status" tabindex="-1" aria-live="polite">${saveStatus()}</div>
+        ${card.aiError ? html`<p class="notice notice-warn" role="note">AI 초안을 만들지 못했습니다. 주문 정보를 직접 채워 주세요. ${card.aiError}</p>` : ''}
+        <section class="cd-card-section" aria-labelledby="cd-fields-h">
+          <div class="cd-sec-top cd-fields-head">
+            <h3 id="cd-fields-h">거래처 · 차량</h3>
+            <details class="cd-card-guide cd-origin-guide" ${guideOpen ? html`open` : ''}>
+              <summary>근거 · 표시 안내</summary>
+              <p><span class="chip chip-ai cd-provenance"></span> AI 초안 <span class="chip chip-edited">사람이 고침</span> <span class="chip chip-confirmed">사람이 확인</span></p>
+              <p>${icon('evidence')} 칸의 근거를 누르면 ${o.hasAudio ? '해당 녹음이 재생되고 ' : ''}대화의 관련 문장이 표시됩니다. 품번은 통화에서 언급된 경우에만 AI가 채웁니다.</p>
+              ${card.aiModel ? html`<p>${card.aiModel}${card.updatedAt ? ` · 마지막 저장 ${fmtWhen(card.updatedAt)}` : ''}</p>` : ''}
+            </details>
+          </div>
+          <div class="cd-grid">${TOP_FIELDS.map((f) => fieldBlock(f, groups))}${typeBlock()}</div>
+        </section>
+        ${itemsSection(groups)}
+        <section class="cd-sec" aria-labelledby="cd-delivery-h">
+          <h3 id="cd-delivery-h">수령 · 메모</h3>
+          <div class="cd-grid">${WHEN_FIELDS.map((f) => fieldBlock(f, groups))}${urgentBlock(groups)}${fieldBlock(NOTE_FIELD, groups)}</div>
+          <datalist id="cd-delivery-list">${DELIVERY_OPTIONS.map((d) => html`<option value="${d}"></option>`)}</datalist>
+        </section>
+        ${other.length ? html`<section class="cd-sec cd-other-flags" aria-labelledby="cd-other-h"><h3 id="cd-other-h">추가 확인</h3>${flagsView(other.map((x) => ({ ...x, u: { ...x.u, reason: otherReason(x.u) } })))}</section>` : ''}
+        <section class="cd-sec cd-ask" aria-labelledby="cd-ask-h" data-slot="ask">${askView()}</section>
+        <section class="cd-sec cd-callback" aria-label="다시 전화할 곳" data-slot="callback">${callbackView()}</section>
+        <section class="cd-sec cd-reex" aria-label="AI로 다시 정리" data-slot="reex">${reexView()}</section>
+      </div>
+      ${actions ? html`<section class="cd-actions" id="cd-card-actions" aria-label="카드 상태 바꾸기" data-slot="actions" tabindex="-1">${actions}</section>` : ''}
     `);
     updateInlineIssues();
+    el.querySelector('.cd-card-scroll').scrollTop = scrollTop;
     if (activeKey) {
       const b = el.querySelector(`[data-ev="${CSS.escape(activeKey)}"]`);
       if (b) b.classList.add('ev-active'); else activeKey = null;
@@ -375,8 +411,15 @@ export function mountCard(el, o) {
     updateInlineIssues();
     el.querySelectorAll('[data-chip]').forEach((s) => render(s, html`${chipFor(s.dataset.chip)}`));
     const st = slot('status'); if (st) render(st, cardChip(card.status));
-    const ac = slot('actions'); if (ac) render(ac, actionsView());
+    const ac = slot('actions');
+    if (ac) {
+      const previous = ac.querySelector('.cd-confirm-issues');
+      const focused = previous?.contains(document.activeElement);
+      render(ac, actionsView(previous?.open));
+      if (focused) ac.querySelector('.cd-confirm-issues summary')?.focus({ preventScroll: true });
+    }
     const save = slot('save-status'); if (save) render(save, saveStatus());
+    const indicator = slot('save-indicator'); if (indicator) render(indicator, saveIndicator());
     const plate = slot('plate-hint'); if (plate) render(plate, plateHint());
   }
   function renderItems() {
@@ -400,7 +443,7 @@ export function mountCard(el, o) {
       const label = FIELD_LABEL[key] || (key === 'callType' ? '통화 종류' : key);
       return html`<li><strong>${label}</strong><br>최신 ${shownValue(key, latest[key])}<br>내 입력 ${shownValue(key, value)}</li>`;
     }) : [];
-    return html`<div class="notice notice-error" role="alert">
+    return html`<div class="notice notice-error cd-save-error" role="alert">
       <p>${failure.message || '입력을 저장하지 못했습니다.'}</p>
       ${diff.length ? html`<ul>${diff}</ul>` : ''}
       ${latest ? html`<div class="row">
@@ -800,6 +843,8 @@ export function mountCard(el, o) {
   function handleAct(act, btn) {
     switch (act) {
       case 'to-trans': o.onJumpToTranscript(activeKey ? evMap.get(activeKey) : null); break;
+      case 'status-jump': slot('actions')?.focus(); break;
+      case 'save-error': slot('save-status')?.focus(); break;
       case 'item-add': addItem(); break;
       case 'urgent':
         if (!editable()) return;

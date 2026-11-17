@@ -1,6 +1,7 @@
 // 통화 목록 · 찾기(F08): 글 · 카드 검색, 상태 · 날짜 · 거래처 거르기, 맞은 문장 굵게 → 누르면 그 대목으로.
 import { api } from '../api.js';
 import { CALL_TYPES } from '../domain.js';
+import { icon } from '../icons.js';
 import { html, render, fmtWhen, fmtSec, callChip, SOURCE_LABEL, highlight, errorBox, href, kstDay } from '../ui.js';
 
 const STATUS_TABS = [
@@ -99,18 +100,18 @@ export default {
     render(el, html`<div class="page cl-page">
       <div class="page-head">
         <div>
-          <h1>통화 기록 · 찾기</h1>
-          <p class="sub">받아쓴 글과 주문 카드에서 찾습니다. 문장을 누르면 그 대목으로 갑니다.</p>
+          <p class="eyebrow">통화 아카이브</p><h1>통화 기록</h1>
+          <p class="sub">통화 내용을 찾고, 근거에서 주문을 확인하세요.</p>
         </div>
-        <a class="btn btn-primary cl-upload" href="#/upload"><span aria-hidden="true">⤒</span> 녹음 올리기</a>
+        <a class="btn btn-primary cl-upload" href="#/upload">${icon('upload')} 녹음 올리기</a>
       </div>
-      <form class="cl-search" role="search" data-slot="form">
+      <section class="cl-control" aria-label="통화 검색과 필터"><form class="cl-search" role="search" data-slot="form">
         <label class="sr-only" for="cl-q">통화 찾기</label>
         <input id="cl-q" class="input input-search" type="search" enterkeyhint="search" autocomplete="off"
-          placeholder="거래처, 차종, 부품, 차번호로 찾기 — 예: 쏘렌토" value="${state.q}" maxlength="100">
+          placeholder="거래처, 차종, 부품 또는 차번호 검색" value="${state.q}" maxlength="100">
         <button type="button" class="btn cl-clear ${state.q ? '' : 'hidden'}" data-act="clear-q" aria-label="검색어 지우기">지우기</button>
       </form>
-      <div class="cl-filters" data-slot="filters"></div>
+      <div class="cl-filters" data-slot="filters"></div></section>
       <div class="cl-results" data-slot="results" aria-live="polite"><p class="loading">불러오는 중…</p></div>
     </div>`);
     const root = el.querySelector('.cl-page');
@@ -128,7 +129,7 @@ export default {
             ${STATUS_TABS.map(([k, label]) => html`<button type="button" class="tab" data-status="${k}" aria-pressed="${state.status === k}">${label}</button>`)}
           </div>
         </div>
-        <div class="cl-row2">
+        <div class="cl-quick-range">
           <div class="cl-group">
             <p class="cl-group-label" id="cl-range-l">날짜</p>
             <div class="cl-range" role="group" aria-labelledby="cl-range-l">
@@ -136,6 +137,10 @@ export default {
               ${state.range === 'custom' ? html`<button type="button" class="tab" data-range="custom" aria-pressed="true">${customLabel(state.from, state.to)}</button>` : ''}
             </div>
           </div>
+        </div>
+        <details class="cl-advanced" ${state.customer || state.callType || state.callback || state.range === 'custom' ? html`open` : ''}>
+          <summary>상세 필터${state.customer || state.callType || state.callback || state.range === 'custom' ? ' · 적용 중' : ''}</summary>
+          <div class="cl-advanced-grid">
           <div class="cl-group cl-cust-group">
             <label class="cl-group-label" for="cl-cust">거래처</label>
             <select id="cl-cust" class="select cl-cust-select" ${customers === null ? html`disabled` : ''}>
@@ -144,8 +149,6 @@ export default {
               ${custList.map((c) => html`<option value="${c.name}" ${c.name === state.customer ? html`selected` : ''}>${c.name}${c.calls ? ` (${c.calls}건)` : ''}</option>`)}
             </select>
           </div>
-        </div>
-        <div class="cl-row2">
           <div class="cl-group">
             <label class="cl-group-label" for="cl-type">통화 종류</label>
             <select id="cl-type" class="select">
@@ -161,11 +164,10 @@ export default {
               <option value="false" ${state.callback === 'false' ? html`selected` : ''}>표시 없음</option>
             </select>
           </div>
-        </div>
-        <div class="cl-row2">
           <label class="cl-group"><span class="cl-group-label">시작일</span><input id="cl-from" class="input" type="date" value="${state.range === 'custom' ? state.from || '' : rangeDates(state.range).from || ''}"></label>
           <label class="cl-group"><span class="cl-group-label">종료일</span><input id="cl-to" class="input" type="date" value="${state.range === 'custom' ? state.to || '' : rangeDates(state.range).to || ''}"></label>
-        </div>`);
+          </div>
+        </details>`);
     }
 
     // ── 결과 ──────────────────────────────────────────────────────
@@ -189,7 +191,7 @@ export default {
       const source = SOURCE_LABEL[c.source] || c.source || '';
       return html`<li class="cl-item">
         <div class="cl-top">
-          <a class="cl-title" href="#/calls/${encodeURIComponent(c.id)}">${c.title || '제목 없는 통화'}</a>
+          <a class="cl-title" href="#/calls/${encodeURIComponent(c.id)}">${c.customer || card?.customer || c.title || '제목 없는 통화'}</a>
           <span class="cl-chips">
             ${callChip(c)}
             ${card?.callType ? html`<span class="chip">${card.callType}</span>` : ''}
@@ -197,6 +199,7 @@ export default {
             ${card?.callback ? html`<span class="chip chip-callback">다시 전화</span>` : ''}
           </span>
         </div>
+        <p class="cl-context">${card?.carModel || '차종 미입력'}${card?.items?.length ? ` · ${card.items.map((item) => item.part).filter(Boolean).join(', ')}` : ''}</p>
         <p class="cl-meta">
           <span>${fmtWhen(c.recordedAt)}</span>
           <span>${source}${c.hasAudio ? '' : ' · 녹음 없음'}</span>
@@ -232,7 +235,7 @@ export default {
         groups.get(day).push(call);
       }
       return [...groups].map(([day, rows]) => html`
-        <section aria-label="${day}">
+        <section class="cl-day-group" aria-label="${day}">
           <h2 class="cl-group-label"><time datetime="${day}">${day}</time></h2>
           <ul class="list-wrap cl-list">${rows.map(rowView)}</ul>
         </section>`);

@@ -171,7 +171,7 @@ export function errorBox(err) {
 }
 export function aiOffNotice(meta) {
   if (meta && meta.aiEnabled === false) {
-    return html`<div class="notice notice-warn">AI 키 없음 — 지금은 AI 기능(카드 정리 · 브리핑 · 묻기)이 꺼져 있습니다. 나머지 화면은 그대로 쓸 수 있습니다.</div>`;
+    return html`<div class="notice notice-warn">AI 처리가 꺼져 있습니다. 카드 자동 정리·브리핑·질문을 사용하려면 처리 방식을 설정해 주세요. 나머지 화면은 그대로 쓸 수 있습니다.</div>`;
   }
   return html``;
 }

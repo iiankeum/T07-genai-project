@@ -1,3 +1,12 @@
+## 2026-11-18 08:44 KST · 오늘 업무·통화 검토·검색 화면 템플릿 재구성
+- 돌린 사람 · 도구 · 작업방: 신*림(taejs) · Codex(Astra 검토, GPT-6.1 Sol high 병렬 개발) · 아맞다 개발 작업방
+- 한 일: 기존 PR 기능과 API를 유지하며 화면 프레임, 오늘 할 일, 통화 기록, 원문·주문 카드 템플릿과 레이아웃을 재구성했다. 모바일 주문/대화 전환과 실제 근거 연결을 유지했다.
+- 왜: 기존 화면의 반복 배지·중첩 카드·긴 제목이 업무 우선순위를 흐렸다는 사용자 피드백을 반영한다.
+- 어떻게: Astra 시각 기준 검토, Sol 2개 화면 작업 병렬, root 공통 프레임·검색 수정. Antigravity 앱 2.26.0 설치는 확인했지만 실행 -10827로 사용하지 못해 직접 HTML을 교체했다. 가짜 데이터만 사용했다.
+- 결과물: [오늘 화면](../../src/app/public/js/pages/today.js) · [통화 검토](../../src/app/public/js/pages/call.js) · [검색](../../src/app/public/js/pages/calls.js) · [확장 E2E](../../src/app/tools/browser-e2e.mjs)
+- AI 가 판단한 것 · 사람이 확인할 것: 구문 검사와 화면 유틸리티 6개 통과. 새 E2E는 localhost listen EPERM, Chrome은 SIGABRT/EPERM으로 차단되어 새 캡처와 실제 배치는 미검증이다. Antigravity 생성·시각 검증 완료로 기록하지 않는다.
+- 다음 할 일: Mac 로컬 모델·앱 변경과 검증 보고서를 추가한다. 실행 가능한 환경에서 새 E2E·시각 검증 후 기존 PR에 반영한다. 현재 Git DNS 오류와 연결 앱 403으로 원격 쓰기가 막혀 있다.
+
 # 작업 기록 — 03-개발-태림
 
 새 기록을 맨 위에 쓴다. 형식은 [work/README.md](../README.md) 참고.

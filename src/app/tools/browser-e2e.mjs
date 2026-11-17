@@ -19,6 +19,7 @@ const blocked = [];
 const servers = [];
 let browser;
 let page;
+let runError = null;
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 async function server(mode, port) {
   const root = path.join(data, mode);
@@ -36,8 +37,8 @@ async function server(mode, port) {
   child.on('error', (err) => errors.push(err.message));
   servers.push({ child, logs, mode });
   for (let attempt = 0; attempt < 100; attempt++) {
-    if (child.exitCode !== null) throw new Error(`Server exited: ${logs.join('')}`);
-    try { if ((await fetch(baseURL + '/healthz')).ok) return { baseURL, root }; } catch { /* starting */ }
+    if (child.exitCode !== null || logs.some((line) => /listen EPERM|listen EACCES/.test(line))) throw new Error(`Server exited: ${logs.join('')}`);
+    try { if ((await fetch(baseURL + '/healthz', { signal: AbortSignal.timeout(500) })).ok) return { baseURL, root }; } catch { /* starting */ }
     await delay(100);
   }
   throw new Error(`Server failed to start: ${logs.join('')}`);
@@ -67,6 +68,36 @@ try {
   page = await context.newPage();
   page.setDefaultTimeout(10000);
   page.on('pageerror', (error) => errors.push(error.message));
+  await step('dashboard prioritizes work and never creates AI briefing on entry', async () => {
+    let briefPosts = 0;
+    const record = (request) => { if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/briefing') briefPosts++; };
+    page.on('request', record);
+    await page.goto(demo.baseURL + '/#/');
+    await page.getByRole('heading', { name: '지금 처리할 일', exact: true }).waitFor();
+    await page.locator('#today-priority a').first().waitFor();
+    assert.equal(briefPosts, 0);
+    assert.ok(await page.locator('#today-priority a').count() >= 3);
+    await screenshot('09-today-work-queue-fake');
+    await page.setViewportSize({ width: 360, height: 800 });
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'dashboard horizontal overflow');
+    await screenshot('10-today-mobile-fake');
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    page.off('request', record);
+  });
+  await step('call archive searches and preserves advanced filters', async () => {
+    await page.goto(demo.baseURL + '/#/calls');
+    await page.locator('.cl-item').first().waitFor();
+    await page.locator('#cl-q').fill('신흥모터스');
+    await page.waitForFunction(() => document.querySelector('.cl-count')?.textContent.includes('신흥모터스'));
+    await page.locator('.cl-advanced summary').click();
+    await page.locator('#cl-type').selectOption('주문');
+    await page.waitForFunction(() => location.hash.includes('callType='));
+    await screenshot('11-call-archive-fake');
+    await page.reload();
+    await page.locator('#cl-type').waitFor();
+    assert.equal(await page.locator('#cl-type').inputValue(), '주문');
+    assert.equal(await page.locator('#cl-q').inputValue(), '신흥모터스');
+  });
   await step('desktop call loads with three columns and evidence', async () => {
     await page.goto(demo.baseURL + '/#/calls/fx-c51');
     await page.locator('[data-field="customer"]').waitFor();
@@ -179,7 +210,7 @@ try {
     await page.locator('#workspace-create [name="name"]').fill('가짜 검증 작업공간');
     await page.locator('#workspace-create button[type="submit"]').click();
     await page.waitForURL('**/#/calls');
-    await page.getByRole('heading', { name: '통화 기록 · 찾기', exact: true }).waitFor();
+    await page.getByRole('heading', { name: '통화 기록', exact: true }).waitFor();
     await page.goto(privateApp.baseURL + '/#/settings');
     await page.getByRole('heading', { name: '설정', exact: true }).waitFor();
     await screenshot('07-private-settings-fake');
@@ -218,10 +249,11 @@ try {
   console.log(`PASS ${results.length} browser journeys; paid provider disabled`);
 } catch (error) {
   process.exitCode = 1;
+  runError = error.message;
   console.error(error);
   if (page) await screenshot('failure').catch(() => {});
 } finally {
-  await writeFile(path.join(artifacts, 'results.json'), JSON.stringify({ at: new Date().toISOString(), fixtureOnly: true, paidProviderEnabled: false, results, pageErrors: errors, blockedExternalOrigins: [...new Set(blocked)] }, null, 2));
+  await writeFile(path.join(artifacts, 'results.json'), JSON.stringify({ at: new Date().toISOString(), fixtureOnly: true, paidProviderEnabled: false, runError, results, pageErrors: errors, blockedExternalOrigins: [...new Set(blocked)] }, null, 2));
   await browser?.close();
   for (const { child, logs, mode } of servers) { child.kill('SIGTERM'); await writeFile(path.join(artifacts, mode + '-server.log'), logs.join('')); }
 }
