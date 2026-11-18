@@ -664,6 +664,12 @@ export function mountCard(el, o) {
     if (activeKey?.startsWith('item:')) activeKey = null;
     renderItems();
     saveItems();
+    // 삭제된 버튼 대신 이어서 편집할 품목으로 키보드 동선을 잇는다.
+    const target = items.length
+      ? el.querySelector('input[data-item="part"][data-i="' + Math.min(i, items.length - 1) + '"]')
+      : el.querySelector('[data-act="item-add"]');
+    target?.focus({ preventScroll: true });
+    target?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
   }
 
   function addItem() {

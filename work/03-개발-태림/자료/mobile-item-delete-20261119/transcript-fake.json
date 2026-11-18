@@ -1,0 +1,23 @@
+{
+  "fixtureOnly": true,
+  "results": [
+    {
+      "size": "desktop",
+      "matches": 3,
+      "keyboard": true,
+      "summaryRestoresQuery": true,
+      "noWriteRequests": true,
+      "noOverflow": true
+    },
+    {
+      "size": "mobile",
+      "matches": 3,
+      "keyboard": true,
+      "summaryRestoresQuery": true,
+      "noWriteRequests": true,
+      "noOverflow": true
+    }
+  ],
+  "errors": [],
+  "blocked": []
+}
