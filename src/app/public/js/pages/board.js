@@ -110,13 +110,13 @@ export default {
       const customers = new Set(state.customers.map(({ name }) => name));
       if (state.customer) customers.add(state.customer);
       render(root, html`<div class="page-head">
-        <h1>주문 카드 보드</h1>
+        <div><p class="eyebrow">주문 진행 상황</p><h1>주문 보드</h1><p class="sub">확인이 필요한 주문부터 출고까지, 한눈에 관리하세요.</p></div>
         <div class="row">
           <a class="btn" href="#/shipping">출고 목록</a>
           <button type="button" class="btn" data-act="reload">새로고침</button>
         </div>
       </div>
-      <div class="row">
+      <div class="row board-filters">
         <label class="field"><span>거래처</span><select class="select" data-filter="customer">
           <option value="">모든 거래처</option>
           ${[...customers].map((name) => html`<option value="${name}" ${state.customer === name ? html`selected` : ''}>${name}</option>`)}

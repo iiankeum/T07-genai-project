@@ -31,13 +31,13 @@ export default {
         <a class="btn" href="#/ask">지난 통화에 묻기 →</a>
       </div>
       <div class="card ka-split as-layout">
-        <aside class="as-sidebar" aria-labelledby="as-work-title">
-          <div class="as-work-header"><span class="as-icon" aria-hidden="true">✧</span><h2 id="as-work-title">현재 업무 제안</h2></div>
+        <details class="as-sidebar" ${matchMedia('(min-width: 901px)').matches ? html`open` : ''}>
+          <summary class="as-work-header"><span class="as-icon" aria-hidden="true">✧</span><h2 id="as-work-title">현재 업무 제안</h2><span class="as-expand" aria-hidden="true">⌄</span></summary>
           <label class="field"><span>현재 통화</span><select class="select" data-ref="calls" disabled><option>불러오는 중…</option></select></label>
           <button type="button" class="btn" data-act="refresh">제안 새로고침</button>
           <div class="as-suggestions" data-ref="suggestions"><p class="loading" role="status">일을 살펴보는 중…</p></div>
           <a class="as-knowledge-meta" href="#/knowledge"><span><strong>공유 지식</strong><small data-ref="count">팀에서 확인한 지식을 함께 써요.</small></span><span aria-hidden="true">→</span></a>
-        </aside>
+        </details>
         <section class="as-chat" aria-labelledby="as-chat-title">
           <header class="as-chat-head">
             <div><h2 id="as-chat-title">아맞다 어시스턴트</h2><p class="help">통화와 승인된 지식을 근거로 답변해요.</p></div>
@@ -67,6 +67,10 @@ export default {
     </div>`);
 
     const root = el.firstElementChild;
+    const layoutMedia = matchMedia('(min-width: 901px)');
+    const suggestionsPanel = root.querySelector('.as-sidebar');
+    const syncLayout = () => { if (!suggestionsPanel.contains(document.activeElement)) suggestionsPanel.open = layoutMedia.matches; };
+    layoutMedia.addEventListener('change', syncLayout);
     const ref = (name) => root.querySelector(`[data-ref="${name}"]`);
     const act = (name) => root.querySelector(`[data-act="${name}"]`);
     const input = root.querySelector('#as-question');
@@ -348,6 +352,7 @@ export default {
     }
     return () => {
       disposed = true;
+      layoutMedia.removeEventListener('change', syncLayout);
       request?.controller.abort();
       draftRequest?.abort();
       threadRequest?.abort();

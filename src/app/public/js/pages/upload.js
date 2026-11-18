@@ -48,7 +48,7 @@ export default {
 
     render(el, html`<div class="page upload-page">
       <div class="page-head"><div>
-        <p class="eyebrow">F01 · 녹음 올리기</p>
+        <p class="eyebrow">새 통화 기록</p>
         <h1>녹음 올리기</h1>
         <p class="sub">통화 녹음 파일을 올리면 받아쓰고 주문 카드로 정리합니다.</p>
       </div></div>
@@ -79,21 +79,21 @@ export default {
         <p class="sr-only" role="status" data-ref="announce"></p>
       </section>
 
-      <section class="card" aria-labelledby="flowTitle">
-        <h2 id="flowTitle">올린 녹음은 이렇게 정리됩니다</h2>
+      <details class="card upload-explainer">
+        <summary id="flowTitle">녹음은 어떻게 정리되나요?</summary>
         <ol class="upload-flow">
           <li><strong>올리기</strong><span>휴대폰 · PC</span></li>
-          <li><strong>16kHz 로 바꿈</strong><span>서버가 받아쓰기 좋은 소리로</span></li>
-          <li><strong>받아쓰기 일꾼</strong><span>Whisper 가 글로</span></li>
+          <li><strong>음성 준비</strong><span>받아쓰기용으로 변환</span></li>
+          <li><strong>받아쓰기</strong><span>Whisper로 대화 기록</span></li>
           <li><strong>AI 카드</strong><span>주문 내용만 뽑아 정리</span></li>
           <li><strong>확인 · 확정</strong><span>사람이 보고 확정</span></li>
         </ol>
         <p class="help">올린 원본 파일은 바꾼 뒤 지웁니다. 받아쓰기 일꾼에게는 바꾼 소리 파일만 갑니다.</p>
-      </section>
+      </details>
 
       <div class="grid-2 upload-side">
         <section class="card" aria-labelledby="workerTitle">
-          <div class="card-title"><h2 id="workerTitle">받아쓰기 일꾼 상태</h2><button type="button" class="btn btn-sm btn-ghost" data-act="refresh">새로고침</button></div>
+          <div class="card-title"><h2 id="workerTitle">받아쓰기 연결</h2><button type="button" class="btn btn-sm btn-ghost" data-act="refresh">새로고침</button></div>
           <div data-ref="worker" aria-live="off"><p class="loading">확인 중…</p></div>
           <p class="help">10초마다 저절로 새로 봅니다.</p>
         </section>

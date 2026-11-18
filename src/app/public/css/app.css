@@ -293,3 +293,36 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 16px 0; }
   .worker-pill { max-width: 46vw; padding: 4px 8px; font-size: .74rem; }
   #bigTextBtn { padding: 6px 8px; font-size: .8rem; }
 }
+
+/* 제품 공통 위계: 탐색은 조용하게, 제목·작업·보조 설명은 다른 단계로. */
+:root { --bg: #f7f8fa; --line: #e8eaed; --line-strong: #ced1d8; --radius: 16px; }
+.page:not(.cd-page) { padding: 32px; }
+.page-head { margin-bottom: 28px; align-items: center; }
+.page-head h1 { font-weight: 650; font-size: 1.88rem; line-height: 1.375; letter-spacing: -.0253em; }
+.page-head .sub { margin-top: 8px; font-size: .88rem; line-height: 1.6; font-weight: 400; }
+.eyebrow { font-size: .72rem; font-weight: 550; letter-spacing: 0; color: var(--muted); margin-bottom: 8px; }
+.card { box-shadow: none; padding: 24px; }
+h2, h3, .card-title { font-weight: 650; }
+.btn { font-weight: 600; font-size: .88rem; border-radius: 10px; }
+.btn-lg { font-size: .94rem; min-height: 48px; }
+.chip { font-size: .72rem; font-weight: 550; padding: 3px 8px; }
+.notice { font-size: .85rem; line-height: 1.6; }
+.field > span { font-weight: 550; font-size: .82rem; }
+.input, .select, .textarea { border-color: var(--line-strong); font-size: .94rem; }
+.help { font-size: .78rem; line-height: 1.6; }
+@media (min-width:1120px) {
+ :root { --side: 224px; }
+ .sidenav { padding: 24px 16px 16px; }
+ .nav-cta { font-size: .82rem; }
+ .nav-link { min-height: 46px; font-weight: 500; }
+ .nav-link.active { font-weight: 600; }
+ .nav-group-label { margin-bottom: 12px; }
+}
+@media (max-width:719px) {
+ .page:not(.cd-page) { padding: 24px 16px; }
+ .page-head { margin-bottom: 20px; gap: 16px; }
+ .page-head h1 { font-size: 1.65rem; }
+ .page-head .sub { font-size: .85rem; }
+ .card { padding: 20px; }
+ .topbar { padding-inline:16px; }
+}
