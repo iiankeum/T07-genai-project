@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 import CoreFoundation
 
 // 파일 존재가 아니라 실행 중인 로컬 서버의 목록만 확인한다. 실제 추론 성공과 구분한다.
@@ -124,5 +125,79 @@ enum LocalMacPreflight {
 
         파일 존재·설치 확인과 실제 전사·답변 생성 성공은 달라요. 이 점검은 읽기 전용이며 다운로드·설정 변경 없이 수동 업무를 계속할 수 있어요.
         """
+    }
+}
+
+// Bounded metadata-only inspection. Directory descriptors prevent following replaced symlinks.
+enum LocalModelStorageUsage {
+    struct Row { let title: String; let bytes: UInt64?; let sharedFiles: Int }
+    static let locations = [
+        ("주문 모델 파일 위치", "models/ollama/blobs"),
+        ("받아쓰기 모델 파일 위치", "whisper-small"),
+        ("주문 모델 부분 다운로드", "models/ollama/.partial-blobs"),
+        ("받아쓰기 저장 캐시", ".whisper-verified-cache"),
+        ("받아쓰기 부분 다운로드", ".whisper-partial-cache")
+    ]
+    static func inspect(root: URL, limit: Int = 8000) -> [Row] {
+        var seen = Set<String>(), remaining = limit
+        let base = open(root.path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
+        guard base >= 0 else { return locations.map { Row(title: $0.0, bytes: nil, sharedFiles: 0) } }
+        defer { close(base) }
+        func walk(_ fd: Int32, _ bytes: inout UInt64, _ shared: inout Int, depth: Int = 0) throws {
+            guard depth < 64 else { throw CocoaError(.fileReadTooLarge) }
+            let copied = dup(fd)
+            guard copied >= 0 else { throw CocoaError(.fileReadUnknown) }
+            guard let directory = fdopendir(copied) else { close(copied); throw CocoaError(.fileReadUnknown) }
+            defer { closedir(directory) }
+            while true {
+                errno = 0
+                guard let entry = readdir(directory) else {
+                    if errno != 0 { throw CocoaError(.fileReadUnknown) }; break
+                }
+                let name = withUnsafeBytes(of: &entry.pointee.d_name) { String(bytes: $0.prefix { $0 != 0 }, encoding: .utf8) }
+                guard let name else { throw CocoaError(.fileReadUnknown) }
+                if name == "." || name == ".." { continue }
+                remaining -= 1
+                guard remaining >= 0 else { throw CocoaError(.fileReadTooLarge) }
+                var info = stat()
+                guard fstatat(fd, name, &info, AT_SYMLINK_NOFOLLOW) == 0 else { throw CocoaError(.fileReadUnknown) }
+                if (info.st_mode & S_IFMT) == S_IFLNK { throw CocoaError(.fileReadUnsupportedScheme) }
+                if (info.st_mode & S_IFMT) == S_IFDIR {
+                    let child = openat(fd, name, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
+                    guard child >= 0 else { throw CocoaError(.fileReadUnknown) }
+                    defer { close(child) }
+                    try walk(child, &bytes, &shared, depth: depth + 1)
+                } else if (info.st_mode & S_IFMT) == S_IFREG {
+                    guard info.st_size >= 0 else { throw CocoaError(.fileReadUnknown) }
+                    let key = "\(info.st_dev):\(info.st_ino)"
+                    if seen.insert(key).inserted {
+                        guard let sum = adding(bytes, UInt64(info.st_size)) else { throw CocoaError(.fileReadTooLarge) }
+                        bytes = sum
+                    } else { shared += 1 }
+                } else { throw CocoaError(.fileReadUnknown) }
+            }
+        }
+        return locations.map { title, relative in
+            var fd = dup(base), missing = false
+            for part in relative.split(separator: "/") {
+                let next = openat(fd, String(part), O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
+                let error = errno
+                close(fd); fd = next
+                if next < 0 { missing = error == ENOENT; break }
+            }
+            guard fd >= 0 else { return Row(title: title, bytes: missing ? 0 : nil, sharedFiles: 0) }
+            defer { close(fd) }
+            let oldSeen = seen
+            var bytes: UInt64 = 0, shared = 0
+            do { try walk(fd, &bytes, &shared); return Row(title: title, bytes: bytes, sharedFiles: shared) }
+            catch { seen = oldSeen; return Row(title: title, bytes: nil, sharedFiles: 0) }
+        }
+    }
+    static func adding(_ left: UInt64, _ right: UInt64) -> UInt64? {
+        let (sum, overflow) = left.addingReportingOverflow(right)
+        return overflow ? nil : sum
+    }
+    static func report(_ rows: [Row]) -> String {
+        rows.map { "\($0.title): \(LocalMacPreflight.capacity($0.bytes))" + ($0.bytes.map { " [\($0)바이트]" } ?? "") + ($0.sharedFiles > 0 ? " (공유 파일 \($0.sharedFiles)개 중복 제외)" : "") }.joined(separator: "\n") + "\n\n파일 크기 합계이며 실제 디스크 점유량이나 삭제 시 확보되는 공간은 아니에요. 같은 inode의 하드링크는 위 항목부터 한 번만 계산해요.\n\n위치로 구분했을 뿐 설치 완료·무결성·재개 가능 여부는 검증하지 않았어요. 캐시는 다음 모델 준비 때 다시 검증해요. 조회 실패·심볼릭 링크·항목·깊이·크기 제한 초과는 ‘확인 불가’예요. 준비 작업 중에는 값이 달라질 수 있어요.\n\n실행기·설치 중 임시 폴더·기타 자료는 제외돼요. 읽기 전용으로, 삭제·정리·다운로드는 하지 않아요."
     }
 }

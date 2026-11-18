@@ -629,6 +629,7 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
         if localMode {
             navigation.append(command("이 Mac에서 시작…", #selector(showGettingStarted)))
             navigation.append(command("이 Mac 점검…", #selector(showMacPreflight)))
+            navigation.append(command("모델·재개 캐시 공간…", #selector(showModelStorageUsage)))
             navigation.append(command("로컬 AI 준비 상태…", #selector(showPreparation)))
             navigation.append(command("주문 정리 모델 준비…", #selector(confirmModelPreparation)))
             navigation.append(command("받아쓰기 모델 준비…", #selector(confirmWhisperPreparation)))
@@ -692,6 +693,22 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
 
     private func showPreparationGuide() { showGettingStarted() }
 
+    @objc private func showModelStorageUsage() {
+        guard let storage = localStorage, !closing, !failed, window.attachedSheet == nil else { return }
+        let alert = NSAlert()
+        alert.messageText = "모델·재개 캐시 공간 · 읽기 전용"
+        alert.informativeText = "파일 내용이나 해시를 읽지 않고 크기만 확인하고 있어요…"
+        alert.addButton(withTitle: "닫기")
+        alert.beginSheetModal(for: window)
+        DispatchQueue.global(qos: .utility).async { [weak self, weak alert] in
+            let report = LocalModelStorageUsage.report(LocalModelStorageUsage.inspect(root: storage))
+            DispatchQueue.main.async {
+                guard let self, let alert, !self.closing, self.window.attachedSheet === alert.window else { return }
+                alert.informativeText = report
+            }
+        }
+    }
+
     @objc private func showMacPreflight() {
         guard let storage = localStorage, !closing, !failed, window.attachedSheet == nil else { return }
         let version = ProcessInfo.processInfo.operatingSystemVersion
@@ -711,7 +728,12 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
             os: "\(version.majorVersion).\(version.minorVersion).\(version.patchVersion)",
             architecture: architecture, memoryBytes: memory > 0 ? memory : nil, freeBytes: free)
         alert.addButton(withTitle: "닫기")
-        alert.beginSheetModal(for: window)
+        alert.addButton(withTitle: "모델·캐시 공간 보기")
+        alert.beginSheetModal(for: window) { [weak self] answer in
+            if answer == .alertSecondButtonReturn {
+                DispatchQueue.main.async { [weak self] in self?.showModelStorageUsage() }
+            }
+        }
     }
 
     @objc private func showGettingStarted() {
