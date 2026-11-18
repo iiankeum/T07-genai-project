@@ -37,6 +37,7 @@ export function bindForm(form, action) {
     feedback.id = id;
   }
   const linkedFields = new Set();
+  let pending = false;
   function clearErrorLinks() {
     for (const field of linkedFields) {
       const ids = (field.getAttribute('aria-describedby') || '').split(/\s+/).filter(id => id && id !== feedback.id);
@@ -47,19 +48,34 @@ export function bindForm(form, action) {
   }
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
+    if (pending) return;
+    pending = true;
     const button = event.submitter ?? form.querySelector('button[type="submit"]');
+    const values = formValues(form); // disabled 입력은 FormData에서 빠지므로 잠금 전에 값을 확보한다.
+    const controls = [...new Set([...form.elements].filter(field =>
+      field.matches('input, select, textarea') ? !['button', 'reset'].includes(field.type)
+        : field.matches('button') && field.type === 'submit'))].map(field => [field, field.disabled]);
+    const previousBusy = form.getAttribute('aria-busy');
+    let restored = false;
+    const restoreControls = () => {
+      if (restored) return;
+      restored = true;
+      for (const [field, disabled] of controls) field.disabled = disabled;
+    };
+    for (const [field] of controls) field.disabled = true;
+    form.setAttribute('aria-busy', 'true');
     clearErrorLinks();
     form.querySelectorAll('[aria-invalid]').forEach((input) => input.removeAttribute('aria-invalid'));
-    button.disabled = true;
     feedback.hidden = true;
     try {
-      const message = await action(formValues(form), button);
+      const message = await action(values, button);
       if (message) {
         feedback.textContent = message;
         feedback.classList.remove('is-error');
         feedback.hidden = false;
       }
     } catch (err) {
+      restoreControls(); // 오류 입력에 초점을 보내기 전에 잠금을 해제한다.
       feedback.textContent = err.message || '잠시 뒤에 다시 해 주세요.';
       feedback.classList.add('is-error');
       feedback.hidden = false;
@@ -76,7 +92,10 @@ export function bindForm(form, action) {
         feedback.focus();
       }
     } finally {
-      button.disabled = false;
+      restoreControls();
+      if (previousBusy === null) form.removeAttribute('aria-busy');
+      else form.setAttribute('aria-busy', previousBusy);
+      pending = false;
     }
   });
 }
