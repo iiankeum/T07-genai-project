@@ -85,14 +85,28 @@ async function members(el, key, account) {
   const access = account.access;
   if (!access || access.demo) return show(el, key, demoOnly);
   if (access.role !== 'admin') return show(el, key, restricted);
-  const draw = async () => {
-    const { members, invites } = await api.get('/api/settings/members');
+  show(el, key, html`<p role="status">구성원을 불러오는 중입니다.</p>`);
+  const placeholder = el.firstElementChild;
+  let initial;
+  try { initial = await api.get('/api/settings/members'); } catch (error) {
+    if (!placeholder.isConnected || el.firstElementChild !== placeholder) return;
+    throw error;
+  }
+  if (!placeholder.isConnected || el.firstElementChild !== placeholder) return;
+  const { members, invites } = initial;
+  function inviteList(invites) { return html`${invites.length ? html`<div class="account-stack">${invites.map((i) => html`
+        <form class="account-form invite-row" data-invite="${i.id}">
+          <div><strong>${i.email}</strong><p>${roleName(i.role)} · ${i.expired ? '만료됨' : '수락 대기'}</p></div>
+          <fieldset data-invite-actions style="border:0;padding:0;margin:0"><button type="submit" class="btn" name="action" value="resend">다시 보내기</button>
+          <button type="submit" class="btn" name="action" value="cancel">초대 취소</button></fieldset>
+          ${status}
+        </form>`)}</div>` : html`<p>수락을 기다리는 초대가 없어요.</p>`}`; }
     show(el, key, html`
       <h2>구성원 초대</h2>
       <form id="member-invite" class="account-form">
         <label>이메일<input name="email" type="email" maxlength="254" required></label>
         <label>역할<select name="role">${roleOptions()}</select></label>
-        ${save('초대 보내기')}${status}
+        <fieldset data-invite-actions style="border:0;padding:0;margin:0">${save('초대 보내기')}</fieldset>${status}
       </form>
       <h2>구성원</h2>
       <div class="account-stack">${members.map((m) => html`
@@ -103,32 +117,88 @@ async function members(el, key, account) {
           ${save('변경 저장')}${status}
         </form>`)}</div>
       <h2>수락 대기 중인 초대</h2>
-      ${invites.length ? html`<div class="account-stack">${invites.map((i) => html`
-        <form class="account-form invite-row" data-invite="${i.id}">
-          <div><strong>${i.email}</strong><p>${roleName(i.role)} · ${i.expired ? '만료됨' : '수락 대기'}</p></div>
-          <button type="submit" class="btn" name="action" value="resend">다시 보내기</button>
-          <button type="submit" class="btn" name="action" value="cancel">초대 취소</button>
-          ${status}
-        </form>`)}</div>` : html`<p>수락을 기다리는 초대가 없어요.</p>`}
+      <div data-ref="invite-list">${inviteList(invites)}
+      </div><p data-ref="invite-result" role="status" tabindex="-1" hidden></p><button type="button" class="btn" data-act="reload-invites">초대 목록 새로고침</button>
     `);
-    bindForm(el.querySelector('#member-invite'), async (body) => {
-      await api.post('/api/settings/invites', body);
-      await draw();
-      el.querySelector('#member-invite [role="status"]').textContent = '초대를 준비했어요.';
-      el.querySelector('#member-invite [role="status"]').hidden = false;
-    });
-    for (const form of el.querySelectorAll('.member-row')) bindForm(form, async (body) => {
-      await api.patch(`/api/settings/members/${encodeURIComponent(form.dataset.member)}`, body);
-      return '구성원 역할과 상태를 저장했어요.';
-    });
-    for (const form of el.querySelectorAll('.invite-row')) bindForm(form, async (body, button) => {
+  const page = el.firstElementChild;
+  const alive = () => page.isConnected && el.firstElementChild === page;
+  const area = page.querySelector('[data-ref="invite-list"]');
+  const feedback = page.querySelector('[data-ref="invite-result"]');
+  const inviteForm = page.querySelector('#member-invite');
+  let busy = false;
+  let needsRefresh = false;
+  let generation = 0;
+  function syncActions() {
+    for (const fieldset of page.querySelectorAll('[data-invite-actions]')) fieldset.disabled = busy || needsRefresh;
+    page.querySelector('[data-act="reload-invites"]').disabled = busy;
+  }
+  // Prevent a second form's bindForm snapshot while another invitation operation owns the list.
+  page.addEventListener('submit', event => {
+    if ((busy || needsRefresh || !alive()) && event.target.matches('#member-invite, .invite-row')) {
+      event.preventDefault(); event.stopImmediatePropagation();
+    }
+  }, true);
+  function notice(message) {
+    if (!alive()) return;
+    feedback.textContent = message;
+    feedback.hidden = false;
+  }
+  async function refreshInvites(successMessage = '') {
+    const request = ++generation;
+    try {
+      const data = await api.get('/api/settings/members');
+      if (!alive() || request !== generation) return false;
+      const restoreFocus = area.contains(document.activeElement) || document.activeElement === document.body;
+      render(area, inviteList(data.invites));
+      bindInvites();
+      needsRefresh = false;
+      notice(successMessage || '초대 목록을 새로 불러왔어요.');
+      if (restoreFocus) feedback.focus();
+      return true;
+    } catch (error) {
+      if (!alive() || request !== generation) return false;
+      needsRefresh = true;
+      notice((successMessage ? successMessage + ' 하지만 ' : '') + '초대 목록을 불러오지 못했어요. 다시 발송하지 말고 초대 목록을 새로고침해 주세요.');
+      return false;
+    }
+  }
+  async function invitationOperation(mutate, message, reset = false) {
+    if (busy || needsRefresh || !alive()) return;
+    busy = true;
+    syncActions();
+    notice('초대를 처리하는 중입니다. 다른 폼에 작성한 내용은 그대로 유지됩니다.');
+    try {
+      await mutate();
+      if (!alive()) return;
+      if (reset) inviteForm.reset();
+      await refreshInvites(message);
+    } catch (error) {
+      if (alive()) notice('초대를 처리하지 못했어요. 입력은 그대로 남아 있어요.');
+      throw error;
+    } finally {
+      busy = false;
+      if (alive()) syncActions();
+    }
+  }
+  bindForm(inviteForm, async body => {
+    await invitationOperation(() => api.post('/api/settings/invites', body), '초대를 준비했어요.', true);
+  });
+  for (const form of page.querySelectorAll('.member-row')) bindForm(form, async body => {
+    await api.patch(`/api/settings/members/${encodeURIComponent(form.dataset.member)}`, body);
+    return '구성원 역할과 상태를 저장했어요.';
+  });
+  function bindInvites() {
+    for (const form of area.querySelectorAll('.invite-row')) bindForm(form, async (body, button) => {
       const route = `/api/settings/invites/${encodeURIComponent(form.dataset.invite)}`;
-      if (button.value === 'cancel') await api.del(route);
-      else await api.post(`${route}/resend`);
-      await draw();
+      await invitationOperation(() => button.value === 'cancel' ? api.del(route) : api.post(`${route}/resend`), button.value === 'cancel' ? '초대를 취소했어요.' : '초대 재발송을 요청했어요.');
     });
-  };
-  await draw();
+  }
+  bindInvites();
+  page.querySelector('[data-act="reload-invites"]').addEventListener('click', async () => {
+    if (busy || !alive()) return;
+    busy = true; syncActions();
+    try { await refreshInvites(); } finally { busy = false; if (alive()) syncActions(); }
+  });
 }
 
 async function notificationSettings(el, key, account) {
