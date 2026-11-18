@@ -5,7 +5,7 @@ import path from 'node:path';
 import { dataDir, db, tx, parseJson } from '../lib/db.mjs';
 import { HttpError, cleanText } from '../lib/http.mjs';
 import { requireAdmin, kstDay } from '../lib/security.mjs';
-import { CALL_TYPES, callView, getCallRow, maskPhone } from '../lib/repo.mjs';
+import { CALL_TYPES, callView, getCallRow, maskPhone, isShipTarget } from '../lib/repo.mjs';
 import { purgeCallReferences } from '../lib/call-retention.mjs';
 import { recordAudit, requestAccess, requireRole } from '../lib/auth.mjs';
 
@@ -288,11 +288,21 @@ function glossaryCustomers() {
   return map;
 }
 
+// isShipTarget와 같은 조건. JS item.part의 truthiness를 JSON 타입별로 보존한다.
+// 집계는 SQL에서 유지해 카드마다 별도 조회하지 않는다.
+const CUSTOMER_SHIP_TARGET = `COALESCE(NULLIF(k.call_type, ''), '주문') IN ('주문', '반품·교환')
+  AND EXISTS (SELECT 1 FROM json_each(CASE WHEN json_valid(k.items) THEN k.items ELSE '[]' END) j
+    WHERE CASE WHEN j.type = 'object' THEN CASE json_type(j.value, '$.part')
+      WHEN 'text' THEN length(json_extract(j.value, '$.part')) > 0
+      WHEN 'integer' THEN json_extract(j.value, '$.part') != 0
+      WHEN 'real' THEN json_extract(j.value, '$.part') != 0
+      WHEN 'true' THEN 1 WHEN 'array' THEN 1 WHEN 'object' THEN 1 ELSE 0 END ELSE 0 END)`;
+
 export function listCustomers() {
   const d = db();
   const gl = glossaryCustomers();
   const agg = d.prepare(`SELECT ${EFF_CUSTOMER} AS name, COUNT(*) AS calls, MAX(c.recorded_at) AS lastAt,
-      SUM(CASE WHEN k.status IN ('draft', 'confirmed') THEN 1 ELSE 0 END) AS openCards
+      SUM(CASE WHEN k.status = 'draft' OR (k.status = 'confirmed' AND ${CUSTOMER_SHIP_TARGET}) THEN 1 ELSE 0 END) AS openCards
     FROM calls c LEFT JOIN cards k ON k.call_id = c.id
     WHERE ${EFF_CUSTOMER} IS NOT NULL GROUP BY name`).all();
   // 사전에 번호가 없으면 마지막으로 걸려 온 번호(가려서)
@@ -337,7 +347,7 @@ export function customerDetail(rawName) {
       phone: maskPhone(g?.phone || lastNum || null),
       inGlossary: Boolean(g),
       calls: calls.length,
-      openCards: calls.filter((c) => c.card && (c.card.status === 'draft' || c.card.status === 'confirmed')).length,
+      openCards: calls.filter((c) => c.card && (c.card.status === 'draft' || (c.card.status === 'confirmed' && isShipTarget(c.card)))).length,
     },
     calls,
   };

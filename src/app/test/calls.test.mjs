@@ -341,3 +341,50 @@ test('가짜 날짜 경계: KST 통화일 복합필터와 희망 일정 문구�
   ({body} = await get('/api/calls?' + query));
   assert.equal(body.total, 0);
 });
+
+test('거래처 열린 카드: 처리 완료 문의는 제외하고 초안·출고 대상·콜백은 독립 유지한다 (가짜)', async () => {
+  const cases = [
+    ['draft-inquiry','draft','배송 문의',[],true,1],
+    ['done-inquiry','confirmed','배송 문의',[],true,0],
+    ['inquiry-with-part','confirmed','배송 문의',[{part:'가짜 부품'}],false,0],
+    ['order','confirmed','주문',[{part:'가짜 부품'}],false,1],
+    ['return','confirmed','반품·교환',[{part:'가짜 부품'}],false,1],
+    ['empty-order','confirmed','주문',[],false,0],
+    ['blank-part','confirmed','주문',[{part:''}],false,0],
+    ['empty-return','confirmed','반품·교환',[],false,0],
+    ['stock-inquiry','confirmed','재고·단가 문의',[{part:'가짜 부품'}],false,0],
+    ['other','confirmed','기타',[{part:'가짜 부품'}],false,0],
+    ['default-type','confirmed','',[{part:'가짜 부품'}],false,1],
+    // 이전 저장자료의 JSON truthiness도 공통 isShipTarget과 일치해야 한다.
+    ['string-zero','confirmed','주문',[{part:'0'}],false,1],
+    ['number-zero','confirmed','주문',[{part:0}],false,0],
+    ['number-one','confirmed','주문',[{part:1}],false,1],
+    ['false-part','confirmed','주문',[{part:false}],false,0],
+    ['true-part','confirmed','주문',[{part:true}],false,1],
+    ['null-part','confirmed','주문',[{part:null}],false,0],
+    ['object-part','confirmed','주문',[{part:{}}],false,1],
+    ['array-part','confirmed','주문',[{part:[]}],false,1],
+    ['cancelled','cancelled','주문',[{part:'가짜 부품'}],true,0],
+    ['shipped','shipped','주문',[{part:'가짜 부품'}],true,0],
+  ];
+  try {
+    for (const [key,status,callType,items,callback] of cases) {
+      const name='가짜 집계 '+key,id='fake-count-'+key;
+      addCall({id,recordedAt:at(today,'12:30'),customer:name,card:{status,customer:name,items,callback}});
+      db().prepare('UPDATE cards SET call_type=? WHERE call_id=?').run(callType,id);
+    }
+    const list=(await get('/api/customers')).body.customers;
+    for(const [key,status,callType,items,callback,expected] of cases){
+      const name='가짜 집계 '+key;
+      assert.equal(list.find(c=>c.name===name).openCards,expected,key+' list');
+      const {body}=await get('/api/customers/'+encodeURIComponent(name));
+      assert.equal(body.customer.openCards,expected,key+' detail');
+      const {isShipTarget}=await import('../public/js/domain.js');
+      assert.equal(expected,status==='draft'||(status==='confirmed'&&isShipTarget(body.calls[0].card))?1:0,key+' domain parity');
+      assert.equal(body.calls[0].card.callback,callback,key+' callback unchanged');
+      assert.equal(body.calls[0].card.status,status,key+' status unchanged');
+    }
+  } finally {
+    for (const [key] of cases) db().prepare('DELETE FROM calls WHERE id=?').run('fake-count-'+key);
+  }
+});
