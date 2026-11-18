@@ -204,10 +204,33 @@ async function dataSettings(el, key, account) {
   });
   const deleteForm = el.querySelector('#data-delete');
   if (deleteForm) bindForm(deleteForm, async (body) => {
-    await api.del(`/api/calls/${encodeURIComponent(body.id)}`);
-    deleteForm.elements.id.querySelector('option:checked')?.remove();
-    deleteForm.elements.confirm.value = '';
-    return '통화를 삭제했어요.';
+    const selectedId = String(body.id || '');
+    const select = deleteForm.elements.id;
+    const confirmation = deleteForm.elements.confirm;
+    if (!selectedId || ![...select.options].some(option => option.value === selectedId)) throw new Error('삭제할 통화를 선택해 주세요.');
+    select.disabled = true;
+    confirmation.disabled = true;
+    deleteForm.setAttribute('aria-busy', 'true');
+    try {
+      await api.del(`/api/calls/${encodeURIComponent(selectedId)}`);
+      // 요청 시점의 대상을 제거한다. 대기 중 선택값/DOM이 달라져도 다른 통화는 남긴다.
+      [...select.options].find(option => option.value === selectedId)?.remove();
+      confirmation.value = '';
+      if (!select.options.length) {
+        const empty = document.createElement('p');
+        empty.setAttribute('role', 'status');
+        empty.tabIndex = -1;
+        empty.textContent = '통화를 삭제했어요. 삭제할 통화가 없어요.';
+        deleteForm.replaceWith(empty);
+        empty.focus();
+      }
+      return '통화를 삭제했어요.';
+    } finally {
+      select.disabled = false;
+      confirmation.disabled = false;
+      deleteForm.removeAttribute('aria-busy');
+      if (deleteForm.isConnected) select.focus({ preventScroll: true });
+    }
   });
 }
 
