@@ -1,0 +1,22 @@
+{
+  "scope": "actual module + one synthetic completed inquiry; not backend reproduction",
+  "actual": [
+    {
+      "label": "통화",
+      "count": "1건"
+    },
+    {
+      "label": "확인 필요",
+      "count": "0장"
+    },
+    {
+      "label": "확정 · 출고 전",
+      "count": "1장"
+    },
+    {
+      "label": "출고 완료",
+      "count": "0장"
+    }
+  ],
+  "footer": "마지막 통화 어제 오전 10:00 · 열린 카드(확인 필요 + 확정) 1장"
+}

@@ -112,6 +112,10 @@ jobs:
         run: npm run test:nonorder-guidance-e2e
         env:
           NONORDER_GUIDANCE_OUTPUT: artifacts/e2e/nonorder-guidance
+      - name: Customer work status (fake inquiry and mixed calls)
+        run: npm run test:customer-status-e2e
+        env:
+          CUSTOMER_STATUS_OUTPUT: artifacts/e2e/customer-status
       - uses: actions/upload-artifact@v4
         if: always()
         with:

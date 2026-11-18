@@ -1,5 +1,6 @@
 // 거래처별 모아 보기(F13): 한 거래처의 통화 · 주문 카드를 날짜별로 묶어 보여 준다.
 import { api } from '../api.js';
+import { isShipTarget } from '../domain.js';
 import { html, render, kstDay, fmtDate, fmtClock, fmtWhen, fmtSec, callChip, errorBox, href, SOURCE_LABEL } from '../ui.js';
 import { partsText, carText, callHref, customerHref } from './board.js';
 
@@ -41,7 +42,7 @@ export default {
       if (list.length < 2) return '';
       return html`<label class="field cust-pick"><span>다른 거래처 보기</span>
         <select class="select" data-change="pick" aria-label="거래처 고르기">
-          ${list.map((c) => html`<option value="${c.name}" ${c.name === name ? html`selected` : ''}>${c.name}${c.calls != null ? ` (통화 ${c.calls}건${c.openCards ? ` · 열린 카드 ${c.openCards}` : ''})` : ''}</option>`)}
+          ${list.map((c) => html`<option value="${c.name}" ${c.name === name ? html`selected` : ''}>${c.name}${c.calls != null ? ` (통화 ${c.calls}건${c.openCards ? ` · 처리할 카드 ${c.openCards}` : ''})` : ''}</option>`)}
         </select></label>`;
     }
 
@@ -72,6 +73,8 @@ export default {
       }
       const cards = calls.map((c) => c.card).filter(Boolean);
       const n = (s) => cards.filter((c) => c.status === s).length;
+      const shippingPending = cards.filter((c) => c.status === 'confirmed' && isShipTarget(c)).length;
+      const completedCalls = cards.filter((c) => c.status === 'confirmed' && !isShipTarget(c)).length;
       const last = calls.reduce((m, c) => (ts(c.recordedAt) > ts(m) ? c.recordedAt : m), null);
 
       // 날짜(한국 시간)별로 묶기
@@ -88,10 +91,10 @@ export default {
         <div class="metrics cust-metrics">
           <div class="metric metric-brand"><span class="metric-num">${calls.length}<small>건</small></span><span class="metric-label">통화</span></div>
           <div class="metric metric-warn"><span class="metric-num">${n('draft')}<small>장</small></span><span class="metric-label">확인 필요</span></div>
-          <div class="metric metric-ok"><span class="metric-num">${n('confirmed')}<small>장</small></span><span class="metric-label">확정 · 출고 전</span></div>
+          <div class="metric metric-ok"><span class="metric-num">${shippingPending}<small>장</small></span><span class="metric-label">출고 대기</span></div>
           <div class="metric"><span class="metric-num">${n('shipped')}<small>장</small></span><span class="metric-label">출고 완료</span></div>
         </div>
-        <p class="cust-last">${last ? `마지막 통화 ${fmtWhen(last)} · ` : ''}열린 카드(확인 필요 + 확정) ${n('draft') + n('confirmed')}장</p>
+        <p class="cust-last">${last ? `마지막 통화 ${fmtWhen(last)} · ` : ''}표시된 통화 기준 · 처리할 카드 ${n('draft') + shippingPending}장 · 통화 처리 완료 ${completedCalls}장</p>
         <div class="cust-bar">
           ${picker()}
           <div class="cust-order" role="group" aria-label="순서">
