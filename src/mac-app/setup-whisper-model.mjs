@@ -1,3 +1,4 @@
+import {resolveStorageRoot} from './whisper-runtime-profile.mjs';
 // 개발용 Whisper 가중치 준비. Python 설치·실행·음성 전송·추론은 하지 않는다.
 import fs from 'node:fs/promises';
 import {createReadStream,createWriteStream} from 'node:fs';
@@ -61,5 +62,5 @@ export async function prepare(root,{model=MODEL,signal,emit=()=>{},transfer=down
   await fs.rename(stage,dest);stage=null;emit({event:'ready',model:model.name,inferenceVerified:false});
  }finally{if(stage)await fs.rm(stage,{recursive:true,force:true});if(owned)await fs.rmdir(lock);}
 }
-async function main(){const args=process.argv.slice(2);if(args.length>1||(args.length&&!['--status','--prepare'].includes(args[0])))throw Error('usage: --status | --prepare');const root=path.join(homedir(),'Library/Application Support/Ahmatda');const c=new AbortController();process.once('SIGINT',()=>c.abort());process.once('SIGTERM',()=>c.abort());const emit=value=>process.stdout.write(JSON.stringify(value)+'\n');if(args[0]==='--prepare')await prepare(root,{signal:c.signal,emit});else emit(await inspect(root,{signal:c.signal}));}
+async function main(){const args=process.argv.slice(2);if(args.length>1||(args.length&&!['--status','--prepare'].includes(args[0])))throw Error('usage: --status | --prepare');const root=await resolveStorageRoot(path.dirname(fileURLToPath(import.meta.url)));const c=new AbortController();process.once('SIGINT',()=>c.abort());process.once('SIGTERM',()=>c.abort());const emit=value=>process.stdout.write(JSON.stringify(value)+'\n');if(args[0]==='--prepare')await prepare(root,{signal:c.signal,emit});else emit(await inspect(root,{signal:c.signal}));}
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))main().catch(error=>{process.stdout.write(JSON.stringify({event:'error',code:error.name==='AbortError'?'cancelled':error.message})+'\n');process.exitCode=1;});

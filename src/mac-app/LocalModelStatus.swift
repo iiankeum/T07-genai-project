@@ -1,4 +1,5 @@
 import Foundation
+import CoreFoundation
 
 // 파일 존재가 아니라 실행 중인 로컬 서버의 목록만 확인한다. 실제 추론 성공과 구분한다.
 enum LocalModelStatus {
@@ -45,5 +46,24 @@ enum LocalVerificationLink {
         dates.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         guard let expires = dates.date(from: expiry), expires > now else { return nil }
         return parts.url
+    }
+}
+
+
+// 개발 선택은 번들 안의 고정된 두 표지가 일치할 때만 허용한다.
+enum LocalDevelopmentProfile {
+    static func storageName(info: Any?, data: Data?) throws -> String {
+        if info == nil && data == nil { return "Ahmatda" }
+        guard let tag = info as? String, tag == "development-whisper-pyav-lgpl-v1",
+              let data, data.count < 1024,
+              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              Set(object.keys) == Set(["version", "profile"]),
+              let version = object["version"] as? NSNumber,
+              CFGetTypeID(version) != CFBooleanGetTypeID(), version.intValue == 1, version.doubleValue == 1,
+              object["profile"] as? String == tag else {
+            throw NSError(domain: "AhmatdaDevelopmentProfile", code: 1,
+                          userInfo: [NSLocalizedDescriptionKey: "개발 프로파일 표지가 맞지 않아요. 기본 앱으로 돌아가거나 개발 앱을 다시 빌드해 주세요."])
+        }
+        return "Ahmatda-PyAV-Dev"
     }
 }

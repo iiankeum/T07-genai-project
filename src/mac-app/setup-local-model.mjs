@@ -1,3 +1,4 @@
+import {resolveStorageRoot} from './whisper-runtime-profile.mjs';
 // 개발용 모델 준비 helper. 런타임은 앱 업데이트로 제공한다. 모델 외 다운로드·실행·추론 없음.
 import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream, createWriteStream } from 'node:fs';
@@ -150,7 +151,7 @@ export async function prepare(root,{model=MODEL,runtime=RUNTIME,signal,emit=()=>
 async function main(){
   const args=process.argv.slice(2);
   if(args.length>1 || (args.length && !['--status','--prepare'].includes(args[0]))) throw new Error('usage: --status | --prepare');
-  const root=path.join(homedir(),'Library/Application Support/Ahmatda');
+  const root=await resolveStorageRoot(path.dirname(fileURLToPath(import.meta.url)));
   const controller=new AbortController();
   process.once('SIGINT',()=>controller.abort());process.once('SIGTERM',()=>controller.abort());
   const emit=value=>process.stdout.write(JSON.stringify(value)+'\n');

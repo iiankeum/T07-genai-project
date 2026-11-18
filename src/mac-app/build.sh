@@ -8,6 +8,15 @@ fi
 
 source_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 repo=$(cd "$source_dir/../.." && pwd)
+whisper_profile=${AHMATDA_WHISPER_PROFILE:-default}
+case "$whisper_profile" in
+  default) output="$repo/out/Ahmatda.app" ;;
+  development-whisper-pyav-lgpl-v1)
+    [[ "${AHMATDA_BUNDLE_WHISPER:-0}" == 1 && -n "${AHMATDA_WHISPER_RUNTIME:-}" ]] || { echo '개발 프로파일에는 명시적 Whisper 번들과 실행기 경로가 필요합니다.' >&2; exit 1; }
+    output="$repo/out/Ahmatda-PyAV-Dev.app"
+    [[ ! -e "$output" && ! -L "$output" ]] || { echo '기존 개발 앱을 보존합니다. 별도 보관 후 다시 빌드해 주세요.' >&2; exit 1; } ;;
+  *) echo '알 수 없는 Whisper 프로파일입니다.' >&2; exit 1 ;;
+esac
 node_source=$(NODE_OPTIONS= NODE_PATH= "${AHMATDA_NODE_BINARY:-node}" -p 'process.execPath')
 node_major=$(NODE_OPTIONS= NODE_PATH= "$node_source" -p 'process.versions.node.split(".")[0]')
 if [[ "$node_major" != 24 ]]; then
@@ -39,6 +48,12 @@ resources="$bundle/Contents/Resources"
 mkdir -p "$macos" "$resources/app" "$resources/pc-agent"
 
 cp "$source_dir/Info.plist" "$bundle/Contents/"
+if [[ "$whisper_profile" != default ]]; then
+    /usr/libexec/PlistBuddy -c 'Set :CFBundleIdentifier org.ininhyeop.t07.ahmatda.pyavdev' "$bundle/Contents/Info.plist"
+    /usr/libexec/PlistBuddy -c 'Set :CFBundleDisplayName 아맞다-PyAV-개발' "$bundle/Contents/Info.plist"
+    /usr/libexec/PlistBuddy -c "Add :AhmatdaDevelopmentProfile string $whisper_profile" "$bundle/Contents/Info.plist"
+    printf '{"version":1,"profile":"development-whisper-pyav-lgpl-v1"}\n' > "$resources/whisper-runtime-profile.json"
+fi
 cp "$node_source" "$macos/node"
 cp "$node_license" "$resources/Node-LICENSE.txt"
 cp "$repo/LICENSE" "$resources/Project-LICENSE.txt"
@@ -52,6 +67,7 @@ cp "$source_dir/local-runtime.mjs" "$resources/"
 cp "$source_dir/prepare-whisper-runtime.mjs" "$resources/"
 cp "$source_dir/install-whisper-runtime.mjs" "$resources/"
 cp "$source_dir/whisper-worker.mjs" "$resources/"
+cp "$source_dir/whisper-runtime-profile.mjs" "$resources/"
 cp "$repo/src/pc-agent/callnote_agent.py" "$resources/pc-agent/"
 cp "$repo/src/pc-agent/decode_audio_compat.py" "$resources/pc-agent/"
 
@@ -95,10 +111,13 @@ fi
 # 재배포 고지/Developer ID/공증 완료를 뜻하지 않으며 전역 Python·venv를 포함하지 않는다.
 if [[ "${AHMATDA_BUNDLE_WHISPER:-0}" == 1 ]]; then
     whisper_source=${AHMATDA_WHISPER_RUNTIME:-"$HOME/Library/Application Support/Ahmatda/runtime/whisper-portable-3.12.16"}
-    NODE_OPTIONS= NODE_PATH= "$node_source" --input-type=module - "$source_dir/install-whisper-runtime.mjs" "$whisper_source" "$resources/runtime/whisper-portable-3.12.16" <<'JS'
+    NODE_OPTIONS= NODE_PATH= "$node_source" --input-type=module - "$source_dir/install-whisper-runtime.mjs" "$whisper_source" "$resources" "$whisper_profile" <<'JS'
 import {pathToFileURL} from 'node:url';
+import path from 'node:path';
 const {copyVerifiedRuntime}=await import(pathToFileURL(process.argv[2]));
-await copyVerifiedRuntime(process.argv[3],process.argv[4]);
+const {profileInfo}=await import(pathToFileURL(path.join(path.dirname(process.argv[2]),'whisper-runtime-profile.mjs')));
+const selected=profileInfo(process.argv[5]);
+await copyVerifiedRuntime(process.argv[3],path.join(process.argv[4],'runtime',selected.runtimeName),{profile:selected.profile});
 JS
 fi
 
@@ -126,7 +145,9 @@ codesign --force --sign - "$macos/node"
 codesign --force --sign - "$bundle"
 codesign --verify --deep --strict "$bundle"
 
-output="$repo/out/Ahmatda.app"
+if [[ "$whisper_profile" != default && ( -e "$output" || -L "$output" ) ]]; then
+    echo "개발 앱 출력 경로가 생겨 보존하고 중단합니다." >&2; exit 1
+fi
 if [[ -e "$output" ]]; then
     mv "$output" "$stage/previous.app"
 fi

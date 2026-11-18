@@ -27,3 +27,12 @@ check(LocalVerificationLink.parse(fakeMail(localLink, kind:"reset"), email:"fake
 check(LocalVerificationLink.parse(fakeMail(localLink, expiry:"2000-01-01T00:00:00.000Z"), email:"fake@example.invalid") == nil, "expired link")
 check(LocalVerificationLink.parse(fakeMail("https://example.com/#/verify?token=\(fakeToken)"), email:"fake@example.invalid") == nil, "external origin refused")
 check(LocalVerificationLink.parse(fakeMail(localLink+"&next=https://example.com"), email:"fake@example.invalid") == nil, "extra parameters refused")
+
+check((try? LocalDevelopmentProfile.storageName(info: nil, data: nil)) == "Ahmatda", "default storage unchanged")
+let devTag = "development-whisper-pyav-lgpl-v1"
+let devProfile = Data("{\"version\":1,\"profile\":\"development-whisper-pyav-lgpl-v1\"}".utf8)
+check((try? LocalDevelopmentProfile.storageName(info: devTag, data: devProfile)) == "Ahmatda-PyAV-Dev", "explicit development storage")
+check((try? LocalDevelopmentProfile.storageName(info: nil, data: devProfile)) == nil, "profile needs plist agreement")
+check((try? LocalDevelopmentProfile.storageName(info: devTag, data: nil)) == nil, "plist needs profile agreement")
+check((try? LocalDevelopmentProfile.storageName(info: "other", data: devProfile)) == nil, "unknown profile rejected")
+check((try? LocalDevelopmentProfile.storageName(info: devTag, data: Data("{\"version\":true,\"profile\":\"development-whisper-pyav-lgpl-v1\"}".utf8))) == nil, "boolean version rejected")

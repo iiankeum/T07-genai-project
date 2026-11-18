@@ -1,3 +1,4 @@
+import {resolveStorageRoot} from './whisper-runtime-profile.mjs';
 // 앱 전용 Ollama 감독기. 다운로드·유료 API·다른 프로세스 제어를 하지 않는다.
 import fs from 'node:fs/promises';
 import { createReadStream, createWriteStream } from 'node:fs';
@@ -248,7 +249,7 @@ async function main() {
   if(process.argv.length!==3 || process.argv[2]!=='--start') fail('usage_start_required');
   if(process.platform!=='darwin' || process.arch!=='arm64') fail('unsupported_platform');
   process.umask(0o077);
-  const root=path.join(homedir(),'Library/Application Support/Ahmatda');
+  const root=await resolveStorageRoot(path.dirname(fileURLToPath(import.meta.url)));
   await runWithParent(root,{emit:value=>process.stdout.write(JSON.stringify(value)+'\n')});
 }
 if(process.argv[1] && path.resolve(process.argv[1])===fileURLToPath(import.meta.url)) {

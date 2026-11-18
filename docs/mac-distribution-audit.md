@@ -114,3 +114,12 @@ node src/mac-app/prepare-pyav-runtime.mjs --inspect /절대경로/새로운/alte
 원본·이동된 대안runtime 모두 inventory 검사와 WAV/MP3/M4A·BytesIO·workerWAV 전사를 통과했다. 실제 제작wheel의 사본1바이트를 바꾼 입력은 설치 전에 checksum 오류로 거절됐다. helper113개(새10개 포함) 통과. [합성음성 증거](../work/03-개발-태림/자료/real-local-audio-20261118/alternative-runtime-fake-input.json).
 
 inventory는 로컬 제작물의 변경 탐지이지 게시자 서명·소스와 바이너리의 암호학적 대응 증명이 아니다. 신뢰한 로컬 빌드 결과만 입력한다. 기본앱·지원runtime·ZIP·WHEELS는 그대로다. 다음 단계는 이프로파일을 선택하는 명시적 개발번들 경로와 별도 패키지의 첫설치/일꾼 수용시험이다. 정식배포·법적적합성·다른Mac 호환성은 여전히 미확정이다.
+
+
+## 명시적 개발앱 프로파일 연결
+
+기본 프로파일을 바꾸지 않고 별도 `Ahmatda-PyAV-Dev.app` 빌드 경로를 추가했다. 번들의 고정 JSON으로 개발runtime을 선택하고 Swift는 plist와 JSON의 일치를 확인한다. 기본앱은 기존 Ahmatda 자료폴더, 개발앱은 별도 Ahmatda-PyAV-Dev 자료폴더를 사용한다. 모델준비·Ollama·설치기·일꾼 모두 같은 프로파일로 분리했다. 임의 경로·알 수 없는 프로파일은 거절한다.
+
+helper121개, Swift20개, Node171개 통과. 별도개발앱 빌드/ad hoc strict검사 및 번들CLI status에서 dev런타임검증true/기본자료 미사용을 확인했다. 임시 가짜계정·개발번들로 브라우저 연결→실제Whisper 큐 처리→ready→연결해제→일꾼종료를 통과했다. 카드제공자는 fixture이며 실제LLM이 아니다. 전사는 '두 개' 대신 '두개'여서 첫 엄격검사는 실패했고 재시험은 공백 정규화 비교로 통과했다. 원문과 정확일치false를 그대로 보존한다. [증거](../work/03-개발-태림/자료/real-local-audio-20261118/devprofile-managed-worker-fake-input.json).
+
+새 native 개발앱의 GUI를 실제로 열어 가입·모델다운로드·첫업무를 끝내지는 않았다. 기존 앱/ZIP/백업·설치자료를 보존했다. 두 앱은 같은 loopback포트를 쓰므로 동시에 실행하지 않는다. 기본앱 재선택은 기존경로 복귀이며 DB병합·업데이트 복구를 뜻하지 않는다. [명시 빌드 방법](mac-app.md)을 따른다.

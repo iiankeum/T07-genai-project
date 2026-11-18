@@ -202,3 +202,19 @@ AHMATDA_BUNDLE_OLLAMA=1 AHMATDA_BUNDLE_WHISPER=1 AHMATDA_BUNDLE_AUDIO=1 bash src
 가짜 임시 공간의 실Whisper 일꾼을600초 유지하며6초 간격 online검사100회를 통과했다. 프로세스 재시작 없이 전사→fixture카드 ready, 브라우저 해제→감독기 종료,5601/11435 해제를 확인했다. [증거](../work/03-개발-태림/자료/real-local-audio-20261118/managed-worker-10min-fake-input.json). 수시간/수일 운영·메모리누수·현장 음성품질·실LLM 시험은 아니다. `real-managed-worker.mjs --run-real-local-model --soak-seconds=600`으로 재현한다.
 
 배포 전에는 [서명·OS 호환성·라이선스 점검](mac-distribution-audit.md)의 차단 항목을 해소해야 한다. 현재 ZIP은 개발 검증용이다.
+
+
+## 명시적 PyAV 개발 프로파일
+
+기본앱과 별도로 개발용 PyAV를 시험할 때만 아래 선택값을 사용한다. 기본값은 기존 프로파일이다.
+
+```sh
+AHMATDA_BUNDLE_WHISPER=1 \
+AHMATDA_WHISPER_PROFILE=development-whisper-pyav-lgpl-v1 \
+AHMATDA_WHISPER_RUNTIME=/절대경로/alternative-runtime \
+AHMATDA_BUNDLE_AUDIO=1 bash src/mac-app/build.sh
+```
+
+출력은 `out/Ahmatda-PyAV-Dev.app`이다. 기존 개발 출력도 덮어쓰지 않는다. `out/Ahmatda.app`과 기존 ZIP은 그대로 유지한다. 별도 번들 식별자와 `Ahmatda-PyAV-Dev` 자료폴더를 사용하며 기존 계정·DB·모델·자격증명을 자동복사하지 않는다. 개발앱 창 제목에 개발 테스트임을 표시한다. 모델 준비 메뉴와 실행기·일꾼도 같은 개발 자료폴더만 사용한다.
+
+번들 JSON과 plist 표지가 일치해야 한다. 알 수 없는 프로파일이나 임의 경로는 허용하지 않는다. 기본앱을 다시 선택하면 기존 기본 자료폴더·런타임을 사용하며 개발자료를 병합하지 않는다. 두 앱은5601/11435 포트를 공유하므로 동시에 실행하지 않는다. 이 선택은 개발 검증이며 일반 사용자 배포·법적 적합성·타Mac 호환성을 보증하지 않는다.

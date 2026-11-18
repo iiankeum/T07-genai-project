@@ -147,9 +147,20 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
     }
 
     private func startLocalServer() throws {
+        let profileURL = Bundle.main.resourceURL?.appendingPathComponent("whisper-runtime-profile.json")
+        let profileData: Data?
+        if let profileURL, files.fileExists(atPath: profileURL.path) {
+            let values = try profileURL.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey])
+            guard values.isRegularFile == true, values.isSymbolicLink != true,
+                  (values.fileSize ?? 1024) < 1024 else { throw LaunchError.missingBundle }
+            profileData = try Data(contentsOf: profileURL)
+        } else { profileData = nil }
+        let storageName = try LocalDevelopmentProfile.storageName(
+            info: Bundle.main.object(forInfoDictionaryKey: "AhmatdaDevelopmentProfile"), data: profileData)
+        if storageName != "Ahmatda" { window.title = "아맞다 · PyAV 개발 테스트 · 별도 자료" }
         let storage = try files.url(for: .applicationSupportDirectory, in: .userDomainMask,
                                     appropriateFor: nil, create: true)
-            .appendingPathComponent("Ahmatda", isDirectory: true)
+            .appendingPathComponent(storageName, isDirectory: true)
         try files.createDirectory(at: storage, withIntermediateDirectories: true,
                                   attributes: [.posixPermissions: 0o700])
         try files.setAttributes([.posixPermissions: 0o700], ofItemAtPath: storage.path)

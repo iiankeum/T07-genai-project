@@ -2,12 +2,12 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import http from 'node:http';
-import {homedir} from 'node:os';
 import {fileURLToPath} from 'node:url';
 import {createHash,timingSafeEqual} from 'node:crypto';
 import {spawn} from 'node:child_process';
 import {setTimeout as delay} from 'node:timers/promises';
-import {verifyRuntime,install,RUNTIME_NAME} from './install-whisper-runtime.mjs';
+import {verifyRuntime,install} from './install-whisper-runtime.mjs';
+import {resolveRuntimePaths,resolveStorageRoot} from './whisper-runtime-profile.mjs';
 import {inspect as inspectModel,MODEL} from './setup-whisper-model.mjs';
 export const SERVER='http://127.0.0.1:5601';
 const NAME='ahmatda-local-mac';
@@ -32,11 +32,16 @@ export function checkAuthorization(credentials,{signal}={}){return new Promise(r
   let body='',bytes=0;res.on('data',chunk=>{bytes+=chunk.length;if(bytes>4096){res.destroy();resolve(false);}else body+=chunk;});res.on('end',()=>{try{resolve(res.statusCode===200&&authorizationMatches(JSON.parse(body),credentials));}catch{resolve(false);}});res.on('error',()=>resolve(false));
  });req.setTimeout(1500,()=>req.destroy());req.on('error',()=>resolve(false));req.end();
 });}
+export async function ensureWorkerRuntime(root,bundleRoot,{signal}={}){
+ let selected;try{selected=await resolveRuntimePaths(bundleRoot,root);}catch{throw Error('runtime_not_prepared');}
+ const {local,source,profile}=selected;
+ try{await verifyRuntime(local,{signal,profile});}catch(e){if(signal?.aborted)throw e;try{await install(source,root,{signal,profile});}catch(e){if(signal?.aborted)throw e;throw Error('runtime_not_prepared');}}
+ return selected;
+}
 export async function ensureAssets(root,bundleRoot,{signal}={}){
  // 파일이 없는 동안에는 대용량 해시를 반복하지 않는다. 다음 poll에서 새 파일을 발견한다.
  for(const item of MODEL.files){let s;try{s=await fs.lstat(path.join(root,'whisper-small',item.name));}catch{throw Error('model_not_prepared');}if(!s.isFile()||s.isSymbolicLink()||s.size!==item.size)throw Error('model_not_prepared');}
- const local=path.join(root,'runtime',RUNTIME_NAME);
- try{await verifyRuntime(local,{signal});}catch(e){if(signal?.aborted)throw e;try{await install(path.join(bundleRoot,'runtime',RUNTIME_NAME),root,{signal});}catch(e){if(signal?.aborted)throw e;throw Error('runtime_not_prepared');}}
+ const {local}=await ensureWorkerRuntime(root,bundleRoot,{signal});
  const state=await inspectModel(root,{signal});if(!state.modelVerified)throw Error('model_integrity_failed');
  const agent=path.join(bundleRoot,'pc-agent/callnote_agent.py');const s=await fs.lstat(agent);if(!s.isFile()||s.isSymbolicLink())throw Error('agent_missing');
  return {python:path.join(local,'python/bin/python3.12'),agent,model:path.join(root,'whisper-small')};
@@ -86,5 +91,5 @@ export async function supervisor({root,bundleRoot,capability,signal,emit=()=>{},
   }
  }finally{await stop();await fs.rm(secrets,{recursive:true,force:true});emit({event:'stopped',code:'supervisor_stopped',transcriptionVerified:false});}
 }
-async function main(){if(process.argv.length!==3||!['--start','--supervise'].includes(process.argv[2]))throw Error('usage: --start');const c=new AbortController();process.once('SIGINT',()=>c.abort());process.once('SIGTERM',()=>c.abort());process.stdin.once('end',()=>c.abort());process.stdin.once('error',()=>c.abort());process.stdin.resume();try{await supervisor({root:path.join(homedir(),'Library/Application Support/Ahmatda'),bundleRoot:path.dirname(fileURLToPath(import.meta.url)),capability:process.env.AHMATDA_LOCAL_WORKER_CAPABILITY,signal:c.signal,emit:e=>process.stdout.write(JSON.stringify(e)+'\n')});}finally{process.stdin.pause();process.stdin.destroy();}}
+async function main(){if(process.argv.length!==3||!['--start','--supervise'].includes(process.argv[2]))throw Error('usage: --start');const c=new AbortController();process.once('SIGINT',()=>c.abort());process.once('SIGTERM',()=>c.abort());process.stdin.once('end',()=>c.abort());process.stdin.once('error',()=>c.abort());process.stdin.resume();try{const bundleRoot=path.dirname(fileURLToPath(import.meta.url));await supervisor({root:await resolveStorageRoot(bundleRoot),bundleRoot,capability:process.env.AHMATDA_LOCAL_WORKER_CAPABILITY,signal:c.signal,emit:e=>process.stdout.write(JSON.stringify(e)+'\n')});}finally{process.stdin.pause();process.stdin.destroy();}}
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))main().catch(()=>{process.stdout.write(JSON.stringify({event:'error',code:'worker_supervisor_failed'})+'\n');process.exitCode=1;});
