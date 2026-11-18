@@ -95,3 +95,22 @@ node src/mac-app/prepare-pyav-wheel.mjs --prepare-development-wheel \
 실제 CLI의 다운로드→컴파일→wheel제작→감사가 성공했고, 새wheel을 또 다른 Python 복사본에 설치하여 staging 앱 소스의3개 포맷·BytesIO·worker WAV 전사를 통과했다. helper103개(새 안전검사13개 포함)도 통과했다. 수동 제작본과 wheel 해시가 달라 **기능적 재현 성공이지 바이트 동일 재현은 아니다.** [증거](../work/03-개발-태림/자료/real-local-audio-20261118/pyav-script-rebuild-fake-input.json).
 
 기존9097030 ZIP과 별도백업의 SHA256이 `c2324131bf44536ff0b8fca1524d64d2adf4c0b98b78e2c32c6f307c784e44dc`로 같음을 확인했다. 기존 앱·지원런타임·기본 WHEELS는 교체하지 않았다. 다음 단계는 새 wheel/대응소스를 검증된 런타임 준비 경로에 편입하고 별도 패키지를 만드는 것이며, 아직 수행하지 않았다. 소스·고지 보존 자체가 모든 법적 의무 충족을 뜻하지 않는다.
+
+
+## 별도 개발 런타임 편입
+
+`prepare-pyav-runtime.mjs`는 검증된 기본 런타임을 복사하고 그 안의 PyAV만 새wheel로 교체한다. 고정 소스 메타데이터·원본소스 SHA·wheel SHA·구성을 대조하고 설치 후 실제57개 바이너리의 라이선스·로드 의존성·서명을 다시 검사한다. 설치 전후 패키지집합25개가 같아 빌드도구가 들어오지 않았음을 확인했다. 대응소스·원문고지·구성·감사는 `pyav-redistribution`에 포함한다.
+
+```sh
+node src/mac-app/prepare-pyav-runtime.mjs --prepare-development-runtime \
+  --source-runtime /절대경로/기존/whisper-portable-3.12.16 \
+  --wheel-build /절대경로/pyav-build-result \
+  --output /절대경로/새로운/alternative-runtime
+node src/mac-app/prepare-pyav-runtime.mjs --inspect /절대경로/새로운/alternative-runtime
+```
+
+네트워크 없이 동작하며 기존경로·출력을 보존한다. 실패·취소 시 새staging을 정리한다. 기본 런타임을 전환하지 않았으므로 되돌리기는 기존 경로를 계속 사용하는 방식이며, 실제 업데이트 후 복구 기능을 구현했다는 뜻은 아니다. 새 kind는 `development-whisper-pyav-lgpl-v1`이고 기존 설치기·자동 일꾼·앱번들은 이프로파일을 아직 선택하지 않는다.
+
+원본·이동된 대안runtime 모두 inventory 검사와 WAV/MP3/M4A·BytesIO·workerWAV 전사를 통과했다. 실제 제작wheel의 사본1바이트를 바꾼 입력은 설치 전에 checksum 오류로 거절됐다. helper113개(새10개 포함) 통과. [합성음성 증거](../work/03-개발-태림/자료/real-local-audio-20261118/alternative-runtime-fake-input.json).
+
+inventory는 로컬 제작물의 변경 탐지이지 게시자 서명·소스와 바이너리의 암호학적 대응 증명이 아니다. 신뢰한 로컬 빌드 결과만 입력한다. 기본앱·지원runtime·ZIP·WHEELS는 그대로다. 다음 단계는 이프로파일을 선택하는 명시적 개발번들 경로와 별도 패키지의 첫설치/일꾼 수용시험이다. 정식배포·법적적합성·다른Mac 호환성은 여전히 미확정이다.
