@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 
 func check(_ condition: Bool, _ label: String) {
     precondition(condition, label)
@@ -99,3 +100,60 @@ check(TeamServerAddress.validated("https://team.example.com", confirmed: false) 
 for bad in ["http://team.example.com", "https://user:secret@team.example.com", "https://user@team.example.com", "https://team.example.com/path", "https://team.example.com/?x=1", "https://team.example.com/#fragment", "https://team.example.com:0", "https://team.example.com:65536", "https://", "not a url", "https://te am.example.com", "https://team.example.com\\\\@evil.test", "https://.example.com", "https://-bad.example.com", "https://example..com", "https://team.example.com/%2e", "https://[bad::ipv6]"] {
     check(TeamServerAddress.validated(bad, confirmed: true) == nil, "invalid or ambiguous team URL refused")
 }
+
+
+// 실제 사용자 설정 대신 private 임시 폴더와 가짜 ai.json만 사용한다.
+let aiRoot = FileManager.default.temporaryDirectory.appendingPathComponent("ahcha-config-" + UUID().uuidString)
+try! FileManager.default.createDirectory(at: aiRoot, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
+defer { try? FileManager.default.removeItem(at: aiRoot) }
+let aiFile = aiRoot.appendingPathComponent("ai.json")
+func fakeAI(_ text: String, mode: mode_t = 0o600) {
+    try? FileManager.default.removeItem(at: aiFile)
+    try! Data(text.utf8).write(to: aiFile)
+    precondition(chmod(aiFile.path, mode) == 0)
+}
+func rejectsAI(_ label: String) {
+    do { _ = try LocalAIConfiguration.environment(in: aiRoot); preconditionFailure(label) }
+    catch { check(true, label) }
+}
+check(try! LocalAIConfiguration.environment(in: aiRoot)["OLLAMA_MODEL"] == "qwen3:4b", "missing ai config keeps default")
+fakeAI(#"{"provider":"off"}"#)
+check(try! LocalAIConfiguration.environment(in: aiRoot) == ["AI_PROVIDER":"off"], "off policy preserved")
+fakeAI(#"{"provider":"ollama"}"#)
+check(try! LocalAIConfiguration.environment(in: aiRoot)["OLLAMA_MODEL"] == "qwen3:4b", "missing model keeps default")
+fakeAI(#"{"provider":"ollama","model":"local/custom:latest"}"#, mode: 0o644)
+check(try! LocalAIConfiguration.environment(in: aiRoot)["OLLAMA_MODEL"] == "local/custom:latest", "legacy readable 644 config allowed inside private root")
+var aiInfo = stat(); precondition(lstat(aiFile.path, &aiInfo) == 0)
+check(!LocalAIConfiguration.allowedMetadata(aiInfo, owner: aiInfo.st_uid == 0 ? 1 : 0), "foreign owner metadata rejected without chown")
+for mode: mode_t in [0o620, 0o602, 0o666] {
+    precondition(chmod(aiFile.path, mode) == 0); rejectsAI("group or world writable config refused")
+}
+fakeAI(String(repeating: "x", count: LocalAIConfiguration.maximumBytes + 1)); rejectsAI("oversized config refused")
+fakeAI("{"); rejectsAI("malformed config refused")
+for value in [#"{"provider":"remote"}"#, #"{"provider":"ollama","model":"custom-cloud:latest"}"#, #"{"provider":"ollama","model":"../unsafe"}"#] {
+    fakeAI(value); rejectsAI("existing provider and model policy preserved")
+}
+try! FileManager.default.removeItem(at: aiFile)
+let outsideAI = aiRoot.appendingPathComponent("untouched.json")
+try! Data(#"{"provider":"off"}"#.utf8).write(to: outsideAI)
+try! FileManager.default.createSymbolicLink(atPath: aiFile.path, withDestinationPath: outsideAI.path)
+rejectsAI("config symlink refused")
+check(try! String(contentsOf: outsideAI, encoding: .utf8) == #"{"provider":"off"}"#, "symlink target unchanged")
+try! FileManager.default.removeItem(at: aiFile)
+try! FileManager.default.createSymbolicLink(atPath: aiFile.path, withDestinationPath: aiRoot.appendingPathComponent("missing.json").path)
+rejectsAI("dangling config symlink not treated as absent")
+try! FileManager.default.removeItem(at: aiFile)
+precondition(mkfifo(aiFile.path, 0o600) == 0)
+rejectsAI("FIFO rejected without blocking")
+try! FileManager.default.removeItem(at: aiFile)
+try! FileManager.default.createDirectory(at: aiFile, withIntermediateDirectories: false)
+rejectsAI("directory config refused")
+fakeAI(#"{"provider":"off"}"#)
+let hardlink = aiRoot.appendingPathComponent("alias.json")
+precondition(link(aiFile.path, hardlink.path) == 0)
+rejectsAI("multiply linked config refused")
+try! FileManager.default.removeItem(at: hardlink)
+let rootAlias = aiRoot.appendingPathComponent("root-alias")
+try! FileManager.default.createSymbolicLink(atPath: rootAlias.path, withDestinationPath: aiRoot.path)
+do { _ = try LocalAIConfiguration.environment(in: rootAlias); preconditionFailure("symlink root") }
+catch { check(true, "symlink storage root refused") }

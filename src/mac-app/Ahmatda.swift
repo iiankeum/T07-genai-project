@@ -12,7 +12,7 @@ private enum LaunchError: LocalizedError {
         case .usage: return "서버 모드에는 --server와 HTTPS 주소를 지정해 주세요."
         case .alreadyOpen: return "이 Mac에서 아차가 이미 실행 중입니다."
         case .missingBundle: return "앱 번들에 Node 또는 서버 파일이 없습니다. 다시 빌드해 주세요."
-        case .aiConfiguration: return "ai.json의 provider를 off 또는 ollama로 설정해 주세요. model에는 설치한 로컬 모델 이름만 지정할 수 있어요."
+        case .aiConfiguration: return "ai.json 파일의 소유자·쓰기 권한과 4KB 이하 크기를 확인해 주세요. 링크 파일은 사용할 수 없어요. provider는 off 또는 ollama, model은 로컬 모델 이름이어야 해요."
         case .workerConfiguration: return "worker.env에 작업공간 ID와 일꾼 토큰을 적고 권한을 600으로 설정해 주세요."
         }
     }
@@ -33,31 +33,6 @@ private enum Mode {
     }
 }
 
-private struct AIConfiguration: Decodable {
-    let provider: String
-    let model: String?
-
-    static func environment(in storage: URL) throws -> [String: String] {
-        let file = storage.appendingPathComponent("ai.json")
-        guard FileManager.default.fileExists(atPath: file.path) else {
-            return ["AI_PROVIDER": "ollama", "OLLAMA_MODEL": "qwen3:4b"]
-        }
-        guard let data = try? Data(contentsOf: file),
-              let config = try? JSONDecoder().decode(AIConfiguration.self, from: data) else {
-            throw LaunchError.aiConfiguration
-        }
-        if config.provider == "off" { return ["AI_PROVIDER": "off"] }
-        let name = config.model ?? "qwen3:4b"
-        guard config.provider == "ollama", name.count <= 128,
-              name.range(of: #"\A(?:[a-z0-9][a-z0-9_-]*/)?[a-z0-9][a-z0-9_.-]*(?::[a-z0-9][a-z0-9_.-]*)?\z"#,
-                         options: [.regularExpression, .caseInsensitive]) != nil,
-              name.range(of: #"(?:^|[/:._-])cloud(?:$|[/:._-])"#,
-                         options: [.regularExpression, .caseInsensitive]) == nil else {
-            throw LaunchError.aiConfiguration
-        }
-        return ["AI_PROVIDER": "ollama", "OLLAMA_MODEL": name]
-    }
-}
 
 private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate {
     private let local = URL(string: "http://127.0.0.1:5601/")!
@@ -210,7 +185,8 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
             "FFMPEG_PATH": audioBundled ? ffmpeg.path : "ffmpeg",
             "FFPROBE_PATH": audioBundled ? ffprobe.path : "ffprobe",
         ]
-        aiEnvironment = try AIConfiguration.environment(in: storage)
+        do { aiEnvironment = try LocalAIConfiguration.environment(in: storage) }
+        catch { throw LaunchError.aiConfiguration }
         env.merge(aiEnvironment) { _, localValue in localValue }
         env.merge(try workerEnvironment(in: storage)) { _, localValue in localValue }
         proc.environment = env

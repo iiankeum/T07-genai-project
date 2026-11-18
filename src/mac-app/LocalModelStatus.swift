@@ -229,3 +229,58 @@ enum TeamServerAddress {
         return parts.url
     }
 }
+
+
+// 설정은 private 정규 파일 fd에서만 제한된 크기로 읽는다. 설정 쓰기·모델 조회는 하지 않는다.
+enum LocalAIConfiguration {
+    static let maximumBytes = 4096
+    private struct Configuration: Decodable { let provider: String; let model: String? }
+    static func allowedMetadata(_ info: stat, owner: uid_t) -> Bool {
+        (info.st_mode & S_IFMT) == S_IFREG && info.st_uid == owner &&
+        (info.st_mode & 0o022) == 0 && info.st_nlink == 1 &&
+        info.st_size >= 0 && info.st_size <= maximumBytes
+    }
+    static func environment(in storage: URL) throws -> [String: String] {
+        let fallback = ["AI_PROVIDER": "ollama", "OLLAMA_MODEL": "qwen3:4b"]
+        let directory = open(storage.path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
+        guard directory >= 0 else { throw CocoaError(.fileReadNoPermission) }
+        defer { close(directory) }
+        var root = stat()
+        guard fstat(directory, &root) == 0, root.st_uid == geteuid(),
+              (root.st_mode & 0o077) == 0 else { throw CocoaError(.fileReadNoPermission) }
+        let fd = openat(directory, "ai.json", O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC)
+        if fd < 0 {
+            if errno == ENOENT { return fallback }
+            throw CocoaError(.fileReadNoPermission)
+        }
+        defer { close(fd) }
+        var before = stat()
+        guard fstat(fd, &before) == 0, allowedMetadata(before, owner: geteuid()) else {
+            throw CocoaError(.fileReadNoPermission)
+        }
+        var data = Data(), buffer = [UInt8](repeating: 0, count: maximumBytes + 1)
+        while data.count <= maximumBytes {
+            let count = read(fd, &buffer, maximumBytes + 1 - data.count)
+            if count < 0 { if errno == EINTR { continue }; throw CocoaError(.fileReadUnknown) }
+            if count == 0 { break }
+            data.append(contentsOf: buffer.prefix(count))
+        }
+        var after = stat()
+        guard data.count <= maximumBytes, fstat(fd, &after) == 0,
+              allowedMetadata(after, owner: geteuid()), before.st_size == after.st_size,
+              before.st_mtimespec.tv_sec == after.st_mtimespec.tv_sec,
+              before.st_mtimespec.tv_nsec == after.st_mtimespec.tv_nsec,
+              data.count == after.st_size else { throw CocoaError(.fileReadCorruptFile) }
+        let config = try JSONDecoder().decode(Configuration.self, from: data)
+        if config.provider == "off" { return ["AI_PROVIDER": "off"] }
+        let name = config.model ?? "qwen3:4b"
+        guard config.provider == "ollama", name.count <= 128,
+              name.range(of: #"\A(?:[a-z0-9][a-z0-9_-]*/)?[a-z0-9][a-z0-9_.-]*(?::[a-z0-9][a-z0-9_.-]*)?\z"#,
+                         options: [.regularExpression, .caseInsensitive]) != nil,
+              name.range(of: #"(?:^|[/:._-])cloud(?:$|[/:._-])"#,
+                         options: [.regularExpression, .caseInsensitive]) == nil else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+        return ["AI_PROVIDER": "ollama", "OLLAMA_MODEL": name]
+    }
+}
