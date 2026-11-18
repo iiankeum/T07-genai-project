@@ -33,7 +33,7 @@ export default {
     render(el, html`<div class="page customer-page"></div>`);
     const root = el.firstElementChild;
     const alive = () => !ac.signal.aborted && root.isConnected;
-    document.title = `${name || '거래처'} · 콜노트(가칭)`;
+    document.title = `${name || '거래처'} · 아차`;
 
     function picker() {
       const list = st.customers.slice();
@@ -52,9 +52,9 @@ export default {
       const calls = Array.isArray(d?.calls) ? d.calls : [];
       const head = html`<div class="page-head cust-head">
         <div>
-          <p class="eyebrow">F13 · 거래처별 모아 보기 · 가짜 거래처</p>
+          <p class="eyebrow">거래처별 모아 보기${ctx.meta?.access?.demo === true ? ' · 데모 작업공간' : ''}</p>
           <h1>${cust.name || name || '거래처'}</h1>
-          ${cust.phone ? html`<p class="sub"><span class="chip chip-phone">가짜 번호 ${cust.phone}</span></p>` : ''}
+          ${cust.phone ? html`<p class="sub"><span class="chip chip-phone">전화번호 ${cust.phone}</span></p>` : ''}
         </div>
         <a class="btn" href="${href('/calls', { customer: cust.name || name })}">이 거래처 통화 찾기</a>
       </div>`;

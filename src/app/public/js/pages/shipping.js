@@ -102,7 +102,7 @@ export default {
       const head = html`<div class="page-head">
         <div><p class="eyebrow no-print">확정 주문 · 출고 준비</p><h1>출고 목록</h1>
           <p class="sub no-print">확정된 주문을 거래처별로 묶었습니다. 들고 나갈 때 인쇄하거나 CSV 로 내려받으세요.</p>
-          <p class="print-only">가짜 통화 데모 데이터 · ${fmtDate(now)} ${fmtClock(now)} 출력 · ${SCOPES.find((s) => s.key === st.scope).label}</p>
+          <p class="print-only">${ctx.meta?.access?.demo === true ? '데모 작업공간 · ' : ''}출고 목록 · ${fmtDate(now)} ${fmtClock(now)} 출력 · ${SCOPES.find((s) => s.key === st.scope).label}</p>
         </div>
       </div>
       <div class="tabs ship-scope no-print" role="group" aria-label="범위">
