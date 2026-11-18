@@ -126,6 +126,8 @@ jobs:
         run: npm run test:trial-submit-e2e
       - name: Upload batch explicit selection (fake WAV and API only)
         run: npm run test:upload-batch-e2e
+      - name: Copy fallback keyboard focus (fake clipboard only)
+        run: npm run test:copy-focus-e2e
       - uses: actions/upload-artifact@v4
         if: always()
         with:
