@@ -1,0 +1,45 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#d9dce2;font-family:"Noto Sans CJK KR",sans-serif}
+.slide{width:1080px;height:1080px;margin:0 auto 40px;position:relative;overflow:hidden}
+svg{display:block}
+</style></head><body>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <radialGradient id="navy" cx="30%" cy="22%" r="95%"><stop offset="0" stop-color="#24345f"/><stop offset="1" stop-color="#0e1427"/></radialGradient>
+  <linearGradient id="orange" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff7d33"/><stop offset="1" stop-color="#e5470b"/></linearGradient>
+  <!-- A: 「아!」 ligature, centred -->
+  <g id="markA">
+    <circle cx="345" cy="455" r="175" fill="none" stroke="var(--o)" stroke-width="104"/>
+    <path d="M672 250 V612 M672 432 H790" stroke="var(--b)" stroke-width="104" stroke-linecap="round" fill="none"/>
+    <circle cx="672" cy="770" r="60" fill="var(--b)"/>
+  </g>
+  <!-- D: ㅇ is a speech bubble (tail) -->
+  <g id="markD">
+    <circle cx="345" cy="455" r="175" fill="none" stroke="var(--o)" stroke-width="104"/>
+    <path d="M196 560 L262 640 L150 690Z" fill="var(--o)" stroke="var(--o)" stroke-width="40" stroke-linejoin="round"/>
+    <path d="M672 250 V612 M672 432 H790" stroke="var(--b)" stroke-width="104" stroke-linecap="round" fill="none"/>
+    <circle cx="672" cy="770" r="60" fill="var(--b)"/>
+  </g>
+</defs></svg>
+
+<div class="slide"><svg width="1080" height="1080" viewBox="0 0 1000 1000">
+  <rect width="1000" height="1000" fill="url(#navy)"/>
+  <g transform="translate(500 500) scale(.86) translate(-480 -514)" style="--o:#fff6d2;--b:#ff6a1a"><use href="#markA"/></g>
+</svg></div>
+
+<div class="slide"><svg width="1080" height="1080" viewBox="0 0 1000 1000">
+  <rect width="1000" height="1000" fill="url(#orange)"/>
+  <g transform="translate(500 500) scale(.86) translate(-480 -514)" style="--o:#141c33;--b:#fff6d2"><use href="#markA"/></g>
+</svg></div>
+
+<div class="slide"><svg width="1080" height="1080" viewBox="0 0 1000 1000">
+  <rect width="1000" height="1000" fill="url(#navy)"/>
+  <g transform="translate(500 500) scale(.86) translate(-480 -514)" style="--o:#fff6d2;--b:#ff6a1a"><use href="#markD"/></g>
+</svg></div>
+
+<div class="slide"><svg width="1080" height="1080" viewBox="0 0 1000 1000">
+  <rect width="1000" height="1000" fill="#fff6d2"/>
+  <g transform="translate(500 500) scale(.86) translate(-480 -514)" style="--o:#141c33;--b:#ff6a1a"><use href="#markD"/></g>
+</svg></div>
+</body></html>

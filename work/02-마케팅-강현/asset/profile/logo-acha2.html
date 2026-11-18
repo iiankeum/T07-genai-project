@@ -1,0 +1,67 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#e9e9ee;font-family:"Noto Sans CJK KR",sans-serif}
+.slide{width:1600px;height:900px;margin:0 auto 40px;position:relative;overflow:hidden;display:flex;align-items:center;padding:0 130px;gap:90px}
+.app{width:420px;height:420px;border-radius:98px;overflow:hidden;flex:none;box-shadow:0 30px 60px rgba(0,0,0,.18)}
+.word{font-size:230px;font-weight:900;letter-spacing:-12px;line-height:1}
+.latin{font-size:44px;font-weight:700;letter-spacing:14px;margin-top:30px;opacity:.75}
+.name{position:absolute;left:130px;top:60px;font-size:30px;font-weight:700;opacity:.55}
+svg{display:block}
+</style></head><body>
+
+<!-- E · 깜빡이: 깜빡이(방향 지시등) = 깜빡하다 -->
+<div class="slide" style="background:#0c0f0d;color:#f2f7f3">
+  <div class="name">E · 깜빡이 = 깜빡하다</div>
+  <div class="app"><svg width="420" height="420" viewBox="0 0 1000 1000">
+    <defs>
+      <radialGradient id="eg" cx="50%" cy="40%" r="80%"><stop offset="0" stop-color="#1c2420"/><stop offset="1" stop-color="#0a0d0b"/></radialGradient>
+      <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="22" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    </defs>
+    <rect width="1000" height="1000" fill="url(#eg)"/>
+    <path d="M150 500 L420 300 V420 H470 V580 H420 V700 Z" fill="#2a3a30" stroke="#2a3a30" stroke-width="40" stroke-linejoin="round"/>
+    <path d="M850 500 L580 300 V420 H530 V580 H580 V700 Z" fill="#3dff8a" stroke="#3dff8a" stroke-width="40" stroke-linejoin="round" filter="url(#glow)"/>
+  </svg></div>
+  <div><div class="word">아차</div><div class="latin" style="color:#3dff8a;opacity:1">ACHA</div></div>
+</div>
+
+<!-- F · 핸들 속 느낌표 -->
+<div class="slide" style="background:#f5f3ee;color:#111">
+  <div class="name">F · 핸들 속 느낌표</div>
+  <div class="app"><svg width="420" height="420" viewBox="0 0 1000 1000">
+    <defs><linearGradient id="fg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff6b2c"/><stop offset="1" stop-color="#ff3d2e"/></linearGradient></defs>
+    <rect width="1000" height="1000" fill="url(#fg)"/>
+    <circle cx="500" cy="500" r="300" fill="none" stroke="#fff7ee" stroke-width="86"/>
+    <path d="M500 200 V470" stroke="#fff7ee" stroke-width="96" stroke-linecap="round"/>
+    <circle cx="500" cy="590" r="62" fill="#1a0f0b"/>
+    <path d="M200 560 Q330 560 420 600 M800 560 Q670 560 580 600" stroke="#fff7ee" stroke-width="70" stroke-linecap="round" fill="none"/>
+  </svg></div>
+  <div><div class="word">아차</div><div class="latin">ACHA</div></div>
+</div>
+
+<!-- G · 자동차 말풍선 -->
+<div class="slide" style="background:#e8fff4;color:#06261a">
+  <div class="name">G · 자동차가 곧 말풍선</div>
+  <div class="app"><svg width="420" height="420" viewBox="0 0 1000 1000">
+    <rect width="1000" height="1000" fill="#0f2e22"/>
+    <path d="M190 560 Q190 470 270 455 L360 345 Q385 315 425 315 H600 Q640 315 665 345 L740 445 Q810 455 810 540 V600 Q810 640 770 640 H330 L230 720 L250 640 H230 Q190 640 190 600 Z" fill="#5cffb0"/>
+    <path d="M395 445 L440 375 H585 L635 445 Z" fill="#0f2e22"/>
+    <circle cx="350" cy="645" r="58" fill="#0f2e22"/><circle cx="660" cy="645" r="58" fill="#0f2e22"/>
+    <circle cx="350" cy="645" r="30" fill="#5cffb0"/><circle cx="660" cy="645" r="30" fill="#5cffb0"/>
+  </svg></div>
+  <div><div class="word">아차</div><div class="latin">ACHA</div></div>
+</div>
+
+<!-- H · a! 모노그램 -->
+<div class="slide" style="background:#f4efff;color:#2a0e7a">
+  <div class="name">H · 소문자 a가 느낌표로</div>
+  <div class="app"><svg width="420" height="420" viewBox="0 0 1000 1000">
+    <defs><linearGradient id="hg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7b3cff"/><stop offset="1" stop-color="#4c14d9"/></linearGradient></defs>
+    <rect width="1000" height="1000" fill="url(#hg)"/>
+    <circle cx="430" cy="520" r="160" fill="none" stroke="#ffd9c7" stroke-width="104"/>
+    <path d="M642 300 V600" stroke="#ffd9c7" stroke-width="104" stroke-linecap="round"/>
+    <circle cx="642" cy="760" r="62" fill="#ffd9c7"/>
+  </svg></div>
+  <div><div class="word">아차</div><div class="latin">ACHA</div></div>
+</div>
+</body></html>
