@@ -1,3 +1,13 @@
+## 2026-11-18 21:13 KST · 녹음 업로드 동의·전송·재시도 자동 회귀
+
+- 돌린 사람 · 도구 · 작업방: 신*림 · ChatGPT dot · 아맞다 직접 작업
+- 한 일: 실제 upload페이지 모듈을 쓰는 독립 브라우저 회귀와 npm명령·CI연결을 추가했다. 디자인/public 수정없음.
+- 왜: 1.6핵심 녹음동의·workspace·전사대기·재시도 흐름이 기존 자동회귀에서 빠지는 것을 막는다.
+- 어떻게: 구현/리뷰·통합2개 에이전트. localhost동적포트·가짜무음WAV·API mock. 기본sandbox Chromium실행차단 후 정상권한확인으로 실행. 실제계정·음성·외부API 없음.
+- 결과물: [테스트](../../src/app/tools/upload-browser-e2e.mjs), [결과](자료/real-local-audio-20261118/upload-ui-mock-regression.json). demo/private각4회 총8전송, POST/multipart·동의필드·workspace header·bytes·대기→카드·중복·500오류→수동재시도 통과. Node175개통과.
+- AI가 판단한 것 · 사람이 확인할 것: UI→mock API 시험이다. 실제백엔드수집·FFmpeg·전사·로그인을 검증하지 않는다. 원격CI는 push오류때문에 아직미실행이다.
+- 다음 할 일: 디자인출고/접근성 회귀와 통합. push우회·재시도없음, 사용자자료·AGY수정분보존, 유료API·배포·병합없음.
+
 ## 2026-11-18 21:09 KST · AGY 새 시안 기반 제품 탐색 재구성
 
 - 돌린 사람 · 도구 · 작업방: 신*림 · ChatGPT dot · 디자인 검토
