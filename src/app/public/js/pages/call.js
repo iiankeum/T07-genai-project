@@ -59,6 +59,8 @@ export default {
     let showSummary = false;
     let transcriptQuery = '';
     let transcriptMatch = 0;
+    let lastCardInput = null;
+    let cardReturn = null;
     let follow = readPref('cn.follow', '1') === '1';
     let rate = Number(readPref('cn.rate', '1'));
     if (!RATES.includes(rate)) rate = 1;
@@ -479,6 +481,33 @@ export default {
     function scheduleConnector() {
       if (!frame) frame = requestAnimationFrame(drawConnector);
     }
+    // 원문 확인 전 편집하던 칸을 기억한다. 저장/데이터 상태와는 분리된 화면 내 이동 정보다.
+    function rememberCardInput(event) {
+      const target = event.target;
+      if (target instanceof HTMLElement && slot('card').contains(target) && target.matches('input[data-field],textarea[data-field],select[data-field],input[data-item]')) lastCardInput = target;
+    }
+    function rememberCardReturn(block = null) {
+      if (wideMq.matches) return;
+      const target = lastCardInput?.isConnected && (!block || block.contains(lastCardInput))
+        ? lastCardInput : block?.querySelector('input[data-field],textarea[data-field],select[data-field],input[data-item]') || block?.querySelector('.cd-evbtn');
+      if (!target) { cardReturn = null; return; }
+      const index = Number(target.dataset.i);
+      cardReturn = { target, field: target.dataset.field, itemField: target.dataset.item,
+        itemId: target.dataset.item ? curCard()?.items?.[index]?.id : null };
+    }
+    function restoreCardReturn() {
+      if (wideMq.matches || !cardReturn) return false;
+      let target = cardReturn.target?.isConnected ? cardReturn.target : null;
+      if (!target && cardReturn.field) target = [...slot('card').querySelectorAll('[data-field]')].find(el => el.dataset.field === cardReturn.field);
+      if (!target && cardReturn.itemId) {
+        const index = curCard()?.items?.findIndex(item => item.id === cardReturn.itemId);
+        target = [...slot('card').querySelectorAll('[data-item]')].find(el => Number(el.dataset.i) === index && el.dataset.item === cardReturn.itemField);
+      }
+      if (!target || target.disabled) return false;
+      target.focus({ preventScroll: true });
+      target.scrollIntoView({ block: 'center', behavior: 'auto' });
+      return true;
+    }
     function showMobilePane(name) {
       root.dataset.mobilePane = name;
       slot('jump').querySelectorAll('[data-jump]').forEach((btn) => {
@@ -538,6 +567,7 @@ export default {
       }
     }
     function jumpToTranscript(r) {
+      rememberCardReturn(slot('card').querySelector('.ev-active'));
       showMobilePane('trans');
       if (!wideMq.matches) slot('trans').focus({ preventScroll: true });
       if (showSummary) { showSummary = false; renderTranscript(); }
@@ -744,7 +774,9 @@ export default {
       const jump = t.closest('[data-jump]');
       if (jump) {
         const name = jump.dataset.jump;
+        if (name === 'trans' && root.dataset.mobilePane === 'card') rememberCardReturn();
         showMobilePane(name);
+        if (name === 'card' && restoreCardReturn()) return;
         const sec = slot(name);
         if (sec.getBoundingClientRect().top < (topbar?.offsetHeight || 60)) {
           sec.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' });
@@ -767,6 +799,7 @@ export default {
       }
     }
     root.addEventListener('click', onClick);
+    root.addEventListener('focusin', rememberCardInput);
     root.addEventListener('input', onTranscriptInput);
     root.addEventListener('keydown', onTranscriptKey);
 
@@ -797,6 +830,7 @@ export default {
       history.removeEventListener('toggle', onHistoryToggle);
       historyForm.removeEventListener('submit', onHistorySearch);
       root.removeEventListener('click', onClick);
+      root.removeEventListener('focusin', rememberCardInput);
       root.removeEventListener('input', onTranscriptInput);
       root.removeEventListener('keydown', onTranscriptKey);
     };
