@@ -11,7 +11,7 @@ const EXAMPLE = [
 const THREADS = '/api/assistant/threads/';
 
 export default {
-  title: '어시스턴트',
+  title: '업무 도우미',
   mount(el, ctx) {
     let context = null;
     let threads = [];
@@ -27,8 +27,8 @@ export default {
 
     render(el, html`<div class="page as-page">
       <div class="page-head">
-        <div><h1>어시스턴트</h1><p class="sub">통화와 공유 지식을 살펴보고 다음 일을 준비하세요.</p></div>
-        <a class="btn" href="#/ask">지난 통화에 묻기 →</a>
+        <div><h1>업무 도우미</h1><p class="sub">선택한 통화에서 할 일을 정리하고 재연락 문안을 준비하세요.</p></div>
+        <a class="btn" href="#/ask">여러 통화에서 내용 찾기 →</a>
       </div>
       <div class="card ka-split as-layout">
         <details class="as-sidebar" ${matchMedia('(min-width: 901px)').matches ? html`open` : ''}>

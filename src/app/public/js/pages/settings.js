@@ -3,9 +3,9 @@ import { html, render, fmtWhen } from '../ui.js';
 import { bindForm, roleName } from './account.js';
 
 const sections = [
-  ['profile', '프로필'], ['workspace', '워크스페이스 정보'], ['members', '구성원·권한'],
+  ['profile', '프로필'], ['workspace', '업체 정보'], ['members', '구성원·권한'],
   ['notifications', '알림 설정'], ['display', '화면 설정'], ['data', '데이터·개인정보'],
-  ['integrations', '수집·AI 설정'],
+  ['integrations', '녹음·AI 연결'],
 ];
 const sectionDescriptions = {profile:'이름, 연락처와 로그인 정보',workspace:'상호, 대표 번호와 영업시간',members:'팀원 초대와 역할 관리',notifications:'놓치지 않을 업무 알림',display:'글씨 크기와 화면 보기',data:'녹음·기록 보관과 개인정보',integrations:'로컬 받아쓰기와 AI 연결'};
 const roles = ['admin', 'reception', 'shipping', 'viewer'];
@@ -22,8 +22,8 @@ function show(el, active, body) {
   const section = sections.find(([key]) => key === active);
   render(el, html`<div class="page account-page settings-page ${section ? '' : 'settings-home'}">
     <div class="page-head"><div><p class="eyebrow">내 작업공간</p><h1>${section?.[1] || '설정'}</h1><p class="sub">${section ? sectionDescriptions[active] : '내 계정과 팀의 작업 환경을 관리하세요.'}</p></div></div>
-    <nav class="account-links settings-nav" aria-label="설정 메뉴">${sections.map(([key, label]) => html`
-      <a href="#/settings/${key}" ${key === active ? html`aria-current="page"` : ''}>${label}</a>`)}</nav>
+    ${section ? html`<a class="settings-back" href="#/settings">← 전체 설정</a><nav class="account-links settings-nav" aria-label="설정 메뉴">${sections.map(([key, label]) => html`
+      <a href="#/settings/${key}" ${key === active ? html`aria-current="page"` : ''}>${label}</a>`)}</nav>` : ''}
     <section class="panel account-panel">${body}</section>
   </div>`);
 }

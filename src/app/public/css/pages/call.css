@@ -462,3 +462,12 @@ body[data-page="call"] { background:#fff; }
  .cd-grid { gap:16px 12px; }
  .cd-card .cd-evtime { display:none; }
 }
+
+/* Transcript find: local sentence navigation, distinct from order evidence. */
+.cd-trans-search{display:flex;align-items:center;gap:6px;margin-top:12px;padding-bottom:12px}
+.cd-trans-search .input{flex:1;min-width:0;height:40px;font-size:14px}
+.cd-trans-search .btn{flex:none;min-width:40px;min-height:40px;padding:6px}
+.cd-search-count{flex:none;font-size:12px;color:var(--text-secondary,#555);white-space:nowrap}
+.cd-seg.is-search-match .cd-text,.cd-plain.is-search-match{background:#fff7d6;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+.cd-seg.is-search-current .cd-text,.cd-plain.is-search-current{outline:2px solid #a87600;outline-offset:3px;border-radius:2px}
+@media(max-width:420px){.cd-trans-search{flex-wrap:wrap}.cd-trans-search .input{flex-basis:calc(100% - 100px)}.cd-search-count{order:4;width:100%;min-height:16px}}

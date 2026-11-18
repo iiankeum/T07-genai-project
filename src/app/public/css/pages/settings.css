@@ -32,3 +32,8 @@
 .settings-home .account-panel { grid-column:1/-1; }
 .settings-home .settings-directory { grid-template-columns:repeat(3,minmax(0,1fr)); }
 @media(max-width:719px) { .settings-home .settings-directory { grid-template-columns:1fr; } }
+
+/* 설정 홈은 목적지를 한 번만 보여주고 내부 화면은 돌아갈 경로를 명시한다. */
+.settings-back { grid-column:1/-1; color:var(--muted); text-decoration:none; width:fit-content; padding:8px 0; }
+.settings-back:hover { color:var(--brand); }
+.settings-home .account-panel { border:0; padding:0; background:transparent; }

@@ -53,7 +53,7 @@ export default {
 
     render(el, html`<div class="page kn-page">
       <div class="page-head">
-        <div><h1>공유 지식</h1><p class="sub">현장 용어와 업무 경험을 모아 팀과 함께 사용하세요.</p></div>
+        <div><h1 data-ref="page-title">공유 지식</h1><p class="sub" data-ref="page-description">현장 용어와 업무 규칙을 모아 팀과 함께 사용하세요.</p></div>
         <div class="ka-actions" data-ref="actions"></div>
       </div>
       <div class="ka-metrics" aria-label="지식 현황" data-ref="metrics"></div>
@@ -87,6 +87,8 @@ export default {
 
     function paintList() {
       if (disposed) return;
+      ref('page-title').textContent = category === '거래처' ? '거래처' : '공유 지식';
+      ref('page-description').textContent = category === '거래처' ? '거래처 이름과 전화번호를 확인하고 수정안을 제안하세요. 분류를 바꾸면 다른 공유 지식도 볼 수 있어요.' : '현장 용어와 업무 규칙을 모아 팀과 함께 사용하세요.';
       render(ref('filters'), html`${FILTERS.map(([key, label]) => html`<button type="button" class="btn kn-filter" aria-pressed="${filter === key}" data-act="filter" data-value="${key}">${label}</button>`)}`);
       const shown = visibleItems();
       render(ref('list'), shown.length ? html`<ul class="kn-items">${shown.map((item) => html`<li>
@@ -217,6 +219,20 @@ export default {
       if (!dialog.open) dialog.showModal();
     }
 
+    let relationRowId = 0;
+    function relationRow(entry = {}) {
+      const n = ++relationRowId;
+      return html`<div class="kn-relation-row" data-relation-row>
+        <label class="field"><span>어떤 관계인가요?</span><input class="input" name="relation-label" maxlength="60" value="${entry.relation || ''}" placeholder="예: 함께 쓰는 부품" aria-describedby="kn-relations-help"></label>
+        <label class="field"><span>무엇과 연결되나요?</span><input class="input" name="relation-target" maxlength="80" value="${entry.target || ''}" list="kn-relation-targets" placeholder="이름을 고르거나 직접 입력" aria-describedby="kn-relations-help"></label>
+        <button type="button" class="btn btn-ghost kn-relation-remove" data-act="relation-remove" aria-label="연결 정보 ${n} 삭제">삭제</button>
+      </div>`;
+    }
+    function syncRelationAdd() {
+      const button = dialog.querySelector('[data-act="relation-add"]');
+      if (button) button.disabled = dialog.querySelectorAll('[data-relation-row]').length >= 10;
+    }
+
     function suggest(initial = {}, id = null, title) {
       if (!canPropose) return;
       const data = { kind: '현장말', ...initial };
@@ -233,12 +249,19 @@ export default {
           <label class="field"><span>정의와 업무에서의 의미</span><textarea class="textarea" name="note" rows="3" maxlength="2000" required>${data.note || ''}</textarea></label>
           <label class="field"><span>출처와 근거</span><input class="input" name="evidenceNote" maxlength="300" value="${data.evidenceNote || ''}" placeholder="예: 공급사 문서명과 확인 날짜" ${!data.sourceCallId ? 'required' : ''}></label>
           ${data.sourceCallId ? html`<p class="help">${callSource(data)}</p>` : ''}
-          <label class="field"><span>연결된 개념</span><textarea class="textarea" name="relations" rows="2" maxlength="1000" placeholder="한 줄에 관계 | 대상">${(data.relations || []).map((entry) => entry.relation + ' | ' + entry.target).join('\n')}</textarea></label>
+          <fieldset class="kn-relation-editor"><legend>함께 알아둘 정보 <span>(선택)</span></legend>
+            <p class="help" id="kn-relations-help">다른 용어나 부품과의 관계를 적어 두세요. 예: 앞 브레이크 패드 → 함께 쓰는 부품 → 앞 디스크. 최대 10개.</p>
+            <div data-ref="relation-rows">${(data.relations || []).map(relationRow)}</div>
+            <datalist id="kn-relation-targets">${items.filter(item => item.status !== 'archived').map(item => html`<option value="${item.term}"></option>`)}</datalist>
+            <p class="help kn-relation-error" id="kn-relation-error" data-ref="relation-error" role="alert"></p>
+            <button type="button" class="btn btn-sm" data-act="relation-add">+ 연결 정보 추가</button>
+          </fieldset>
           <p class="help">담당자가 승인한 버전이 다음 AI 요청에 참조됩니다.</p>
           <div data-ref="form-error"></div>
           <button class="btn btn-primary" type="submit">검토 대기로 저장</button>
         </form>`);
       syncFields(dialog.querySelector('form'));
+      syncRelationAdd();
     }
 
     function syncFields(form) {
@@ -309,16 +332,28 @@ export default {
         return;
       }
       const { data, id } = dialogState;
-      const relations = get('relations').split('\n').map((line) => line.trim()).filter(Boolean).map((line) => line.split('|').map((part) => part.trim()));
-      if (relations.some((parts) => parts.length !== 2 || !parts.every(Boolean))) {
-        render(ref('form-error'), errorBox({ message: '연결된 개념을 “관계 | 대상” 형식으로 써 주세요.' }));
-        form.elements.relations.focus();
-        return;
+      const relations = [];
+      ref('relation-error').textContent = '';
+      for (const [index, row] of [...form.querySelectorAll('[data-relation-row]')].entries()) {
+        const relationInput = row.querySelector('[name="relation-label"]');
+        const targetInput = row.querySelector('[name="relation-target"]');
+        relationInput.removeAttribute('aria-invalid'); targetInput.removeAttribute('aria-invalid');
+        const relation = relationInput.value.trim(), target = targetInput.value.trim();
+        if (!relation && !target) continue;
+        if (!relation || !target) {
+          ref('relation-error').textContent = `${index + 1}번째 연결 정보의 ${!relation ? '관계 설명' : '연결할 이름'}을 입력하거나 이 줄을 삭제해 주세요.`;
+          const invalid = !relation ? relationInput : targetInput;
+          invalid.setAttribute('aria-invalid', 'true');
+          invalid.setAttribute('aria-describedby', 'kn-relations-help kn-relation-error');
+          invalid.focus();
+          return;
+        }
+        relations.push({ relation, target });
       }
       const body = {
         kind: get('kind'), term: get('term'), standard: get('standard'), note: get('note'), phone: get('phone'),
         evidenceNote: get('evidenceNote'), aliases: get('aliases').split(',').map((alias) => alias.trim()).filter(Boolean),
-        relations: relations.map(([relation, target]) => ({ relation, target })),
+        relations,
       };
       if (!id && data.sourceCallId) {
         body.sourceCallId = data.sourceCallId;
@@ -361,7 +396,22 @@ export default {
       const btn = event.target.closest('[data-act]');
       if (!btn || busy || disposed) return;
       const { act, id, value } = btn.dataset;
-      if (act === 'filter') {
+      if (act === 'relation-add') {
+        const rows = ref('relation-rows');
+        if (!rows || rows.children.length >= 10) return;
+        const holder = document.createElement('div');
+        render(holder, relationRow());
+        const row = holder.firstElementChild;
+        rows.append(row);
+        syncRelationAdd();
+        row.querySelector('input').focus();
+      } else if (act === 'relation-remove') {
+        const row = btn.closest('[data-relation-row]');
+        const next = row.nextElementSibling || row.previousElementSibling;
+        row.remove(); syncRelationAdd();
+        (next?.querySelector('input') || dialog.querySelector('[data-act="relation-add"]')).focus();
+        ref('relation-error').textContent = '';
+      } else if (act === 'filter') {
         filter = value;
         await select(visibleItems()[0]?.id);
         ref('filters').querySelector(`[data-value="${filter}"]`)?.focus();
@@ -369,7 +419,7 @@ export default {
         await select(id, true);
         ref('list').querySelector('[aria-pressed="true"]')?.focus({ preventScroll: true });
       } else if (act === 'reload') load();
-      else if (act === 'new') suggest();
+      else if (act === 'new') suggest(category ? {kind: category} : {});
       else if (act === 'edit' && detail) suggest(detail, detail.id);
       else if (act === 'close') dialog.close();
       else if (act === 'import') ref('file').click();

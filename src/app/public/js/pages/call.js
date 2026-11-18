@@ -57,6 +57,8 @@ export default {
     let historyRequest = null;
     let historyFilter = 'all';
     let showSummary = false;
+    let transcriptQuery = '';
+    let transcriptMatch = 0;
     let follow = readPref('cn.follow', '1') === '1';
     let rate = Number(readPref('cn.rate', '1'));
     if (!RATES.includes(rate)) rate = 1;
@@ -367,6 +369,13 @@ export default {
           </div>
           ${!showSummary && call.hasAudio && segs.length ? html`<button type="button" class="btn btn-sm cd-follow" data-act="follow" aria-pressed="${follow}">${follow ? '따라가기 켬' : '따라가기 끔'}</button>` : ''}
         </div>
+        ${!showSummary && hasText ? html`<div class="cd-trans-search" role="search" aria-label="이 통화 대화에서 찾기">
+          <label class="sr-only" for="cd-trans-query">대화에서 찾을 말</label>
+          <input id="cd-trans-query" class="input" type="search" maxlength="100" placeholder="대화에서 찾기" value="${transcriptQuery}" aria-describedby="cd-trans-search-count">
+          <span id="cd-trans-search-count" class="cd-search-count" role="status" aria-live="polite"></span>
+          <button type="button" class="btn btn-sm" data-trans-find="prev" aria-label="이전 일치 문장">↑</button>
+          <button type="button" class="btn btn-sm" data-trans-find="next" aria-label="다음 일치 문장">↓</button>
+        </div>` : ''}
       </header>`);
       const scroll = slot('trans-scroll');
       const scrollTop = scroll.scrollTop;
@@ -386,7 +395,37 @@ export default {
       scroll.scrollTop = scrollTop;
       if (playingIdx >= 0) lineEl(playingIdx)?.classList.add('is-playing');
       if (markIdx >= 0) lineEl(markIdx)?.classList.add('is-mark');
+      updateTranscriptSearch();
       scheduleConnector();
+    }
+    function updateTranscriptSearch(step = 0, jump = false) {
+      const all = [...slot('trans-scroll').querySelectorAll('.cd-seg, .cd-plain')];
+      const needle = transcriptQuery.trim().toLocaleLowerCase();
+      const matches = all.filter(line => needle && (line.querySelector('.cd-text') || line).textContent.toLocaleLowerCase().includes(needle));
+      transcriptMatch = matches.length ? (transcriptMatch + step + matches.length) % matches.length : 0;
+      all.forEach(line => {
+        line.classList.toggle('is-search-match', matches.includes(line));
+        line.classList.toggle('is-search-current', matches[transcriptMatch] === line);
+      });
+      const count = root.querySelector('#cd-trans-search-count');
+      if (count) count.textContent = !needle ? '' : matches.length ? `${transcriptMatch + 1}/${matches.length} 문장` : '일치 없음';
+      root.querySelectorAll('[data-trans-find]').forEach(button => { button.disabled = !matches.length; });
+      if (jump && matches.length) {
+        const line = matches[transcriptMatch];
+        if (line.matches('.cd-seg')) scrollToSeg(Number(line.dataset.i), true);
+        else line.scrollIntoView({block:'center', behavior:reduceMotion ? 'auto' : 'smooth'});
+      }
+    }
+    function onTranscriptInput(e) {
+      if (e.target.id !== 'cd-trans-query') return;
+      transcriptQuery = e.target.value;
+      transcriptMatch = 0;
+      updateTranscriptSearch();
+    }
+    function onTranscriptKey(e) {
+      if (e.target.id !== 'cd-trans-query' || e.isComposing) return;
+      if (e.key === 'Enter') { e.preventDefault(); updateTranscriptSearch(e.shiftKey ? -1 : 1, true); }
+      if (e.key === 'Escape') { e.preventDefault(); transcriptQuery = ''; e.target.value = ''; transcriptMatch = 0; updateTranscriptSearch(); }
     }
     const lineEl = (i) => (i >= 0 ? root.querySelector(`#cd-seg-${i}`) : null);
 
@@ -664,6 +703,8 @@ export default {
     function onClick(e) {
       const t = e.target;
       if (!(t instanceof Element)) return;
+      const findButton = t.closest('[data-trans-find]');
+      if (findButton) { updateTranscriptSearch(findButton.dataset.transFind === 'prev' ? -1 : 1, true); return; }
       const historyBtn = t.closest('[data-history]');
       if (historyBtn) {
         if (historyBtn.dataset.history !== 'retry') {
@@ -726,6 +767,8 @@ export default {
       }
     }
     root.addEventListener('click', onClick);
+    root.addEventListener('input', onTranscriptInput);
+    root.addEventListener('keydown', onTranscriptKey);
 
     await load();
     if (history.open && !historyLoaded && !historyRequest) void loadHistory();
@@ -754,6 +797,8 @@ export default {
       history.removeEventListener('toggle', onHistoryToggle);
       historyForm.removeEventListener('submit', onHistorySearch);
       root.removeEventListener('click', onClick);
+      root.removeEventListener('input', onTranscriptInput);
+      root.removeEventListener('keydown', onTranscriptKey);
     };
   },
 };

@@ -18,7 +18,7 @@ try {
  browser=await chromium.launch({headless:true});const context=await browser.newContext({reducedMotion:'reduce'});
  await context.route('**/*',r=>new URL(r.request().url()).hostname==='127.0.0.1'?r.continue():r.abort());
  const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
- for(const [name,route] of [['today','/'],['calls','/calls'],['board','/board'],['shipping','/shipping'],['upload','/upload'],['live','/live'],['assistant','/assistant'],['settings','/settings'],['tools','/more']]){
+ for(const [name,route] of [['today','/'],['calls','/calls'],['board','/board'],['shipping','/shipping'],['upload','/upload'],['live','/live'],['assistant','/assistant'],['settings','/settings'],['tools','/more'],['knowledge','/knowledge'],['customers','/knowledge?tab=customer'],['settings-display','/settings/display'],['ask','/ask']]){
   for(const [size,w,h] of [['desktop',1440,1000],['mobile',390,844]]){
    await page.setViewportSize({width:w,height:h});await page.goto(base+'/#'+route);await page.locator('#view h1').first().waitFor();await page.evaluate(()=>document.fonts.ready);await page.waitForTimeout(500);
    if(name==='assistant' && size==='mobile') {
@@ -37,9 +37,12 @@ try {
  const manifest=await (await page.request.get(base+'/manifest.webmanifest')).json();assert.equal(manifest.short_name,'아차');
  await page.goto(base+'/#/');await page.locator('#sideNav .nav-link').first().waitFor();
  for(const href of ['#/','#/calls','#/board','#/shipping','#/more','#/settings'])assert.equal(await page.locator(`#sideNav a[href="${href}"]`).count(),1,'desktop primary destination retained');
+ for(const href of ['#/ask','#/assistant','#/knowledge?tab=customer','#/knowledge'])assert.equal(await page.locator(`#sideNav a[href="${href}"]`).count(),1,'purpose-specific entry retained');
  assert.equal(await page.locator('#sideNav .lnb-workspace a[href="#/workspaces"]').count(),1,'workspace switch retained');
  await page.locator('#sideNav a[href="#/more"]').click();await page.locator('.tools-directory').waitFor();assert.equal(await page.locator('.tools-section').count(),4);
  for(const href of ['#/upload','#/live','#/assistant','#/ask','#/knowledge','#/settings/notifications','#/help'])assert.equal(await page.locator(`.menu-list a[href="${href}"]`).count(),1,'secondary destination retained');
+ await page.goto(base+'/#/knowledge?tab=customer');await page.locator('#view h1').waitFor();assert.equal(await page.locator('#sideNav a[aria-current="page"]').count(),1);assert.equal(await page.locator('#sideNav a[aria-current="page"]').getAttribute('href'),'#/knowledge?tab=customer');
+ await page.goto(base+'/#/settings');await page.locator('.settings-directory').waitFor();assert.equal(await page.locator('.settings-nav').count(),0,'settings home has no duplicate menu');
  await page.setViewportSize({width:390,height:844});
  await page.goto(base+'/#/');await page.locator('#today-priority a').first().waitFor();
  assert.ok(await page.locator('#today-priority').evaluate(el=>Boolean(el.compareDocumentPosition(document.querySelector('.today-overview')) & Node.DOCUMENT_POSITION_FOLLOWING)),'tasks before metrics in DOM');
