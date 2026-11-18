@@ -334,3 +334,19 @@
 .cd-field.ev-active, .cd-item.ev-active { border-color: var(--brand-line); }
 .cd-list-link strong { font-weight: 600; }
 .cd-connector path { stroke-width: 1.5; }
+
+/* 상세 작업에서는 전역 탐색 대신 현재 카드의 주 행동을 항상 제공한다. */
+@media(max-width:899px) {
+ body[data-page="call"] .tabbar { display:none; }
+ body[data-page="call"] .view { padding-bottom:16px; }
+ .cd-page[data-mobile-pane="card"] { padding-bottom:calc(var(--cd-actions-h, 120px) + 24px + env(safe-area-inset-bottom)); }
+ .cd-page[data-mobile-pane="card"] .cd-actions { position:fixed; bottom:0; left:0; right:0; z-index:30; padding:8px 16px calc(12px + env(safe-area-inset-bottom)); border-radius:0; max-height:40dvh; overflow:auto; box-shadow:0 -3px 16px #1717190a; }
+ .cd-page[data-mobile-pane="card"] .cd-card-scroll { scroll-margin-bottom:calc(var(--cd-actions-h, 120px) + 16px); }
+ .cd-action-buttons { display:grid; grid-template-columns:auto minmax(0,1fr); gap:12px; }
+ .cd-action-buttons .cd-primary { min-height:48px; }
+ .cd-page[data-mobile-pane="card"] .cd-float { bottom:calc(var(--cd-actions-h,120px) + 16px); }
+ .cd-page[data-mobile-pane="trans"] .cd-float { bottom:16px; }
+ .cd-actions-jump { display:none; }
+ .cd-confirm-issues summary { min-height:36px; }
+ .cd-why { max-height:72px; }
+}

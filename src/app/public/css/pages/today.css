@@ -456,3 +456,8 @@ a.today-row:hover .today-row-top strong { color: var(--brand-ink); }
 }
 html.big-text .today-stat-label { font-size: .75rem; white-space: normal; }
 html.big-text .today-heading h1 { font-size: 2rem; line-height: 1.375; }
+
+/* 통계보다 해야 할 업무가 먼저다. DOM과 시각 순서를 함께 바꾼다. */
+.today-overview { margin-block:28px; }
+#today-stats-h { font-size:1rem; line-height:1.4; font-weight:600; margin:0 0 12px; }
+@media(max-width:560px) { .today-header { margin-bottom:20px; } }

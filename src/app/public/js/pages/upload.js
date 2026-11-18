@@ -79,18 +79,6 @@ export default {
         <p class="sr-only" role="status" data-ref="announce"></p>
       </section>
 
-      <details class="card upload-explainer">
-        <summary id="flowTitle">녹음은 어떻게 정리되나요?</summary>
-        <ol class="upload-flow">
-          <li><strong>올리기</strong><span>휴대폰 · PC</span></li>
-          <li><strong>음성 준비</strong><span>받아쓰기용으로 변환</span></li>
-          <li><strong>받아쓰기</strong><span>Whisper로 대화 기록</span></li>
-          <li><strong>AI 카드</strong><span>주문 내용만 뽑아 정리</span></li>
-          <li><strong>확인 · 확정</strong><span>사람이 보고 확정</span></li>
-        </ol>
-        <p class="help">올린 원본 파일은 바꾼 뒤 지웁니다. 받아쓰기 일꾼에게는 바꾼 소리 파일만 갑니다.</p>
-      </details>
-
       <div class="grid-2 upload-side">
         <section class="card" aria-labelledby="workerTitle">
           <div class="card-title"><h2 id="workerTitle">받아쓰기 연결</h2><button type="button" class="btn btn-sm btn-ghost" data-act="refresh">새로고침</button></div>
@@ -103,6 +91,19 @@ export default {
           <div data-ref="samples"><p class="loading">불러오는 중…</p></div>
         </section>
       </div>
+
+      <details class="card upload-explainer">
+        <summary id="flowTitle">녹음은 어떻게 정리되나요?</summary>
+        <ol class="upload-flow">
+          <li><strong>올리기</strong><span>휴대폰 · PC</span></li>
+          <li><strong>음성 준비</strong><span>받아쓰기용으로 변환</span></li>
+          <li><strong>받아쓰기</strong><span>Whisper로 대화 기록</span></li>
+          <li><strong>AI 카드</strong><span>주문 내용만 뽑아 정리</span></li>
+          <li><strong>확인 · 확정</strong><span>사람이 보고 확정</span></li>
+        </ol>
+        <p class="help">올린 원본 파일은 바꾼 뒤 지웁니다. 받아쓰기 일꾼에게는 바꾼 소리 파일만 갑니다.</p>
+      </details>
+
 
       <section class="card card-soft upload-f12" aria-labelledby="f12Title">
         <h2 id="f12Title">PC의 녹음 폴더 연결하기</h2>
