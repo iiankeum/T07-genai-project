@@ -1,6 +1,7 @@
 // 앱 전용 Ollama 감독기. 다운로드·유료 API·다른 프로세스 제어를 하지 않는다.
 import fs from 'node:fs/promises';
-import { createReadStream } from 'node:fs';
+import { createReadStream, createWriteStream } from 'node:fs';
+import { pipeline } from 'node:stream/promises';
 import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import net from 'node:net';
@@ -32,7 +33,7 @@ async function digest(file, signal) {
   for await (const chunk of createReadStream(file, {signal})) hash.update(chunk);
   return hash.digest('hex');
 }
-export async function verifyRuntime(runtimeDir, {entries=RUNTIME_FILES, signal}={}) {
+export async function verifyRuntime(runtimeDir, {entries=RUNTIME_FILES, signal, allowRootOwner=false}={}) {
   await safeDirectory(runtimeDir);
   const expected = new Set(entries.map(e => e.path));
   const directories = new Set(['']);
@@ -41,7 +42,7 @@ export async function verifyRuntime(runtimeDir, {entries=RUNTIME_FILES, signal}=
     for (let dir=path.dirname(item.path); dir!=='.'; dir=path.dirname(dir)) directories.add(dir);
     const file=path.join(runtimeDir,item.path);
     const stat=await fs.lstat(file).catch(()=>null);
-    if (!stat || stat.uid!==process.getuid() || (!stat.isSymbolicLink() && (stat.mode & 0o022))) fail('runtime_unverified');
+    if (!stat || (stat.uid!==process.getuid() && !(allowRootOwner && stat.uid===0)) || (!stat.isSymbolicLink() && (stat.mode & 0o022))) fail('runtime_unverified');
     if (item.link) {
       if (!stat.isSymbolicLink() || await fs.readlink(file)!==item.link || path.isAbsolute(item.link)) fail('runtime_unverified');
       const resolved=path.posix.normalize(path.posix.join(path.posix.dirname(item.path),item.link));
@@ -53,6 +54,8 @@ export async function verifyRuntime(runtimeDir, {entries=RUNTIME_FILES, signal}=
   async function scan(relative='') {
     const dir=path.join(runtimeDir,relative);
     await safeDirectory(dir);
+    const dirStat=await fs.lstat(dir);
+    if((dirStat.uid!==process.getuid() && !(allowRootOwner && dirStat.uid===0)) || (dirStat.mode & 0o022)) fail('unsafe_runtime_permissions');
     for (const item of await fs.readdir(dir,{withFileTypes:true})) {
       const rel=relative ? relative+'/'+item.name : item.name;
       if (item.isDirectory()) { if(!directories.has(rel)) fail('unexpected_runtime_file'); await scan(rel); }
@@ -66,6 +69,71 @@ export async function verifyRuntime(runtimeDir, {entries=RUNTIME_FILES, signal}=
   signal?.throwIfAborted();
   return true;
 }
+async function copyRuntimeFile(source, target, signal) {
+  await pipeline(createReadStream(source),createWriteStream(target,{flags:'wx',mode:0o700}),{signal});
+}
+
+/** 네트워크 없이 helper 옆 앱 번들의 검증된 실행기만 설치한다. 기존 대상은 덮어쓰지 않는다. */
+export async function ensureRuntime(root, bundleRoot=path.dirname(fileURLToPath(import.meta.url)), {
+  entries=RUNTIME_FILES,version=VERSION,signal,emit=()=>{},copyFile=copyRuntimeFile,
+}={}) {
+  root=path.resolve(root);
+  const parent=path.join(root,'runtime');
+  const target=path.join(parent,'ollama-v'+version);
+  signal?.throwIfAborted();
+  await safeDirectory(root,true);
+  await safeDirectory(parent,true);
+  const exists=await fs.lstat(target).catch(e=>{if(e.code==='ENOENT')return null;throw e;});
+  if(exists) {
+    await verifyRuntime(target,{entries,signal});
+    return {installed:false,runtimeDir:target};
+  }
+  const source=path.join(path.resolve(bundleRoot),'runtime','ollama-v'+version);
+  const sourceStat=await fs.lstat(source).catch(e=>{if(e.code==='ENOENT')return null;throw e;});
+  if(!sourceStat) fail('runtime_bundle_missing');
+  await verifyRuntime(source,{entries,signal,allowRootOwner:true});
+  await safeDirectory(root,true);
+  await safeDirectory(parent,true);
+  const lock=path.join(parent,'.install-ollama-'+version+'.lock');
+  let locked=false,stage;
+  try {
+    try {await fs.mkdir(lock,{mode:0o700});locked=true;}catch(e){if(e.code==='EEXIST')fail('runtime_install_busy');throw e;}
+    // 다른 협조적 설치가 lock을 기다리는 사이 완료된 경우도 기존 대상은 그대로 쓴다.
+    const appeared=await fs.lstat(target).catch(e=>{if(e.code==='ENOENT')return null;throw e;});
+    if(appeared) {await verifyRuntime(target,{entries,signal});return {installed:false,runtimeDir:target};}
+    const required=entries.reduce((sum,item)=>sum+(item.size||0),0)+64*1024*1024;
+    const disk=await fs.statfs(parent);
+    if(disk.bavail*disk.bsize<required) fail('runtime_install_disk_space');
+    stage=await fs.mkdtemp(path.join(parent,'.install-ollama-'+version+'-'));
+    await fs.chmod(stage,0o700);
+    emit({event:'installing',runtimeVersion:version,network:false});
+    for(const item of entries) {
+      signal?.throwIfAborted();
+      const dest=path.join(stage,item.path);
+      const relativeParent=path.dirname(item.path);
+      if(relativeParent!=='.') {
+        await fs.mkdir(path.dirname(dest),{recursive:true,mode:0o700});
+        await safeDirectory(path.dirname(dest),true);
+      }
+      if(item.link) await fs.symlink(item.link,dest);
+      else await copyFile(path.join(source,item.path),dest,signal);
+    }
+    await verifyRuntime(stage,{entries,signal});
+    signal?.throwIfAborted();
+    const current=await fs.lstat(target).catch(e=>{if(e.code==='ENOENT')return null;throw e;});
+    if(current) fail('runtime_target_appeared');
+    // 전용 lock과 존재 재검사로 정상 동시 실행을 막는다. 동일 사용자에 의한 적대적
+    // 검사/rename 사이 경로 교체까지 막는 OS RENAME_EXCL 원자성은 Node API가 제공하지 않는다.
+    await fs.rename(stage,target);
+    stage=null;
+    emit({event:'installed',runtimeVersion:version,network:false});
+    return {installed:true,runtimeDir:target};
+  } finally {
+    if(stage) await fs.rm(stage,{recursive:true,force:true});
+    if(locked) await fs.rmdir(lock);
+  }
+}
+
 export async function portAvailable(port) {
   const server=net.createServer();
   return new Promise((resolve,reject)=>{
@@ -89,17 +157,17 @@ function health(port, version) {
 /** 내부 port/entries/spawnRuntime 주입은 시험용이다. CLI에는 임의 실행경로·포트 입력을 노출하지 않는다. */
 export async function startRuntime(root, {
   signal, emit=()=>{}, port=PORT, entries=RUNTIME_FILES, version=VERSION,
-  startupMs=15000, stopMs=1500, spawnRuntime=spawn,
+  startupMs=15000, stopMs=1500, spawnRuntime=spawn, bundleRoot=path.dirname(fileURLToPath(import.meta.url)),
 }={}) {
   root=path.resolve(root);
   signal?.throwIfAborted();
   const runtimeDir=path.join(root,'runtime','ollama-v'+version);
   const verifySignal=signal ? AbortSignal.any([signal,AbortSignal.timeout(startupMs)]) : AbortSignal.timeout(startupMs);
-  await verifyRuntime(runtimeDir,{entries,signal:verifySignal});
+  await ensureRuntime(root,bundleRoot,{entries,version,signal:verifySignal,emit});
   if (!await portAvailable(port)) fail('runtime_port_in_use');
   await safeDirectory(path.join(root,'runtime','home'),true);
-  await safeDirectory(path.join(root,'models'));
-  await safeDirectory(path.join(root,'models','ollama'));
+  await safeDirectory(path.join(root,'models'),true);
+  await safeDirectory(path.join(root,'models','ollama'),true);
   signal?.throwIfAborted();
   const env={HOME:path.join(root,'runtime','home'),PATH:'/usr/bin:/bin:/usr/sbin:/sbin',
     OLLAMA_HOST:`127.0.0.1:${port}`,OLLAMA_MODELS:path.join(root,'models','ollama'),
@@ -185,7 +253,7 @@ async function main() {
 }
 if(process.argv[1] && path.resolve(process.argv[1])===fileURLToPath(import.meta.url)) {
   main().catch(error=>{
-    const allowed=['usage_start_required','unsupported_platform','runtime_unverified','unsafe_runtime_path','unsafe_runtime_permissions','unsafe_manifest','unexpected_runtime_file','loopback_unavailable','runtime_port_in_use','runtime_start_failed','runtime_exited','runtime_start_timeout','runtime_stop_timeout'];
+    const allowed=['usage_start_required','unsupported_platform','runtime_unverified','unsafe_runtime_path','unsafe_runtime_permissions','unsafe_manifest','unexpected_runtime_file','loopback_unavailable','runtime_port_in_use','runtime_start_failed','runtime_exited','runtime_start_timeout','runtime_stop_timeout','runtime_bundle_missing','runtime_install_busy','runtime_install_disk_space','runtime_target_appeared'];
     const code=error.name==='AbortError'?'cancelled':allowed.includes(error.message)?error.message:'runtime_unavailable';
     process.stdout.write(JSON.stringify({event:'error',code})+'\n');process.exitCode=code==='cancelled'?0:1;
     process.stdin.pause();

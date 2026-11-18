@@ -8,7 +8,7 @@ import net from 'node:net';
 import {spawn} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {PassThrough} from 'node:stream';
-import {verifyRuntime,startRuntime,runWithParent,portAvailable} from '../local-runtime.mjs';
+import {verifyRuntime,ensureRuntime,startRuntime,runWithParent,portAvailable} from '../local-runtime.mjs';
 
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 async function unusedPort(){const s=net.createServer();await new Promise(r=>s.listen(0,'127.0.0.1',r));const p=s.address().port;await new Promise(r=>s.close(r));return p;}
@@ -85,4 +85,57 @@ test('자기 process group의 후손도 종료하고 다른 서버는 유지',as
  const h=await startRuntime(f.root,f);const childPid=Number(await fs.readFile(path.join(f.root,'runtime/home/descendant.pid'),'utf8'));await h.stop();await h.done;
  for(let i=0;i<20;i++){try{process.kill(childPid,0);await wait(50);}catch{break;}}
  assert.throws(()=>process.kill(childPid,0),{code:'ESRCH'});assert.equal(await portAvailable(otherPort),false);
+});
+
+test('번들에서 빈 사용자 루트에 stage 설치하고 재실행은 기존 파일 유지',async t=>{
+ const f=await fixture(t);const root=path.join(f.root,'new-user');const events=[];
+ const result=await ensureRuntime(root,f.root,{entries:f.entries,version:'test',emit:e=>events.push(e)});
+ assert.equal(result.installed,true);await verifyRuntime(result.runtimeDir,{entries:f.entries});
+ assert.equal((await fs.stat(result.runtimeDir)).mode&0o777,0o700);
+ assert.deepEqual(events.map(e=>e.event),['installing','installed']);
+ const before=await fs.stat(path.join(result.runtimeDir,'ollama'));
+ const again=await ensureRuntime(root,path.join(f.root,'no-bundle'),{entries:f.entries,version:'test'});
+ assert.equal(again.installed,false);assert.equal((await fs.stat(path.join(result.runtimeDir,'ollama'))).ino,before.ino);
+});
+test('기존 손상 실행기를 덮어쓰지 않음',async t=>{
+ const f=await fixture(t);const root=path.join(f.root,'existing');const dest=path.join(root,'runtime/ollama-vtest');await fs.mkdir(dest,{recursive:true});await fs.writeFile(path.join(dest,'ollama'),'keep-corrupt');
+ await assert.rejects(ensureRuntime(root,f.root,{entries:f.entries,version:'test'}),/runtime_unverified/);
+ assert.equal(await fs.readFile(path.join(dest,'ollama'),'utf8'),'keep-corrupt');
+});
+test('동시 설치 또는 이전 비정상 종료 lock은 그대로 유지',async t=>{
+ const f=await fixture(t);const root=path.join(f.root,'locked');const lock=path.join(root,'runtime/.install-ollama-test.lock');await fs.mkdir(lock,{recursive:true});
+ await assert.rejects(ensureRuntime(root,f.root,{entries:f.entries,version:'test'}),/install_busy/);assert.ok((await fs.stat(lock)).isDirectory());
+});
+test('복사 실패와 취소에서 target 미노출 및 stage 정리',async t=>{
+ const f=await fixture(t);
+ for(const cancel of [false,true]) {
+  const root=path.join(f.root,cancel?'cancelled':'failed');const controller=new AbortController();
+  const copyFile=async(source,dest)=>{await fs.copyFile(source,dest);if(cancel)controller.abort();else throw Error('fake_copy_failure');};
+  await assert.rejects(ensureRuntime(root,f.root,{entries:f.entries,version:'test',signal:controller.signal,copyFile}),cancel?{name:'AbortError'}:/fake_copy_failure/);
+  assert.deepEqual(await fs.readdir(path.join(root,'runtime')),[]);
+ }
+});
+test('게시 직전에 나타난 목적지를 보존',async t=>{
+ const f=await fixture(t);const root=path.join(f.root,'appeared');const dest=path.join(root,'runtime/ollama-vtest');
+ const copyFile=async(source,target)=>{await fs.copyFile(source,target);await fs.mkdir(dest);await fs.writeFile(path.join(dest,'keep'),'original');};
+ await assert.rejects(ensureRuntime(root,f.root,{entries:f.entries,version:'test',copyFile}),/target_appeared/);
+ assert.equal(await fs.readFile(path.join(dest,'keep'),'utf8'),'original');assert.deepEqual(await fs.readdir(path.join(root,'runtime')),['ollama-vtest']);
+});
+test('손상 번들·없는 번들·symlink 목적지는 실행하지 않음',async t=>{
+ const f=await fixture(t);const root=path.join(f.root,'new');
+ await assert.rejects(ensureRuntime(root,path.join(f.root,'missing'),{entries:f.entries,version:'test'}),/bundle_missing/);
+ await fs.appendFile(path.join(f.dir,'ollama'),'corruption');await assert.rejects(ensureRuntime(root,f.root,{entries:f.entries,version:'test'}),/runtime_unverified/);
+ await fs.mkdir(path.join(root,'runtime'),{recursive:true});await fs.symlink(f.dir,path.join(root,'runtime/ollama-vtest'));
+ await assert.rejects(ensureRuntime(root,f.root,{entries:f.entries,version:'test'}),/unsafe_runtime_path/);
+});
+test('bundled runtime을 첫 설치한 뒤 빈 모델 폴더를 만들고 기동',async t=>{
+ const f=await fixture(t);const root=path.join(f.root,'firststart');const events=[];
+ const h=await startRuntime(root,{...f,bundleRoot:f.root,emit:e=>events.push(e)});await h.stop();await h.done;
+ assert.deepEqual(events.map(e=>e.event),['installing','installed','starting','ready','stopped']);
+ assert.ok((await fs.stat(path.join(root,'models/ollama'))).isDirectory());
+});
+
+test('group 쓰기 가능한 runtime 디렉터리와 사용자 저장소는 거절',async t=>{
+ const f=await fixture(t);await fs.chmod(f.dir,0o770);await assert.rejects(verifyRuntime(f.dir,{entries:f.entries}),/unsafe_runtime_permissions/);await fs.chmod(f.dir,0o700);
+ const root=path.join(f.root,'writable-home');await fs.mkdir(root,{mode:0o770});await fs.chmod(root,0o770);await assert.rejects(ensureRuntime(root,f.root,{entries:f.entries,version:'test'}),/unsafe_runtime_permissions/);
 });

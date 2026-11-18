@@ -65,6 +65,26 @@ done < "$stage/source-files"
 sed -E -i '' '/^<link.*href="https:\/\/(cdn\.jsdelivr\.net|fonts\.googleapis\.com|fonts\.gstatic\.com)/d' \
     "$resources/app/public/index.html" "$resources/app/public/intro/index.html"
 
+# 선택 개발 패키지: 이미 준비된 공식 런타임만 검증해 넣는다. 네트워크 다운로드는 하지 않는다.
+if [[ "${AHMATDA_BUNDLE_OLLAMA:-0}" == 1 ]]; then
+    runtime_source=${AHMATDA_OLLAMA_RUNTIME:-"$HOME/Library/Application Support/Ahmatda/runtime/ollama-v0.40.16"}
+    NODE_OPTIONS= NODE_PATH= "$node_source" --input-type=module - "$source_dir/local-runtime.mjs" "$runtime_source" "$resources/runtime/ollama-v0.40.16" <<'JS'
+import {pathToFileURL} from 'node:url';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+const {verifyRuntime,RUNTIME_FILES}=await import(pathToFileURL(process.argv[2]));
+await verifyRuntime(process.argv[3]);
+for (const entry of RUNTIME_FILES) {
+    const dest=path.join(process.argv[4],entry.path);
+    await fs.mkdir(path.dirname(dest),{recursive:true,mode:0o755});
+    if(entry.link) await fs.symlink(entry.link,dest);
+    else await fs.copyFile(path.join(process.argv[3],entry.path),dest);
+}
+await verifyRuntime(process.argv[4]);
+JS
+    # vendor의 원본 서명/바이너리 해시를 보존한다. 아래에서 최상위 앱만 ad hoc 서명한다.
+fi
+
 NODE_OPTIONS= NODE_PATH= "$macos/node" "$source_dir/copy-dependencies.mjs" "$repo/src/app" "$resources/app"
 git -C "$repo" rev-parse HEAD > "$resources/app/REVISION"
 if [[ -n $(git -C "$repo" status --porcelain -- src/app src/mac-app) ]]; then
