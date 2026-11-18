@@ -50,7 +50,7 @@ mkdir -p "$macos" "$resources/app" "$resources/pc-agent"
 cp "$source_dir/Info.plist" "$bundle/Contents/"
 if [[ "$whisper_profile" != default ]]; then
     /usr/libexec/PlistBuddy -c 'Set :CFBundleIdentifier org.ininhyeop.t07.ahmatda.pyavdev' "$bundle/Contents/Info.plist"
-    /usr/libexec/PlistBuddy -c 'Set :CFBundleDisplayName 아맞다-PyAV-개발' "$bundle/Contents/Info.plist"
+    /usr/libexec/PlistBuddy -c 'Set :CFBundleDisplayName 아차-PyAV-개발' "$bundle/Contents/Info.plist"
     /usr/libexec/PlistBuddy -c "Add :AhmatdaDevelopmentProfile string $whisper_profile" "$bundle/Contents/Info.plist"
     printf '{"version":1,"profile":"development-whisper-pyav-lgpl-v1"}\n' > "$resources/whisper-runtime-profile.json"
 fi

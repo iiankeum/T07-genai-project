@@ -10,7 +10,7 @@ private enum LaunchError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .usage: return "서버 모드에는 --server와 HTTPS 주소를 지정해 주세요."
-        case .alreadyOpen: return "이 Mac에서 아맞다가 이미 실행 중입니다."
+        case .alreadyOpen: return "이 Mac에서 아차가 이미 실행 중입니다."
         case .missingBundle: return "앱 번들에 Node 또는 서버 파일이 없습니다. 다시 빌드해 주세요."
         case .aiConfiguration: return "ai.json의 provider를 off 또는 ollama로 설정해 주세요. model에는 설치한 로컬 모델 이름만 지정할 수 있어요."
         case .workerConfiguration: return "worker.env에 작업공간 ID와 일꾼 토큰을 적고 권한을 600으로 설정해 주세요."
@@ -115,10 +115,10 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1180, height: 800),
                           styleMask: [.titled, .closable, .miniaturizable, .resizable],
                           backing: .buffered, defer: false)
-        window.title = "아맞다"
+        window.title = "아차"
         window.isReleasedWhenClosed = false
         window.minSize = NSSize(width: 400, height: 500)
-        status = NSTextField(wrappingLabelWithString: "아맞다를 시작하고 있어요…")
+        status = NSTextField(wrappingLabelWithString: "아차를 시작하고 있어요…")
         status.alignment = .center
         status.frame = window.contentView!.bounds.insetBy(dx: 28, dy: 28)
         status.autoresizingMask = [.width, .height]
@@ -131,12 +131,12 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
             switch try Mode(arguments: Array(CommandLine.arguments.dropFirst())) {
             case .local:
                 origin = local
-                window.title = "아맞다 · 이 Mac"
+                window.title = "아차 · 이 Mac"
                 installMenu(localMode: true)
                 try startLocalServer()
             case let .remote(url):
                 origin = url
-                window.title = "아맞다 · 서버 · \(url.host ?? "")"
+                window.title = "아차 · 서버 · \(url.host ?? "")"
                 installMenu(localMode: false)
                 showWebView(localRules: nil)
             }
@@ -156,7 +156,7 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
         } else { profileData = nil }
         let storageName = try LocalDevelopmentProfile.storageName(
             info: Bundle.main.object(forInfoDictionaryKey: "AhmatdaDevelopmentProfile"), data: profileData)
-        if storageName != "Ahmatda" { window.title = "아맞다 · PyAV 개발 테스트 · 별도 자료" }
+        if storageName != "Ahmatda" { window.title = "아차 · PyAV 개발 테스트 · 별도 자료" }
         let storage = try files.url(for: .applicationSupportDirectory, in: .userDomainMask,
                                     appropriateFor: nil, create: true)
             .appendingPathComponent(storageName, isDirectory: true)
@@ -620,7 +620,7 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
             item.target = self
             return item
         }
-        addMenu("아맞다", [NSMenuItem(title: "아맞다 종료", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")])
+        addMenu("아차", [NSMenuItem(title: "아차 종료", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")])
         var navigation = [command("링크 열기…", #selector(openLink), "l"), command("새로고침", #selector(reload), "r")]
         navigation.append(command("팀 서버 열기…", #selector(openTeamServer)))
         if localMode {
@@ -1017,7 +1017,7 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
     @objc private func openLink() {
         guard let webView else { return }
         let prompt = NSAlert()
-        prompt.messageText = "아맞다 링크 열기"
+        prompt.messageText = "아차 링크 열기"
         let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 360, height: 24))
         prompt.accessoryView = field
         prompt.window.initialFirstResponder = field
