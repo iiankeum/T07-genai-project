@@ -92,6 +92,11 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
     private var aiEnvironment: [String: String] = [:]
     private let probeDelegate = LocalProbeDelegate()
     private var probeSession: URLSession?
+    private var modelSetupProcess: Process?
+    private var modelSetupOutput: Pipe?
+    private var modelSetupBuffer = Data()
+    private var modelSetupAlert: NSAlert?
+    private var modelSetupFinished = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1180, height: 800),
@@ -383,6 +388,7 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
         var navigation = [command("링크 열기…", #selector(openLink), "l"), command("새로고침", #selector(reload), "r")]
         if localMode {
             navigation.append(command("로컬 AI 준비 상태…", #selector(showPreparation)))
+            navigation.append(command("주문 정리 모델 준비…", #selector(confirmModelPreparation)))
             navigation.append(command("로컬 자료 폴더 열기", #selector(revealStorage)))
         }
         addMenu("이동", navigation)
@@ -442,9 +448,112 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
     private func showPreparationGuide() {
         let alert = NSAlert()
         alert.messageText = "모델을 자동으로 내려받지 않아요"
-        alert.informativeText = "현재는 개발 검증용 앱이에요.\n\n1. 공식 Ollama를 준비하고 로컬 서버를 실행해요.\n2. 설정된 모델을 준비해요: \(aiEnvironment["OLLAMA_MODEL"] ?? "qwen3:4b")\n3. 이동 → 로컬 AI 준비 상태에서 다시 확인해요.\n\n음성 받아쓰기는 faster-whisper 일꾼이 별도로 필요해요. 모델 다운로드·자동 설치 기능은 아직 없어요.\n계정 가입 후 인증 링크는 이동 → 로컬 자료 폴더 열기의 data/outbox에 저장돼요."
+        alert.informativeText = "현재는 개발 검증용 앱이에요.\n\n1. 공식 Ollama를 준비하고 로컬 서버를 실행해요.\n2. 설정된 모델을 준비해요: \(aiEnvironment["OLLAMA_MODEL"] ?? "qwen3:4b")\n3. 이동 → 로컬 AI 준비 상태에서 다시 확인해요.\n\n음성 받아쓰기는 faster-whisper 일꾼이 별도로 필요해요. 이동 → 주문 정리 모델 준비에서 검증된 실행기의 qwen3:4b 파일을 준비할 수 있어요. 실행기 자동 설치와 시작은 아직 없어요.\n계정 가입 후 인증 링크는 이동 → 로컬 자료 폴더 열기의 data/outbox에 저장돼요."
         alert.addButton(withTitle: "확인")
         alert.beginSheetModal(for: window)
+    }
+
+    @objc private func confirmModelPreparation() {
+        guard localStorage != nil, modelSetupAlert == nil, modelSetupProcess == nil,
+              window.attachedSheet == nil else { return }
+        let alert = NSAlert()
+        alert.messageText = "주문 정리 모델을 준비할까요?"
+        alert.informativeText = "qwen3:4b · Apache-2.0\n공식 Ollama 배포 서버에서 최대 약 2.50GB를 받으며 통신·저장 공간을 사용해요. 녹음이나 원문은 전송하지 않아요.\n\n검증된 앱 전용 Ollama 실행기가 이미 있어야 해요. 설치된 정상 파일은 재사용하며 해시를 확인해요. 받아쓰기 모델·실행기 자동 설치와 AI 서버 자동 시작은 포함하지 않아요."
+        alert.addButton(withTitle: "모델 준비 시작")
+        alert.addButton(withTitle: "취소")
+        alert.beginSheetModal(for: window) { [weak self] answer in
+            if answer == .alertFirstButtonReturn { self?.startModelPreparation() }
+        }
+    }
+
+    private func startModelPreparation() {
+        guard let resources = Bundle.main.resourceURL,
+              let executable = Bundle.main.url(forAuxiliaryExecutable: "node") else { return }
+        let alert = NSAlert()
+        modelSetupAlert = alert
+        modelSetupFinished = false
+        modelSetupBuffer.removeAll()
+        alert.messageText = "주문 정리 모델 준비"
+        alert.informativeText = "설치된 파일의 무결성과 저장 공간을 확인하고 있어요…"
+        alert.addButton(withTitle: "취소")
+        alert.beginSheetModal(for: window) { [weak self] _ in
+            guard let self else { return }
+            self.modelSetupAlert = nil
+            if let process = self.modelSetupProcess, process.isRunning { process.terminate() }
+        }
+        let process = Process()
+        let output = Pipe()
+        process.executableURL = executable
+        process.arguments = [resources.appendingPathComponent("setup-local-model.mjs").path, "--prepare"]
+        process.environment = ["HOME": files.homeDirectoryForCurrentUser.path,
+                               "PATH": "/usr/bin:/bin:/usr/sbin:/sbin"]
+        process.standardOutput = output
+        process.standardError = FileHandle.nullDevice
+        output.fileHandleForReading.readabilityHandler = { [weak self] handle in
+            let data = handle.availableData
+            if data.isEmpty { handle.readabilityHandler = nil; return }
+            DispatchQueue.main.async { self?.receiveModelSetup(data) }
+        }
+        process.terminationHandler = { [weak self] process in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.modelSetupProcess = nil
+                if !self.modelSetupFinished {
+                    self.modelSetupAlert?.informativeText = process.terminationStatus == 0
+                        ? "모델 준비 작업이 끝났어요. 이동 → 로컬 AI 준비 상태에서 연결을 확인해 주세요."
+                        : "모델 준비를 마치지 못했어요. 기존 정상 모델은 유지돼요. 실행기·네트워크·저장 공간을 확인해 주세요."
+                }
+                self.modelSetupAlert?.buttons.first?.title = "확인"
+            }
+        }
+        modelSetupProcess = process
+        modelSetupOutput = output
+        do { try process.run() }
+        catch {
+            modelSetupProcess = nil
+            output.fileHandleForReading.readabilityHandler = nil
+            alert.informativeText = "모델 준비 도구를 시작할 수 없어요. 앱을 다시 빌드하거나 업데이트해 주세요."
+            alert.buttons.first?.title = "확인"
+        }
+    }
+
+    private func receiveModelSetup(_ data: Data) {
+        modelSetupBuffer.append(data)
+        guard modelSetupBuffer.count < 65536 else {
+            modelSetupProcess?.terminate()
+            modelSetupBuffer.removeAll()
+            return
+        }
+        while let end = modelSetupBuffer.firstIndex(of: 10) {
+            let line = modelSetupBuffer.prefix(upTo: end)
+            modelSetupBuffer.removeSubrange(...end)
+            guard let value = try? JSONSerialization.jsonObject(with: line) as? [String: Any],
+                  let event = value["event"] as? String else { continue }
+            switch event {
+            case "progress":
+                let completed = (value["completed"] as? NSNumber)?.doubleValue ?? 0
+                let total = (value["total"] as? NSNumber)?.doubleValue ?? 1
+                modelSetupAlert?.informativeText = "모델 파일을 받고 있어요: \(Int(min(100, completed / max(1, total) * 100)))%\n완료 후 파일 해시를 검사해요. 취소하면 정상 모델은 그대로 유지돼요."
+            case "preparing":
+                modelSetupAlert?.informativeText = "공식 배포 서버에서 필요한 모델 파일을 준비하고 있어요."
+            case "ready":
+                modelSetupFinished = true
+                modelSetupAlert?.informativeText = "모델 파일과 해시 확인이 끝났어요.\n\n이것은 실제 AI 답변 성공을 뜻하지 않아요. 로컬 Ollama 서버를 시작하고 준비 상태를 다시 확인해 주세요. 받아쓰기 준비는 별도예요."
+            case "error":
+                modelSetupFinished = true
+                let code = value["code"] as? String ?? ""
+                if code == "runtime_missing_or_unverified_use_app_update" {
+                    modelSetupAlert?.informativeText = "검증된 앱 전용 실행기가 없어요. 실행기를 포함한 앱 업데이트가 필요해요. 모델 파일은 변경하지 않았어요."
+                } else if code == "insufficient_disk_space" {
+                    modelSetupAlert?.informativeText = "저장 공간이 부족해요. 여유 공간을 확보한 뒤 다시 시도해 주세요."
+                } else if code == "cancelled" {
+                    modelSetupAlert?.informativeText = "모델 준비를 취소했어요. 기존 정상 모델은 유지돼요."
+                } else {
+                    modelSetupAlert?.informativeText = "모델 준비를 마치지 못했어요. 네트워크·파일 무결성·다른 준비 작업을 확인해 주세요. 기존 정상 모델은 유지돼요."
+                }
+            default: break
+            }
+        }
     }
 
     @objc private func openLink() {
@@ -495,6 +604,7 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
     func applicationWillTerminate(_ notification: Notification) {
         closing = true
         probeSession?.invalidateAndCancel()
+        if let modelSetupProcess, modelSetupProcess.isRunning { modelSetupProcess.terminate() }
         stopChild()
         if let child, child.isRunning { child.waitUntilExit() }
         if lock >= 0 { Darwin.close(lock) }
