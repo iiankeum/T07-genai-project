@@ -122,6 +122,8 @@ jobs:
           KNOWLEDGE_EVIDENCE_OUTPUT: artifacts/e2e/knowledge-evidence
       - name: Today briefing and summary stale response protection (fake data only)
         run: npm run test:today-race-e2e
+      - name: Trial submission preserves pending input (fake policy and API)
+        run: npm run test:trial-submit-e2e
       - uses: actions/upload-artifact@v4
         if: always()
         with:
