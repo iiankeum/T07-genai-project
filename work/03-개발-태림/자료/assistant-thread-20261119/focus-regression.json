@@ -1,0 +1,51 @@
+{
+  "scope": "actual assistant.js and API client with delayed fake callback responses; no actual AI/backend/send",
+  "status": "passed",
+  "results": [
+    {
+      "size": "desktop",
+      "status": 200,
+      "retainsFocus": true,
+      "tabNeverEntersBackground": true,
+      "backgroundInert": true,
+      "escapeRestoresTrigger": true
+    },
+    {
+      "size": "desktop",
+      "status": 500,
+      "retainsFocus": true,
+      "tabNeverEntersBackground": true,
+      "backgroundInert": true,
+      "escapeRestoresTrigger": true
+    },
+    {
+      "size": "desktop",
+      "closedWhileLoading": true,
+      "lateResponseCannotReopen": true
+    },
+    {
+      "size": "mobile",
+      "status": 200,
+      "retainsFocus": true,
+      "tabNeverEntersBackground": true,
+      "backgroundInert": true,
+      "escapeRestoresTrigger": true
+    },
+    {
+      "size": "mobile",
+      "status": 500,
+      "retainsFocus": true,
+      "tabNeverEntersBackground": true,
+      "backgroundInert": true,
+      "escapeRestoresTrigger": true
+    },
+    {
+      "size": "mobile",
+      "closedWhileLoading": true,
+      "lateResponseCannotReopen": true
+    }
+  ],
+  "abortedCallbacks": 2,
+  "errors": [],
+  "blocked": []
+}
