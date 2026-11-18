@@ -217,6 +217,17 @@ async function integrations(el, key, account, ctx) {
   async function draw(token) {
     const rr = await api.get('/api/settings/integrations');
     show(el, key, html`
+      ${rr.localWorker?.available ? html`<h2>이 Mac에서 받아쓰기</h2>
+        <p>${rr.localWorker.connected ? '현재 작업공간이 연결돼 있어요.' : rr.localWorker.configuredElsewhere ? '다른 작업공간의 연결이 있어요. 새 연결을 시작하면 기존 연결은 즉시 해제돼요.' : '전사 모델과 실행기를 준비한 뒤 이 작업공간을 연결하세요.'}</p>
+        <p>승인은 30일 동안 유효해요. 앱이 열려 있을 때 이 작업공간의 녹음을 이 Mac에서 처리해요. 화면에서 다른 공간을 선택해도 연결된 공간은 자동으로 바뀌지 않아요.</p>
+        <form id="local-worker-connect" class="account-form">
+          <label class="account-check"><input name="confirm" type="checkbox" required> 현재 작업공간의 로컬 받아쓰기에 동의하고 기존 연결이 있으면 교체해요.</label>
+          ${save(rr.localWorker.connected ? '연결 갱신' : '이 Mac에서 받아쓰기 연결')}${status}
+        </form>
+        ${rr.localWorker.connected ? html`<form id="local-worker-disconnect" class="account-form">
+          <label class="account-check"><input name="confirm" type="checkbox" required> 이 작업공간의 로컬 받아쓰기 연결을 해제해요.</label>
+          <button type="submit" class="btn btn-danger">연결 해제</button>${status}
+        </form>` : ''}` : ''}
       <h2>녹음 폴더 연결</h2>
       <p>${rr.ingestConfigured ? '연결용 토큰이 발급됐어요.' : '연결용 토큰을 발급해 폴더 전송 프로그램에 설정해 주세요.'}</p>
       <p>받아쓰기 처리 · ${ctx.meta?.worker?.online ? '연결됨' : '대기 중'}</p>
@@ -231,6 +242,12 @@ async function integrations(el, key, account, ctx) {
         <button type="submit" class="btn btn-danger">토큰 폐기</button>${status}
       </form>` : ''}
       <h2>AI 처리 범위</h2>
+      <p class="notice">${ctx.meta?.aiProvider === 'ollama'
+        ? `로컬 모델 설정 · ${ctx.meta.model || 'Ollama'}. 앱 서버와 같은 기기의 Ollama로 처리합니다. 모델 설치와 실행 여부는 실제 요청 시 확인됩니다.`
+        : ctx.meta?.aiProvider === 'fixture' ? '고정 예시 응답 모드입니다. 실제 AI 추론을 하지 않습니다.'
+        : ctx.meta?.aiProvider === 'anthropic' ? '외부 Claude 연결 설정입니다. 아래 동의와 서버의 유료 호출 허용이 모두 필요합니다.'
+        : 'AI 처리가 꺼져 있습니다.'}</p>
+      ${ctx.meta?.aiProvider === 'ollama' ? html`<p>아래 설정은 외부 AI 전송에만 적용됩니다. 로컬 모델을 끄려면 Node 설치의 AI_PROVIDER를 off로 바꾸세요. Mac 앱은 ‘로컬 자료 폴더 열기’에서 ai.json의 provider를 off로 바꾼 뒤 앱을 다시 실행하세요.</p>` : ''}
       <p>서버에서 외부 AI를 켠 경우 ‘서버 AI 사용’으로 저장하면 받아쓴 글 원문과 관련 업무 정보가 외부 AI에 전송될 수 있어요.</p>
       <form id="integration-ai" class="account-form">
         <label>처리 방식<select name="aiMode">
@@ -239,6 +256,10 @@ async function integrations(el, key, account, ctx) {
         </select></label>${save()}${status}
       </form>
     `);
+    const localConnect=el.querySelector('#local-worker-connect');
+    if(localConnect) bindForm(localConnect,async()=>{await api.post('/api/settings/local-worker',{confirm:true});await draw();});
+    const localDisconnect=el.querySelector('#local-worker-disconnect');
+    if(localDisconnect) bindForm(localDisconnect,async()=>{await api.del('/api/settings/local-worker',{body:{confirm:true}});await draw();});
     bindForm(el.querySelector('#integration-token'), async () => {
       const result = await api.post('/api/settings/ingest-token');
       await draw(result.token);

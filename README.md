@@ -5,16 +5,22 @@
 ## 한 줄 소개
 **아맞다**는 자동차 부품 대리점의 전화 주문을 받아쓰고, 통화 근거가 붙은 주문 카드로 정리해 확인과 출고를 돕는다.
 
-## 내 서버에서 시작하기
+## 설치 경로
 
-Docker Engine과 Compose 플러그인을 준비한 뒤 저장소의 루트에서 실행한다.
+팀 서버는 **Node.js 24 + SQLite 직접 실행**을 유지한다. Docker는 선택 사항이며 필수 설치 항목이 아니다.
 
 ```sh
-cp src/app/.env.example src/app/.env
-docker compose --env-file src/app/.env up -d --build --wait
+cd src/app
+npm ci
+cp .env.example .env
+node --env-file=.env server.mjs
 ```
 
-[http://127.0.0.1:5600](http://127.0.0.1:5600)에서 가짜 샘플로 체험할 수 있다. 계정 만들기와 로컬 인증 링크 읽기, 데이터 백업은 [자가 호스팅 안내](docs/self-hosting.md)를 따른다. [개발·테스트 안내](src/app/README.md)와 [시스템 구조](docs/architecture.md)도 함께 제공한다.
+기본 예제는 비공개 작업공간과 고정 응답 `fixture`를 사용한다. **fixture는 로컬 AI 추론이 아니다.** 실제 로컬 모델은 별도로 설치한 Ollama와 `AI_PROVIDER=ollama`로 연결한다. 음성 전사는 Whisper 일꾼을 별도로 준비한다.
+
+- [Mac 앱 소스 빌드·모델 준비](docs/mac-app.md): 로컬 처리와 선택적인 웹 서버 접속을 구분한다. 서명·공증된 배포판과 실제 추론 검증은 별도 단계다.
+- [Node 직접 설치·선택 Docker·백업](docs/self-hosting.md)
+- [개발·무과금 테스트](src/app/README.md) · [시스템 구조](docs/architecture.md)
 
 ## 🚨 Up Next 🚨
 **[ 11/11(수) 22:00 ]** 킥오프 미팅 · 최종 아이템 결정

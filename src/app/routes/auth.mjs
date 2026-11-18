@@ -3,7 +3,7 @@ import {
   me, login, logout, signup, verify, resendVerification, requestReset, resetPassword, inviteInfo, acceptInvite,
   createWorkspace, switchWorkspace, updateProfile, changePassword, updatePreferences, updateWorkspace,
   listMembers, changeMember, inviteMember, cancelInvite, integrationSettings, updateAiSettings, rotateIngestToken,
-  updateRetention, requestAccess, requireRole, forEachWorkspace,
+  updateRetention, requestAccess, requireRole, forEachWorkspace, connectLocalWorker, disconnectLocalWorker,
 } from '../lib/auth.mjs';
 import { db, nowIso, tx, parseJson } from '../lib/db.mjs';
 import { HttpError, readJson, sendJson } from '../lib/http.mjs';
@@ -93,6 +93,8 @@ export function register(router) {
   router.delete('/api/settings/invites/:id', ({ params }) => cancelInvite(params.id));
   router.get('/api/settings/integrations', () => integrationSettings());
   router.patch('/api/settings/integrations', async ({ req }) => updateAiSettings(await readJson(req, 8 * 1024)));
+  router.post('/api/settings/local-worker', control(function localWorkerConnect(body, req) { return connectLocalWorker(req,body); }));
+  router.delete('/api/settings/local-worker', control(function localWorkerDisconnect(body, req) { return disconnectLocalWorker(req,body); }));
   router.post('/api/settings/ingest-token', () => rotateIngestToken());
   router.delete('/api/settings/ingest-token', () => rotateIngestToken(true));
   router.patch('/api/settings/data', async ({ req }) => {

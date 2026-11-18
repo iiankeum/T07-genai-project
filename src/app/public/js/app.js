@@ -5,6 +5,7 @@
 // 화면마다 css/pages/<이름>.css 가 있으면 처음 열 때 자동으로 붙인다.
 import { getMeta } from './api.js';
 import { html, render, esc, routeOf } from './ui.js';
+import { icon } from './icons.js';
 
 const ROUTES = [
   { re: /^\/?$/, page: 'today' },
@@ -76,14 +77,15 @@ const isActive = (item, page) => (Array.isArray(item.page) ? item.page.includes(
 
 function renderNav(page, meta) {
   const workspace = meta?.access?.workspace;
-  const foot = [WORKSPACES, SETTINGS, HELP, ...(meta?.access?.role === 'admin' ? [ADMIN] : [])];
-  const link = (n) => html`<a class="nav-link ${isActive(n, page) ? 'active' : ''}" href="${n.href}" title="${n.label}" ${isActive(n, page) ? html`aria-current="page"` : ''}><span class="nav-icon" aria-hidden="true">${n.icon}</span><span class="nav-label">${n.label}</span></a>`;
+  const foot = [SETTINGS, HELP, ...(meta?.access?.role === 'admin' ? [ADMIN] : [])];
+  const link = (n) => html`<a class="nav-link ${isActive(n, page) ? 'active' : ''}" href="${n.href}" title="${n.label}" ${isActive(n, page) ? html`aria-current="page"` : ''}><span class="nav-icon">${icon(n.page)}</span><span class="nav-label">${n.label}</span></a>`;
   render(document.getElementById('sideNav'), html`
-    <a class="btn btn-primary nav-cta" href="${LIVE.href}" title="${LIVE.label}" ${page === LIVE.page ? html`aria-current="page"` : ''}><span aria-hidden="true">${LIVE.icon}</span><span class="nav-cta-label">${LIVE.label}</span></a>
-    <div class="nav-group"><p class="nav-group-label">${workspace?.name || '워크스페이스'}</p><ul>${NAV.slice(0, 5).map((n) => html`<li>${link(n)}</li>`)}</ul></div>
-    <div class="nav-group"><p class="nav-group-label">함께 일하는 AI</p><ul>${NAV.slice(5).map((n) => html`<li>${link(n)}</li>`)}</ul></div>
+    <a class="workspace-switch" href="${WORKSPACES.href}" title="워크스페이스 선택"><span class="workspace-symbol">${icon('account')}</span><span class="workspace-copy"><strong>${workspace?.name || '워크스페이스'}</strong><span>${meta?.access?.demo === false ? '내 작업공간' : '예시 데이터로 체험 중'}</span></span><span class="workspace-chevron" aria-hidden="true">⌄</span></a>
+    <a class="btn btn-primary nav-cta" href="${LIVE.href}" title="${LIVE.label}" ${page === LIVE.page ? html`aria-current="page"` : ''}>${icon('live')}<span class="nav-cta-label">${LIVE.label}</span></a>
+    <div class="nav-group"><p class="nav-group-label">업무</p><ul>${NAV.slice(0, 5).map((n) => html`<li>${link(n)}</li>`)}</ul></div>
+    <div class="nav-group"><p class="nav-group-label">지식과 도구</p><ul>${NAV.slice(5).map((n) => html`<li>${link(n)}</li>`)}</ul></div>
     <div class="sidenav-foot">${foot.map(link)}</div>`);
-  render(document.getElementById('tabBar'), html`${TABS.map((t) => html`<a class="tab-link ${isActive(t, page) ? 'active' : ''}" href="${t.href}" ${isActive(t, page) ? html`aria-current="page"` : ''}><span class="tab-icon" aria-hidden="true">${t.icon}</span><span>${t.label}</span></a>`)}`);
+  render(document.getElementById('tabBar'), html`${TABS.map((t) => html`<a class="tab-link ${isActive(t, page) ? 'active' : ''}" href="${t.href}" ${isActive(t, page) ? html`aria-current="page"` : ''}><span class="tab-icon">${icon(t.page)}</span><span>${t.label}</span></a>`)}`);
 }
 
 function renderMore(el, meta) {
@@ -92,7 +94,7 @@ function renderMore(el, meta) {
   items.push({ href: '#/trial', label: '무료 체험 신청', icon: '✉' });
   render(el, html`<div class="page">
     <div class="page-head"><h1>더보기</h1></div>
-    <ul class="menu-list">${items.map((n) => html`<li><a class="menu-link" href="${n.href}"><span class="nav-icon" aria-hidden="true">${n.icon}</span><span>${n.label}</span><span class="menu-arrow" aria-hidden="true">›</span></a></li>`)}</ul>
+    <ul class="menu-list">${items.map((n) => html`<li><a class="menu-link" href="${n.href}"><span class="nav-icon">${icon(n.page)}</span><span>${n.label}</span><span class="menu-arrow" aria-hidden="true">›</span></a></li>`)}</ul>
   </div>`);
 }
 
@@ -105,6 +107,7 @@ function goToLogin(returnTo) {
 async function route() {
   const my = ++seq;
   const r = parseHash();
+  document.body.dataset.page = r.page;
   const path = document.getElementById('topbarPath');
   renderNav(r.page, shellMeta);
   path.textContent = [...NAV, LIVE, SETTINGS, HELP, ADMIN].find((n) => isActive(n, r.page))?.label || '메뉴';
@@ -213,7 +216,7 @@ window.addEventListener('ahmatda:workspace-changed', () => {
   button.textContent = '새 작업공간 열기';
   button.addEventListener('click', () => location.reload());
   notice.append(text, button);
-  (document.querySelector('main') || document.body).prepend(notice);
+  (document.getElementById('workspaceNoticeSlot') || document.body).prepend(notice);
 });
 
 window.addEventListener('ahmatda:session-expired', (event) => {

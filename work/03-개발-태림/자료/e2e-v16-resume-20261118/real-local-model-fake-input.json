@@ -1,0 +1,33 @@
+{
+  "at": "2026-11-18T05:57:51.044Z",
+  "provider": "ollama",
+  "cloudDisabled": true,
+  "elapsedMs": 2097,
+  "data": {
+    "items": [
+      {
+        "name": "앞 브레이크 패드",
+        "quantity": 1
+      },
+      {
+        "name": "앞 디스크",
+        "quantity": 2
+      }
+    ]
+  },
+  "model": "qwen3:4b",
+  "syntheticInput": true,
+  "realInference": true,
+  "runtimeVersion": "0.40.16",
+  "runtimeSHA256": "a743717494315da7cd352982b805f6b992d4b4452ca117fd5fbf86c4ee46fca0",
+  "modelDigest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+  "modelFileBytes": 2497293931,
+  "memoryUsedBytes": 3181631242,
+  "contextLength": 4096,
+  "hardware": "Apple M5 Max, 36 GiB RAM, Metal",
+  "limits": [
+    "가짜 텍스트 한 문장의 JSON 추출 시험",
+    "음성 전사와 전체 주문 카드 파이프라인 미검증",
+    "OS 네트워크 차단을 적용한 완전 오프라인 시험은 미수행"
+  ]
+}

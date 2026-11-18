@@ -1,44 +1,15 @@
-// Claude 호출: 주문 카드 추출(extractCard) · 오늘 브리핑(writeBriefing) · 지난 통화에 묻기(answerQuestion).
+// AI 호출: 주문 카드 추출(extractCard) · 오늘 브리핑(writeBriefing) · 지난 통화에 묻기(answerQuestion).
 // 키 값 · 요청 본문 전체는 로그에 남기지 않는다. 시험은 setClientForTest(가짜) 로 진짜 API 를 부르지 않는다.
 import { config, secret, hasSecret } from './config.mjs';
-import { HttpError, cleanText } from './http.mjs';
+import { cleanText } from './http.mjs';
 import { CALL_TYPES } from './repo.mjs'; // 통화 종류 목록(DB 를 열지는 않는다)
 import { takeDaily } from './security.mjs';
 import { FIXTURE_MODEL, fixtureJson } from './ai-fixture.mjs';
+import { AiError } from './ai-error.mjs';
+import { ollamaJson } from './ai-ollama.mjs';
 import { aiModeForWorkspace } from './auth.mjs';
 
-// ── 오류 ─────────────────────────────────────────────────────────
-const AI_ERROR_TEXT = {
-  no_key: 'AI 키 없음',
-  refused: 'AI 가 답하지 않았습니다',
-  bad_output: 'AI 답을 읽지 못했습니다',
-  api_error: 'AI 를 부르지 못했습니다',
-  rate_limited: 'AI 사용량이 많아 잠시 뒤에 다시 해 주세요',
-  fixture_unavailable: '가짜 테스트 응답이 준비된 대화가 아닙니다. 샘플 대화로 해 보세요.',
-};
-
-export class AiError extends Error {
-  /** @param {'no_key'|'refused'|'bad_output'|'api_error'|'rate_limited'|'fixture_unavailable'} code */
-  constructor(code, message) {
-    super(message || AI_ERROR_TEXT[code] || 'AI 오류');
-    this.name = 'AiError';
-    this.code = code;
-  }
-}
-
-/** AiError → 화면용 HttpError (routes 에서 throw 한다). 다른 오류는 그대로. */
-export function aiHttpError(err) {
-  if (err instanceof HttpError) return err;
-  if (!(err instanceof AiError)) return new HttpError(502, 'ai_failed', 'AI 를 부르지 못했습니다. 잠시 뒤 다시 해 주세요.');
-  switch (err.code) {
-    case 'no_key': return new HttpError(503, 'ai_disabled', '서버에서 AI 기능을 켜 주세요.');
-    case 'fixture_unavailable': return new HttpError(422, 'fixture_unavailable', AI_ERROR_TEXT.fixture_unavailable);
-    case 'rate_limited': return new HttpError(429, 'ai_busy', 'AI 사용량이 많습니다. 잠시 뒤에 다시 해 주세요.');
-    case 'refused': return new HttpError(422, 'ai_refused', 'AI 가 이 글에는 답하지 않았습니다.');
-    case 'bad_output': return new HttpError(502, 'ai_bad_output', 'AI 답을 읽지 못했습니다. 다시 해 주세요.');
-    default: return new HttpError(502, 'ai_failed', 'AI 를 부르지 못했습니다. 잠시 뒤 다시 해 주세요.');
-  }
-}
+export { AiError, aiHttpError } from './ai-error.mjs';
 
 // ── 클라이언트 ────────────────────────────────────────────────────
 let testClient = null;
@@ -60,6 +31,7 @@ function paidAiEnabled() {
 
 export function aiStatus() {
   const aiProvider = config.aiProvider;
+  if (!testClient && aiProvider === 'ollama') return { aiEnabled: true, aiProvider, model: config.ollamaModel };
   const aiEnabled = Boolean(testClient) || aiProvider === 'fixture' || paidAiEnabled();
   const model = aiProvider === 'fixture' ? FIXTURE_MODEL : aiEnabled ? config.model : null;
   return { aiEnabled, aiProvider, model };
@@ -190,10 +162,15 @@ async function callJson({ operation, input, maxTokens = 4000, ...request }) {
   signal?.throwIfAborted();
   return withSlot(async () => {
     signal?.throwIfAborted();
-    const out = !testClient && config.aiProvider === 'fixture'
-      ? { data: fixtureJson(operation, input), model: FIXTURE_MODEL }
-      : await anthropicJson({ ...request, maxTokens });
-    if (!out.data && config.aiProvider === 'fixture') throw new AiError('fixture_unavailable');
+    let out;
+    if (!testClient && config.aiProvider === 'fixture') {
+      out = { data: fixtureJson(operation, input), model: FIXTURE_MODEL };
+      if (!out.data) throw new AiError('fixture_unavailable');
+    } else if (!testClient && config.aiProvider === 'ollama') {
+      out = await ollamaJson({ ...request, maxTokens, model: config.ollamaModel });
+    } else {
+      out = await anthropicJson({ ...request, maxTokens });
+    }
     if (!matchesSchema(out.data, request.schema)) throw new AiError('bad_output');
     return out;
   });

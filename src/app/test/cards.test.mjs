@@ -261,8 +261,8 @@ test('onTranscript: 글 저장 → 카드 → ready, 제목 · 거래처 · 요�
   assert.equal(JSON.parse(call.segments).length, 7);
   assert.equal(call.customer, '우리공업사');
   assert.ok(call.title.startsWith('우리공업사 · 휀다(펜더) 외 1'));
-  assert.equal(call.summary, AI2.summary);
   const c = cardView(getCardRow('p1'));
+  assert.equal(call.summary, cards.composeSummary(c));
   assert.equal(c.status, 'draft');
   assert.equal(c.customerByPhone, true);
   assert.deepEqual(c.askBack, AI2.ask_back);
@@ -688,4 +688,78 @@ test('POST /api/live/save: 새 통화(source=live, 오디오 없음) + 카드 �
   assert.equal(r.status, 400);
   r = await req('POST', '/api/live/save', { text: 'x', durationSec: -1 });
   assert.equal(r.status, 400);
+});
+
+
+test('원문에 없는 거래처·차종과 위조 인용은 제거하고 요약에 재노출하지 않는다', () => {
+  const transcript = '앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다.';
+  const v = cards.buildCardFromAi({ transcript, segments: [{ start: 0, end: 3.7, text: transcript }] }, {
+    customer: '우리공업사', car_model: '아반떼 AD',
+    evidence: { customer: '우리공업사', car_model: '아반떼 AD' },
+    items: [{ part: '앞 브레이크 패드', qty: 1, quote: '앞 브레이크 패드 한 세트' },
+      { part: '앞 디스크', qty: 2, quote: '앞 디스크 두 개' }],
+    summary: '아반떼 AD 패드 주문', note: '우리공업사 요청',
+    fixes: [{ heard: '우리공업사', fixed: '다른공업사' }],
+  });
+  assert.equal(v.customer, null);
+  assert.equal(v.car_model, null);
+  assert.equal(v.evidence.customer, undefined);
+  assert.equal(v.evidence.carModel, undefined);
+  assert.equal(v.note, null);
+  assert.equal(v.fixes.length, 0);
+  assert.ok(v.unsure.some((u) => u.field === 'customer' && u.blocking));
+  assert.ok(v.unsure.some((u) => u.field === 'carModel' && u.blocking));
+  assert.ok(!JSON.stringify(v.ai_draft).includes('아반떼'));
+  assert.ok(v.summary.includes('패드'));
+});
+
+test('실제 인용을 다른 필드의 근거로 재사용해도 허위 신원값을 허용하지 않는다', () => {
+  const transcript = '앞 디스크 두 개 주세요.';
+  const v = cards.buildCardFromAi({ transcript, segments: [] }, {
+    customer: '우리공업사', contact: '김 담당', car_model: '아반떼 AD', model_year: '2024', plate: '12가3456',
+    evidence: { customer: transcript, contact: transcript, car_model: transcript, model_year: transcript, plate: transcript },
+  });
+  for (const field of ['customer', 'contact', 'car_model', 'model_year', 'plate']) assert.equal(v[field], null);
+  assert.deepEqual(v.evidence, {});
+});
+
+test('세그먼트 없는 원문도 확인하고 자유 요약만의 환각을 버린다', () => {
+  const v = cards.buildCardFromAi({ transcript: '한성정비 앞 디스크 두 개요.', segments: [] }, {
+    customer: '한성정비', items: [{ part: '앞 디스크', qty: 2 }],
+    evidence: { customer: '한성정비' }, summary: '아반떼 AD 주문',
+  });
+  assert.equal(v.customer, '한성정비');
+  assert.equal(v.evidence.customer.quote, '한성정비');
+  assert.equal(v.evidence.customer.at, null);
+  assert.ok(!v.summary.includes('아반떼'));
+});
+
+test('실제 음성 정정은 확인 필요로 유지하고 꾸며낸 정정은 거부한다', () => {
+  const v = cards.buildCardFromAi(getCallRow('c2'), AI2);
+  assert.equal(v.car_model, '쏘나타 DN8');
+  assert.ok(v.unsure.some((u) => u.field === 'carModel' && u.blocking));
+  const forged = cards.buildCardFromAi({ transcript: '앞 디스크 두 개', segments: [] }, {
+    car_model: '아반떼 AD', evidence: { car_model: '앞 디스크' },
+    fixes: [{ heard: '앞 디스크', fixed: '아반떼 AD' }],
+  });
+  assert.equal(forged.car_model, null);
+});
+
+test('승인 사전에 등록된 별칭은 원문에 있을 때 표준명으로 유지한다', () => {
+  addGloss('ground-alias', '오인식', '특수 별칭', '표준 테스트 차종', null);
+  const v = cards.buildCardFromAi({ transcript: '특수 별칭 앞 패드 주세요', segments: [] }, {
+    car_model: '표준 테스트 차종', evidence: { car_model: '특수 별칭' },
+  });
+  assert.equal(v.car_model, '표준 테스트 차종');
+  assert.equal(v.evidence.carModel.quote, '특수 별칭');
+});
+
+
+test('요약은 품명에 이미 있는 방향을 중복 표시하지 않고 별도 방향은 유지한다', () => {
+  assert.equal(cards.composeSummary({ items: [
+    { part: '앞 브레이크 패드', side: '앞', qty: 1 },
+    { part: '앞 디스크', side: '앞', qty: 2 },
+  ] }), '앞 브레이크 패드 1개, 앞 디스크 2개');
+  assert.equal(cards.composeSummary({ items: [{ part: '브레이크 패드', side: '뒤', qty: 1 }] }), '뒤 브레이크 패드 1개');
+  assert.equal(cards.composeSummary({ items: [{ part: '후드', side: '후', qty: 1 }] }), '후 후드 1개');
 });

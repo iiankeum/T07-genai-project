@@ -1,0 +1,21 @@
+{
+  "at": "2026-11-18T06:35:46.097Z",
+  "blankRootInstall": true,
+  "existingPreserved": true,
+  "networkUsed": false,
+  "files": 46,
+  "links": 10,
+  "elapsedMs": 1330,
+  "events": [
+    {
+      "event": "installing",
+      "runtimeVersion": "0.40.16",
+      "network": false
+    },
+    {
+      "event": "installed",
+      "runtimeVersion": "0.40.16",
+      "network": false
+    }
+  ]
+}

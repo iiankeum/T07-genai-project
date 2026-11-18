@@ -1,0 +1,39 @@
+{
+  "at": "2026-11-18T07:03:29.634Z",
+  "syntheticInput": true,
+  "isolatedTemporaryWorkspace": true,
+  "realWhisperWorker": true,
+  "browserConnectDisconnect": true,
+  "cardProvider": "fixture (not real LLM)",
+  "status": "ready",
+  "transcript": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다.",
+  "events": [
+    {
+      "event": "starting",
+      "code": "worker_starting",
+      "transcriptionVerified": false
+    },
+    {
+      "event": "running",
+      "code": "worker_started",
+      "transcriptionVerified": false
+    },
+    {
+      "event": "waiting",
+      "reason": "connection_missing",
+      "code": "local_worker_not_ready",
+      "transcriptionVerified": false
+    },
+    {
+      "event": "stopped",
+      "code": "supervisor_stopped",
+      "transcriptionVerified": false
+    }
+  ],
+  "disconnected": true,
+  "limits": [
+    "가짜 계정·합성음성 한 건",
+    "실제 사용자 네이티브 가입/약관 동의 검증 아님",
+    "새 Mac 전체 설치·현장 음성 품질·OS 네트워크 차단 검증 아님"
+  ]
+}

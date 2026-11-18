@@ -1,10 +1,10 @@
 // 계정과 워크스페이스 소속은 중앙 DB에 둔다. 업무 자료는 각 워크스페이스 DB에 둔다.
 import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto';
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, rmSync, writeFileSync, lstatSync, renameSync, unlinkSync, linkSync } from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { DatabaseSync } from 'node:sqlite';
-import { config, hasSecret } from './config.mjs';
+import { config, hasSecret, secret } from './config.mjs';
 import { db, newId, nowIso, workspaceContext, withWorkspace, DEMO_WORKSPACE_ID, LEGACY_WORKSPACE_ID, defaultWorkspaceId, parseJson } from './db.mjs';
 import { HttpError } from './http.mjs';
 import { readCookie, secureRequest, requireBearer, safeEqual } from './security.mjs';
@@ -67,6 +67,11 @@ export function accountDb() {
       used_at TEXT, id TEXT NOT NULL UNIQUE
     );
     CREATE INDEX IF NOT EXISTS account_links_lookup ON account_links(kind, email, workspace_id);
+    CREATE TABLE IF NOT EXISTS local_worker_connection(
+      id INTEGER PRIMARY KEY CHECK(id=1), workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+      authorizer_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token_hash TEXT NOT NULL UNIQUE, expires_at INTEGER NOT NULL, created_at TEXT NOT NULL
+    );
   `);
   accountsDb = d;
   return d;
@@ -598,7 +603,7 @@ export function aiModeForWorkspace() {
 export function integrationSettings() {
   requireWorkspaceAdmin();
   const w = currentWorkspaceRow();
-  return { aiMode: w.ai_mode, ingestConfigured: Boolean(w.ingest_hash), ingestRotatedAt: w.ingest_rotated_at };
+  return { localWorker: localWorkerSettings(), aiMode: w.ai_mode, ingestConfigured: Boolean(w.ingest_hash), ingestRotatedAt: w.ingest_rotated_at };
 }
 
 export function updateAiSettings(body) {
@@ -635,7 +640,105 @@ export function machineWorkspace(id) {
   throw new HttpError(503, 'workspace_unavailable', '연결된 워크스페이스를 찾을 수 없습니다.');
 }
 
+const LOCAL_WORKER_PREFIX = 'ah_local_worker_';
+function localMacEnabled() {
+  return config.localMac && !config.demoMode && config.host === '127.0.0.1' && config.port === 5601 &&
+    config.publicBaseUrl === 'http://127.0.0.1:5601' && !config.trustProxy &&
+    /^[a-f0-9]{64}$/.test(secret('AHMATDA_LOCAL_WORKER_CAPABILITY'));
+}
+function localWorkerRow() {
+  return accountDb().prepare(`SELECT l.* FROM local_worker_connection l
+    JOIN memberships m ON m.user_id=l.authorizer_id AND m.workspace_id=l.workspace_id
+    JOIN users u ON u.id=l.authorizer_id
+    WHERE l.id=1 AND l.expires_at>? AND m.active=1 AND m.role='admin' AND u.verified_at IS NOT NULL`).get(Date.now());
+}
+export function localWorkerSettings() {
+  const access=requireWorkspaceAdmin();
+  if(!localMacEnabled()) return {available:false};
+  const row=localWorkerRow();
+  return {available:true, connected:row?.workspace_id===access.workspace.id,
+    configuredElsewhere:Boolean(row && row.workspace_id!==access.workspace.id),
+    expiresAt:row?.workspace_id===access.workspace.id ? row.expires_at : null};
+}
+function requireLocalMacRequest(req) {
+  if(!localMacEnabled()) throw new HttpError(404,'local_worker_unavailable','이 Mac 앱에서만 연결할 수 있어요.');
+  if(!['127.0.0.1','::ffff:127.0.0.1'].includes(req.socket?.remoteAddress) ||
+     req.headers.host!=='127.0.0.1:5601' || req.headers.origin!=='http://127.0.0.1:5601') {
+    throw new HttpError(403,'local_worker_origin','이 Mac의 앱 화면에서 연결해 주세요.');
+  }
+  const access=requireWorkspaceAdmin();
+  if(req.headers['x-ahmatda-workspace']!==access.workspace.id) throw new HttpError(409,'workspace_changed','현재 작업공간을 새로 확인해 주세요.');
+  return access;
+}
+function privateWorkerFile() {
+  const dir=lstatSync(config.dataDir);
+  if(!dir.isDirectory() || dir.isSymbolicLink() || dir.uid!==process.getuid() || (dir.mode&0o077)) {
+    throw new HttpError(503,'private_storage_required','로컬 자료 폴더 권한을 확인해 주세요.');
+  }
+  const file=path.join(config.dataDir,'local-worker.json');
+  try {const st=lstatSync(file);if(!st.isFile() || st.isSymbolicLink() || st.uid!==process.getuid() || (st.mode&0o077)) throw new HttpError(503,'private_storage_required','로컬 연결 파일 권한을 확인해 주세요.');}
+  catch(e){if(e.code!=='ENOENT')throw e;}
+  return file;
+}
+export function connectLocalWorker(req,body) {
+  const access=requireLocalMacRequest(req);
+  if(body.confirm!==true) throw new HttpError(400,'local_worker_consent','이 작업공간의 녹음을 이 Mac에서 처리할지 확인해 주세요.');
+  const file=privateWorkerFile(), raw=LOCAL_WORKER_PREFIX+token(), expiresAt=Date.now()+30*DAY;
+  const credentials={version:1,workspaceId:access.workspace.id,token:raw,expiresAt,
+    capabilityHash:digest(secret('AHMATDA_LOCAL_WORKER_CAPABILITY')),server:'http://127.0.0.1:5601'};
+  const pending=path.join(config.dataDir,'.local-worker-'+token()+'.tmp');
+  const backup=path.join(config.dataDir,'.local-worker-'+token()+'.backup');
+  let hadPrevious=false, replaced=false, committed=false;
+  try {
+    writeFileSync(pending,JSON.stringify(credentials),{flag:'wx',mode:0o600});
+    // 기존 inode를 보존한다. 파일 교체 뒤 DB COMMIT이 실패해도 원래 자격증명을 되돌릴 수 있다.
+    try {linkSync(file,backup);hadPrevious=true;} catch(e) {if(e.code!=='ENOENT')throw e;}
+    accountTransaction(d=>{
+      d.prepare(`INSERT INTO local_worker_connection(id,workspace_id,authorizer_id,token_hash,expires_at,created_at)
+        VALUES(1,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET workspace_id=excluded.workspace_id,
+        authorizer_id=excluded.authorizer_id,token_hash=excluded.token_hash,expires_at=excluded.expires_at,created_at=excluded.created_at`)
+        .run(access.workspace.id,access.user.id,digest(raw),expiresAt,nowIso());
+      renameSync(pending,file);
+      replaced=true;
+    });
+    committed=true;
+  } catch(error) {
+    if(replaced) {
+      // 복원이 실패하면 backup은 남긴다. 새 토큰은 DB에 없어서 사용할 수 없다.
+      if(hadPrevious) renameSync(backup,file);
+      else unlinkSync(file);
+    }
+    throw error;
+  } finally {
+    try{unlinkSync(pending);}catch(e){if(e.code!=='ENOENT')throw e;}
+    if(committed || !replaced) {try{unlinkSync(backup);}catch(e){if(e.code!=='ENOENT')throw e;}}
+  }
+  recordAudit({entity:'local-worker',entityId:access.workspace.id,action:'connect',after:{expiresAt}});
+  return localWorkerSettings();
+}
+export function disconnectLocalWorker(req,body) {
+  const access=requireLocalMacRequest(req);
+  if(body.confirm!==true) throw new HttpError(400,'local_worker_consent','받아쓰기 연결 해제를 확인해 주세요.');
+  const row=accountDb().prepare('SELECT workspace_id FROM local_worker_connection WHERE id=1').get();
+  if(row && row.workspace_id!==access.workspace.id) throw new HttpError(403,'permission_denied','다른 작업공간의 연결은 해제할 수 없어요.');
+  const file=privateWorkerFile();
+  accountDb().prepare('DELETE FROM local_worker_connection WHERE id=1').run();
+  try{unlinkSync(file);}catch(e){if(e.code!=='ENOENT')throw e;}
+  recordAudit({entity:'local-worker',entityId:access.workspace.id,action:'disconnect'});
+  return localWorkerSettings();
+}
+
 export function workerAccess(req) {
+  const raw=/^Bearer\s+(.+)$/i.exec(String(req.headers.authorization??''))?.[1]?.trim()??'';
+  if(raw.startsWith(LOCAL_WORKER_PREFIX)) {
+    if(!localMacEnabled() || !['127.0.0.1','::ffff:127.0.0.1'].includes(req.socket?.remoteAddress) ||
+       req.headers.host!=='127.0.0.1:5601' || !TOKEN_RE.test(raw.slice(LOCAL_WORKER_PREFIX.length))) {
+      throw new HttpError(401,'unauthorized','로컬 받아쓰기 연결을 다시 확인해 주세요.');
+    }
+    const row=localWorkerRow();
+    if(!row || !safeEqual(digest(raw),row.token_hash)) throw new HttpError(401,'unauthorized','로컬 받아쓰기 연결이 만료되거나 해제됐어요.');
+    return machineWorkspace(row.workspace_id);
+  }
   requireBearer(req, 'WORKER_TOKEN');
   const id = process.env.WORKER_WORKSPACE_ID?.trim() || defaultWorkspaceId();
   if (id !== DEMO_WORKSPACE_ID && id !== LEGACY_WORKSPACE_ID && !NEW_WS_RE.test(id)) {

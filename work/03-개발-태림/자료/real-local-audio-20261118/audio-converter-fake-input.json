@@ -1,0 +1,117 @@
+{
+  "syntheticOnly": true,
+  "source": {
+    "version": "9.0.2",
+    "filename": "ffmpeg-9.0.2.tar.xz",
+    "size": 12040788,
+    "sha256": "8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e",
+    "url": "https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz",
+    "hashSource": "https://formulae.brew.sh/api/formula/ffmpeg.json",
+    "license": "LGPL-2.1-or-later",
+    "pgpVerified": false
+  },
+  "configure": [
+    "--disable-autodetect",
+    "--disable-gpl",
+    "--disable-version3",
+    "--disable-nonfree",
+    "--disable-network",
+    "--disable-everything",
+    "--disable-shared",
+    "--enable-static",
+    "--disable-doc",
+    "--disable-debug",
+    "--disable-ffplay",
+    "--disable-avdevice",
+    "--disable-swscale",
+    "--disable-videotoolbox",
+    "--disable-audiotoolbox",
+    "--enable-ffmpeg",
+    "--enable-ffprobe",
+    "--enable-avcodec",
+    "--enable-avformat",
+    "--enable-avfilter",
+    "--enable-swresample",
+    "--enable-protocol=file,pipe",
+    "--enable-demuxer=wav,mp3,mov,aac,flac,ogg",
+    "--enable-decoder=pcm_s16le,pcm_s24le,pcm_s32le,pcm_f32le,pcm_f64le,mp3,mp3float,aac,alac,flac,vorbis,opus",
+    "--enable-parser=aac,mpegaudio,flac,opus,vorbis",
+    "--enable-encoder=pcm_s16le",
+    "--enable-muxer=wav",
+    "--enable-filter=aresample,aformat,anull",
+    "--cc=/usr/bin/clang",
+    "--extra-cflags=-mmacosx-version-min=14.0",
+    "--extra-ldflags=-mmacosx-version-min=14.0"
+  ],
+  "state": {
+    "event": "status",
+    "runtime": "ffmpeg-audio-9.0.2",
+    "filesVerified": true,
+    "downloadBytes": 12040788,
+    "developerPreparationOnly": true,
+    "distributionSigningVerified": false,
+    "pgpVerified": false,
+    "conversionVerified": false
+  },
+  "results": [
+    {
+      "input": "wav",
+      "outputCodec": "pcm_s16le",
+      "sampleRate": "16000",
+      "channels": 1,
+      "duration": "1.000000"
+    },
+    {
+      "input": "mp3",
+      "outputCodec": "pcm_s16le",
+      "sampleRate": "16000",
+      "channels": 1,
+      "duration": "1.000000"
+    },
+    {
+      "input": "m4a",
+      "outputCodec": "pcm_s16le",
+      "sampleRate": "16000",
+      "channels": 1,
+      "duration": "1.000000"
+    }
+  ],
+  "systemLibrariesOnlyVerified": true,
+  "enabledProtocols": [
+    "file",
+    "pipe"
+  ],
+  "appConverter": {
+    "syntheticOnly": true,
+    "appConverter": true,
+    "bundledExecutable": true,
+    "results": [
+      {
+        "input": "wav",
+        "audioFile": "audio/fake_converter_wav.wav",
+        "durationSec": 1,
+        "sha256": "b86cb6d149d796d0a4343df832b87b977cd91ad42ece60dce4c8848796fe4d0a",
+        "bytes": 32044
+      },
+      {
+        "input": "mp3",
+        "audioFile": "audio/fake_converter_mp3.wav",
+        "durationSec": 1,
+        "sha256": "c4a0c45d1d1ec425653db4daa625cb1d4ef0af8f644af31a5382361abe9389ce",
+        "bytes": 32044
+      },
+      {
+        "input": "m4a",
+        "audioFile": "audio/fake_converter_m4a.wav",
+        "durationSec": 1,
+        "sha256": "f16ec1237bfc87f12e27be1cf7fa76a801b9c33e19a4d715ce15800481f7194b",
+        "bytes": 32044
+      }
+    ]
+  },
+  "limits": [
+    "합성 톤 WAV/MP3/M4A 각1건",
+    "새 Mac 전체설치와 실제전화 품질 검증 아님",
+    "PGP/Developer ID/공증/최종 재배포 검토 미완료"
+  ]
+}
