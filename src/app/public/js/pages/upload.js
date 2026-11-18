@@ -58,24 +58,29 @@ export default {
         : html`<strong>녹음 처리 권한과 동의를 확인해 주세요.</strong> 이 작업공간의 구성원에게 녹음과 받아쓴 글이 공유됩니다. <a href="#/help">데이터 처리 안내</a>`}</div>
 
       <section class="card upload-box" aria-labelledby="upTitle">
-        <h2 id="upTitle" class="sr-only">파일 고르기</h2>
+        <h2 id="upTitle" class="upload-step-title"><span aria-hidden="true">1</span> 녹음 파일 선택</h2>
         <div class="upload-drop" data-ref="drop">
           <svg class="upload-drop-icon" viewBox="0 0 24 24" width="44" height="44" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
           <p class="upload-drop-title">여기에 녹음 파일을 끌어다 놓으세요</p>
           <p class="upload-drop-or">또는</p>
-          <label class="btn btn-primary btn-lg upload-pick">파일 고르기<input type="file" class="sr-only" data-ref="file" accept="audio/*,.m4a,.amr,.3gp" multiple></label>
-          <p class="help">m4a · mp3 · wav · amr · 3gp 등 · 한 파일 ${maxMB}MB · ${Math.round(maxSec / 60)}분 이하 · 여러 개를 고르면 하나씩 차례로 올립니다(한 시간에 5개까지).</p>
+          <label class="btn btn-primary btn-lg upload-pick">파일 고르기<input type="file" class="sr-only" data-ref="file" aria-describedby="uploadFileHelp" accept="audio/*,.m4a,.amr,.3gp" multiple></label>
+          <p id="uploadFileHelp" class="help">m4a · mp3 · wav · amr · 3gp 등 · 한 파일 ${maxMB}MB · ${Math.round(maxSec / 60)}분 이하 · 여러 개를 고르면 하나씩 차례로 올립니다(한 시간에 5개까지).</p>
         </div>
 
         <ul class="upload-rows" data-ref="rows" aria-live="off"></ul>
 
+        <fieldset class="upload-form-group"><legend class="upload-step-title"><span aria-hidden="true">2</span> 통화 정보</legend>
+        <p class="help">아래 정보는 선택한 파일 전체에 적용됩니다. 번호는 비워 두어도 됩니다.</p>
         <div class="upload-options">
           <label class="field"><span>녹음 시각</span><input class="input" type="datetime-local" data-ref="when" value="${localNow()}"></label>
           <label class="field"><span>걸려 온 번호 (${demo ? '가짜 번호만 · ' : ''}선택)</span><input class="input" type="tel" inputmode="tel" data-ref="caller" maxlength="20" placeholder="예: 010-0000-0000" autocomplete="off"></label>
         </div>
+        </fieldset>
+        <fieldset class="upload-form-group"><legend class="upload-step-title"><span aria-hidden="true">3</span> 권한 확인 후 올리기</legend>
         <label class="check upload-confirm"><input type="checkbox" data-ref="fake"><span><strong>${demo ? '가짜(연습) 녹음만 올립니다. 실제 고객 통화는 올리지 않습니다.' : '이 녹음의 수집·처리·공유 권한과 필요한 동의를 확인했습니다.'}</strong></span></label>
-        <button type="button" class="btn btn-primary btn-lg btn-block" data-act="upload" disabled>올리기</button>
-        <p class="help" data-ref="hint"></p>
+        <button type="button" class="btn btn-primary btn-lg btn-block" data-act="upload" aria-describedby="uploadHint" disabled>올리기</button>
+        <p id="uploadHint" class="help" data-ref="hint"></p>
+        </fieldset>
         <p class="sr-only" role="status" data-ref="announce"></p>
       </section>
 
