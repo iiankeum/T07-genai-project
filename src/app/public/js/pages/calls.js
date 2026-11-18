@@ -210,15 +210,15 @@ export default {
       const card = c.card || null;
       const matches = Array.isArray(c.matches) ? c.matches : [];
       const shown = matches.slice(0, 3);
-      const source = SOURCE_LABEL[c.source] || c.source || '';
+      const source = c.source === 'seed' ? '가짜 대본' : (SOURCE_LABEL[c.source] || c.source || '');
       return html`<li class="cl-item" data-call-id="${c.id}">
-        <div class="cl-time"><time datetime="${c.recordedAt}" title="${fmtWhen(c.recordedAt)}">${fmtClock(c.recordedAt)}</time><span>${source}${c.hasAudio ? '' : ' · 녹음 없음'}</span></div>
+        <div class="cl-time"><time datetime="${c.recordedAt}" title="${fmtWhen(c.recordedAt)}">${fmtClock(c.recordedAt)}</time></div>
         <div class="cl-identity"><a class="cl-title" href="#/calls/${encodeURIComponent(c.id)}">${c.customer || card?.customer || c.title || '제목 없는 통화'}</a>
-          ${c.customer ? html`<a class="cl-cust" href="${custHref(c.customer)}" aria-label="${c.customer} 통화 모아 보기">거래처 기록 ›</a>` : ''}
+          ${c.customer ? html`<a class="cl-cust" href="${custHref(c.customer)}" aria-label="${c.customer} 통화 모아 보기" title="거래처의 다른 통화 보기">모아보기</a>` : ''}
         </div>
         <div class="cl-content"><p class="cl-context">${card?.carModel || '차종 미입력'}${card?.items?.length ? ` · ${card.items.map((item) => item.part).filter(Boolean).join(', ')}` : ''}</p>
         ${c.summary ? html`<p class="cl-summary">${c.summary}</p>` : ''}</div>
-        <div class="cl-chips">${callChip(c)}${card?.callType ? html`<span class="chip">${card.callType}</span>` : ''}${card?.urgent ? html`<span class="chip chip-urgent">급함</span>` : ''}${card?.callback ? html`<span class="chip chip-callback">다시 전화</span>` : ''}</div>
+        <div class="cl-chips">${callChip(c)}${card?.callType ? html`<span class="chip">${card.callType}</span>` : ''}${card?.urgent ? html`<span class="chip chip-urgent">급함</span>` : ''}${card?.callback ? html`<span class="chip chip-callback">다시 전화</span>` : ''}<span class="cl-source">${source}${c.hasAudio ? '' : ' · 녹음 없음'}</span></div>
         ${c.status === 'failed' && c.error ? html`<p class="cl-error">실패 이유: ${c.error}</p>` : ''}
         ${shown.length ? html`<ul class="cl-matches" aria-label="찾은 문장">${shown.map((m) => matchView(c, m))}</ul>` : ''}
         ${matches.length > shown.length ? html`<p class="cl-more-matches">이 통화에서 ${matches.length - shown.length}문장 더 찾았습니다 — 통화를 열어 보세요.</p>` : ''}
