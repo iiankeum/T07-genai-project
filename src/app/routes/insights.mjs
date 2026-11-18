@@ -626,7 +626,7 @@ export function buildShipping(day, scope) {
     const item = {
       callId: r.call_id,
       title: r.ctitle || makeTitle({ customer: r.eff, items: card.items, recordedAt: r.rat, durationSec: r.dur, source: r.src }),
-      status: card.status, statusLabel: card.statusLabel,
+      status: card.status, statusLabel: card.statusLabel, revision: card.revision,
       items: card.items,
       carModel: card.carModel, modelYear: card.modelYear, plate: card.plate,
       due: card.due, delivery: card.delivery, urgent: card.urgent,

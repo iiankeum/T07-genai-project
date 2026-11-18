@@ -68,6 +68,10 @@ jobs:
         run: npm run test:card-confirm-e2e
         env:
           CARD_CONFIRM_OUTPUT: artifacts/e2e/card-confirm
+      - name: Shipping displayed revision (temporary fixture server)
+        run: npm run test:shipping-revision-e2e
+        env:
+          SHIPPING_REVISION_OUTPUT: artifacts/e2e/shipping-revision
       - uses: actions/upload-artifact@v4
         if: always()
         with:
