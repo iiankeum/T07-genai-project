@@ -1,0 +1,7 @@
+{
+  "scope": "fake local canary owns requested port",
+  "status": "passed",
+  "testExit": 1,
+  "requestsToCanary": 0,
+  "childFailedBeforeBrowserOrFetch": true
+}

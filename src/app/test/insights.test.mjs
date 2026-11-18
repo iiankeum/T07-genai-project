@@ -306,6 +306,7 @@ test('출고 목록: 기본은 확정 · 출고 전 전부, today 는 그날 확
   let { body } = await get('/api/shipping');
   assert.equal(body.scope, 'all');
   assert.equal(body.total, 3);
+  assert.ok(body.groups.flatMap(g => g.cards).every(card => Number.isSafeInteger(card.revision) && card.revision >= 0));
   const han = body.groups.find((g) => g.customer === '한빛카');
   assert.deepEqual(han.cards.map((c) => c.callId), ['c2', 'o1']);
   assert.equal(han.cards[0].plate, '12가3456');
