@@ -147,3 +147,9 @@ test('다른 소유자의 자격증명 파일은 교체하지 않는다',()=>{
  try{rejects(()=>connect(),503);}finally{mocked.mock.restore();syncBuiltinESMExports();}
  assert.equal(fs.readFileSync(file,'utf8'),before);
 });
+
+test('authorization endpoint reports token-bound workspace rather than requested workspace',async()=>{
+ connect();const c=credentials();
+ const response=await new Promise((resolve,reject)=>{const r=http.get(base+'/api/worker/authorization',{headers:{Host:'127.0.0.1:5601',Authorization:'Bearer '+c.token,'x-ahmatda-workspace':B}},res=>{let body='';res.on('data',x=>body+=x);res.on('end',()=>resolve({status:res.statusCode,body:JSON.parse(body)}));});r.on('error',reject);});
+ assert.equal(response.status,200);assert.deepEqual(response.body,{authorized:true,workspaceId:A});
+});

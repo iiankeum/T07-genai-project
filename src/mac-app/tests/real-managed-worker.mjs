@@ -14,7 +14,9 @@ const root=await fs.mkdtemp(path.join(await fs.realpath(os.tmpdir()),'ahmatda-ma
 const support=path.join(os.homedir(),'Library/Application Support/Ahmatda');
 const capability=randomBytes(32).toString('hex');
 const controller=new AbortController();let server,worker,browser;
-const events=[];const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const soakArg=process.argv.find(a=>a.startsWith('--soak-seconds='));const soakSeconds=soakArg?Number(soakArg.split('=')[1]):0;
+if(!Number.isInteger(soakSeconds)||soakSeconds<0||soakSeconds>600)throw Error('soak duration must be 0..600 seconds');
+let heartbeatChecks=0;const events=[];const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 try {
  await fs.mkdir(path.join(root,'data'),{mode:0o700});
  const {copyVerifiedRuntime,RUNTIME_NAME}=await import('../install-whisper-runtime.mjs');
@@ -53,11 +55,13 @@ try {
  const uploaded=await fetch(base+'/api/calls/upload',{method:'POST',headers:{Origin:base,Cookie:cookie,'x-ahmatda-workspace':workspace},body:form});const queued=await uploaded.json();assert.equal(uploaded.status,201,JSON.stringify(queued));
  let call;for(let i=0;i<180;i++){call=(await request('/api/calls/'+queued.callId,undefined,'GET')).value;if(call.transcript&&['ready','failed'].includes(call.status))break;await sleep(1000);}
  assert.equal(call.transcript,'앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다.');assert.equal(call.status,'ready');
+ const soakUntil=Date.now()+soakSeconds*1000;while(Date.now()<soakUntil){await sleep(Math.min(6000,soakUntil-Date.now()));const status=(await request('/api/worker/status',undefined,'GET')).value;assert.equal(status.online,true);heartbeatChecks++;}
+ assert.equal(events.filter(e=>e.event==='running').length,1,'worker unexpectedly restarted');
  await page.locator('#local-worker-disconnect input[name=confirm]').check();await page.locator('#local-worker-disconnect button').click();
  await page.locator('#local-worker-disconnect').waitFor({state:'detached'});await sleep(3500);
  assert.equal((await request('/api/settings/integrations',undefined,'GET')).value.localWorker.connected,false);
  controller.abort();await worker;worker=null;
  assert.ok(events.some(e=>e.event==='running'));assert.equal(events.at(-1)?.event,'stopped');
- const result={at:new Date().toISOString(),syntheticInput:true,isolatedTemporaryWorkspace:true,realWhisperWorker:true,browserConnectDisconnect:true,cardProvider:'fixture (not real LLM)',status:call.status,transcript:call.transcript,events,disconnected:true,limits:['가짜 계정·합성음성 한 건','실제 사용자 네이티브 가입/약관 동의 검증 아님','새 Mac 전체 설치·현장 음성 품질·OS 네트워크 차단 검증 아님']};
+ const result={at:new Date().toISOString(),syntheticInput:true,isolatedTemporaryWorkspace:true,realWhisperWorker:true,browserConnectDisconnect:true,soakSeconds,heartbeatChecks,cardProvider:'fixture (not real LLM)',status:call.status,transcript:call.transcript,events,disconnected:true,limits:['가짜 계정·합성음성 한 건','실제 사용자 네이티브 가입/약관 동의 검증 아님','새 Mac 전체 설치·현장 음성 품질·OS 네트워크 차단 검증 아님']};
  const output=path.join(repo,'src/app/artifacts/real-managed-worker.json');await fs.mkdir(path.dirname(output),{recursive:true});await fs.writeFile(output,JSON.stringify(result,null,2));console.log(JSON.stringify({passed:true,artifact:output}));
 }finally{await browser?.close();controller.abort();await worker?.catch(()=>{});if(server)await new Promise(r=>{server.closeAllConnections();server.close(r);});await fs.rm(root,{recursive:true,force:true});}

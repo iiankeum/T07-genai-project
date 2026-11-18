@@ -25,10 +25,11 @@ export async function readCredential(root,capability,{now=Date.now()}={}){
   return {...c,expiresAt:expires};
  }finally{await h.close();}
 }
+export function authorizationMatches(value,credentials){return value?.authorized===true&&typeof value.workspaceId==='string'&&value.workspaceId===credentials.workspaceId;}
 export function checkAuthorization(credentials,{signal}={}){return new Promise(resolve=>{
  // Node http는 프록시·리다이렉트를 사용하지 않는다. 토큰은 이 loopback 요청에만 넣는다.
  const req=http.request({hostname:'127.0.0.1',port:5601,path:'/api/worker/authorization',method:'GET',agent:false,signal,headers:{authorization:`Bearer ${credentials.token}`}},res=>{
-  let body='',bytes=0;res.on('data',chunk=>{bytes+=chunk.length;if(bytes>4096){res.destroy();resolve(false);}else body+=chunk;});res.on('end',()=>{try{resolve(res.statusCode===200&&JSON.parse(body).authorized===true);}catch{resolve(false);}});res.on('error',()=>resolve(false));
+  let body='',bytes=0;res.on('data',chunk=>{bytes+=chunk.length;if(bytes>4096){res.destroy();resolve(false);}else body+=chunk;});res.on('end',()=>{try{resolve(res.statusCode===200&&authorizationMatches(JSON.parse(body),credentials));}catch{resolve(false);}});res.on('error',()=>resolve(false));
  });req.setTimeout(1500,()=>req.destroy());req.on('error',()=>resolve(false));req.end();
 });}
 export async function ensureAssets(root,bundleRoot,{signal}={}){
