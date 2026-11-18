@@ -628,6 +628,7 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
         var navigation = [command("링크 열기…", #selector(openLink), "l"), command("새로고침", #selector(reload), "r")]
         if localMode {
             navigation.append(command("이 Mac에서 시작…", #selector(showGettingStarted)))
+            navigation.append(command("이 Mac 점검…", #selector(showMacPreflight)))
             navigation.append(command("로컬 AI 준비 상태…", #selector(showPreparation)))
             navigation.append(command("주문 정리 모델 준비…", #selector(confirmModelPreparation)))
             navigation.append(command("받아쓰기 모델 준비…", #selector(confirmWhisperPreparation)))
@@ -691,6 +692,28 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
 
     private func showPreparationGuide() { showGettingStarted() }
 
+    @objc private func showMacPreflight() {
+        guard let storage = localStorage, !closing, !failed, window.attachedSheet == nil else { return }
+        let version = ProcessInfo.processInfo.operatingSystemVersion
+        var system = utsname()
+        let architecture: String?
+        if uname(&system) == 0 {
+            architecture = withUnsafeBytes(of: &system.machine) { bytes in
+                String(bytes: bytes.prefix { $0 != 0 }, encoding: .utf8)
+            }
+        } else { architecture = nil }
+        let attributes = try? files.attributesOfFileSystem(forPath: storage.path)
+        let free = (attributes?[.systemFreeSize] as? NSNumber).flatMap { $0.int64Value >= 0 ? $0.uint64Value : nil }
+        let memory = ProcessInfo.processInfo.physicalMemory
+        let alert = NSAlert()
+        alert.messageText = "이 Mac 점검 · 읽기 전용"
+        alert.informativeText = LocalMacPreflight.report(
+            os: "\(version.majorVersion).\(version.minorVersion).\(version.patchVersion)",
+            architecture: architecture, memoryBytes: memory > 0 ? memory : nil, freeBytes: free)
+        alert.addButton(withTitle: "닫기")
+        alert.beginSheetModal(for: window)
+    }
+
     @objc private func showGettingStarted() {
         guard localStorage != nil, !closing, !failed, gettingStartedAlert == nil,
               modelSetupProcess == nil, window.attachedSheet == nil else { return }
@@ -703,7 +726,7 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
         choice.addItems(withTitles: LocalGettingStartedStep.allCases.map { $0.title })
         choice.target = self
         choice.action = #selector(updateGettingStartedStep)
-        let detail = NSTextField(wrappingLabelWithString: LocalGettingStartedStep.account.detail)
+        let detail = NSTextField(wrappingLabelWithString: LocalGettingStartedStep.preflight.detail)
         detail.frame = NSRect(x: 0, y: 0, width: 410, height: 106)
         let content = NSView(frame: NSRect(x: 0, y: 0, width: 410, height: 146))
         choice.frame.origin.y = 116
@@ -735,6 +758,7 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
     private func openGettingStartedStep(_ step: LocalGettingStartedStep) {
         guard localStorage != nil, !closing, !failed, window.attachedSheet == nil else { return }
         switch step {
+        case .preflight: showMacPreflight()
         case .account: webView?.load(URLRequest(url: URL(string: "http://127.0.0.1:5601/#/login")!))
         case .verification: openLocalVerification()
         case .orderModel: confirmModelPreparation()
