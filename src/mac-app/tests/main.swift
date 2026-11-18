@@ -36,3 +36,18 @@ check((try? LocalDevelopmentProfile.storageName(info: nil, data: devProfile)) ==
 check((try? LocalDevelopmentProfile.storageName(info: devTag, data: nil)) == nil, "plist needs profile agreement")
 check((try? LocalDevelopmentProfile.storageName(info: "other", data: devProfile)) == nil, "unknown profile rejected")
 check((try? LocalDevelopmentProfile.storageName(info: devTag, data: Data("{\"version\":true,\"profile\":\"development-whisper-pyav-lgpl-v1\"}".utf8))) == nil, "boolean version rejected")
+
+check(LocalGettingStartedStep.allCases.count == 6, "six explicit setup steps")
+check(Set(LocalGettingStartedStep.allCases.map { $0.title }).count == 6, "unique setup labels")
+for step in LocalGettingStartedStep.allCases {
+    check(LocalGettingStartedStep.selected(index: step.rawValue, confirmed: true) == step, "confirmed step maps explicitly")
+    check(LocalGettingStartedStep.selected(index: step.rawValue, confirmed: false) == nil, "cancel never selects action")
+    check(!step.detail.isEmpty, "each step explains its boundary")
+}
+check(LocalGettingStartedStep.selected(index: -1, confirmed: true) == nil, "invalid negative step")
+check(LocalGettingStartedStep.selected(index: 6, confirmed: true) == nil, "invalid overflow step")
+check(LocalGettingStartedStep.introduction.contains("완료 여부를 판정하지"), "guide does not claim completion")
+check(LocalGettingStartedStep.orderModel.detail.contains("동의해야"), "model download requires confirmation")
+check(LocalGettingStartedStep.speechModel.detail.contains("동의해야"), "speech download requires confirmation")
+check(LocalGettingStartedStep.connection.detail.contains("권한을 부여하지"), "guide never grants worker authorization")
+check(LocalGettingStartedStep.readiness.detail.contains("품질을 보장하지"), "installation not inference success")

@@ -89,6 +89,9 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
     private var failed = false
     private var closing = false
     private var preparationShown = false
+    private var gettingStartedAlert: NSAlert?
+    private var gettingStartedChoice: NSPopUpButton?
+    private var gettingStartedDetail: NSTextField?
     private var preparationAlert: NSAlert?
     private var aiEnvironment: [String: String] = [:]
     private let probeDelegate = LocalProbeDelegate()
@@ -624,6 +627,7 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
         addMenu("아맞다", [NSMenuItem(title: "아맞다 종료", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")])
         var navigation = [command("링크 열기…", #selector(openLink), "l"), command("새로고침", #selector(reload), "r")]
         if localMode {
+            navigation.append(command("이 Mac에서 시작…", #selector(showGettingStarted)))
             navigation.append(command("로컬 AI 준비 상태…", #selector(showPreparation)))
             navigation.append(command("주문 정리 모델 준비…", #selector(confirmModelPreparation)))
             navigation.append(command("받아쓰기 모델 준비…", #selector(confirmWhisperPreparation)))
@@ -655,14 +659,14 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
         alert.informativeText = "로컬 모델 연결을 확인하고 있어요…"
         alert.addButton(withTitle: "수동 업무 계속")
         alert.addButton(withTitle: "다시 확인")
-        alert.addButton(withTitle: "모델 준비 안내")
+        alert.addButton(withTitle: "이 Mac에서 시작")
         alert.beginSheetModal(for: window) { [weak self] answer in
             guard let self else { return }
             self.probeSession?.invalidateAndCancel()
             self.probeSession = nil
             self.preparationAlert = nil
             if answer == .alertSecondButtonReturn { self.showPreparation() }
-            if answer == .alertThirdButtonReturn { self.showPreparationGuide() }
+            if answer == .alertThirdButtonReturn { DispatchQueue.main.async { [weak self] in self?.showPreparationGuide() } }
         }
         let common = "\n\n받아쓰기: " + whisperWorkerNotice + "\n이 화면에서는 실제 전사를 시험하지 않아요. 유료 AI는 꺼져 있고, 녹음이나 원문은 외부로 보내지 않아요."
         if aiEnvironment["AI_PROVIDER"] == "off" {
@@ -685,12 +689,59 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
         }.resume()
     }
 
-    private func showPreparationGuide() {
+    private func showPreparationGuide() { showGettingStarted() }
+
+    @objc private func showGettingStarted() {
+        guard localStorage != nil, !closing, !failed, gettingStartedAlert == nil,
+              modelSetupProcess == nil, window.attachedSheet == nil else { return }
         let alert = NSAlert()
-        alert.messageText = "모델을 자동으로 내려받지 않아요"
-        alert.informativeText = "현재는 개발 검증용 앱이에요.\n\n1. 앱 전용 Ollama 실행기를 준비해요. 앱을 다시 열면 11435에서 자동 시작해요.\n2. 설정된 모델을 준비해요: \(aiEnvironment["OLLAMA_MODEL"] ?? "qwen3:4b")\n3. 이동 → 로컬 AI 준비 상태에서 다시 확인해요.\n\n음성 받아쓰기는 faster-whisper 일꾼이 별도로 필요해요. 이동 → 주문 정리 모델 준비에서 검증된 실행기의 qwen3:4b 파일을 준비할 수 있어요. Ollama 포함 빌드는 첫 실행에 실행기를 설치하고 앱이 시작·종료해요.\n계정 가입 후 이동 → 로컬 가입 인증 링크 열기에서 이메일을 입력하면 터미널 없이 링크를 열 수 있어요."
-        alert.addButton(withTitle: "확인")
-        alert.beginSheetModal(for: window)
+        alert.messageText = "이 Mac에서 시작"
+        alert.informativeText = LocalGettingStartedStep.introduction
+        alert.addButton(withTitle: "선택한 단계 열기")
+        alert.addButton(withTitle: "닫기")
+        let choice = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 410, height: 28))
+        choice.addItems(withTitles: LocalGettingStartedStep.allCases.map { $0.title })
+        choice.target = self
+        choice.action = #selector(updateGettingStartedStep)
+        let detail = NSTextField(wrappingLabelWithString: LocalGettingStartedStep.account.detail)
+        detail.frame = NSRect(x: 0, y: 0, width: 410, height: 106)
+        let content = NSView(frame: NSRect(x: 0, y: 0, width: 410, height: 146))
+        choice.frame.origin.y = 116
+        content.addSubview(choice)
+        content.addSubview(detail)
+        alert.accessoryView = content
+        gettingStartedAlert = alert
+        gettingStartedChoice = choice
+        gettingStartedDetail = detail
+        alert.beginSheetModal(for: window) { [weak self] answer in
+            guard let self else { return }
+            let step = LocalGettingStartedStep.selected(index: choice.indexOfSelectedItem,
+                                                        confirmed: answer == .alertFirstButtonReturn)
+            self.gettingStartedAlert = nil
+            self.gettingStartedChoice = nil
+            self.gettingStartedDetail = nil
+            guard !self.closing, !self.failed, let step else { return }
+            // End this sheet before invoking another existing confirmation sheet.
+            DispatchQueue.main.async { [weak self] in self?.openGettingStartedStep(step) }
+        }
+    }
+
+    @objc private func updateGettingStartedStep() {
+        guard let choice = gettingStartedChoice,
+              let step = LocalGettingStartedStep(rawValue: choice.indexOfSelectedItem) else { return }
+        gettingStartedDetail?.stringValue = step.detail
+    }
+
+    private func openGettingStartedStep(_ step: LocalGettingStartedStep) {
+        guard localStorage != nil, !closing, !failed, window.attachedSheet == nil else { return }
+        switch step {
+        case .account: webView?.load(URLRequest(url: URL(string: "http://127.0.0.1:5601/#/login")!))
+        case .verification: openLocalVerification()
+        case .orderModel: confirmModelPreparation()
+        case .speechModel: confirmWhisperPreparation()
+        case .connection: openWorkerSettings()
+        case .readiness: showPreparation()
+        }
     }
 
     @objc private func confirmModelPreparation() {
