@@ -34,3 +34,7 @@
 ### 이동 가능한 Python 전사 실행기 준비 도구 (개발 전용)
 
 `prepare-whisper-runtime.mjs`는 공식 [Astral python-build-standalone](https://github.com/astral-sh/python-build-standalone/releases/tag/20261110)의 CPython3.12.16과 PyPI 고정 wheel24개를 별도 앱 자료 폴더에 준비한다. 원본 LICENSE 및 wheel의 `dist-info/licenses` 고지는 삭제하지 않는다. Python 배포본에는 자체 종속 구성요소가 있고 PyAV wheel에는 FFmpeg 관련 구성요소가 있으므로 패키지 이름의 단일 라이선스만으로 전체 재배포 조건을 판단하지 않는다. 이 도구와 로컬 전사 검증은 전체 번들의 재배포 고지 검토·Developer ID 서명·공증을 완료했다는 뜻이 아니다. 준비된 실행기는 `AHMATDA_BUNDLE_WHISPER=1` 개발 빌드에 선택적으로 포함하며 원본 고지를 함께 보존한다.
+
+### 선택 오디오 변환기
+
+`AHMATDA_BUNDLE_AUDIO=1`은 [공식 FFmpeg9.0.2](https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz)를 LGPL2.1-or-later 최소 오디오 구성으로 빌드한 ffmpeg/ffprobe를 포함한다. GPL/version3/nonfree, 네트워크, 외부 라이브러리 자동탐지를 끈다. 대응 원본소스·COPYING.LGPLv2.1·LICENSE.md·configure옵션·빌드로그를 `runtime/ffmpeg-audio-9.0.2/redistribution`에 함께 제공한다. [공식 법적 고지](https://ffmpeg.org/legal.html)를 기준으로 최종 재배포 의무를 검토해야 한다. SHA256은 공식 Homebrew소스 메타데이터와 대조했으며 PGP서명은 검증하지 않았다. 앱의 ad hoc검사는 DeveloperID·공증을 뜻하지 않는다.

@@ -182,6 +182,13 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
         proc.executableURL = executable
         proc.arguments = ["--import", bootstrap.path, server.path]
         proc.currentDirectoryURL = app
+        let audioRuntime = resources.appendingPathComponent("runtime/ffmpeg-audio-9.0.2", isDirectory: true)
+        let audioBundled = files.fileExists(atPath: audioRuntime.path)
+        let ffmpeg = audioRuntime.appendingPathComponent("bin/ffmpeg")
+        let ffprobe = audioRuntime.appendingPathComponent("bin/ffprobe")
+        if audioBundled && (!files.isExecutableFile(atPath: ffmpeg.path) || !files.isExecutableFile(atPath: ffprobe.path)) {
+            throw LaunchError.missingBundle
+        }
         var env = [
             "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
             "HOME": files.homeDirectoryForCurrentUser.path,
@@ -190,7 +197,8 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
             "DEMO_MODE": "0", "TRUST_PROXY": "0", "AUTH_MAIL_MODE": "outbox",
             "AHMATDA_LOCAL_MAC": "1", "AHMATDA_LOCAL_WORKER_CAPABILITY": workerCapability,
             "ALLOW_PAID_AI": "0", "ANTHROPIC_API_KEY": "", "AHMATDA_OLLAMA_PORT": "11435",
-            "FFMPEG_PATH": "ffmpeg", "FFPROBE_PATH": "ffprobe",
+            "FFMPEG_PATH": audioBundled ? ffmpeg.path : "ffmpeg",
+            "FFPROBE_PATH": audioBundled ? ffprobe.path : "ffprobe",
         ]
         aiEnvironment = try AIConfiguration.environment(in: storage)
         env.merge(aiEnvironment) { _, localValue in localValue }

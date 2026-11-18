@@ -1,3 +1,12 @@
+## 2026-11-18 16:26 KST · 공식 소스 오디오 변환기 선택 번들
+- 돌린 사람 · 도구 · 작업방: 신*림(taejs) · ChatGPT dot · 아맞다 직접 작업
+- 한 일: 공식 FFmpeg소스 최소 LGPL오디오빌드, 검증복사, 앱명시경로 연결과 대응소스/고지 포함을 구현했다.
+- 왜: Homebrew GPL·다수외부dylib 의존 바이너리 복사를 피하고 새Mac의 별도설치 요구를 줄인다.
+- 어떻게: 내부 실행기1개. 고정12,040,788B소스hash·시스템dylib만·네트워크disable 확인, 가짜WAV/MP3/M4A 변환·ffprobe·앱convertToWav 검증. 취소시본인build프로세스그룹정리.
+- 결과물: [준비도구](../../src/mac-app/prepare-audio-runtime.mjs) · [검증기록](자료/real-local-audio-20261118/audio-converter-fake-input.json) · [고지](../../THIRD_PARTY_NOTICES.md)
+- AI 가 판단한 것 · 사람이 확인할 것: 오디오helper12개·전체Mac helper83개 통과. 포함앱빌드/ad hoc검사 통과. PGP·정식서명공증·최종재배포검토·새Mac전체설치는 미완료.
+- 다음 할 일: 10분유지시험 결과수집 및 최종패키지/CI. 유료API·전역설치변경·운영배포·병합 없음.
+
 ## 2026-11-18 16:20 KST · 자동 일꾼 응답의 작업공간 재확인
 - 돌린 사람 · 도구 · 작업방: 신*림(taejs) · ChatGPT dot · 아맞다 직접 작업
 - 한 일: authorization 응답에 실제 토큰의 작업공간을 넣고 감독기가 자격증명과 일치할 때만 실행하도록 보완했다.

@@ -33,7 +33,7 @@ AHMATDA_NODE_LICENSE=/path/to/node24/LICENSE \
 bash src/mac-app/build.sh
 ```
 
-빌드 결과물은 `out/Ahmatda.app`에 둔다. `.env`, SQLite, 로컬 녹음, 사용자 파일, Ollama와 Whisper 모델은 번들에 포함하지 않는다. 다양한 녹음 형식 변환에는 `ffmpeg`와 `ffprobe`가 필요하다. 없으면16kHz mono16bit WAV만 받는다. 실행기는 `/opt/homebrew/bin`과 `/usr/local/bin`을 포함한 고정 경로에서 두 명령을 찾는다.
+빌드 결과물은 `out/Ahmatda.app`에 둔다. `.env`, SQLite, 로컬 녹음, 사용자 파일, Ollama와 Whisper 모델은 번들에 포함하지 않는다. 오디오 포함 빌드는 앱 안의 `ffmpeg`와 `ffprobe`를 사용한다. 미포함 빌드는 고정 PATH에서 찾으며 없으면16kHz mono16bit WAV만 받는다.
 
 ## 이 Mac 모드
 
@@ -183,3 +183,16 @@ AHMATDA_BUNDLE_OLLAMA=1 AHMATDA_BUNDLE_WHISPER=1 bash src/mac-app/build.sh
 이미 준비된 `runtime/whisper-portable-3.12.16`을 검사해 앱에 포함한다. `AHMATDA_WHISPER_RUNTIME`으로 같은 준비 도구가 만든 경로를 지정할 수 있다. 빌드 중 네트워크 다운로드·pip 실행·전역 설치는 하지 않는다. 모델 파일과 사용자 자료는 포함하지 않는다.
 
 번들의 `install-whisper-runtime.mjs --install-from-bundle`은 전용 private 자료 폴더로 복사·재검증하며 기존 정상 또는 손상 설치를 덮어쓰지 않는다. 기본 `--status`는 읽기 확인이다. 설치helper9개 회귀와 실제 포함빌드·ad hoc검사·빈 폴더 설치·격리Python import를 확인했다. [증거](../work/03-개발-태림/자료/real-local-audio-20261118/whisper-bundle-install.json). 번들 설치 검증은 위 자동일꾼 통합시험과 별개이며 신규 Mac 전체 설치 검증은 아니다.
+
+## 오디오 변환기 포함 개발 빌드
+
+공식 FFmpeg9.0.2 소스의 고정SHA256을 확인하고 GPL/version3/nonfree·외부라이브러리 자동탐지·네트워크를 끈 최소 오디오용 바이너리를 만든다. 소스12,040,788B, 완성실행기와 대응소스/고지 약17MB다. 전역 Homebrew 설치를 복사하거나 변경하지 않는다.
+
+```sh
+node src/mac-app/prepare-audio-runtime.mjs --prepare-development-runtime
+AHMATDA_BUNDLE_OLLAMA=1 AHMATDA_BUNDLE_WHISPER=1 AHMATDA_BUNDLE_AUDIO=1 bash src/mac-app/build.sh
+```
+
+빌드는 이미 준비된 `runtime/ffmpeg-audio-9.0.2`를 검사해 복사하며 네트워크/컴파일을 실행하지 않는다. `AHMATDA_AUDIO_RUNTIME`으로 같은 검증을 통과하는 준비 경로를 지정할 수 있다. 앱은 번들의 실행파일을 명시 경로로 사용한다. 대응소스·LGPL고지·configure설정·빌드로그도 포함한다. 자체inventory는 변경탐지이며 공급자서명을 대신하지 않는다.
+
+시스템dylib만 의존, 네트워크프로토콜 없음(file/pipe만), 가짜 WAV/MP3/M4A→16k mono WAV 및 ffprobe를 확인했다. 앱의 실제 `convertToWav`로도 세 형식이 통과했다. [증거](../work/03-개발-태림/자료/real-local-audio-20261118/audio-converter-fake-input.json). 모든 포맷/손상파일/새Mac 검증은 아니다. 공식PGP서명·DeveloperID·공증과 최종 재배포 의무 검토는 아직이다.

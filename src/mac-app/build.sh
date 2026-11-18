@@ -99,6 +99,17 @@ await copyVerifiedRuntime(process.argv[3],process.argv[4]);
 JS
 fi
 
+# 선택 LGPL 오디오 변환기. 네트워크/외부 라이브러리 없이 준비된 빌드와 대응 소스를 함께 복사한다.
+if [[ "${AHMATDA_BUNDLE_AUDIO:-0}" == 1 ]]; then
+    mkdir -p "$resources/runtime"
+    audio_source=${AHMATDA_AUDIO_RUNTIME:-"$HOME/Library/Application Support/Ahmatda/runtime/ffmpeg-audio-9.0.2"}
+    NODE_OPTIONS= NODE_PATH= "$node_source" --input-type=module - "$source_dir/prepare-audio-runtime.mjs" "$audio_source" "$resources/runtime/ffmpeg-audio-9.0.2" <<'JS'
+import {pathToFileURL} from 'node:url';
+const {copyVerifiedRuntime}=await import(pathToFileURL(process.argv[2]));
+await copyVerifiedRuntime(process.argv[3],process.argv[4]);
+JS
+fi
+
 NODE_OPTIONS= NODE_PATH= "$macos/node" "$source_dir/copy-dependencies.mjs" "$repo/src/app" "$resources/app"
 git -C "$repo" rev-parse HEAD > "$resources/app/REVISION"
 if [[ -n $(git -C "$repo" status --porcelain -- src/app src/mac-app) ]]; then
