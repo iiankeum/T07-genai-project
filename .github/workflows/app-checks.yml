@@ -128,6 +128,8 @@ jobs:
         run: npm run test:upload-batch-e2e
       - name: Copy fallback keyboard focus (fake clipboard only)
         run: npm run test:copy-focus-e2e
+      - name: Mobile item deletion keyboard continuity (fake data only)
+        run: npm run test:item-delete-focus-e2e
       - uses: actions/upload-artifact@v4
         if: always()
         with:
