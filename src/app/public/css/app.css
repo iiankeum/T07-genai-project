@@ -387,3 +387,6 @@ h2, h3, .card-title { font-weight: 650; }
 .tools-section .menu-link { padding:14px 0; min-height:48px; }
 @media(max-width:640px) { .tools-directory { grid-template-columns:minmax(0,1fr); gap:16px; } .tools-section { padding:20px; } }
 .tools-directory > .tools-section { margin:0; }
+
+/* 사용자가 지정한 원본 로고. 비율/색/여백을 임의로 변경하지 않는다. */
+.brand-logo { display:block; width:36px; height:36px; object-fit:contain; flex:none; border-radius:8px; }

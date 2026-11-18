@@ -33,6 +33,10 @@ try {
  }
  await page.setViewportSize({width:1440,height:1000});
  assert.equal(await page.locator('.brand-name').innerText(),'아차');
+ assert.equal(await page.locator('.brand').getAttribute('aria-label'),'아차 첫 화면');
+ assert.equal(await page.locator('.brand-logo').getAttribute('alt'),'');
+ assert.ok(await page.locator('.brand-logo').evaluate(img=>img.complete && img.naturalWidth===1254 && img.naturalHeight===1254));
+ assert.equal(await page.locator('.brand-logo').evaluate(img=>Math.round(img.getBoundingClientRect().width)),36);
  assert.ok((await page.title()).includes('아차'));
  const manifest=await (await page.request.get(base+'/manifest.webmanifest')).json();assert.equal(manifest.short_name,'아차');
  await page.goto(base+'/#/');await page.locator('#sideNav .nav-link').first().waitFor();
