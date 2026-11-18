@@ -31,6 +31,12 @@ try {
    if(size==='mobile'){await page.locator('#bigTextBtn').click();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,`${name} large text overflow`);await page.locator('#bigTextBtn').click();}
   }
  }
+ await page.setViewportSize({width:1440,height:1000});
+ await page.goto(base+'/#/');await page.locator('#sideNav .nav-link').first().waitFor();
+ for(const href of ['#/','#/calls','#/board','#/shipping','#/more','#/settings'])assert.equal(await page.locator(`#sideNav a[href="${href}"]`).count(),1,'desktop primary destination retained');
+ assert.equal(await page.locator('#headerWorkspace a[href="#/workspaces"]').count(),1,'workspace switch retained');
+ await page.locator('#sideNav a[href="#/more"]').click();await page.locator('.menu-list').waitFor();
+ for(const href of ['#/upload','#/live','#/assistant','#/ask','#/knowledge','#/settings/notifications','#/help'])assert.equal(await page.locator(`.menu-list a[href="${href}"]`).count(),1,'secondary destination retained');
  await page.setViewportSize({width:390,height:844});
  await page.goto(base+'/#/');await page.locator('#today-priority a').first().waitFor();
  assert.ok(await page.locator('#today-priority').evaluate(el=>Boolean(el.compareDocumentPosition(document.querySelector('.today-overview')) & Node.DOCUMENT_POSITION_FOLLOWING)),'tasks before metrics in DOM');
@@ -56,5 +62,5 @@ try {
  await page.goto(base+'/#/settings');await page.locator('.settings-directory').waitFor();assert.equal(await page.locator('.settings-destination').count(),7);
  await page.locator('.settings-destination[href="#/settings/display"]').click();await page.getByRole('heading',{name:'화면 설정',exact:true}).waitFor();
  assert.equal(await page.locator('.settings-nav [aria-current="page"]').getAttribute('href'),'#/settings/display');
- assert.deepEqual(errors,[]);await writeFile(path.join(dir,'results.json'),JSON.stringify({fakeData:true,paidAI:false,checks:["mobile primary task navigation", "task queue before metrics", "detail fixed action visibility and last input clearance", "detail transcript/card switch", "8 mobile large-text layouts","responsive assistant disclosure","upload invalid file rejection","upload consent gate without sending audio","7 settings cards and display navigation"],results,errors},null,2));console.log(`PASS ${results.length} viewports`);
+ assert.deepEqual(errors,[]);await writeFile(path.join(dir,'results.json'),JSON.stringify({fakeData:true,paidAI:false,checks:["desktop primary and secondary routes retained", "workspace switch retained", "mobile primary task navigation", "task queue before metrics", "detail fixed action visibility and last input clearance", "detail transcript/card switch", "8 mobile large-text layouts","responsive assistant disclosure","upload invalid file rejection","upload consent gate without sending audio","7 settings cards and display navigation"],results,errors},null,2));console.log(`PASS ${results.length} viewports`);
 }finally{await browser?.close();child.kill('SIGTERM');await new Promise(r=>child.exitCode!==null?r():child.once('exit',r));await rm(data,{recursive:true,force:true});}

@@ -326,3 +326,42 @@ h2, h3, .card-title { font-weight: 650; }
  .card { padding: 20px; }
  .topbar { padding-inline:16px; }
 }
+
+/* AGY Montage v2 재구성: 전역 탐색을 상단으로 옮기되 기존 라우트·권한은 유지한다. */
+:root { --bg:#f7f7f8; --ink:#171719; --line:rgba(112,115,124,.16); }
+#headerWorkspace { min-width:0; max-width:240px; }
+#headerWorkspace .workspace-switch { margin:0; min-height:44px; padding:6px 12px; background:var(--bg); }
+#headerWorkspace .workspace-copy { position:static; width:auto; height:auto; clip-path:none; }
+#headerWorkspace .workspace-copy > span { display:none; }
+#headerWorkspace .workspace-chevron { position:static; width:auto; height:auto; clip-path:none; }
+.topbar-path { display:none; }
+.topbar .brand { width:auto; }
+.layout { display:block; }
+.topbar { gap:16px; }
+.primary-tabs { list-style:none; }
+.is-guest #headerWorkspace, .is-guest .header-upload, .is-guest .header-live { display:none; }
+@media(min-width:900px) {
+ .topbar { padding-inline:max(24px,calc((100vw - 1100px)/2)); }
+ .sidenav { position:sticky; top:var(--topbar-h); z-index:19; display:block; height:auto; padding:0 max(24px,calc((100vw - 1100px)/2)); border-right:0; border-bottom:1px solid var(--line); overflow:visible; }
+ .sidenav ul.primary-tabs { display:flex; gap:24px; }
+ .sidenav .nav-link { justify-content:center; position:relative; min-height:48px; padding:12px 4px; border-radius:0; font-size:14px; white-space:nowrap; }
+ .sidenav .nav-link.active { background:transparent; color:var(--ink); }
+ .sidenav .nav-link.active::after { content:''; position:absolute; inset:auto 0 0; height:2px; background:var(--brand); }
+ .page { max-width:1148px; margin-inline:auto; }
+ .fake-banner { padding-inline:max(24px,calc((100vw - 1100px)/2)); }
+}
+@media(max-width:899px) {
+ .header-upload,.header-live { display:none; }
+ .topbar { gap:8px; padding-inline:16px; flex-wrap:wrap; }
+ #headerWorkspace { flex:1; max-width:none; }
+ #headerWorkspace .workspace-switch { border:0; background:transparent; padding:4px; }
+ #headerWorkspace .workspace-symbol { display:none; }
+ #headerWorkspace .workspace-copy strong { max-width:130px; }
+ .topbar-right { margin-left:0; gap:4px; }
+ .worker-pill .worker-text { display:none; }
+ .worker-pill { min-width:24px; padding-inline:6px; }
+}
+@media(min-width:900px) {
+ body .view .page:not(.cd-page) { max-width:1148px; }
+ body .view .page.cd-page { max-width:1440px; }
+}
