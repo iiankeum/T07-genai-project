@@ -48,6 +48,10 @@ jobs:
         run: npm run test:mobile-return-e2e
         env:
           MOBILE_RETURN_OUTPUT: artifacts/e2e/mobile-return
+      - name: Settings deletion race (fake deferred API only)
+        run: npm run test:settings-delete-e2e
+        env:
+          SETTINGS_DELETE_OUTPUT: artifacts/e2e/settings-delete
       - uses: actions/upload-artifact@v4
         if: always()
         with:
