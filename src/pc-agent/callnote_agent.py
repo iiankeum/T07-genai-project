@@ -298,6 +298,10 @@ class WhisperTranscriber:
         self.gpu = gpu_name() if self.device == "cuda" else "CPU"
 
     def transcribe(self, audio, initial_prompt: str | None, language: str = "ko") -> dict:
+        # 명시적 파일 입력만 호환 디코더를 사용한다. 서버 WAV 검증·ndarray 경로는 유지한다.
+        if isinstance(audio, (str, os.PathLike)) or hasattr(audio, "read"):
+            from decode_audio_compat import decode_audio_compat
+            audio = decode_audio_compat(audio)
         started = time.time()
         out, self.last_vad_fallback = transcribe_with_vad_guard(
             self.model, audio, initial_prompt, language, self.beam_size)

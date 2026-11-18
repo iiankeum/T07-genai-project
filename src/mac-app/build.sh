@@ -53,6 +53,7 @@ cp "$source_dir/prepare-whisper-runtime.mjs" "$resources/"
 cp "$source_dir/install-whisper-runtime.mjs" "$resources/"
 cp "$source_dir/whisper-worker.mjs" "$resources/"
 cp "$repo/src/pc-agent/callnote_agent.py" "$resources/pc-agent/"
+cp "$repo/src/pc-agent/decode_audio_compat.py" "$resources/pc-agent/"
 
 # 런타임 소스만 복사한다. Git이 무시하는 .env, .data, 로컬 녹음은 대상에 없다.
 git -C "$repo" ls-files --cached --others --exclude-standard -z -- \

@@ -1,3 +1,13 @@
+## 2026-11-18 17:19 KST · PyAV 격리 재빌드와 오디오 호환 경로 검증
+
+- 돌린 사람 · 도구 · 작업방: 신*림 · ChatGPT dot · 아맞다 직접 작업
+- 한 일: x264/x265 없는 shared FFmpeg/PyAV를 격리 재빌드하고 파일 입력 호환 디코더를 추가했다.
+- 왜: 재배포 구성과 기존 PyAV19 API 비호환을 분리해 검증하기 위해서다.
+- 어떻게: 직접 통합·검증과 내부 작업자1명 빌드. 공식 고정소스/SHA, 직접 디코딩·이동 설치·실제 합성음성 전사·staging 및 Python38/Node171/helper90 회귀를 확인했다.
+- 결과물: [점검 보고서](../../docs/mac-distribution-audit.md), [앱 API 시험](자료/real-local-audio-20261118/repo-compat-result-fake-input.json).
+- AI가 판단한 것 · 사람이 확인할 것: metadata_errors는 기존 wheel에서도 재현됐다. vendor 수정 없이 파일 입력만 자체 디코딩하고 worker WAV 계약을 보존했다. 법적 적합·macOS14 실기·서명공증은 미확정이다.
+- 다음 할 일: 대응소스/고지/빌드 재현을 갖춘 정식 런타임 준비 경로 통합 검토. 기존 앱·지원runtime·ZIP·디자인 파일 보존, 운영 배포 없음.
+
 ## 2026-11-18 16:57 KST · macOS 하위호환과 PyAV 재배포 대안 검토
 
 - 돌린 사람 · 도구 · 작업방: 신*림 · ChatGPT dot · 아맞다 직접 작업

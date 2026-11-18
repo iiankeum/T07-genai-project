@@ -56,3 +56,23 @@ Ollama26.2 대상은 `mlx_metal_v4/libjaccl.dylib`, `libmlx.dylib`, `libmlxc.dyl
 [FFmpeg 공식 지침](https://ffmpeg.org/legal.html)은 동적 연결, 바이너리에 정확히 대응하는 소스와 빌드 옵션, 고지 및 외부 라이브러리 검토를 안내한다. [n9.0.2 라이선스 원문](https://raw.githubusercontent.com/FFmpeg/FFmpeg/n9.0.2/LICENSE.md)은 x264/x265를 GPL 외부 라이브러리로 구분한다. 기존 wheel의 LGPL3+ 표기와 실제 링크를 함께 검토해야 하며 gpl 플래그 문자열이 없다는 이유만으로 적합하다고 판정하지 않는다. 자체 빌드도 법적 적합성을 자동 보증하지 않는다.
 
 즉시 가능한 보수적 선택은 `AHMATDA_BUNDLE_WHISPER`를 켜지 않아 해당 실행기를 포함하지 않는 것이다. build.sh 기본값0을 코드로 확인했다. 이 경우 터미널 없는 음성 전사 준비라는 제품 목표를 충족하지 못하므로 완성판으로 안내하지 않는다. 현재 개발 ZIP은 기존 그대로 보존하고 외부 배포하지 않았다.
+
+
+## 격리 재빌드 검증 결과
+
+공식 FFmpeg9.0.2 소스에서 shared 라이브러리7개를 만들고 PyAV19.0.2를 다시 컴파일했다. GPL/nonfree/version3/x264/x265/자동탐지/네트워크는 비활성화했다. 새 wheel은3,264,750B이며 SHA256은 `b6315114df45bc329ebec6098f3bd48cca1d1453db4c5e4d2d76888131f90f91`이다. 실제 libavcodec 표시는 LGPL2.1+다. x264/x265 파일·로드와 비시스템 절대로드가 없음을 검사했다.
+
+WAV·MP3·M4A 직접 디코딩과 M4A→배열→Whisper 합성음성 전사를 통과했다. Python을 다른 폴더로 옮기고 원래 빌드 라이브러리 경로를 없앤 후에도 동일 전사에 성공했다. 57개 Mach-O 개발 서명 검사가 통과했으나 공증은 아니다. 빌드 도구가 들어 있는 개발 Python 복사본 자체는 배포물이 아니다.
+
+중요한 추가 발견: 기존 제공 wheel과 재빌드 wheel 모두 faster-whisper1.2.1의 `metadata_errors` 인자에서 동일하게 실패한다. 새 바이너리 회귀가 아니다. [PyAV19 API](https://raw.githubusercontent.com/PyAV-Org/PyAV/v19.0.2/av/container/core.py)와 [faster-whisper1.2.1 호출부](https://raw.githubusercontent.com/SYSTRAN/faster-whisper/v1.2.1/faster_whisper/audio.py)를 대조했다. 격리 복사본에서 해당 인자만 제거하면 양쪽3개 포맷이 통과하고 잘못된 입력은 오류가 유지된다. 기존 앱의 WAV→배열 전사 경로는 이미 이 호출을 사용하지 않으며, 기존·재빌드 런타임에서 실제 pc-agent 전사도 통과했다.
+
+증거: [재빌드·이동 시험](../work/03-개발-태림/자료/real-local-audio-20261118/pyav-rebuilt-fake-input.json), [기존 wheel 비교](../work/03-개발-태림/자료/real-local-audio-20261118/compat-vendor-fake-input.json), [새 wheel 비교](../work/03-개발-태림/자료/real-local-audio-20261118/compat-rebuilt-fake-input.json). 기존 앱·지원 런타임·ZIP은 교체하지 않았다. macOS14 실기, 전체 라이선스 의무와 최종 배포 적합성은 미확정이다.
+
+
+### 앱 호환 경로 반영
+
+vendor 패키지를 덮어쓰지 않고 자체 `decode_audio_compat.py`를 추가했다. `WhisperTranscriber`의 명시적 파일·바이너리 스트림 입력만 PyAV의 지원 API로 디코딩한다. 기존 서버 WAV 검증과 배열 전달은 변경하지 않는다. 입력64MiB/디코딩10분 상한, 로컬파일 제한, 오류 전파를 적용했다. Mac 빌드 복사 목록에 helper를 추가했다.
+
+Python38개, Node171개, Mac helper90개 회귀가 통과했다. 실제 새 helper의 WAV·MP3·M4A·BytesIO 입력과 기존 worker WAV 배열 모두 정확한 합성문장 전사를 확인했다. 빌드에 들어갈 Python 소스2개만 별도 임시폴더로 복사한 staging 검사도 통과했다. 전체 앱 재빌드·사용자 런타임 교체는 하지 않았다.
+
+[실제 앱 API 시험](../work/03-개발-태림/자료/real-local-audio-20261118/repo-compat-result-fake-input.json), [staging 시험](../work/03-개발-태림/자료/real-local-audio-20261118/staged-compat-result-fake-input.json). 재현 도구는 `src/mac-app/tests/real-pyav-compat.py`다. `--run-synthetic-model-test --fixtures <synthetic.wav/mp3/m4a 폴더> --model <이미 준비된 로컬 모델>`을 명시해야 하며 모델 다운로드를 수행하지 않는다.
