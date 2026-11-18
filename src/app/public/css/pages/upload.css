@@ -69,3 +69,40 @@
 /* 단추는 모두 48px 이상(손가락으로 누르기 쉽게) */
 .upload-page .btn-sm { min-height: var(--tap); }
 .upload-page .card-title h2 { margin: 0; }
+
+/* 입력은 왼쪽, 준비 상태와 도움말은 오른쪽. 설명보다 첫 행동을 먼저 둔다. */
+.upload-page { max-width:1280px; }
+.upload-drop { padding:28px 20px; border-width:1px; background:#fbfcfe; }
+.upload-drop-icon { width:32px; height:32px; margin-bottom:8px; }
+.upload-drop-title { font-size:1rem; font-weight:600; }
+.upload-drop-or { font-size:.78rem; margin-block:8px; }
+.upload-drop .help { max-width:44ch; margin:16px auto 0; font-size:.75rem; }
+.upload-confirm { background:#fffbf4; font-size:.8rem; padding:12px; }
+.upload-confirm strong { font-weight:500; }
+.upload-explainer > summary { cursor:pointer; font-size:.88rem; font-weight:600; min-height:44px; display:flex; align-items:center; justify-content:space-between; }
+.upload-explainer > summary::after { content:'+'; font-size:1.2rem; color:var(--muted); }
+.upload-explainer[open] > summary::after { content:'−'; }
+.upload-explainer > summary::-webkit-details-marker { display:none; }
+.upload-explainer { margin-top:16px; padding:12px 20px; }
+.upload-explainer .upload-flow { grid-template-columns:1fr; gap:12px; margin-top:16px; }
+.upload-explainer .upload-flow li { padding:8px 8px 8px 40px; border:0; background:transparent; text-align:left; }
+.upload-explainer .upload-flow li::before { left:0; top:12px; transform:none; background:var(--brand-soft); color:var(--brand-ink); font-weight:600; }
+.upload-explainer .upload-flow li::after { display:none; }
+.upload-explainer .upload-flow strong { font-size:.82rem; font-weight:600; }
+.upload-explainer .upload-flow span { font-size:.75rem; }
+.upload-side { grid-template-columns:1fr; }
+.upload-side h2, .upload-f12 h2 { font-size:1rem; }
+.upload-side p, .upload-f12 p { font-size:.82rem; line-height:1.6; }
+.upload-side .card { padding:20px; }
+.upload-worker-state { font-size:.88rem; font-weight:600; }
+.upload-dl dt,.upload-dl dd { font-size:.78rem; }
+.upload-f12 { background:#fff; border-color:var(--line); }
+@media(min-width:1100px) {
+ .upload-page { display:grid; grid-template-columns:minmax(0,1.65fr) minmax(280px,1fr); gap:16px 24px; align-items:start; }
+ .upload-page > .page-head,.upload-page > .notice,.upload-page > .upload-f12 { grid-column:1/-1; margin:0; }
+ .upload-page > .page-head { margin-bottom:8px; }
+ .upload-page > .upload-box { grid-column:1; grid-row:3/5; margin:0; }
+ .upload-page > .upload-explainer { grid-column:2; grid-row:4; margin:0; }
+ .upload-page > .upload-side { grid-column:2; grid-row:3; margin:0; }
+ .upload-page > .upload-f12 { margin-top:8px; }
+}

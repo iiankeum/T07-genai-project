@@ -524,6 +524,8 @@ export default {
     const topbar = document.querySelector('.topbar');
     const measure = () => {
       root.style.setProperty('--cd-top', `${topbar?.offsetHeight || 60}px`);
+      const actionHeight = root.querySelector('.cd-actions')?.offsetHeight || 0;
+      root.style.setProperty('--cd-actions-h', `${actionHeight}px`);
       if (wideMq.matches && !slot('body').classList.contains('hidden')) {
         const bodyTop = slot('body').getBoundingClientRect().top + window.scrollY;
         const available = Math.floor(window.innerHeight - bodyTop - slot('foot').offsetHeight - 22);
@@ -538,7 +540,7 @@ export default {
     }
     window.addEventListener('scroll', scheduleConnector, { capture: true, passive: true });
     window.addEventListener('resize', measure);
-    root.addEventListener('toggle', scheduleConnector, true);
+    root.addEventListener('toggle', measure, true);
     root.addEventListener('input', scheduleConnector);
 
     // ── 찾기에서 온 대목(?t=&seg=) ─────────────────────────────────
@@ -750,7 +752,7 @@ export default {
       ro?.disconnect();
       window.removeEventListener('scroll', scheduleConnector, true);
       window.removeEventListener('resize', measure);
-      root.removeEventListener('toggle', scheduleConnector, true);
+      root.removeEventListener('toggle', measure, true);
       root.removeEventListener('input', scheduleConnector);
       wideHistory.removeEventListener('change', onHistoryBreakpoint);
       history.removeEventListener('toggle', onHistoryToggle);

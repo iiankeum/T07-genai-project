@@ -73,3 +73,13 @@
   .cl-meta { gap: 0 8px; }
   .cl-search .input { padding-left: 36px; }
 }
+
+.cl-control { padding:20px 24px; border-radius:16px; margin-bottom:24px; }
+.cl-search .input { min-height:48px; background:#f7f8fa; border-color:transparent; }
+.cl-list { border:1px solid var(--line); border-radius:16px; overflow:hidden; }
+.cl-item { padding:20px 24px; }
+.cl-title { font-weight:600; }
+.cl-context { font-size:.85rem; }
+.cl-meta { font-size:.73rem; }
+.cl-day-group > h2 { font-size:.88rem; font-weight:550; color:var(--muted); margin:0 0 12px 4px; }
+@media(max-width:719px) { .cl-control,.cl-item { padding:16px; } .cl-tabs { gap:0 8px; } }

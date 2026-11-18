@@ -1,13 +1,12 @@
+import {acquireModelLock} from './model-prepare-lock.mjs';
+import {downloadHTTP,resumeHTTP,validatedPartial} from './model-range-download.mjs';
 import {resolveStorageRoot} from './whisper-runtime-profile.mjs';
 // 개발용 모델 준비 helper. 런타임은 앱 업데이트로 제공한다. 모델 외 다운로드·실행·추론 없음.
 import { createHash, randomUUID } from 'node:crypto';
-import { createReadStream, createWriteStream } from 'node:fs';
+import { createReadStream } from 'node:fs';
 import fs from 'node:fs/promises';
-import https from 'node:https';
-import { homedir } from 'node:os';
+import { isDeepStrictEqual } from 'node:util';
 import path from 'node:path';
-import { pipeline } from 'node:stream/promises';
-import { Transform } from 'node:stream';
 import { fileURLToPath } from 'node:url';
 
 const descriptor = (hash, size, type) => ({mediaType: type, digest: `sha256:${hash}`, size});
@@ -27,12 +26,27 @@ export const RUNTIME = Object.freeze({version:'0.40.16',relative:'runtime/ollama
 const allFiles = model => [model.manifest.config, ...model.manifest.layers];
 const blobName = item => item.digest.replace(':','-');
 
+function validateModel(model){
+  if(!model?.manifest?.config||!Array.isArray(model.manifest.layers))throw Error('invalid_model_manifest');
+  const seen=new Set();let total=0;
+  for(const item of allFiles(model)){
+    if(!item||!/^sha256:[a-f0-9]{64}$/.test(item.digest||'')||!Number.isSafeInteger(item.size)||item.size<1||seen.has(item.digest))throw Error('invalid_model_descriptor');
+    seen.add(item.digest);total+=item.size;if(!Number.isSafeInteger(total)||!Number.isSafeInteger(total+64*1024*1024))throw Error('model_size_overflow');
+  }
+  if(model.digest!==undefined&&(!/^[a-f0-9]{64}$/.test(model.digest)||createHash('sha256').update(JSON.stringify(model.manifest)).digest('hex')!==model.digest))throw Error('model_manifest_digest_mismatch');
+}
 async function safeDirectory(dir) {
   // 심볼릭 링크를 포함한 예상 밖 경로에는 쓰지 않는다.
   const parent=path.dirname(dir);
   if(parent!==dir) await safeDirectory(parent);
   try { await fs.mkdir(dir,{mode:0o700}); } catch(e) { if(e.code!=='EEXIST') throw e; }
   const s=await fs.lstat(dir); if(!s.isDirectory() || s.isSymbolicLink()) throw new Error('unsafe_path');
+}
+async function checkModelDirectories(root){
+  for(const relative of ['models','models/ollama','models/ollama/blobs','models/ollama/manifests','models/ollama/manifests/registry.ollama.ai','models/ollama/manifests/registry.ollama.ai/library','models/ollama/manifests/registry.ollama.ai/library/qwen3']){
+    let info;try{info=await fs.lstat(path.join(root,relative));}catch(e){if(e.code==='ENOENT')continue;throw e;}
+    if(!info.isDirectory()||info.isSymbolicLink())throw Error('unsafe_path');
+  }
 }
 async function regular(file) {
   try { const s=await fs.lstat(file); return s.isFile() && !s.isSymbolicLink() ? s : null; }
@@ -53,36 +67,10 @@ export function approvedDownloadURL(url,item,redirect=false) {
   return (u.hostname==='registry.ollama.ai' && u.pathname===`/v2/library/qwen3/blobs/${item.digest}` && !u.search) ||
     (u.hostname===MODEL_CDN && u.pathname===`/ollama/docker/registry/v2/blobs/sha256/${hash.slice(0,2)}/${hash}/data`);
 }
-export function download(url, target, item, {signal,onProgress=()=>{},redirects=0}={}) {
-  // 계정 헤더·토큰·쿠키·요청 본문·로컬 자료는 전송하지 않는다.
-  return new Promise((resolve,reject)=>{
-    const parsed=new URL(url);
-    if(!approvedDownloadURL(url,item,redirects>0)) return reject(new Error('unapproved_source'));
-    const request=https.get(parsed,{signal,agent:false,headers:{'user-agent':'Ahmatda-model-preparer/1'}},response=>{
-      // 공식 저장소에서 실제 확인한 CDN의 해당 digest 경로만 허용한다.
-      if([301,302,303,307,308].includes(response.statusCode)) {
-        const location=response.headers.location; response.destroy();
-        if(!location || redirects>=3) {reject(new Error('redirect_limit'));return;}
-        let next; try {next=new URL(location,parsed).href;} catch {reject(new Error('unapproved_redirect'));return;}
-        if(!approvedDownloadURL(next,item,true)) {reject(new Error('unapproved_redirect'));return;}
-        download(next,target,item,{signal,onProgress,redirects:redirects+1}).then(resolve,reject);return;
-      }
-      if(response.statusCode!==200) { response.destroy(); reject(new Error('download_http_'+response.statusCode)); return; }
-      const length=response.headers['content-length'];
-      if(length!==undefined && Number(length)!==item.size) { response.destroy();reject(new Error('size_mismatch'));return; }
-      let count=0,last=0;
-      const limiter=new Transform({transform(chunk,encoding,done){count+=chunk.length;
-        if(count>item.size) return done(new Error('size_limit'));
-        if(Date.now()-last>250){onProgress(count);last=Date.now();}done(null,chunk);}});
-      pipeline(response,limiter,createWriteStream(target,{flags:'wx',mode:0o600}),{signal})
-        .then(()=>{if(count!==item.size) throw new Error('size_mismatch'); onProgress(count); resolve();}).catch(reject);
-    });
-    request.setTimeout(30_000,()=>request.destroy(new Error('download_timeout')));
-    request.on('error',reject);
-  });
-}
+export function download(url,target,item,options={}){return downloadHTTP(url,target,item,{...options,approved:approvedDownloadURL});}
+export function downloadResumable(url,target,item,options={}){return resumeHTTP(url,target,item,{...options,approved:approvedDownloadURL});}
 export async function inspect(root,{model=MODEL,runtime=RUNTIME,signal}={}) {
-  const models=path.join(root,'models/ollama');
+  validateModel(model);await checkModelDirectories(root);const models=path.join(root,'models/ollama');
   const installed=[];
   for(const item of allFiles(model)) installed.push(await verifyFile(path.join(models,'blobs',blobName(item)),item,signal));
   let manifest=false;
@@ -90,8 +78,7 @@ export async function inspect(root,{model=MODEL,runtime=RUNTIME,signal}={}) {
     const file=path.join(models,'manifests/registry.ollama.ai/library/qwen3/4b');
     if(await regular(file)) {
       const saved=JSON.parse(await fs.readFile(file,'utf8'));
-      manifest=saved.config?.digest===model.manifest.config.digest &&
-        model.manifest.layers.every(item=>saved.layers?.some(x=>x.digest===item.digest && x.size===item.size));
+      manifest=isDeepStrictEqual(saved,model.manifest);
     }
   } catch(e) { if(e.code!=='ENOENT' && !(e instanceof SyntaxError)) throw e; }
   return {event:'status',model:model.name,license:model.license,source:model.source,
@@ -100,13 +87,12 @@ export async function inspect(root,{model=MODEL,runtime=RUNTIME,signal}={}) {
     modelVerified:installed.every(Boolean)&&manifest,filesVerified:installed.filter(Boolean).length,totalFiles:installed.length,
     inferenceVerified:false,automaticRuntimeInstall:false,automaticServerStart:false,cloudEnabled:false};
 }
-export async function prepare(root,{model=MODEL,runtime=RUNTIME,signal,emit=()=>{},transfer=download}={}) {
-  root=path.resolve(root);
+export async function prepare(root,{model=MODEL,runtime=RUNTIME,signal,emit=()=>{},transfer=download,requestGet,statfs=fs.statfs}={}) {
+  validateModel(model);root=path.resolve(root);
   await safeDirectory(root);
-  const lock=path.join(root,'.model-prepare.lock');
-  let owned=false,stage;
+  let release,stage;
   try {
-    try{await fs.mkdir(lock,{mode:0o700});owned=true;}catch(e){if(e.code==='EEXIST')throw new Error('preparation_busy_or_interrupted_lock');throw e;}
+    release=await acquireModelLock(root,'.model-prepare.lock',{signal});
     const state=await inspect(root,{model,runtime,signal});emit(state);
     if(!state.runtimeVerified) throw new Error('runtime_missing_or_unverified_use_app_update');
     if(state.modelVerified){emit({event:'ready',model:model.name,inferenceVerified:false});return;}
@@ -114,26 +100,39 @@ export async function prepare(root,{model=MODEL,runtime=RUNTIME,signal,emit=()=>
     const blobs=path.join(models,'blobs');
     const manifests=path.join(models,'manifests/registry.ollama.ai/library/qwen3');
     await safeDirectory(blobs);await safeDirectory(manifests);
+    try{const active=await fs.lstat(path.join(manifests,'4b'));if(!active.isFile()||active.isSymbolicLink())throw Error('unsafe_manifest');}catch(e){if(e.code!=='ENOENT')throw e;}
     stage=await fs.mkdtemp(path.join(models,'.prepare-'));
-    const missing=[];
-    for(const item of allFiles(model)) if(!await verifyFile(path.join(blobs,blobName(item)),item,signal)) missing.push(item);
-    const required=missing.reduce((sum,item)=>sum+item.size,0)+64*1024*1024;
-    const disk=await fs.statfs(models); if(disk.bavail*disk.bsize<required) throw new Error('insufficient_disk_space');
-    emit({event:'preparing',model:model.name,downloadBytes:missing.reduce((s,x)=>s+x.size,0),source:model.source,license:model.license});
-    // 먼저 모든 파일을 임시 저장한다. 실패·취소 시 활성 모델을 바꾸지 않는다.
+    const missing=[],reused=[];
+    for(const item of allFiles(model)) {
+      const file=path.join(blobs,blobName(item));
+      if(await verifyFile(file,item,signal)){reused.push(item);continue;}
+      // 기존 손상 blob과 symlink는 다운로드 전에 거절하며 원본을 보존한다.
+      try{await fs.lstat(file);throw Error('existing_invalid_blob_preserved');}catch(e){if(e.code!=='ENOENT')throw e;}
+      missing.push(item);
+    }
+    let cachedBytes=0;
+    if(transfer===download)for(const item of missing)cachedBytes+=(await validatedPartial(path.join(models,'.partial-blobs'),item)).offset;
+    const required=missing.reduce((sum,item)=>sum+item.size,0)-cachedBytes+64*1024*1024;
+    const disk=await statfs(models); if(disk.bavail*disk.bsize<required) throw new Error('insufficient_disk_space');
+    emit({event:'preparing',model:model.name,downloadBytes:missing.reduce((s,x)=>s+x.size,0),source:model.source,license:model.license,resumeMode:transfer===download?'verified-blobs-and-byte-range':'verified-blobs-only'});
+    for(const item of reused)emit({event:'progress',digest:item.digest,completed:item.size,total:item.size,reusedVerifiedFile:true});
+    // 완료 blob과 재개용 부분 파일, 활성 manifest를 각각 분리한다.
     for(const item of missing){
       signal?.throwIfAborted();
       const file=path.join(stage,blobName(item));
-      await transfer(`${model.source}/blobs/${item.digest}`,file,item,{signal,onProgress:completed=>emit({event:'progress',digest:item.digest,completed,total:item.size})});
+      const options={signal,onProgress:completed=>emit({event:'progress',digest:item.digest,completed,total:item.size})};
+      if(transfer===download)await downloadResumable(`${model.source}/blobs/${item.digest}`,file,item,{...options,cache:path.join(models,'.partial-blobs'),get:requestGet});
+      else await transfer(`${model.source}/blobs/${item.digest}`,file,item,options);
       if(!await verifyFile(file,item,signal)) throw new Error('checksum_mismatch');
+      signal?.throwIfAborted();
+      // hard-link는 원자적인 no-overwrite 게시다. stage 링크를 지워 중복 복사를 피한다.
+      try{await fs.link(file,path.join(blobs,blobName(item)));}catch(e){if(e.code==='EEXIST')throw Error('blob_created_during_prepare_preserved');throw e;}
+      await fs.unlink(file);
     }
     signal?.throwIfAborted();
-    for(const item of missing){
-      const dest=path.join(blobs,blobName(item));
-      try { await fs.lstat(dest); throw new Error('existing_invalid_blob_preserved'); }
-      catch(e){if(e.code!=='ENOENT')throw e;}
-    }
-    for(const item of missing) await fs.link(path.join(stage,blobName(item)),path.join(blobs,blobName(item)));
+    // 캐시 재사용 파일도 다시 검사한다. 모든 파일이 온전해야 활성 모델을 바꾼다.
+    for(const item of allFiles(model))if(!await verifyFile(path.join(blobs,blobName(item)),item,signal))throw Error('blob_integrity_changed');
+    if(!await verifyFile(path.join(root,runtime.relative),runtime,signal))throw Error('runtime_integrity_changed');
     const manifest=path.join(manifests,'4b');
     const old=await regular(manifest);
     if(old) await fs.copyFile(manifest,path.join(manifests,`4b.backup-${randomUUID()}`));
@@ -144,8 +143,8 @@ export async function prepare(root,{model=MODEL,runtime=RUNTIME,signal,emit=()=>
     await fs.rename(pending,manifest);
     emit({event:'ready',model:model.name,inferenceVerified:false});
   } finally {
-    if(stage) await fs.rm(stage,{recursive:true,force:true});
-    if(owned) await fs.rmdir(lock);
+    try{if(stage) await fs.rm(stage,{recursive:true,force:true});}
+    finally{if(release) await release();}
   }
 }
 async function main(){

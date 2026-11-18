@@ -7,6 +7,7 @@ const sections = [
   ['notifications', '알림 설정'], ['display', '화면 설정'], ['data', '데이터·개인정보'],
   ['integrations', '수집·AI 설정'],
 ];
+const sectionDescriptions = {profile:'이름, 연락처와 로그인 정보',workspace:'상호, 대표 번호와 영업시간',members:'팀원 초대와 역할 관리',notifications:'놓치지 않을 업무 알림',display:'글씨 크기와 화면 보기',data:'녹음·기록 보관과 개인정보',integrations:'로컬 받아쓰기와 AI 연결'};
 const roles = ['admin', 'reception', 'shipping', 'viewer'];
 const status = html`<p class="account-status" role="status" aria-live="polite" hidden></p>`;
 const save = (text = '저장') => html`<button class="btn btn-primary" type="submit">${text}</button>`;
@@ -19,8 +20,8 @@ const localBigText = () => {
 
 function show(el, active, body) {
   const section = sections.find(([key]) => key === active);
-  render(el, html`<div class="page account-page settings-page">
-    <div class="page-head"><h1>${section?.[1] || '설정'}</h1></div>
+  render(el, html`<div class="page account-page settings-page ${section ? '' : 'settings-home'}">
+    <div class="page-head"><div><p class="eyebrow">내 작업공간</p><h1>${section?.[1] || '설정'}</h1><p class="sub">${section ? sectionDescriptions[active] : '내 계정과 팀의 작업 환경을 관리하세요.'}</p></div></div>
     <nav class="account-links settings-nav" aria-label="설정 메뉴">${sections.map(([key, label]) => html`
       <a href="#/settings/${key}" ${key === active ? html`aria-current="page"` : ''}>${label}</a>`)}</nav>
     <section class="panel account-panel">${body}</section>
@@ -284,8 +285,7 @@ export default {
     const key = ctx.params?.section || ctx.path?.split('/')[2];
     const handler = handlers[key];
     if (!handler) {
-      show(el, key, html`<p>계정, 워크스페이스, 화면과 알림 설정을 관리해요.</p>
-        <a class="btn" href="#/settings/profile">프로필 열기</a>`);
+      show(el, key, html`<div class="settings-directory">${sections.map(([key,label]) => html`<a class="settings-destination" href="#/settings/${key}"><strong>${label}<span aria-hidden="true">↗</span></strong><span>${sectionDescriptions[key]}</span></a>`)}</div>`);
       return;
     }
     const account = await api.get('/api/auth/me');

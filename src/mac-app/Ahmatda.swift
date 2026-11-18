@@ -28,13 +28,7 @@ private enum Mode {
             return
         }
         guard args.count == 2, args[0] == "--server",
-              let address = URLComponents(string: args[1]),
-              address.scheme?.lowercased() == "https",
-              let host = address.host, !host.isEmpty,
-              address.user == nil, address.password == nil,
-              address.path.isEmpty || address.path == "/",
-              address.query == nil, address.fragment == nil,
-              let url = address.url else { throw LaunchError.usage }
+              let url = TeamServerAddress.validated(args[1], confirmed: true) else { throw LaunchError.usage }
         self = .remote(url)
     }
 }
@@ -88,7 +82,12 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
     private var childReady = false
     private var failed = false
     private var closing = false
+    private var teamServerProcesses: [Process] = []
+    private var teamServerOpening = false
     private var preparationShown = false
+    private var gettingStartedAlert: NSAlert?
+    private var gettingStartedChoice: NSPopUpButton?
+    private var gettingStartedDetail: NSTextField?
     private var preparationAlert: NSAlert?
     private var aiEnvironment: [String: String] = [:]
     private let probeDelegate = LocalProbeDelegate()
@@ -623,7 +622,11 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
         }
         addMenu("아맞다", [NSMenuItem(title: "아맞다 종료", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")])
         var navigation = [command("링크 열기…", #selector(openLink), "l"), command("새로고침", #selector(reload), "r")]
+        navigation.append(command("팀 서버 열기…", #selector(openTeamServer)))
         if localMode {
+            navigation.append(command("이 Mac에서 시작…", #selector(showGettingStarted)))
+            navigation.append(command("이 Mac 점검…", #selector(showMacPreflight)))
+            navigation.append(command("모델·재개 캐시 공간…", #selector(showModelStorageUsage)))
             navigation.append(command("로컬 AI 준비 상태…", #selector(showPreparation)))
             navigation.append(command("주문 정리 모델 준비…", #selector(confirmModelPreparation)))
             navigation.append(command("받아쓰기 모델 준비…", #selector(confirmWhisperPreparation)))
@@ -655,14 +658,14 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
         alert.informativeText = "로컬 모델 연결을 확인하고 있어요…"
         alert.addButton(withTitle: "수동 업무 계속")
         alert.addButton(withTitle: "다시 확인")
-        alert.addButton(withTitle: "모델 준비 안내")
+        alert.addButton(withTitle: "이 Mac에서 시작")
         alert.beginSheetModal(for: window) { [weak self] answer in
             guard let self else { return }
             self.probeSession?.invalidateAndCancel()
             self.probeSession = nil
             self.preparationAlert = nil
             if answer == .alertSecondButtonReturn { self.showPreparation() }
-            if answer == .alertThirdButtonReturn { self.showPreparationGuide() }
+            if answer == .alertThirdButtonReturn { DispatchQueue.main.async { [weak self] in self?.showPreparationGuide() } }
         }
         let common = "\n\n받아쓰기: " + whisperWorkerNotice + "\n이 화면에서는 실제 전사를 시험하지 않아요. 유료 AI는 꺼져 있고, 녹음이나 원문은 외부로 보내지 않아요."
         if aiEnvironment["AI_PROVIDER"] == "off" {
@@ -685,12 +688,169 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
         }.resume()
     }
 
-    private func showPreparationGuide() {
+    private func showPreparationGuide() { showGettingStarted() }
+
+    @objc private func openTeamServer() {
+        guard !closing, !failed, !teamServerOpening, window.attachedSheet == nil else { return }
+        teamServerOpening = true
         let alert = NSAlert()
-        alert.messageText = "모델을 자동으로 내려받지 않아요"
-        alert.informativeText = "현재는 개발 검증용 앱이에요.\n\n1. 앱 전용 Ollama 실행기를 준비해요. 앱을 다시 열면 11435에서 자동 시작해요.\n2. 설정된 모델을 준비해요: \(aiEnvironment["OLLAMA_MODEL"] ?? "qwen3:4b")\n3. 이동 → 로컬 AI 준비 상태에서 다시 확인해요.\n\n음성 받아쓰기는 faster-whisper 일꾼이 별도로 필요해요. 이동 → 주문 정리 모델 준비에서 검증된 실행기의 qwen3:4b 파일을 준비할 수 있어요. Ollama 포함 빌드는 첫 실행에 실행기를 설치하고 앱이 시작·종료해요.\n계정 가입 후 이동 → 로컬 가입 인증 링크 열기에서 이메일을 입력하면 터미널 없이 링크를 열 수 있어요."
+        alert.messageText = "팀 서버 주소 입력"
+        alert.informativeText = "관리자가 알려 준 HTTPS 기본 주소를 입력하세요. 다음 화면에서 주소와 전송 범위를 확인한 뒤 연결해요. 이 단계에서는 연결하지 않아요."
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 410, height: 26))
+        field.placeholderString = "https://team.example.com"
+        alert.accessoryView = field
+        alert.addButton(withTitle: "주소 확인")
+        alert.addButton(withTitle: "취소")
+        alert.beginSheetModal(for: window) { [weak self] answer in
+            guard let self else { return }
+            guard !self.closing, !self.failed, answer == .alertFirstButtonReturn else { self.teamServerOpening = false; return }
+            guard let url = TeamServerAddress.validated(field.stringValue, confirmed: true) else {
+                self.teamServerOpening = false
+                DispatchQueue.main.async { [weak self] in self?.showTeamServerError("HTTPS 서버의 기본 주소만 입력해 주세요. 계정 정보·경로·검색 조건은 넣을 수 없어요. 이동 메뉴에서 다시 입력할 수 있어요.") }
+                return
+            }
+            DispatchQueue.main.async { [weak self] in self?.confirmTeamServer(url) }
+        }
+    }
+
+    private func confirmTeamServer(_ url: URL) {
+        guard !closing, !failed, window.attachedSheet == nil else { teamServerOpening = false; return }
+        let alert = NSAlert()
+        alert.messageText = "이 팀 서버를 별도 창에서 열까요?"
+        alert.informativeText = "연결 주소: \(url.absoluteString)\n\n연결하면 IP 등 접속 정보가 전송돼요. 이후 직접 입력·업로드한 내용은 팀 서버에 전달되며, 페이지의 외부 통신과 AI·요금·보관은 서버 운영자의 정책을 따라요. 로컬 무료 모드와 다르므로 확인해 주세요.\n\n로컬 자료·계정·토큰은 자동 이전하지 않아요. 로컬 업무와 받아쓰기는 유지하고 별도 로그인해요. 이 앱의 원격 쿠키·사이트 저장소는 창을 닫으면 유지하지 않아요. 서버의 계정·접속 기록을 삭제하거나 서버 세션을 강제 종료하는 것은 아니에요. 주소를 저장하지 않아요.\n\n로컬 앱을 닫아도 원격 창은 강제 종료하지 않아요. 원격 작업을 끝낸 뒤 해당 창을 직접 닫아 주세요."
+        alert.addButton(withTitle: "이 주소로 연결")
+        alert.addButton(withTitle: "취소")
+        alert.beginSheetModal(for: window) { [weak self] answer in
+            guard let self else { return }
+            self.teamServerOpening = false
+            guard !self.closing, !self.failed, answer == .alertFirstButtonReturn else { return }
+            guard let executable = Bundle.main.executableURL else {
+                DispatchQueue.main.async { [weak self] in self?.showTeamServerError("앱 실행 파일을 찾지 못했어요. 현재 작업은 그대로 유지돼요.") }; return
+            }
+            let process = Process()
+            process.executableURL = executable
+            process.arguments = ["--server", url.absoluteString]
+            process.environment = ["HOME": self.files.homeDirectoryForCurrentUser.path, "PATH": "/usr/bin:/bin:/usr/sbin:/sbin"]
+            process.standardInput = FileHandle.nullDevice
+            process.standardOutput = FileHandle.nullDevice
+            process.standardError = FileHandle.nullDevice
+            process.terminationHandler = { [weak self] stopped in
+                DispatchQueue.main.async { [weak self] in self?.teamServerProcesses.removeAll { $0 === stopped } }
+            }
+            do {
+                try process.run()
+                self.teamServerProcesses.removeAll { !$0.isRunning }
+                self.teamServerProcesses.append(process)
+            } catch {
+                DispatchQueue.main.async { [weak self] in self?.showTeamServerError("별도 창을 열지 못했어요. 현재 로컬 작업은 그대로 유지돼요. 이동 메뉴에서 다시 시도할 수 있어요.") }
+            }
+        }
+    }
+
+    private func showTeamServerError(_ message: String) {
+        guard !closing, window.attachedSheet == nil else { return }
+        let alert = NSAlert()
+        alert.messageText = "팀 서버 창을 열지 않았어요"
+        alert.informativeText = message
         alert.addButton(withTitle: "확인")
         alert.beginSheetModal(for: window)
+    }
+
+    @objc private func showModelStorageUsage() {
+        guard let storage = localStorage, !closing, !failed, window.attachedSheet == nil else { return }
+        let alert = NSAlert()
+        alert.messageText = "모델·재개 캐시 공간 · 읽기 전용"
+        alert.informativeText = "파일 내용이나 해시를 읽지 않고 크기만 확인하고 있어요…"
+        alert.addButton(withTitle: "닫기")
+        alert.beginSheetModal(for: window)
+        DispatchQueue.global(qos: .utility).async { [weak self, weak alert] in
+            let report = LocalModelStorageUsage.report(LocalModelStorageUsage.inspect(root: storage))
+            DispatchQueue.main.async {
+                guard let self, let alert, !self.closing, self.window.attachedSheet === alert.window else { return }
+                alert.informativeText = report
+            }
+        }
+    }
+
+    @objc private func showMacPreflight() {
+        guard let storage = localStorage, !closing, !failed, window.attachedSheet == nil else { return }
+        let version = ProcessInfo.processInfo.operatingSystemVersion
+        var system = utsname()
+        let architecture: String?
+        if uname(&system) == 0 {
+            architecture = withUnsafeBytes(of: &system.machine) { bytes in
+                String(bytes: bytes.prefix { $0 != 0 }, encoding: .utf8)
+            }
+        } else { architecture = nil }
+        let attributes = try? files.attributesOfFileSystem(forPath: storage.path)
+        let free = (attributes?[.systemFreeSize] as? NSNumber).flatMap { $0.int64Value >= 0 ? $0.uint64Value : nil }
+        let memory = ProcessInfo.processInfo.physicalMemory
+        let alert = NSAlert()
+        alert.messageText = "이 Mac 점검 · 읽기 전용"
+        alert.informativeText = LocalMacPreflight.report(
+            os: "\(version.majorVersion).\(version.minorVersion).\(version.patchVersion)",
+            architecture: architecture, memoryBytes: memory > 0 ? memory : nil, freeBytes: free)
+        alert.addButton(withTitle: "닫기")
+        alert.addButton(withTitle: "모델·캐시 공간 보기")
+        alert.beginSheetModal(for: window) { [weak self] answer in
+            if answer == .alertSecondButtonReturn {
+                DispatchQueue.main.async { [weak self] in self?.showModelStorageUsage() }
+            }
+        }
+    }
+
+    @objc private func showGettingStarted() {
+        guard localStorage != nil, !closing, !failed, gettingStartedAlert == nil,
+              modelSetupProcess == nil, window.attachedSheet == nil else { return }
+        let alert = NSAlert()
+        alert.messageText = "이 Mac에서 시작"
+        alert.informativeText = LocalGettingStartedStep.introduction
+        alert.addButton(withTitle: "선택한 단계 열기")
+        alert.addButton(withTitle: "닫기")
+        let choice = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 410, height: 28))
+        choice.addItems(withTitles: LocalGettingStartedStep.allCases.map { $0.title })
+        choice.target = self
+        choice.action = #selector(updateGettingStartedStep)
+        let detail = NSTextField(wrappingLabelWithString: LocalGettingStartedStep.preflight.detail)
+        detail.frame = NSRect(x: 0, y: 0, width: 410, height: 106)
+        let content = NSView(frame: NSRect(x: 0, y: 0, width: 410, height: 146))
+        choice.frame.origin.y = 116
+        content.addSubview(choice)
+        content.addSubview(detail)
+        alert.accessoryView = content
+        gettingStartedAlert = alert
+        gettingStartedChoice = choice
+        gettingStartedDetail = detail
+        alert.beginSheetModal(for: window) { [weak self] answer in
+            guard let self else { return }
+            let step = LocalGettingStartedStep.selected(index: choice.indexOfSelectedItem,
+                                                        confirmed: answer == .alertFirstButtonReturn)
+            self.gettingStartedAlert = nil
+            self.gettingStartedChoice = nil
+            self.gettingStartedDetail = nil
+            guard !self.closing, !self.failed, let step else { return }
+            // End this sheet before invoking another existing confirmation sheet.
+            DispatchQueue.main.async { [weak self] in self?.openGettingStartedStep(step) }
+        }
+    }
+
+    @objc private func updateGettingStartedStep() {
+        guard let choice = gettingStartedChoice,
+              let step = LocalGettingStartedStep(rawValue: choice.indexOfSelectedItem) else { return }
+        gettingStartedDetail?.stringValue = step.detail
+    }
+
+    private func openGettingStartedStep(_ step: LocalGettingStartedStep) {
+        guard localStorage != nil, !closing, !failed, window.attachedSheet == nil else { return }
+        switch step {
+        case .preflight: showMacPreflight()
+        case .account: webView?.load(URLRequest(url: URL(string: "http://127.0.0.1:5601/#/login")!))
+        case .verification: openLocalVerification()
+        case .orderModel: confirmModelPreparation()
+        case .speechModel: confirmWhisperPreparation()
+        case .connection: openWorkerSettings()
+        case .readiness: showPreparation()
+        }
     }
 
     @objc private func confirmModelPreparation() {

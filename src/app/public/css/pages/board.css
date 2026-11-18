@@ -34,3 +34,35 @@
   .board-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; }
   .board-col { display: block; }
 }
+
+/* 단계별 작업판: 버튼보다 주문 내용이 먼저 읽힌다. */
+.board-filters { padding: 16px 20px; background: #fff; border: 1px solid var(--line); border-radius: 12px; margin-bottom: 24px; gap: 20px; }
+.board-filters .field { display: flex; gap: 10px; align-items: center; margin: 0; }
+.board-filters .select { min-width: 150px; }
+.board-col { padding: 0 12px 12px; border: 0; border-radius: 12px; background: #eef0f3; }
+.board-col-head { padding: 16px 4px; margin: 0; font-size: .88rem; color: var(--ink) !important; }
+.board-col-head > span:first-child::before { content:''; display:inline-block; width:7px; height:7px; background: #ba7b1a; border-radius: 50%; margin-right:8px; }
+.board-col-confirmed .board-col-head > span:first-child::before { background: var(--brand); }
+.board-col-shipped .board-col-head > span:first-child::before { background: #00a544; }
+.board-count { min-width: 25px; height: 25px; font-size: .73rem; border:0; background: #e0e3e8; }
+.bcard { border:1px solid #e3e6eb; border-radius:12px; box-shadow: 0 1px 2px #17171905; }
+.bcard-urgent { border-left: 3px solid #b77714; }
+.bcard-main { padding:18px 16px 12px; }
+.bcard-customer { font-size:1rem; font-weight:650; }
+.bcard-car { font-size:.8rem; color:var(--muted); font-weight:400; margin-top:6px; }
+.bcard-parts { font-size:.88rem; line-height:1.6; margin-top:12px; }
+.bcard-when { font-size:.74rem; line-height:1.6; margin-top:12px; }
+.bcard-actions { padding:0 16px 16px; }
+.bcard-actions .btn { font-size:.8rem; min-height:44px; }
+.bcard-actions .btn-primary { background:var(--brand-soft); border-color:transparent; color:var(--brand-ink); }
+.bcard-actions .btn-primary:hover { background:#dceafe; }
+.bcard-actions .btn-ok { background:var(--ok-soft); border-color:var(--ok-line); color:var(--ok); }
+@media(max-width:719px) {
+ .board-filters { padding:12px; gap:8px; margin-bottom:16px; }
+ .board-filters .field { flex:1; min-width:0; display:grid; gap:4px; }
+ .board-filters .select { min-width:0; width:100%; }
+ .board-tabs { gap:0; }
+ .board-tabs .tab { flex:1; padding:8px 5px; font-size:.8rem; }
+ .board-col-head { padding-block:14px; }
+}
+.board-filters .field > span { flex:none; white-space:nowrap; }

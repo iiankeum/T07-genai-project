@@ -85,3 +85,19 @@
   .live-session-actions .btn { flex: 1 1 auto; }
   .live-actions .btn { flex: 1 1 auto; }
 }
+
+.live-session { border-color:var(--line); }
+.live-state { font-size:.94rem; font-weight:600; }
+.live-mode-note { font-size:.78rem; }
+.live-panel-head h2 { font-size:1.05rem; }
+.live-lines { background:#fafbfc; border-color:transparent; }
+.live-line { font-size:.94rem; border:0; border-radius:8px; }
+.live-empty { font-size:.88rem; min-height:200px; }
+@media(max-width:719px) {
+ .live-controls { gap:12px; }
+ .live-wave { width:38px; height:38px; border-radius:10px; }
+ .live-control-text { flex:1 1 220px; }
+ .live-session-actions { width:100%; }
+ .live-session-actions .btn { flex:1; }
+ .live-lines { min-height:200px; }
+}

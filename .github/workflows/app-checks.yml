@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'src/app/**'
+      - 'src/mac-app/**'
       - '.github/workflows/app-checks.yml'
   workflow_dispatch:
 permissions:
@@ -34,3 +35,14 @@ jobs:
         with:
           name: fake-data-browser-evidence
           path: src/app/artifacts/e2e
+
+  model-helpers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Model resume and OS lock regressions (fake data only)
+        run: node --test src/mac-app/tests/model-prepare-lock.test.mjs src/mac-app/tests/setup-local-model.test.mjs src/mac-app/tests/setup-whisper-model.test.mjs

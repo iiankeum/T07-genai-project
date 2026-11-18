@@ -49,9 +49,9 @@ const WORKSPACES = { href: '#/workspaces', label: '워크스페이스 선택', i
 const TABS = [
   { href: '#/', label: '오늘', icon: '☀', page: 'today' },
   { href: '#/calls', label: '통화', icon: '☎', page: ['calls', 'call', 'customer'] },
-  { href: '#/live', label: '실시간', icon: '●', page: 'live' },
-  { href: '#/assistant', label: '어시스턴트', icon: '✧', page: ['assistant', 'ask'] },
-  { href: '#/more', label: '더보기', icon: '≡', page: ['more', 'board', 'shipping', 'upload', 'glossary', 'trial', 'help', 'admin', 'settings', 'account'] },
+  { href: '#/board', label: '주문', icon: '▦', page: 'board' },
+  { href: '#/shipping', label: '출고', icon: '⇪', page: 'shipping' },
+  { href: '#/more', label: '더보기', icon: '≡', page: ['more', 'live', 'assistant', 'ask', 'upload', 'glossary', 'trial', 'help', 'admin', 'settings', 'account'] },
 ];
 
 const view = document.getElementById('view');
@@ -89,7 +89,7 @@ function renderNav(page, meta) {
 }
 
 function renderMore(el, meta) {
-  const items = [...NAV.filter((n) => !['today', 'assistant'].includes(n.page) && !Array.isArray(n.page)), WORKSPACES, SETTINGS, NOTIFICATIONS, HELP];
+  const items = [...NAV.filter((n) => !['today', 'board', 'shipping'].includes(n.page) && !Array.isArray(n.page)), LIVE, WORKSPACES, SETTINGS, NOTIFICATIONS, HELP];
   if (meta?.access?.role === 'admin') items.push(ADMIN);
   items.push({ href: '#/trial', label: '무료 체험 신청', icon: '✉' });
   render(el, html`<div class="page">
