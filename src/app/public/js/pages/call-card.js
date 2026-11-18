@@ -906,7 +906,10 @@ export function mountCard(el, o) {
     const sub = t.dataset.item;
     if (!items[i]) return;
     const value = t.value.trim();
-    items[i][sub] = sub === 'qty' ? (value === '' ? null : Number(value)) : sub === 'partNo' ? normalizePartNo(value) : value;
+    const nextValue = sub === 'qty' ? (value === '' ? null : Number(value)) : sub === 'partNo' ? normalizePartNo(value) : value;
+    // input 뒤 blur/change가 같은 값을 다시 보내면 확정 버튼을 교체하지 않는다.
+    if (Object.is(items[i][sub], nextValue)) return;
+    items[i][sub] = nextValue;
     if (sub === 'part') {
       const title = t.closest('.cd-item')?.querySelector('.cd-item-title');
       if (title) title.textContent = value || '새 부품';

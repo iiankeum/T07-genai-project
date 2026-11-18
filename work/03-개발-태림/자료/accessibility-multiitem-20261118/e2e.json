@@ -1,0 +1,60 @@
+{
+  "at": "2026-11-18T13:11:39.179Z",
+  "fixtureOnly": true,
+  "paidProviderEnabled": false,
+  "runError": null,
+  "results": [
+    {
+      "name": "dashboard prioritizes work and never creates AI briefing on entry",
+      "status": "passed",
+      "elapsedMs": 300
+    },
+    {
+      "name": "call archive searches and preserves advanced filters",
+      "status": "passed",
+      "elapsedMs": 591
+    },
+    {
+      "name": "desktop call loads with three columns and evidence",
+      "status": "passed",
+      "elapsedMs": 387
+    },
+    {
+      "name": "autosave, human review, confirm, callback and shipping preserve states",
+      "status": "passed",
+      "elapsedMs": 560
+    },
+    {
+      "name": "mobile 360px navigation and card remain usable",
+      "status": "passed",
+      "elapsedMs": 61
+    },
+    {
+      "name": "assistant uses saved fake calls and labels fixture responses",
+      "status": "passed",
+      "elapsedMs": 119
+    },
+    {
+      "name": "knowledge proposal requires separate approval",
+      "status": "passed",
+      "elapsedMs": 234
+    },
+    {
+      "name": "live fake sample can pause without claiming completion",
+      "status": "passed",
+      "elapsedMs": 218
+    },
+    {
+      "name": "private signup, one-time verification, login and workspace isolation",
+      "status": "passed",
+      "elapsedMs": 760
+    },
+    {
+      "name": "stale tab cannot write or download after another tab switches workspace",
+      "status": "passed",
+      "elapsedMs": 346
+    }
+  ],
+  "pageErrors": [],
+  "blockedExternalOrigins": []
+}

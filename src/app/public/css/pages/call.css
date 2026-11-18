@@ -508,3 +508,8 @@ body[data-page="call"] { background:#fff; }
 .cd-items > .cd-sec-top { margin-bottom:4px; }
 .cd-item { padding:8px 0 16px; }
 .cd-item-head { margin-bottom:4px; }
+/* Montage Body 1/Label 1 비율을 rem으로 적용해 '글씨 크게'에서도 입력이 확대된다. */
+.cd-card .cd-input-row > .input,.cd-card .cd-input-row > .select,.cd-card .cd-input-row > .textarea,
+.cd-item .input { font-size:.9412rem; line-height:1.5; }
+.cd-field-top label,.cd-sub > span { font-size:.8235rem; line-height:1.4286; }
+.cd-card .cd-item .input { font-size:.9412rem; line-height:1.5; }

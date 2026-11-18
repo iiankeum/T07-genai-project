@@ -50,6 +50,7 @@ export default {
     let disposed = false;
     let detailSeq = 0;
     let dialogState = null;
+    let dialogReturnAction = null;
 
     render(el, html`<div class="page kn-page">
       <div class="page-head">
@@ -219,10 +220,15 @@ export default {
     }
 
     function showDialog(title, contents) {
+      if (!dialog.open) dialogReturnAction = document.activeElement?.closest('[data-act]')?.dataset.act || null;
       render(dialog, html`<div class="ka-dialog-head"><h2 id="kn-dialog-title">${title}</h2>
-        <button class="btn btn-ghost ka-close" type="button" aria-label="닫기" data-act="close">×</button></div>${contents}`);
+        <button class="btn btn-ghost ka-close" type="button" aria-label="닫기" data-act="close">×</button></div><p data-ref="mutation-status" role="status" aria-live="polite" hidden></p>${contents}`);
       if (!dialog.open) dialog.showModal();
     }
+
+    dialog.addEventListener('cancel', (event) => {
+      if (busy) event.preventDefault();
+    });
 
     let relationRowId = 0;
     function relationRow(entry = {}) {
@@ -307,20 +313,38 @@ export default {
     async function mutate(run, success, inlineError) {
       if (busy) return;
       busy = true;
+      const modalMutation = dialog.open;
       const submit = dialog.querySelector('button[type="submit"]');
+      const progress = ref('mutation-status');
       if (submit) submit.disabled = true;
+      if (modalMutation) {
+        submit?.form?.setAttribute('aria-busy', 'true');
+        if (progress) { progress.textContent = '저장 중입니다. 완료될 때까지 잠시 기다려 주세요.'; progress.hidden = false; }
+        if (ref('form-error')) ref('form-error').textContent = '';
+      }
       try {
         const result = await run();
         if (disposed) return;
         if (dialog.open) dialog.close();
         toast(success, 'ok');
         await load(result?.id || result?.item?.id || selected);
+        if (modalMutation && !disposed) {
+          const returnButton = [...root.querySelectorAll('[data-act]')].find(button => button.dataset.act === dialogReturnAction && !dialog.contains(button));
+          (returnButton || ref('detail').querySelector('#kn-detail-title') || root.querySelector('#kn-search'))?.focus({ preventScroll: true });
+        }
       } catch (error) {
         if (disposed) return;
-        if (inlineError && ref('form-error')) render(ref('form-error'), errorBox(error));
+        if (inlineError && ref('form-error')) {
+          const feedback = ref('form-error');
+          render(feedback, errorBox(error));
+          feedback.tabIndex = -1;
+          feedback.focus();
+        }
         else toast(error.message || '요청을 처리하지 못했어요.', 'error');
       } finally {
         busy = false;
+        submit?.form?.removeAttribute('aria-busy');
+        if (progress) progress.hidden = true;
         if (submit) submit.disabled = false;
       }
     }
