@@ -146,7 +146,11 @@ export default {
       if (!data.name) { showMsg(html`<div class="notice notice-error" role="alert">이름을 써 주세요.</div>`); form.elements.name.focus(); return; }
       if (!data.contact || !contactOk(data.contact)) { showMsg(html`<div class="notice notice-error" role="alert">연락처를 전화번호(숫자) 또는 이메일로 써 주세요.</div>`); form.elements.contact.focus(); return; }
       if (!data.consent) { showMsg(html`<div class="notice notice-error" role="alert">개인정보 수집 · 이용에 동의해야 신청할 수 있습니다.</div>`); form.elements.consent.focus(); return; }
+      // 확정한 제출값과 화면값이 달라지지 않도록 요청 동안 입력·동의를 잠근다.
+      const controls = [...form.querySelectorAll('input, select, textarea')].map(field => [field, field.disabled]);
       busy = true;
+      for (const [field] of controls) field.disabled = true;
+      form.setAttribute('aria-busy', 'true');
       updateSubmit();
       showMsg(html`<div class="notice"><span class="spinner" aria-hidden="true"></span> 보내는 중…</div>`);
       try {
@@ -166,7 +170,11 @@ export default {
         showMsg(html`<div class="notice notice-error" role="alert">${err?.message || '신청을 보내지 못했습니다. 잠시 뒤 다시 해 주세요.'}</div>`);
       } finally {
         busy = false;
-        if (!disposed) updateSubmit();
+        if (!disposed && form.isConnected) {
+          for (const [field, disabled] of controls) field.disabled = disabled;
+          form.removeAttribute('aria-busy');
+          updateSubmit();
+        }
       }
     }
 

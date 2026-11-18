@@ -1,0 +1,33 @@
+{
+  "scope": "actual trial UI with deferred fake API, not real submission/consent/backend validation",
+  "results": [
+    {
+      "name": "pending fields and consent locked",
+      "pass": false,
+      "error": "name must be disabled\n\nfalse !== true\n"
+    },
+    {
+      "name": "duplicate submit produces one exact payload",
+      "pass": true
+    },
+    {
+      "name": "failure preserves values and unlocks",
+      "pass": true
+    },
+    {
+      "name": "retry succeeds once with updated payload",
+      "pass": true
+    },
+    {
+      "name": "pending edit cannot be silently discarded",
+      "pass": false,
+      "error": "pending edit and consent change were possible, then success replaced the form\n\ntrue !== false\n"
+    },
+    {
+      "runError": "trial pending safety assertions failed"
+    }
+  ],
+  "requestCount": 3,
+  "errors": [],
+  "blocked": []
+}
