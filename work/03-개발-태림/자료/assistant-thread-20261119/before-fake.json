@@ -1,0 +1,9 @@
+{
+  "reproduced": true,
+  "scope": "actual assistant module + fake GET only",
+  "before": "전환 중 작성한 가짜 초안",
+  "after": "",
+  "posts": 0,
+  "errors": [],
+  "external": []
+}

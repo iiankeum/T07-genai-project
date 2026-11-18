@@ -20,6 +20,8 @@ export default {
     let request = null;
     let draftRequest = null;
     let threadRequest = null;
+    let threadInputState = null;
+    let threadActivity = 'load';
     let contextRequest = null;
     let draft = null;
     let failure = null;
@@ -60,6 +62,7 @@ export default {
             <button type="submit" class="btn btn-primary" data-act="send" disabled>보내기</button>
             <button type="button" class="btn" data-act="stop" hidden>응답 중단</button>
           </form>
+          <p class="help" id="as-thread-loading" data-ref="thread-loading" role="status" hidden></p>
           <p class="help as-foot">주문 확정과 외부 발송은 담당자가 진행합니다.</p>
         </section>
       </div>
@@ -173,7 +176,34 @@ export default {
       syncButtons();
     }
 
+    function syncThreadInput() {
+      const loading = ref('thread-loading');
+      const form = ref('form');
+      if (threadRequest) {
+        if (!threadInputState) threadInputState = {
+          disabled: input.disabled,
+          describedBy: input.getAttribute('aria-describedby'),
+          busy: form.getAttribute('aria-busy'),
+        };
+        input.disabled = true;
+        input.setAttribute('aria-describedby', [threadInputState.describedBy, 'as-thread-loading'].filter(Boolean).join(' '));
+        form.setAttribute('aria-busy', 'true');
+        loading.textContent = threadActivity === 'delete'
+          ? '대화를 삭제하는 중입니다. 완료 후 질문을 작성할 수 있어요.'
+          : '대화를 불러오는 중입니다. 완료 후 질문을 작성할 수 있어요.';
+        loading.hidden = false;
+      } else if (threadInputState) {
+        input.disabled = threadInputState.disabled;
+        for (const [element, name, value] of [[input, 'aria-describedby', threadInputState.describedBy], [form, 'aria-busy', threadInputState.busy]]) {
+          if (value === null) element.removeAttribute(name); else element.setAttribute(name, value);
+        }
+        loading.hidden = true;
+        threadInputState = null;
+      }
+    }
+
     function syncButtons() {
+      syncThreadInput();
       act('send').hidden = Boolean(request);
       act('send').disabled = !context || Boolean(request || threadRequest) || !input.value.trim();
       act('stop').hidden = !request;
@@ -242,6 +272,7 @@ export default {
       if (request || threadRequest) return;
       if (!id) { newChat(); return; }
       const controller = new AbortController();
+      threadActivity = 'load';
       threadRequest = controller;
       failure = null;
       paintHistory();
@@ -264,6 +295,7 @@ export default {
       if (!thread || request || threadRequest) return;
       const id = thread.id;
       if (!(await confirmBox('저장된 대화를 삭제할까요?')) || disposed || request || threadRequest || thread?.id !== id) return;
+      threadActivity = 'delete';
       threadRequest = new AbortController();
       paintHistory();
       syncButtons();

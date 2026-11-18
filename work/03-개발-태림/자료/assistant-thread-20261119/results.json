@@ -1,0 +1,104 @@
+{
+  "status": "passed",
+  "scope": "actual assistant module + fake GET/POST; no AI, real server persistence or account test",
+  "results": [
+    {
+      "width": 1440,
+      "flow": "success",
+      "typingLocked": true,
+      "duplicateAndSendBlocked": true,
+      "priorDraftPolicyPreserved": true,
+      "sendAfterRecovery": true
+    },
+    {
+      "width": 1440,
+      "flow": "failure/restoration/retry",
+      "typingLocked": true,
+      "duplicateAndSendBlocked": true,
+      "priorDraftPolicyPreserved": true,
+      "sendAfterRecovery": true
+    },
+    {
+      "width": 1440,
+      "flow": "delete success locks then retains existing clear policy"
+    },
+    {
+      "width": 1440,
+      "flow": "delete failure restores draft"
+    },
+    {
+      "width": 1440,
+      "flow": "dismiss deletion preserves draft without locking or request"
+    },
+    {
+      "width": 1440,
+      "flow": "AI response pending still permits and preserves next draft"
+    },
+    {
+      "width": 1440,
+      "flow": "original disabled/describedby preserved"
+    },
+    {
+      "width": 1440,
+      "flow": "sequential A-B-A transitions remain usable"
+    },
+    {
+      "width": 1440,
+      "flow": "unmount late success preserves new screen and focus"
+    },
+    {
+      "width": 1440,
+      "flow": "old mount failure cannot unlock or overwrite new mount transition"
+    },
+    {
+      "width": 390,
+      "flow": "success",
+      "typingLocked": true,
+      "duplicateAndSendBlocked": true,
+      "priorDraftPolicyPreserved": true,
+      "sendAfterRecovery": true
+    },
+    {
+      "width": 390,
+      "flow": "failure/restoration/retry",
+      "typingLocked": true,
+      "duplicateAndSendBlocked": true,
+      "priorDraftPolicyPreserved": true,
+      "sendAfterRecovery": true
+    },
+    {
+      "width": 390,
+      "flow": "delete success locks then retains existing clear policy"
+    },
+    {
+      "width": 390,
+      "flow": "delete failure restores draft"
+    },
+    {
+      "width": 390,
+      "flow": "dismiss deletion preserves draft without locking or request"
+    },
+    {
+      "width": 390,
+      "flow": "AI response pending still permits and preserves next draft"
+    },
+    {
+      "width": 390,
+      "flow": "original disabled/describedby preserved"
+    },
+    {
+      "width": 390,
+      "flow": "sequential A-B-A transitions remain usable"
+    },
+    {
+      "width": 390,
+      "flow": "unmount late success preserves new screen and focus"
+    },
+    {
+      "width": 390,
+      "flow": "old mount failure cannot unlock or overwrite new mount transition"
+    }
+  ],
+  "errors": [],
+  "external": []
+}
