@@ -196,3 +196,7 @@ AHMATDA_BUNDLE_OLLAMA=1 AHMATDA_BUNDLE_WHISPER=1 AHMATDA_BUNDLE_AUDIO=1 bash src
 빌드는 이미 준비된 `runtime/ffmpeg-audio-9.0.2`를 검사해 복사하며 네트워크/컴파일을 실행하지 않는다. `AHMATDA_AUDIO_RUNTIME`으로 같은 검증을 통과하는 준비 경로를 지정할 수 있다. 앱은 번들의 실행파일을 명시 경로로 사용한다. 대응소스·LGPL고지·configure설정·빌드로그도 포함한다. 자체inventory는 변경탐지이며 공급자서명을 대신하지 않는다.
 
 시스템dylib만 의존, 네트워크프로토콜 없음(file/pipe만), 가짜 WAV/MP3/M4A→16k mono WAV 및 ffprobe를 확인했다. 앱의 실제 `convertToWav`로도 세 형식이 통과했다. [증거](../work/03-개발-태림/자료/real-local-audio-20261118/audio-converter-fake-input.json). 모든 포맷/손상파일/새Mac 검증은 아니다. 공식PGP서명·DeveloperID·공증과 최종 재배포 의무 검토는 아직이다.
+
+## 10분 유지 검증
+
+가짜 임시 공간의 실Whisper 일꾼을600초 유지하며6초 간격 online검사100회를 통과했다. 프로세스 재시작 없이 전사→fixture카드 ready, 브라우저 해제→감독기 종료,5601/11435 해제를 확인했다. [증거](../work/03-개발-태림/자료/real-local-audio-20261118/managed-worker-10min-fake-input.json). 수시간/수일 운영·메모리누수·현장 음성품질·실LLM 시험은 아니다. `real-managed-worker.mjs --run-real-local-model --soak-seconds=600`으로 재현한다.
