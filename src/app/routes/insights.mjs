@@ -722,7 +722,7 @@ export function register(router) {
     const body = buildShippingCsv(day, scope);
     res.writeHead(200, {
       'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': `attachment; filename="callnote-fake-shipping-${day}${scope === 'today' ? '-today' : ''}.csv"`,
+      'Content-Disposition': `attachment; filename="ahcha-${requestAccess()?.demo === true ? 'demo-' : ''}shipping-${day}${scope === 'today' ? '-today' : ''}.csv"`,
       'Cache-Control': 'no-store',
       'Content-Length': Buffer.byteLength(body),
     });

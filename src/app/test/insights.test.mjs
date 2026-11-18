@@ -325,7 +325,7 @@ test('출고 CSV: BOM · 칸 · 수식 주입 막기', async () => {
   const res = await fetch(base + '/api/shipping.csv');
   assert.equal(res.status, 200);
   assert.equal(res.headers.get('content-type'), 'text/csv; charset=utf-8');
-  assert.match(res.headers.get('content-disposition'), /^attachment; filename="callnote-fake-shipping-\d{4}-\d{2}-\d{2}\.csv"$/);
+  assert.match(res.headers.get('content-disposition'), /^attachment; filename="ahcha-demo-shipping-\d{4}-\d{2}-\d{2}\.csv"$/);
   const buf = Buffer.from(await res.arrayBuffer());
   assert.deepEqual([...buf.subarray(0, 3)], [0xef, 0xbb, 0xbf]);
   const text = buf.toString('utf8').slice(1);

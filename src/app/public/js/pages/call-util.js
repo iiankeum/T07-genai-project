@@ -170,7 +170,7 @@ export function transcriptText(call) {
   const head = [
     call.title || '통화',
     [fmtWhen(call.recordedAt), call.durationSec ? `길이 ${fmtSec(call.durationSec)}` : '', SOURCE_LABEL[call.source] || ''].filter(Boolean).join(' · '),
-    '(가짜 통화 데모 — 거래처 · 차번호 · 전화번호 · 품번은 지어낸 것입니다)',
+    ...(call.isFake === true ? ['(가짜 통화 데이터 — 실제 업무 자료가 아닙니다)'] : []),
   ];
   const segs = Array.isArray(call.segments) ? call.segments : [];
   const body = segs.length
