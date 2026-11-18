@@ -33,3 +33,5 @@ Ollama26.2 대상은 `mlx_metal_v4/libjaccl.dylib`, `libmlx.dylib`, `libmlxc.dyl
 다운로드 원문의 SHA256은 `src/mac-app/licenses/sources.json`에 기록한다. 원본 wheel과 실행파일을 수정하지 않고 고지만 별도로 포함한다. 정식 재배포 적합성 판단을 끝낸 문서는 아니다.
 
 [빈 HOME 시험 기록](../work/03-개발-태림/자료/real-local-audio-20261118/clean-package-c7dcf23.json). 최신 개발 패키지는 `node src/mac-app/tests/clean-package.mjs --inspect-development-bundle`로 검사하며, 추가원문 고지3개의 해시도 확인한다.
+
+보완 후9097030 개발 ZIP도 동일한 빈 HOME 시험을 통과했고 추가 고지3개의 SHA256을 확인했다. [보완 패키지 기록](../work/03-개발-태림/자료/real-local-audio-20261118/clean-package-9097030.json). 패키지 크기는 약326MB이며 외부배포 차단 항목은 그대로다.
