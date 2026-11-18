@@ -238,7 +238,7 @@ async function integrations(el, key, account, ctx) {
   const access = account.access;
   if (!access || access.demo) return show(el, key, demoOnly);
   if (access.role !== 'admin') return show(el, key, restricted);
-  async function draw(token) {
+  async function draw(token, completion) {
     const rr = await api.get('/api/settings/integrations');
     show(el, key, html`
       <div class="integration-overview"><h2>녹음이 주문으로 정리되는 과정</h2><p>필요한 단계만 연결하세요. 아래 표시는 연결 설정 상태이며, 실제 처리 성공을 뜻하지 않습니다.</p><ol>
@@ -293,22 +293,33 @@ async function integrations(el, key, account, ctx) {
       target?.scrollIntoView({block:'start'}); target?.focus({preventScroll:true});
     }));
     const localConnect=el.querySelector('#local-worker-connect');
-    if(localConnect) bindForm(localConnect,async()=>{await api.post('/api/settings/local-worker',{confirm:true});await draw();});
+    if(localConnect) bindForm(localConnect,async()=>{await api.post('/api/settings/local-worker',{confirm:true});await draw(undefined,{section:'integration-transcribe',message:'이 작업공간의 Mac 받아쓰기 연결을 저장했어요.'});});
     const localDisconnect=el.querySelector('#local-worker-disconnect');
-    if(localDisconnect) bindForm(localDisconnect,async()=>{await api.del('/api/settings/local-worker',{body:{confirm:true}});await draw();});
+    if(localDisconnect) bindForm(localDisconnect,async()=>{await api.del('/api/settings/local-worker',{body:{confirm:true}});await draw(undefined,{section:'integration-transcribe',message:'이 작업공간의 Mac 받아쓰기 연결을 해제했어요.'});});
     bindForm(el.querySelector('#integration-token'), async () => {
       const result = await api.post('/api/settings/ingest-token');
-      await draw(result.token);
+      await draw(result.token,{section:'integration-ingest',message:'새 연결용 토큰을 발급했어요. 아래 입력란에서 확인해 주세요.'});
     });
     const revoke = el.querySelector('#integration-revoke');
     if (revoke) bindForm(revoke, async () => {
       await api.del('/api/settings/ingest-token');
-      await draw();
+      await draw(undefined,{section:'integration-ingest',message:'폴더 전송 연결용 토큰을 폐기했어요.'});
     });
     bindForm(el.querySelector('#integration-ai'), async (body) => {
       await api.patch('/api/settings/integrations', body);
       return 'AI 처리 설정을 저장했어요.';
     });
+    if (completion) {
+      const section = el.querySelector('#' + completion.section);
+      const feedback = document.createElement('p');
+      feedback.className = 'notice';
+      feedback.dataset.ref = 'integration-completion';
+      feedback.setAttribute('role', 'status');
+      feedback.tabIndex = -1;
+      feedback.textContent = completion.message;
+      section.querySelector('h2').after(feedback);
+      feedback.focus();
+    }
   }
   await draw();
 }
