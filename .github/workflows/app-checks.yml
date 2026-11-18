@@ -44,6 +44,10 @@ jobs:
         env:
           FORM_FEEDBACK_OUTPUT_DIR: artifacts/e2e/form-feedback
           ASSISTANT_FOCUS_OUTPUT: artifacts/e2e/assistant-focus
+      - name: Mobile evidence round-trip (fixture multi-item orders)
+        run: npm run test:mobile-return-e2e
+        env:
+          MOBILE_RETURN_OUTPUT: artifacts/e2e/mobile-return
       - uses: actions/upload-artifact@v4
         if: always()
         with:
