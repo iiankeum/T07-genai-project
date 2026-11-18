@@ -423,7 +423,7 @@ body[data-page="call"] { background:#fff; }
 .cd-label,.cd-sub > span { color:#464950; font-size:13px; font-weight:500; }
 .cd-input-row { border:1px solid var(--form-border); border-radius:8px; gap:0; background:#fff; overflow:hidden; }
 .cd-card .cd-input-row > :is(.input,.textarea,.select) { border:0!important; background:transparent!important; border-radius:0; min-height:44px; padding:10px 12px; font-size:14px; }
-.cd-input-row:focus-within { border-color:var(--brand); box-shadow:0 0 0 2px #0066ff14; }
+.cd-input-row:focus-within { border-color:var(--brand); box-shadow:0 0 0 2px #49738c24; }
 .cd-field.ev-active .cd-input-row { border-color:var(--brand); }
 .cd-card .cd-input-row:has([aria-invalid="true"]) { border-color:var(--danger); }
 .cd-input-row:has([readonly]),.cd-input-row:has(select:disabled) { background:#f7f8fa; }

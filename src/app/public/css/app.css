@@ -1,13 +1,13 @@
 @font-face { font-family: "Pretendard JP Variable"; src: url("/fonts/PretendardJPVariable.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
-/* Wanted Montage의 light 토큰을 기존 화면의 CSS 변수에 연결한다.
+/* Montage의 의미별 색상 역할을 유지하고 아차 로고의 브랜드색을 연결한다.
    출처와 라이선스는 ../../docs/montage.md를 참고한다. */
 :root {
-  --brand: #0066ff;
-  --brand-ink: #0054d1;
-  --brand-hover: #005eeb;
-  --brand-soft: #eaf2fe;
-  --brand-wash: #f7fbff;
-  --brand-line: #c9defe;
+  --brand: #49738c;
+  --brand-ink: #263f4e;
+  --brand-hover: #355f73;
+  --brand-soft: #eaf3f8;
+  --brand-wash: #f7fafc;
+  --brand-line: #b7cedc;
   --ink: #171719;
   --ink-2: #2e2f33;
   --muted: #5a5c63;
