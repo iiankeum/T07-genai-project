@@ -1,0 +1,57 @@
+{
+  "at": "2026-11-18T15:09:46.822Z",
+  "status": "passed",
+  "isolatedTemporaryRuntime": true,
+  "syntheticInput": true,
+  "sourceBlobsVerified": true,
+  "sourceManifestExact": false,
+  "temporaryManifestFromPinnedDefinition": true,
+  "noModelDownload": true,
+  "realAdapter": "src/app/lib/ai-ollama.mjs",
+  "model": "qwen3:4b",
+  "elapsedMs": 10087,
+  "result": {
+    "items": [
+      {
+        "name": "앞 브레이크 패드",
+        "quantity": 1
+      },
+      {
+        "name": "앞 디스크",
+        "quantity": 2
+      }
+    ]
+  },
+  "events": [
+    {
+      "event": "installing",
+      "runtimeVersion": "0.40.16",
+      "network": false
+    },
+    {
+      "event": "installed",
+      "runtimeVersion": "0.40.16",
+      "network": false
+    },
+    {
+      "event": "starting",
+      "port": 11435,
+      "cloudEnabled": false,
+      "runtimeVersion": "0.40.16"
+    },
+    {
+      "event": "ready",
+      "port": 11435,
+      "cloudEnabled": false,
+      "runtimeVersion": "0.40.16"
+    },
+    {
+      "event": "stopped"
+    }
+  ],
+  "limits": [
+    "가짜 문장 1건, 현장 품질 검증 아님",
+    "모델 선택 GUI와 재시작 적용은 별도 검증",
+    "OS 전체 네트워크 차단 검증 아님"
+  ]
+}

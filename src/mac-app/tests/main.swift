@@ -157,3 +157,38 @@ let rootAlias = aiRoot.appendingPathComponent("root-alias")
 try! FileManager.default.createSymbolicLink(atPath: rootAlias.path, withDestinationPath: aiRoot.path)
 do { _ = try LocalAIConfiguration.environment(in: rootAlias); preconditionFailure("symlink root") }
 catch { check(true, "symlink storage root refused") }
+
+func configSaveRejected(_ expected: LocalAIConfiguration.Snapshot, _ label: String) {
+    do { try LocalAIConfiguration.save(in: aiRoot, model: nil, expected: expected); preconditionFailure(label) }
+    catch { check(true, label) }
+}
+fakeAI(#"{"provider":"off"}"#)
+let initialAI = try! LocalAIConfiguration.snapshot(in: aiRoot)
+let aiBackup = try! LocalAIConfiguration.save(in: aiRoot, model: "qwen3:4b", expected: initialAI)
+check(aiBackup != nil, "existing config gets unique backup")
+check(try! Data(contentsOf: aiRoot.appendingPathComponent(aiBackup!)) == initialAI.data, "backup preserves exact original bytes")
+check(try! LocalAIConfiguration.environment(in: aiRoot)["OLLAMA_MODEL"] == "qwen3:4b", "explicit model selection persisted")
+var savedAI = stat(); precondition(lstat(aiFile.path, &savedAI) == 0)
+check(savedAI.st_mode & 0o777 == 0o600, "saved config private 600")
+configSaveRejected(initialAI, "stale snapshot cannot overwrite new selection")
+let beforeOff = try! LocalAIConfiguration.snapshot(in: aiRoot)
+try! LocalAIConfiguration.save(in: aiRoot, model: nil, expected: beforeOff)
+check(try! LocalAIConfiguration.environment(in: aiRoot) == ["AI_PROVIDER":"off"], "explicit off selection saved")
+fakeAI("invalid")
+configSaveRejected(try! LocalAIConfiguration.snapshot(in: aiRoot), "invalid existing config cannot be silently overwritten")
+try! FileManager.default.removeItem(at: aiFile)
+let absentAI = try! LocalAIConfiguration.snapshot(in: aiRoot)
+check(try! LocalAIConfiguration.save(in: aiRoot, model: nil, expected: absentAI) == nil, "absent config saved exclusively without backup")
+configSaveRejected(absentAI, "new concurrent config protected")
+let validAI = try! LocalAIConfiguration.snapshot(in: aiRoot)
+do { try LocalAIConfiguration.save(in: aiRoot, model: "cloud-model:latest", expected: validAI); preconditionFailure("cloud save") }
+catch { check(true, "cloud model save rejected") }
+check(try! LocalAIConfiguration.snapshot(in: aiRoot) == validAI, "rejected save preserves config")
+let listData = Data(#"{"models":[{"name":"qwen3:4b"},{"name":"qwen3:4b"},{"name":"cloud-model:latest"},{"name":"fake:local","remote_host":"https://example.invalid"},{"name":"../bad"}]}"#.utf8)
+check(LocalModelSelection.names(data:listData,status:200) == ["qwen3:4b"], "model list excludes remote names and deduplicates")
+check(LocalModelSelection.names(data:listData,status:302).isEmpty, "redirect model list rejected")
+check(LocalModelSelection.names(data:Data(repeating:0,count:1_048_577),status:200).isEmpty, "oversized model list rejected")
+for invalidShow in [#"{}"#, #"{"model_info":{}}"#, #"{"model_info":{"architecture":"fake"},"remote_host":"https://example.invalid"}"#, #"{"model_info":{"architecture":"fake"},"remote_model":"fake"}"#] {
+    check(!LocalModelSelection.verifiedLocal(data:Data(invalidShow.utf8),status:200), "unverified or remote model detail refused")
+}
+check(LocalModelSelection.verifiedLocal(data:Data(#"{"model_info":{"architecture":"fake"}}"#.utf8),status:200), "fake local model detail accepted without inference claim")

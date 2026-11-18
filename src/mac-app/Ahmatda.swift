@@ -67,6 +67,8 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
     private var aiEnvironment: [String: String] = [:]
     private let probeDelegate = LocalProbeDelegate()
     private var probeSession: URLSession?
+    private var modelSelectionProbe: LocalModelProbe?
+    private var modelSelectionOpen = false
     private var modelSetupProcess: Process?
     private var modelSetupOutput: Pipe?
     private var modelSetupBuffer = Data()
@@ -604,6 +606,7 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
             navigation.append(command("이 Mac 점검…", #selector(showMacPreflight)))
             navigation.append(command("모델·재개 캐시 공간…", #selector(showModelStorageUsage)))
             navigation.append(command("로컬 AI 준비 상태…", #selector(showPreparation)))
+            navigation.append(command("주문 정리 모델 선택…", #selector(selectLocalModel)))
             navigation.append(command("주문 정리 모델 준비…", #selector(confirmModelPreparation)))
             navigation.append(command("받아쓰기 모델 준비…", #selector(confirmWhisperPreparation)))
             navigation.append(command("받아쓰기 연결 설정…", #selector(openWorkerSettings)))
@@ -662,6 +665,97 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
                 alert.informativeText = message + common
             }
         }.resume()
+    }
+
+    @objc private func selectLocalModel() {
+        guard let storage = localStorage, !closing, !failed, !modelSelectionOpen, window.attachedSheet == nil else { return }
+        let snapshot: LocalAIConfiguration.Snapshot
+        do {
+            snapshot = try LocalAIConfiguration.snapshot(in: storage)
+            _ = try LocalAIConfiguration.environment(in: storage)
+        } catch { showModelSelectionResult("기존 ai.json을 안전하게 읽지 못했어요. 파일을 확인한 뒤 다시 시도하세요. 기존 설정은 바꾸지 않았어요."); return }
+        modelSelectionOpen = true
+        let alert = NSAlert()
+        alert.messageText = "주문 정리 모델 선택"
+        alert.informativeText = "이 앱에 설치된 로컬 모델만 선택해요. 저장해도 현재 작업은 바뀌지 않고 다음 앱 재시작부터 적용돼요. 다운로드·실제 답변 생성은 하지 않아요. 기존 설정은 별도 백업으로 남겨요."
+        let choice = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 410, height: 28))
+        choice.addItem(withTitle: "AI 끄기 · 수동 업무")
+        let restoreTitle = "기본 로컬 설정 복원 · qwen3:4b (미검증)"
+        if !runtimeReady || runtimeProcess?.isRunning != true { choice.addItem(withTitle: restoreTitle) }
+        alert.accessoryView = choice
+        alert.addButton(withTitle: "선택 저장")
+        alert.addButton(withTitle: "취소")
+        alert.beginSheetModal(for: window) { [weak self] answer in
+            guard let self else { return }
+            self.modelSelectionProbe?.cancel(); self.modelSelectionProbe = nil
+            guard answer == .alertFirstButtonReturn, !self.closing, !self.failed else { self.modelSelectionOpen = false; return }
+            let restoreDefault = choice.titleOfSelectedItem == restoreTitle
+            let selected = choice.indexOfSelectedItem == 0 ? nil : (restoreDefault ? "qwen3:4b" : choice.titleOfSelectedItem)
+            func save() {
+                guard !self.closing, !self.failed else { self.modelSelectionOpen = false; return }
+                do {
+                    try LocalAIConfiguration.save(in: storage, model: selected, expected: snapshot)
+                    self.modelSelectionOpen = false
+                    self.showModelSelectionResult("설정을 저장했어요. 현재 작업은 그대로이며, 다음 앱 재시작부터 적용돼요. 실제 답변 생성 성공을 확인한 것은 아니에요.")
+                } catch {
+                    self.modelSelectionOpen = false
+                    self.showModelSelectionResult("설정을 저장하지 못했어요. 파일 권한이나 다른 편집으로 인한 변경을 확인하고 다시 열어 주세요. 기존 설정을 자동으로 덮어쓰지 않아요.")
+                }
+            }
+            if restoreDefault {
+                DispatchQueue.main.async {
+                    guard !self.closing, !self.failed, self.window.attachedSheet == nil else { self.modelSelectionOpen = false; return }
+                    let confirm = NSAlert()
+                    confirm.messageText = "기본 로컬 설정을 복원할까요?"
+                    confirm.informativeText = "qwen3:4b를 다음 앱 재시작부터 사용하도록 설정해요. 모델 설치·연결·답변 생성은 아직 확인하지 않았어요. 다운로드는 하지 않으며, 모델이 없으면 준비 메뉴를 이용해야 해요. 현재 작업은 바뀌지 않아요."
+                    confirm.addButton(withTitle: "미검증 기본 설정 저장")
+                    confirm.addButton(withTitle: "취소")
+                    confirm.beginSheetModal(for: self.window) { answer in
+                        if answer == .alertFirstButtonReturn { DispatchQueue.main.async { save() } }
+                        else { self.modelSelectionOpen = false }
+                    }
+                }
+                return
+            }
+            guard let selected else { DispatchQueue.main.async { save() }; return }
+            guard self.runtimeReady, self.runtimeProcess?.isRunning == true else {
+                self.modelSelectionOpen = false
+                DispatchQueue.main.async { self.showModelSelectionResult("앱 전용 실행기가 연결되지 않아 저장하지 않았어요.") }; return
+            }
+            var request = URLRequest(url: URL(string: "http://127.0.0.1:11435/api/show")!)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try? JSONSerialization.data(withJSONObject: ["model":selected])
+            self.modelSelectionProbe = LocalModelProbe(request: request) { [weak self] data, status in
+                guard let self else { return }
+                self.modelSelectionProbe = nil
+                guard !self.closing, !self.failed, self.runtimeReady, self.runtimeProcess?.isRunning == true,
+                      LocalModelSelection.verifiedLocal(data: data, status: status) else {
+                    self.modelSelectionOpen = false
+                    self.showModelSelectionResult("설치된 로컬 모델인지 확인하지 못해 저장하지 않았어요. 원격 모델은 사용할 수 없어요."); return
+                }
+                save()
+            }
+        }
+        guard runtimeReady, runtimeProcess?.isRunning == true else {
+            alert.informativeText += "\n\n앱 전용 실행기가 연결되지 않았어요. AI 끄기 또는 별도 확인을 거쳐 미검증 기본 설정을 복원할 수 있어요."
+            return
+        }
+        modelSelectionProbe = LocalModelProbe(request: URLRequest(url: URL(string: "http://127.0.0.1:11435/api/tags")!)) { [weak self, weak alert] data, status in
+            guard let self, let alert, alert.window.sheetParent != nil, self.modelSelectionOpen, !self.closing, !self.failed else { return }
+            self.modelSelectionProbe = nil
+            guard self.runtimeReady, self.runtimeProcess?.isRunning == true else { return }
+            let names = LocalModelSelection.names(data: data, status: status)
+            choice.addItems(withTitles: names)
+            if let current = self.aiEnvironment["OLLAMA_MODEL"], names.contains(current), self.aiEnvironment["AI_PROVIDER"] == "ollama" { choice.selectItem(withTitle: current) }
+            if names.isEmpty { alert.informativeText += "\n\n선택 가능한 설치 모델을 찾지 못했어요. AI 끄기만 저장할 수 있어요." }
+        }
+    }
+
+    private func showModelSelectionResult(_ text: String) {
+        guard !closing, !failed, window.attachedSheet == nil else { return }
+        let alert = NSAlert(); alert.messageText = "로컬 모델 설정"; alert.informativeText = text
+        alert.addButton(withTitle: "확인"); alert.beginSheetModal(for: window)
     }
 
     private func showPreparationGuide() { showGettingStarted() }
@@ -1039,6 +1133,7 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
 
     func applicationWillTerminate(_ notification: Notification) {
         closing = true
+        modelSelectionProbe?.cancel()
         probeSession?.invalidateAndCancel()
         stopManagedRuntime()
         if let modelSetupProcess, modelSetupProcess.isRunning { modelSetupProcess.terminate() }
