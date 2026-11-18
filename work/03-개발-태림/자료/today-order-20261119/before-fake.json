@@ -1,0 +1,13 @@
+{
+  "scope": "actual today module + fake deferred dashboard GET, no AI or account API",
+  "requestDays": [
+    "2026-11-19",
+    "2026-11-18",
+    "2026-11-19"
+  ],
+  "newest": "통화9건",
+  "afterOlderResponse": "통화1건",
+  "posts": 0,
+  "errors": [],
+  "external": []
+}

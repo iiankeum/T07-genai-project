@@ -322,7 +322,10 @@ export default {
     }
 
     // ── 불러오기 ────────────────────────────────────────────────
+    let loadGeneration = 0;
     async function load({ quiet = false } = {}) {
+      const generation = ++loadGeneration;
+      const current = () => alive() && generation === loadGeneration && day === st.day;
       const day = st.day;
       st.loading = true;
       if (!quiet) draw();
@@ -331,7 +334,7 @@ export default {
           api.get('/api/dashboard', { day }, { signal: ac.signal }),
           quiet ? ctx.refreshMeta().catch(() => st.meta) : Promise.resolve(st.meta),
         ]);
-        if (!alive() || day !== st.day) return;
+        if (!current()) return;
         // 오늘 통화가 0건이면(새벽 · 영업 전) 어제로 바꿔 다시 부른다
         if (st.autoDay && !st.fallback && day === kstDay() && num(data?.stats?.calls) === 0) {
           st.fallback = true;
@@ -341,7 +344,7 @@ export default {
         // 어제를 대신 보여 주는 중이면, 오늘 통화가 생겼는지 가끔 본다
         if (st.fallback && quiet) {
           const t = await api.get('/api/dashboard', { day: kstDay() }, { signal: ac.signal }).catch(() => null);
-          if (!alive() || day !== st.day) return;
+          if (!current()) return;
           if (t && num(t.stats?.calls) > 0) { st.fallback = false; st.day = kstDay(); st.data = null; return load(); }
         }
         // 방금 만든 요약이 아직 목록에 안 실렸으면 들고 있는 것을 쓴다
@@ -352,7 +355,7 @@ export default {
         st.refreshFailed = false;
         st.loadedAt = new Date().toISOString();
       } catch (err) {
-        if (err?.name === 'AbortError' || !alive() || day !== st.day) return;
+        if (err?.name === 'AbortError' || !current()) return;
         if (st.data) st.refreshFailed = true; else st.error = err;
       }
       st.loading = false;

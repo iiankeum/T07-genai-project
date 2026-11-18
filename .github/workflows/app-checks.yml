@@ -92,6 +92,10 @@ jobs:
         run: npm run test:output-context-e2e
         env:
           OUTPUT_CONTEXT_OUTPUT: artifacts/e2e/output-context
+      - name: Today dashboard response order (fake API only)
+        run: npm run test:today-order-e2e
+        env:
+          TODAY_ORDER_OUTPUT: artifacts/e2e/today-order
       - uses: actions/upload-artifact@v4
         if: always()
         with:

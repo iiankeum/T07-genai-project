@@ -1,0 +1,18 @@
+{
+  "status": "passed",
+  "scope": "actual module with synthetic deferred API, no product server/auth/AI/visual-layout verification",
+  "results": [
+    "today-yesterday-today ABA retains newest dashboard; stale load does not start summary GET",
+    "latest failure cannot be replaced by earlier same-day success",
+    "stale success keeps latest loading intact",
+    "stale failure keeps latest loading intact",
+    "initial zero-call fallback still loads yesterday",
+    "quiet fallback probe returns to today when calls arrive",
+    "stale quiet fallback probe cannot change date after manual ABA",
+    "quiet refresh failure retains data and later refresh recovers",
+    "explicit fake AI briefing completes across same-day refresh without stuck loading",
+    "unmounted response cannot repaint or take focus"
+  ],
+  "errors": [],
+  "external": []
+}
