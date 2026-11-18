@@ -74,15 +74,15 @@ export function mountCard(el, o) {
   let chain = Promise.resolve();
   let alive = true;
   let busy = false;
-  let confirmPending = false;
-  const confirmControls = new Map();
+  let pendingStatus = null;
+  const statusControls = new Map();
   let reexBusy = false;
   let cbOpen = false;
   let activeKey = null;
   const savedTimers = new Map();
   let evMap = new Map();
 
-  const editable = () => canEdit && card?.status === 'draft' && !confirmPending;
+  const editable = () => canEdit && card?.status === 'draft' && !pendingStatus;
   const slot = (name) => el.querySelector('[data-slot="' + name + '"]');
   const profile = () => domainFor(card?.domainVersion);
   function localCard() {
@@ -293,7 +293,7 @@ export function mountCard(el, o) {
         : html`<p class="cd-action-state">${nothingToShip() ? '확정하면 처리가 완료됩니다.' : '확정하면 출고 대기로 이동합니다.'}</p>`;
       return html`${why}<div class="cd-action-buttons">
         <button type="button" class="btn btn-ghost btn-sm" data-act="cancel">카드 취소</button>
-        <button type="button" class="btn btn-primary cd-primary" data-act="confirm" ${issues.length || busy ? html`disabled` : ''} ${issues.length ? html`aria-describedby="cd-confirm-why"` : ''}>${confirmPending ? '확정 처리 중…' : '확인하고 확정'}</button>
+        <button type="button" class="btn btn-primary cd-primary" data-act="confirm" ${issues.length || busy ? html`disabled` : ''} ${issues.length ? html`aria-describedby="cd-confirm-why"` : ''}>${pendingStatus === 'confirm' ? '확정 처리 중…' : '확인하고 확정'}</button>
       </div>`;
     }
     if (s === 'confirmed') {
@@ -349,7 +349,7 @@ export function mountCard(el, o) {
   }
 
   function saveIndicator() {
-    if (confirmPending) return html`<span role="status">확정 처리 중… 아직 완료되지 않았습니다.</span>`;
+    if (pendingStatus) return html`<span role="status">${pendingStatus === 'cancel' ? '취소' : '확정'} 처리 중… 아직 완료되지 않았습니다.</span>`;
     if (failure) return html`<button type="button" class="cd-save-link" data-act="save-error">저장 오류 보기</button>`;
     if (!editable()) return html`<span>읽기 전용</span>`;
     return html`<span>${pending.size ? '저장 중…' : '자동 저장'}</span>`;
@@ -421,23 +421,23 @@ export function mountCard(el, o) {
   }
 
   /** 입력칸은 그대로 두고 표시(칩 · 상태 · 단추)만 새로 그린다 */
-  // 확정할 스냅샷을 보낸 뒤 새 입력이 섞이지 않게 한다. 근거 읽기/듣기는 유지한다.
+  // 확정·취소할 스냅샷을 보낸 뒤 새 입력이 섞이지 않게 한다. 근거 읽기/듣기는 유지한다.
   const readActions = new Set(['to-trans', 'issue-jump', 'basic-jump', 'status-jump', 'save-error']);
-  function lockConfirmControls() {
-    if (!confirmPending) return;
+  function lockStatusControls() {
+    if (!pendingStatus) return;
     el.setAttribute('aria-busy', 'true');
     for (const control of el.querySelectorAll('input, select, textarea, button')) {
       if (control.matches('button') && !control.matches('[data-qty], [data-del], [data-resolve], [data-review]')
         && (!control.dataset.act || readActions.has(control.dataset.act))) continue;
-      if (!confirmControls.has(control)) confirmControls.set(control, control.disabled);
+      if (!statusControls.has(control)) statusControls.set(control, control.disabled);
       control.disabled = true;
     }
   }
-  function unlockConfirmControls() {
-    confirmPending = false;
+  function unlockStatusControls() {
+    pendingStatus = null;
     el.removeAttribute('aria-busy');
-    for (const [control, disabled] of confirmControls) control.disabled = disabled;
-    confirmControls.clear();
+    for (const [control, disabled] of statusControls) control.disabled = disabled;
+    statusControls.clear();
   }
   function refreshDecor() {
     if (!card) return;
@@ -455,7 +455,7 @@ export function mountCard(el, o) {
     const save = slot('save-status'); if (save) render(save, saveStatus());
     const indicator = slot('save-indicator'); if (indicator) render(indicator, saveIndicator());
     const plate = slot('plate-hint'); if (plate) render(plate, plateHint());
-    lockConfirmControls();
+    lockStatusControls();
   }
   function renderItems() {
     const s = slot('items');
@@ -711,17 +711,19 @@ export function mountCard(el, o) {
     if (busy || reexBusy) return;
     busy = true;
     if (btn) btn.disabled = true;
-    if (action === 'confirm') { confirmPending = true; refreshDecor(); }
-    let confirmFailed = false;
+    if (action === 'confirm') { pendingStatus = 'confirm'; refreshDecor(); }
+    let statusFailed = false;
+    let reasonDismissed = false;
     try {
       let reason;
       if (action === 'cancel' || (action === 'reopen' && card.status === 'confirmed')) {
         reason = await reasonBox(action === 'cancel' ? '카드 취소' : '확정 취소 및 수정');
-        if (!reason) return;
+        if (!reason) { reasonDismissed = true; return; }
       }
       if (action === 'ship' && !(await confirmBox('이 카드를 ' + shipWord() + '로 바꿀까요?'))) return;
       if (action === 'unship' && !(await confirmBox('출고 완료를 되돌릴까요? 카드는 확정 상태로 돌아갑니다.'))) return;
       if (!alive) return;
+      if (action === 'cancel') { pendingStatus = 'cancel'; refreshDecor(); }
       await flush();
       const result = await api.post('/api/cards/' + encodeURIComponent(o.callId) + '/' + action, { reason, expectedRevision: savedCard?.revision });
       if (!alive) return;
@@ -731,27 +733,27 @@ export function mountCard(el, o) {
         updateLocalCard();
         items = cloneItems(card.items);
       }
-      unlockConfirmControls();
+      unlockStatusControls();
       busy = false;
       renderAll();
       o.onCardChange(savedCard, { fields: ['status'] });
       const message = action === 'confirm' && nothingToShip() ? '확정했습니다. 처리한 통화로 표시됩니다.' : DONE_MSG[action];
       toast(message || '상태를 바꿨습니다.', 'ok');
     } catch (e) {
-      confirmFailed = action === 'confirm';
-      unlockConfirmControls();
+      statusFailed = action === 'confirm' || action === 'cancel';
+      unlockStatusControls();
       if (alive) {
         toast(e?.message || '상태를 바꾸지 못했습니다.', 'error');
         focusIssue();
       }
     } finally {
-      unlockConfirmControls();
+      unlockStatusControls();
       busy = false;
       if (alive) {
         const active = document.activeElement;
-        const returnToConfirm = confirmFailed && (active === document.body || active?.dataset?.act === 'confirm');
+        const returnToAction = (statusFailed || reasonDismissed) && (active === document.body || active?.dataset?.act === action);
         refreshDecor();
-        if (returnToConfirm) el.querySelector('[data-act="confirm"]')?.focus({ preventScroll: true });
+        if (returnToAction) el.querySelector(`[data-act="${action}"]`)?.focus({ preventScroll: true });
       }
     }
   }
@@ -889,7 +891,7 @@ export function mountCard(el, o) {
   }
 
   function handleAct(act, btn) {
-    if (confirmPending && !readActions.has(act)) return;
+    if (pendingStatus && !readActions.has(act)) return;
     switch (act) {
       case 'to-trans': o.onJumpToTranscript(activeKey ? evMap.get(activeKey) : null); break;
       case 'issue-jump': {

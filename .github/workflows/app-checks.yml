@@ -76,6 +76,10 @@ jobs:
         run: npm run test:shipping-order-e2e
         env:
           SHIPPING_ORDER_OUTPUT: artifacts/e2e/shipping-order
+      - name: Card cancellation pending edits (fake API only)
+        run: npm run test:card-cancel-e2e
+        env:
+          CARD_CANCEL_OUTPUT: artifacts/e2e/card-cancel
       - uses: actions/upload-artifact@v4
         if: always()
         with:
