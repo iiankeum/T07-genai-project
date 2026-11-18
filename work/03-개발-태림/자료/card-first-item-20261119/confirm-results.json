@@ -1,0 +1,79 @@
+{
+  "scope": "actual mountCard + fake deferred API; not real backend persistence or audio playback",
+  "results": [
+    {
+      "width": 1440,
+      "failure": false,
+      "flushBeforeSnapshot": true,
+      "editingLocked": true,
+      "duplicateAndMutationActionsBlocked": true,
+      "evidenceAvailable": true,
+      "failureFocus": null,
+      "serverMatchesReadonlyUI": true,
+      "failureRetry": false
+    },
+    {
+      "width": 1440,
+      "failure": true,
+      "flushBeforeSnapshot": true,
+      "editingLocked": true,
+      "duplicateAndMutationActionsBlocked": true,
+      "evidenceAvailable": true,
+      "failureFocus": "evidence",
+      "serverMatchesReadonlyUI": true,
+      "failureRetry": true
+    },
+    {
+      "width": 1440,
+      "failure": "no-evidence",
+      "flushBeforeSnapshot": true,
+      "editingLocked": true,
+      "duplicateAndMutationActionsBlocked": true,
+      "evidenceAvailable": false,
+      "failureFocus": "confirm",
+      "serverMatchesReadonlyUI": true,
+      "failureRetry": true
+    },
+    {
+      "width": 390,
+      "failure": false,
+      "flushBeforeSnapshot": true,
+      "editingLocked": true,
+      "duplicateAndMutationActionsBlocked": true,
+      "evidenceAvailable": true,
+      "failureFocus": null,
+      "serverMatchesReadonlyUI": true,
+      "failureRetry": false
+    },
+    {
+      "width": 390,
+      "failure": true,
+      "flushBeforeSnapshot": true,
+      "editingLocked": true,
+      "duplicateAndMutationActionsBlocked": true,
+      "evidenceAvailable": true,
+      "failureFocus": "evidence",
+      "serverMatchesReadonlyUI": true,
+      "failureRetry": true
+    },
+    {
+      "width": 390,
+      "failure": "no-evidence",
+      "flushBeforeSnapshot": true,
+      "editingLocked": true,
+      "duplicateAndMutationActionsBlocked": true,
+      "evidenceAvailable": false,
+      "failureFocus": "confirm",
+      "serverMatchesReadonlyUI": true,
+      "failureRetry": true
+    },
+    {
+      "flushConflict": true,
+      "noPrematureConfirm": true,
+      "localInputPreserved": true,
+      "explicitApplyMineThenConfirm": true
+    }
+  ],
+  "errors": [],
+  "blocked": []
+}

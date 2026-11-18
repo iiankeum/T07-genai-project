@@ -104,6 +104,10 @@ jobs:
         run: npm run test:calls-density-e2e
         env:
           CALLS_DENSITY_OUTPUT: artifacts/e2e/calls-density
+      - name: Order card first item (fake fixture, desktop and mobile)
+        run: npm run test:card-first-item-e2e
+        env:
+          CARD_FIRST_ITEM_OUTPUT: artifacts/e2e/card-first-item
       - uses: actions/upload-artifact@v4
         if: always()
         with:
