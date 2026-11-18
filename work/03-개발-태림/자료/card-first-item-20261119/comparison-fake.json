@@ -1,0 +1,178 @@
+{
+  "fakeDataOnly": true,
+  "results": [
+    {
+      "baseline": true,
+      "n": 5,
+      "width": 1440,
+      "first": {
+        "x": 836.609375,
+        "y": 684.578125,
+        "width": 271.1875,
+        "height": 46
+      },
+      "overflow": false
+    },
+    {
+      "baseline": true,
+      "n": 5,
+      "width": 390,
+      "first": {
+        "x": 16,
+        "y": 634.5625,
+        "width": 173,
+        "height": 46
+      },
+      "overflow": false
+    },
+    {
+      "baseline": true,
+      "n": 10,
+      "width": 1440,
+      "first": {
+        "x": 836.609375,
+        "y": 684.578125,
+        "width": 271.1875,
+        "height": 46
+      },
+      "overflow": false
+    },
+    {
+      "baseline": true,
+      "n": 10,
+      "width": 390,
+      "first": {
+        "x": 16,
+        "y": 634.5625,
+        "width": 173,
+        "height": 46
+      },
+      "overflow": false
+    },
+    {
+      "baseline": true,
+      "n": 0,
+      "width": 1440,
+      "first": null,
+      "overflow": false
+    },
+    {
+      "baseline": true,
+      "n": 0,
+      "width": 390,
+      "first": null,
+      "overflow": false
+    },
+    {
+      "baseline": false,
+      "n": 5,
+      "width": 1440,
+      "first": {
+        "x": 836.609375,
+        "y": 627.59375,
+        "width": 271.1875,
+        "height": 46
+      },
+      "overflow": false,
+      "contextKeyboard": true,
+      "largeTextOverflow": false,
+      "contextTarget": {
+        "x": 836.609375,
+        "y": 424.40625,
+        "width": 554.390625,
+        "height": 64.1875
+      }
+    },
+    {
+      "baseline": false,
+      "n": 5,
+      "width": 390,
+      "first": {
+        "x": 16,
+        "y": 594.375,
+        "width": 173,
+        "height": 46
+      },
+      "overflow": false,
+      "contextKeyboard": true,
+      "largeTextOverflow": false,
+      "contextTarget": {
+        "x": 16,
+        "y": 411.375,
+        "width": 358,
+        "height": 44
+      }
+    },
+    {
+      "baseline": false,
+      "n": 10,
+      "width": 1440,
+      "first": {
+        "x": 836.609375,
+        "y": 627.59375,
+        "width": 271.1875,
+        "height": 46
+      },
+      "overflow": false,
+      "contextKeyboard": true,
+      "largeTextOverflow": false,
+      "contextTarget": {
+        "x": 836.609375,
+        "y": 424.40625,
+        "width": 554.390625,
+        "height": 64.1875
+      }
+    },
+    {
+      "baseline": false,
+      "n": 10,
+      "width": 390,
+      "first": {
+        "x": 16,
+        "y": 594.375,
+        "width": 173,
+        "height": 46
+      },
+      "overflow": false,
+      "contextKeyboard": true,
+      "largeTextOverflow": false,
+      "contextTarget": {
+        "x": 16,
+        "y": 411.375,
+        "width": 358,
+        "height": 44
+      }
+    },
+    {
+      "baseline": false,
+      "n": 0,
+      "width": 1440,
+      "first": null,
+      "overflow": false,
+      "contextKeyboard": true,
+      "largeTextOverflow": false,
+      "contextTarget": {
+        "x": 836.609375,
+        "y": 424.40625,
+        "width": 554.390625,
+        "height": 64.1875
+      }
+    },
+    {
+      "baseline": false,
+      "n": 0,
+      "width": 390,
+      "first": null,
+      "overflow": false,
+      "contextKeyboard": true,
+      "largeTextOverflow": false,
+      "contextTarget": {
+        "x": 16,
+        "y": 411.375,
+        "width": 358,
+        "height": 44
+      }
+    }
+  ],
+  "errors": []
+}

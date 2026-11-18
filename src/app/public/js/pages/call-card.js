@@ -243,7 +243,7 @@ export function mountCard(el, o) {
   function itemsSection(groups) {
     return html`<section class="cd-sec cd-items" aria-labelledby="cd-items-h">
       <div class="cd-sec-top">
-        <h3 id="cd-items-h">주문 품목</h3><span data-chip="items">${chipFor('items')}</span><span class="cd-saved" data-saved="items" aria-live="polite"></span>
+        <h3 id="cd-items-h">${card.status === 'draft' && items.length ? '품목·수량 확인' : '주문 품목'}</h3><span data-chip="items">${chipFor('items')}</span><span class="cd-saved" data-saved="items" aria-live="polite"></span>
         ${editable() ? html`<button type="button" class="btn btn-sm cd-add" data-act="item-add">부품 추가</button>` : ''}
       </div>
       ${flagsView(groups.get('items'))}
@@ -356,7 +356,7 @@ export function mountCard(el, o) {
   }
 
   function contextView() {
-    return html`<div><strong>${card.customer || '거래처 미입력'}</strong><span>${card.carModel || '차종 미입력'} · ${card.plate || '차번호 미입력'}</span></div><button class="btn btn-ghost btn-sm" type="button" data-act="basic-jump">차량·거래처 확인</button>`;
+    return html`<button class="cd-context-jump" type="button" data-act="basic-jump" aria-label="${card.customer || '거래처 미입력'}, ${card.carModel || '차종 미입력'}, ${card.plate || '차번호 미입력'} · 차량·거래처 정보 확인"><span class="cd-context-values"><strong>${card.customer || '거래처 미입력'}</strong><span>${card.carModel || '차종 미입력'} · ${card.plate || '차번호 미입력'}</span></span><span class="cd-context-action">정보 확인 <span aria-hidden="true">›</span></span></button>`;
   }
 
   function renderAll() {
@@ -386,7 +386,6 @@ export function mountCard(el, o) {
         <div data-slot="save-status" tabindex="-1" aria-live="polite">${saveStatus()}</div>
         ${card.aiError ? html`<p class="notice notice-warn" role="note">AI 초안을 만들지 못했습니다. 주문 정보를 직접 채워 주세요. ${card.aiError}</p>` : ''}
         <div class="cd-order-context" data-slot="order-context">${contextView()}</div>
-        <p class="cd-draft-note">AI 초안 · 품목·수량과 확인 항목을 검토하세요.</p>
         ${itemsSection(groups)}
         <section class="cd-card-section" aria-labelledby="cd-fields-h">
           <div class="cd-sec-top cd-fields-head">

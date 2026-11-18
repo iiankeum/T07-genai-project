@@ -525,3 +525,17 @@ body[data-page="call"] { background:#fff; }
  .cd-order-context > button { max-width:45%; min-height:44px; padding-inline:8px; font-size:.7647rem; }
  .cd-card-scroll > .cd-items { margin-top:12px; }
 }
+
+/* 차량 맥락을 하나의 정보 확인 동선으로 묶고 반복 안내는 품목 제목에 통합한다. */
+.cd-order-context { display:block; padding:0; border:0; margin-bottom:8px; }
+.cd-context-jump { display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; min-height:44px; padding:8px 10px; border:1px solid var(--line); border-radius:6px; background:var(--surface,#fff); color:var(--ink); font:inherit; text-align:left; cursor:pointer; }
+.cd-context-jump:hover { background:var(--surface-soft,#f7f8fa); }
+.cd-context-jump:focus-visible { outline:2px solid var(--brand); outline-offset:2px; }
+.cd-context-values { display:grid; gap:3px; min-width:0; }
+.cd-context-values strong { color:var(--ink); font-size:.8235rem; }
+.cd-context-action { flex:none; font-weight:600; white-space:nowrap; }
+.cd-card-scroll > .cd-items { margin-top:0; }
+@media(max-width:1023px) {
+ .cd-context-values strong { display:none; } /* 바로 위 통화 제목에 거래처가 표시된다. */
+ .cd-order-context > .cd-context-jump { max-width:none; padding:8px 10px; }
+}
