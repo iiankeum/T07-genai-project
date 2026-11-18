@@ -10,7 +10,7 @@ const MAX_TRIALS = 5000;
 /** 동의 문구(화면 · 소개 페이지가 그대로 보여 준다) */
 export const TRIAL_POLICY = Object.freeze({
   title: '개인정보 수집 · 이용 동의',
-  controller: '콜노트(가칭) 데모 — T07 팀 수업 프로젝트',
+  controller: '아차 데모 — T07 팀 수업 프로젝트',
   purpose: '무료 체험 안내 연락',
   items: '이름 · 소속 · 연락처(전화 또는 이메일) · 역할 · 남긴 말 (이름과 연락처는 꼭 적고, 나머지는 적고 싶을 때만)',
   retention: `수업 프로젝트가 끝나면(${RETENTION_UNTIL}) 지체 없이 파기합니다.`,

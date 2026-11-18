@@ -382,7 +382,7 @@ export default {
     function apply(c) {
       const prev = call;
       call = c;
-      document.title = `${c.title || '통화 상세'} · 콜노트(가칭)`;
+      document.title = `${c.title || '통화 상세'} · 아차`;
       renderHead();
       if (!prev || Boolean(prev.hasAudio) !== Boolean(c.hasAudio)) renderPlayer();
       renderProgress();
@@ -445,7 +445,7 @@ export default {
           const c = await api.get(`/api/calls/${encodeURIComponent(id)}`);
           if (!alive || !call) return;
           call = { ...call, title: c.title, summary: c.summary, customer: c.customer };
-          document.title = `${c.title || '통화 상세'} · 콜노트(가칭)`;
+          document.title = `${c.title || '통화 상세'} · 아차`;
           renderHead();
           renderFoot();
         } catch { /* 다음에 다시 읽으면 된다 */ }

@@ -33,7 +33,7 @@ export default {
     render(el, html`<div class="page customer-page"></div>`);
     const root = el.firstElementChild;
     const alive = () => !ac.signal.aborted && root.isConnected;
-    document.title = `${name || '거래처'} · 콜노트(가칭)`;
+    document.title = `${name || '거래처'} · 아차`;
 
     function picker() {
       const list = st.customers.slice();

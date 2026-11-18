@@ -1,4 +1,4 @@
-// T07 7번 아이템 「AI 전화 주문 받아쓰기」(가칭 콜노트) 데모 서버 진입점.
+// T07 7번 아이템 「AI 전화 주문 받아쓰기」(아차) 데모 서버 진입점.
 // 실행: node src/app/server.mjs   (빌드 단계 없음 · Node 24 · ESM)
 // 환경변수와 API 는 src/app/README.md, 구조는 src/app/docs/설계.md 를 본다.
 import http from 'node:http';

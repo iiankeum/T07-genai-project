@@ -83,7 +83,7 @@ async function route() {
   renderNav(r.page);
   if (cleanup) { try { cleanup(); } catch { /* 무시 */ } cleanup = null; }
   window.scrollTo(0, 0);
-  if (r.page === 'more') { renderMore(view); document.title = '더보기 · 콜노트(가칭)'; return; }
+  if (r.page === 'more') { renderMore(view); document.title = '더보기 · 아차'; return; }
   if (r.page === 'notfound') {
     render(view, html`<div class="page"><div class="empty"><p>없는 화면입니다.</p><a class="btn btn-primary" href="#/">첫 화면으로</a></div></div>`);
     return;
@@ -94,7 +94,7 @@ async function route() {
     const mod = await import(`./pages/${r.page}.js`);
     if (my !== seq) return;
     const page = mod.default;
-    document.title = `${page.title || ''} · 콜노트(가칭)`;
+    document.title = `${page.title || ''} · 아차`;
     const meta = await getMeta();
     if (my !== seq) return;
     const ctx = {

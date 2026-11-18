@@ -4,8 +4,8 @@
 
 /* ===== 여기만 바꾸면 된다 ===== */
 const CONFIG = {
-  productName: '콜노트',                 // 제품명 — 투표로 정해지면 바꾼다
-  productNameNote: '가칭',               // 이름이 정해지면 '' 로 비운다
+  productName: '아차',                   // 제품명 — 2026-11-18 회의에서 「아차」로 확정
+  productNameNote: '',                   // 이름이 정해지면 '' 로 비운다(「아차」 확정으로 비움)
   demoUrl: '/',                          // 데모 주소 — 같은 서버의 앱 첫 화면(/#/ 오늘 브리핑). 실시간 받아쓰기는 '/#/live'
   demoUrlForPreview: 'https://t07.3-39-67-126.sslip.io/',  // 이 파일을 내 컴퓨터에서 바로 열어 볼 때만 쓰는 주소
   signupEndpoint: '/api/trial-signup',   // 무료 체험 신청을 받는 곳(개발 방 답 2026-11-11: POST /api/trial-signup). 다르면 여기만 바꾼다

@@ -33,7 +33,7 @@ export function register(router) {
   });
 
   router.get('/api/meta', () => ({
-    product: '콜노트(가칭)',
+    product: '아차',
     demo: config.demoMode,
     fakeDataNotice: '가짜 통화 데모 — 화면의 거래처·차번호·전화번호·품번은 모두 지어낸 것입니다.',
     aiEnabled: hasSecret('ANTHROPIC_API_KEY'),

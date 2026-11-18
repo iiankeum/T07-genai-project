@@ -104,7 +104,7 @@ export default {
       <section class="card card-soft upload-f12" aria-labelledby="f12Title">
         <p class="eyebrow">F12 · 녹음 폴더 자동 보내기</p>
         <h2 id="f12Title">녹음 폴더를 지켜보다 알아서 보내기</h2>
-        <p>대리점 PC 에 <strong>콜노트 PC 프로그램</strong>(<code>src/pc-agent/</code>, 받아쓰기 일꾼과 한 프로그램)을 깔아 두면, 통화 녹음 폴더에 새 파일이 생길 때마다 이 서버로 보냅니다. 따로 올리지 않아도 1분 안에 통화 목록에 「폴더에서 온 녹음」으로 나타납니다.</p>
+        <p>대리점 PC 에 <strong>아차 PC 프로그램</strong>(<code>src/pc-agent/</code>, 받아쓰기 일꾼과 한 프로그램)을 깔아 두면, 통화 녹음 폴더에 새 파일이 생길 때마다 이 서버로 보냅니다. 따로 올리지 않아도 1분 안에 통화 목록에 「폴더에서 온 녹음」으로 나타납니다.</p>
         <p class="small muted">실행 예시(윈도우 · Python 3.10 이상, 설치는 <code>src/pc-agent/README.md</code>). 토큰은 저장소 밖 <code>%USERPROFILE%\.t07-secrets\ingest.env</code> 에서 읽습니다 — 토큰 값은 화면 · 메신저 · 저장소에 붙여 두지 마세요. 공개 데모에는 <strong>가짜(연습) 녹음만 담은 폴더</strong>를 지정합니다.</p>
         <pre class="upload-cmd" data-ref="cmd"></pre>
         <ul class="small upload-f12-notes">

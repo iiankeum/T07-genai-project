@@ -203,7 +203,7 @@ export function buildDashboard(day) {
 export function buildBriefingText(day) {
   const entries = loadDay(day);
   const s = computeStats(entries);
-  const lines = [`[콜노트 마감 요약 · ${dayLabel(day)}] 가짜 통화 데모`];
+  const lines = [`[아차 마감 요약 · ${dayLabel(day)}] 가짜 통화 데모`];
   if (!s.calls) {
     lines.push('이날은 통화가 없습니다.');
     return lines.join('\n');
