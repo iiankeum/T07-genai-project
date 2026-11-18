@@ -234,9 +234,16 @@ export function mountCard(el, o) {
     </li>`;
   }
 
+  function emptyItemsGuide() {
+    if (!editable()) return '등록된 부품이 없습니다.';
+    return (card.callType || '주문') === '주문'
+      ? '주문을 확정하려면 「부품 추가」로 부품을 한 줄 이상 입력해 주세요.'
+      : '부품 없이 처리할 수 있는 통화입니다. 필요한 경우에만 「부품 추가」로 기록하세요.';
+  }
+
   function itemsList(groups) {
     for (const k of [...evMap.keys()]) if (k.startsWith('item:')) evMap.delete(k);
-    if (!items.length) return html`<li class="cd-item-empty">부품이 아직 없습니다.${editable() ? ' 「부품 줄 추가」로 넣어 주세요.' : ''}</li>`;
+    if (!items.length) return html`<li class="cd-item-empty">${emptyItemsGuide()}</li>`;
     return items.map((it, i) => itemRow(it, i, groups.get(`item:${i}`) || []));
   }
 
@@ -441,6 +448,10 @@ export function mountCard(el, o) {
   function refreshDecor() {
     if (!card) return;
     updateInlineIssues();
+    const empty = el.querySelector('.cd-item-empty');
+    if (empty) empty.textContent = emptyItemsGuide();
+    const itemsHeading = el.querySelector('#cd-items-h');
+    if (itemsHeading) itemsHeading.textContent = card.status === 'draft' && items.length ? '품목·수량 확인' : '주문 품목';
     if (slot('order-context')) render(slot('order-context'), contextView());
     el.querySelectorAll('[data-chip]').forEach((s) => render(s, html`${chipFor(s.dataset.chip)}`));
     const st = slot('status'); if (st) render(st, cardChip(card.status));

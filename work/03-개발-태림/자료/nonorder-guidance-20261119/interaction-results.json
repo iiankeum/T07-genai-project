@@ -1,0 +1,33 @@
+{
+  "scope": "actual card module and CSS with fake API; no server persistence, real user, or AI",
+  "results": [
+    {
+      "width": 1440,
+      "orderRequired": true,
+      "typeChangeImmediate": true,
+      "itemAddDeleteImmediate": true,
+      "inquiryConfirmedWithoutParts": true,
+      "noShipping": true,
+      "readonlyNoInstruction": true
+    },
+    {
+      "width": 1440,
+      "inquiryWarningStillBlocks": true
+    },
+    {
+      "width": 390,
+      "orderRequired": true,
+      "typeChangeImmediate": true,
+      "itemAddDeleteImmediate": true,
+      "inquiryConfirmedWithoutParts": true,
+      "noShipping": true,
+      "readonlyNoInstruction": true
+    },
+    {
+      "width": 390,
+      "inquiryWarningStillBlocks": true
+    }
+  ],
+  "errors": [],
+  "blocked": []
+}
