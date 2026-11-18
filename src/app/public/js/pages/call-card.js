@@ -1,7 +1,10 @@
 // 통화 상세의 주문 카드(F04 · F05 · F06 · F07 다시 정리 · F11): 칸 고치기 · 근거 듣기 · 확정 · 출고 · 다시 전화 · 다시 정리.
-// call.js 만 쓴다. 칸을 고치면 칸에서 벗어날 때(change) PATCH 로 저장하고, 입력칸은 다시 그리지 않아 커서를 잃지 않는다.
+// call.js에서 사용한다. 입력을 모아 저장하고 실패한 변경은 현재 탭에서 복구한다.
 import { api } from '../api.js';
 import { html, render, toast, confirmBox, fmtSec, fmtWhen, cardChip } from '../ui.js';
+import {
+  CALL_TYPES, confirmationIssues, domainFor, isShipTarget, itemId, normalizePartNo,
+} from '../domain.js';
 import { groupUnsure, cloneItems, itemsForSave, num, parseUnsureField, itemMark, FIELD_LABEL } from './call-util.js';
 
 const TOP_FIELDS = [
@@ -11,8 +14,6 @@ const TOP_FIELDS = [
   { key: 'modelYear', label: '연식', ph: '예: 2017', mode: 'numeric' },
   { key: 'plate', label: '차번호', ph: '예: 12가 3456' },
 ];
-/** 통화 종류(카드에 callType 이 있을 때만 보인다) */
-const CALL_TYPES = ['주문', '배송 문의', '반품·교환', '재고·단가 문의', '기타'];
 const WHEN_FIELDS = [
   { key: 'due', label: '원하는 때', ph: '예: 오늘 오전 중' },
   { key: 'delivery', label: '받는 방법', ph: '예: 배송, 퀵, 직접 수령', list: 'cd-delivery-list' },
@@ -23,6 +24,8 @@ const DONE_MSG = {
   confirm: '확정했습니다. 출고 목록에 올라갔습니다.',
   ship: '출고 완료로 바꿨습니다.',
   reopen: '확인 필요로 되돌렸습니다. 이제 칸을 고칠 수 있습니다.',
+  unship: '출고를 되돌렸습니다. 카드는 확정 상태입니다.',
+  cancel: '주문 카드를 취소했습니다.',
 };
 const askText = (q) => (typeof q === 'string' ? q : q?.text ?? q?.question ?? JSON.stringify(q));
 
@@ -43,45 +46,68 @@ const askText = (q) => (typeof q === 'string' ? q : q?.text ?? q?.question ?? JS
 export function mountCard(el, o) {
   let call = o.call;
   let card = call.card || null;
+  let savedCard = card;
   let items = cloneItems(card?.items);
+  const role = o.meta?.access?.role || 'admin';
+  const canEdit = role === 'admin' || role === 'reception';
+  const canShip = role === 'admin' || role === 'shipping';
+  const pending = new Map();
+  const storageKey = 'cn.card.pending:' + (o.meta?.access?.workspace?.id || 'demo') + ':' + o.callId;
+  let saveTimer = null;
+  let failure = null;
+  let latest = null;
+  let baseRevision = savedCard?.revision;
+  let retryMs = 2000;
   let chain = Promise.resolve();
   let alive = true;
   let busy = false;
   let reexBusy = false;
   let cbOpen = false;
   let activeKey = null;
-  let itemsTimer = null;
   const savedTimers = new Map();
   let evMap = new Map();
 
-  const editable = () => Boolean(card) && card.status === 'draft';
-  const slot = (name) => el.querySelector(`[data-slot="${name}"]`);
-
-  /** 주문이 아닌 통화(배송 문의 · 반품·교환 등) */
-  const nonOrder = () => Boolean(card?.callType) && card.callType !== '주문';
-  /** 출고할 물건이 없는 통화: 주문이 아니고 부품 줄도 없다 → 확정 = 처리 끝 */
-  const nothingToShip = () => nonOrder() && !(card.items || []).length;
-  const shipWord = () => (nonOrder() ? '처리 완료' : '출고 완료');
+  const editable = () => canEdit && card?.status === 'draft';
+  const slot = (name) => el.querySelector('[data-slot="' + name + '"]');
+  const profile = () => domainFor(card?.domainVersion);
+  function localCard() {
+    const rows = itemsForSave(items);
+    const warnings = (card?.unsure || []).flatMap((warning) => {
+      if (!Number.isInteger(warning.item)) return [warning];
+      const id = savedCard?.items?.[warning.item]?.id;
+      const index = rows.findIndex((item) => item.id === id);
+      return index < 0 ? [] : [{ ...warning, item: index }];
+    });
+    return { ...card, items: rows, unsure: warnings };
+  }
+  const nothingToShip = () => !isShipTarget(localCard());
+  const shipWord = () => isShipTarget(localCard()) ? '출고 완료' : '처리 완료';
 
   // ── 그리기 ──────────────────────────────────────────────────────
   // 확정 · 출고된 카드는 사람이 확인을 마친 것이라 「AI 초안」 대신 「사람이 확인」으로 바꿔 보인다(기획서 공통 기준)
   const humanChecked = () => card && (card.status === 'confirmed' || card.status === 'shipped');
-  const aiChip = () => (humanChecked()
+  const aiChip = (checked = false) => (checked || humanChecked()
     ? html`<span class="chip chip-confirmed">사람이 확인</span>`
     : html`<span class="chip chip-ai">AI 초안</span>`);
   const editedChip = () => html`<span class="chip chip-edited">사람이 고침</span>`;
   function chipFor(key) {
-    if (!card || !card.aiDraft) return '';
+    if (!card) return '';
     if (key.startsWith('item:')) {
       // 부품 줄마다: AI 초안 줄과 같으면 「AI 초안」, 사람이 고치거나 넣은 줄이면 「사람이 고침」
-      const mark = itemMark(card.aiDraft.items, items[Number(key.slice(5))]);
+      const index = Number(key.slice(5));
+      const item = items[index];
+      if (!item?.part && !item?.partNo) return '';
+      if (humanChecked() || (!pending.has('items') && card.fieldReviews?.['item:' + itemId(item, index)])) return aiChip(true);
+      if (!card.aiDraft) return editedChip();
+      const mark = itemMark(card.aiDraft.items, item);
       if (mark === 'edited') return editedChip();
       return mark === 'ai' ? aiChip() : '';
     }
-    if ((card.edited || []).includes(key)) return editedChip();
+    if (card.fieldReviews?.[key] && !pending.has(key)) return aiChip(true);
+    if (!humanChecked() && (card.edited || []).includes(key)) return editedChip();
     const v = key === 'items' ? items.length : key === 'askBack' ? (card.askBack || []).length : card[key];
     if (v === null || v === undefined || v === '' || v === 0 || v === false) return '';
-    return aiChip();
+    return card.aiDraft || humanChecked() ? aiChip() : editedChip();
   }
 
   function evButton(r, label) {
@@ -102,33 +128,44 @@ export function mountCard(el, o) {
 
   function flagsView(list) {
     if (!list || !list.length) return '';
-    return html`<div class="cd-flags">${list.map(({ u, idx }) => html`<div class="cd-flag-row">
-      <button type="button" class="listen-flag cd-flag" data-flag="${idx}" aria-label="받아쓰기가 틀렸을 수 있는 곳 들어 보기">⚠ 들어 보기${num(u.at) !== null ? ` ${fmtSec(u.at)}` : ''}</button>
+    return html`<div class="cd-flags">${list.map(({ u }) => html`<div class="cd-flag-row">
+      <button type="button" class="listen-flag cd-flag" data-flag="${u.id}" aria-label="받아쓰기가 틀렸을 수 있는 곳 들어 보기">⚠ 들어 보기${num(u.at) !== null ? ` ${fmtSec(u.at)}` : ''}</button>
       <span class="cd-flag-why">${u.reason || '받아쓰기가 틀렸을 수 있습니다. 녹음으로 확인해 주세요.'}</span>
+      ${editable() && u.id ? html`<button type="button" class="btn cd-reviewed" data-review="${u.id}">확인 완료</button>` : ''}
     </div>`)}</div>`;
+  }
+
+  function plateHint() {
+    const plate = String(card.plate ?? '').replace(/\s/g, '');
+    return plate && profile().platePattern && !profile().platePattern.test(plate)
+      ? html`<p class="help">차번호 형식을 확인해 주세요. 예시 12가 3456</p>` : '';
   }
 
   function fieldBlock(f, groups) {
     const r = o.resolve(card.evidence?.[f.key]);
     evMap.set(f.key, r);
     const flags = groups.get(f.key) || [];
+    const label = profile().orderFields[f.key] || f.label;
     const id = `cf-${f.key}`;
     const ro = !editable();
     const value = card[f.key] ?? '';
+    const max = profile().textLimits[f.key];
+    const pattern = f.key === 'modelYear' && profile().modelYearPattern ? profile().modelYearPattern.source : null;
     return html`<div class="cd-field ${f.wide ? 'cd-field-wide' : ''} ${flags.length ? 'is-unsure' : ''}" data-ev="${f.key}">
       <div class="cd-field-top">
-        <label class="cd-label" for="${id}">${f.label}</label>
+        <label class="cd-label" for="${id}">${label}</label>
         <span class="cd-chipslot" data-chip="${f.key}">${chipFor(f.key)}</span>
         ${f.key === 'customer' && card.customerByPhone ? html`<span class="chip chip-phone" title="걸려 온 번호가 거래처 목록의 번호와 같아 그 이름으로 채웠습니다">번호로 확인</span>` : ''}
         <span class="cd-saved" data-saved="${f.key}" aria-live="polite"></span>
       </div>
       <div class="cd-input-row">
         ${f.textarea
-    ? html`<textarea id="${id}" class="textarea" data-field="${f.key}" rows="2" placeholder="${f.ph}" ${ro ? html`readonly` : ''}>${value}</textarea>`
-    : html`<input id="${id}" class="input" data-field="${f.key}" value="${value}" placeholder="${f.ph}" autocomplete="off" spellcheck="false" ${f.mode ? html`inputmode="${f.mode}"` : ''} ${f.list ? html`list="${f.list}"` : ''} ${ro ? html`readonly` : ''}>`}
+    ? html`<textarea id="${id}" class="textarea" data-field="${f.key}" maxlength="${max}" rows="2" placeholder="${f.ph}" ${ro ? html`readonly` : ''}>${value}</textarea>`
+    : html`<input id="${id}" class="input" data-field="${f.key}" maxlength="${max}" ${pattern ? html`pattern="${pattern}"` : ''} value="${value}" placeholder="${f.ph}" autocomplete="off" spellcheck="false" ${f.mode ? html`inputmode="${f.mode}"` : ''} ${f.list ? html`list="${f.list}"` : ''} ${ro ? html`readonly` : ''}>`}
         ${evButton(r, f.label)}
       </div>
       ${flagsView(flags)}
+      ${f.key === 'plate' ? html`<div data-slot="plate-hint">${plateHint()}</div>` : ''}
       ${quoteBox(r)}
     </div>`;
   }
@@ -163,19 +200,19 @@ export function mountCard(el, o) {
         ${ro ? '' : html`<button type="button" class="btn btn-ghost cd-item-del" data-del="${i}" aria-label="${n}번째 부품 줄 지우기">지우기</button>`}
       </div>
       <div class="cd-item-grid">
-        <label class="cd-sub cd-sub-part"><span>부품 이름</span>
-          <input class="input" data-item="part" data-i="${i}" value="${it.part}" placeholder="예: 앞범퍼" autocomplete="off" ${ro ? html`readonly` : ''}></label>
+        <label class="cd-sub cd-sub-part"><span>${profile().itemFields.part}</span>
+          <input class="input" data-item="part" data-i="${i}" maxlength="${profile().textLimits.part}" value="${it.part}" placeholder="예: 앞범퍼" autocomplete="off" ${ro ? html`readonly` : ''}></label>
         <label class="cd-sub cd-sub-side"><span>위치</span>
-          <input class="input" data-item="side" data-i="${i}" value="${it.side}" placeholder="예: 운전석, 좌, 우" autocomplete="off" ${ro ? html`readonly` : ''}></label>
-        <div class="cd-sub cd-sub-qty"><span id="cd-qty-l-${i}">수량</span>
+          <input class="input" data-item="side" data-i="${i}" maxlength="${profile().textLimits.side}" value="${it.side}" placeholder="예: 운전석, 좌, 우" autocomplete="off" ${ro ? html`readonly` : ''}></label>
+        <div class="cd-sub cd-sub-qty"><span id="cd-qty-l-${i}">${profile().itemFields.qty}</span>
           <div class="cd-qty" role="group" aria-labelledby="cd-qty-l-${i}">
             <button type="button" class="btn cd-qty-btn" data-qty="-1" data-i="${i}" aria-label="${n}번째 부품 수량 하나 줄이기" ${ro ? html`disabled` : ''}>−</button>
-            <input class="input cd-qty-input" type="number" inputmode="numeric" min="1" max="999" data-item="qty" data-i="${i}" value="${it.qty ?? ''}" placeholder="?" aria-label="${n}번째 부품 수량" ${ro ? html`readonly` : ''}>
+            <input class="input cd-qty-input" type="number" inputmode="numeric" min="${profile().qtyMin}" max="${profile().qtyMax}" step="1" data-item="qty" data-i="${i}" value="${it.qty ?? ''}" placeholder="?" aria-label="${n}번째 부품 수량" ${ro ? html`readonly` : ''}>
             <button type="button" class="btn cd-qty-btn" data-qty="1" data-i="${i}" aria-label="${n}번째 부품 수량 하나 늘리기" ${ro ? html`disabled` : ''}>+</button>
           </div>
         </div>
-        <label class="cd-sub cd-sub-no"><span>품번</span>
-          <input class="input" data-item="partNo" data-i="${i}" value="${it.partNo}" placeholder="담당자 입력" autocomplete="off" spellcheck="false" ${ro ? html`readonly` : ''}></label>
+        <label class="cd-sub cd-sub-no"><span>${profile().itemFields.partNo}</span>
+          <input class="input" data-item="partNo" data-i="${i}" maxlength="${profile().textLimits.partNo}" value="${it.partNo}" placeholder="담당자 입력" autocomplete="off" spellcheck="false" ${ro ? html`readonly` : ''}></label>
       </div>
       ${flagsView(flags)}
       ${quoteBox(r)}
@@ -231,27 +268,29 @@ export function mountCard(el, o) {
 
   function actionsView() {
     const s = card.status;
-    const n = (card.askBack || []).length;
-    if (s === 'draft') {
-      // 다시 물어볼 것이 남으면 서버가 확정을 막는다(409) — 단추도 미리 막고 바로 위에 이유를 보인다
-      let why;
-      if (n) why = html`<p class="notice notice-warn cd-why" id="cd-confirm-why">다시 물어볼 것 ${n}개를 먼저 해결해 주세요. 거래처에 확인한 뒤 위 「다시 물어볼 것」에서 「해결함」을 누르면 확정할 수 있습니다.</p>`;
-      else if (nothingToShip()) why = html`<p class="cd-why-ok">주문이 아닌 통화(${card.callType})는 부품 줄 없이도 확정할 수 있습니다. 확정하면 처리가 끝난 통화로 표시됩니다.</p>`;
-      else if (!nonOrder() && !(card.items || []).length) why = html`<p class="cd-why-ok">부품이 한 줄도 없습니다. 위 「부품 줄 추가」로 넣은 뒤 확정하세요.</p>`;
-      else why = html`<p class="cd-why-ok">칸을 모두 확인했으면 확정하세요. 확정한 주문만 출고 목록에 올라갑니다.</p>`;
+    if (s === 'draft' && canEdit) {
+      const issues = confirmationIssues(localCard());
+      const why = issues.length
+        ? html`<ul class="notice notice-warn cd-why" id="cd-confirm-why">${issues.map((issue) => html`<li>${issue.message}</li>`)}</ul>`
+        : html`<p class="cd-why-ok">${nothingToShip() ? '확정하면 처리한 통화로 표시됩니다.' : '확정한 주문은 출고 대기에 표시됩니다.'}</p>`;
       return html`${why}
-        <button type="button" class="btn btn-ok btn-lg btn-block" data-act="confirm" ${n ? html`disabled aria-describedby="cd-confirm-why"` : ''}>✓ 확인하고 확정</button>`;
+        <button type="button" class="btn btn-ok btn-lg btn-block" data-act="confirm" ${issues.length || busy ? html`disabled aria-describedby="cd-confirm-why"` : ''}>확인하고 확정</button>
+        <button type="button" class="btn btn-block" data-act="cancel">카드 취소</button>`;
     }
     if (s === 'confirmed') {
-      return html`<p class="notice notice-ok">확정됨${card.confirmedAt ? ` · ${fmtWhen(card.confirmedAt)}` : ''} — ${nothingToShip() ? '처리가 끝난 통화입니다.' : '출고 목록에 올라 있습니다.'}</p>
-        <div class="cd-act-row"><button type="button" class="btn btn-primary btn-lg" data-act="ship">${shipWord()}</button><button type="button" class="btn btn-lg" data-act="reopen">다시 고치기</button></div>`;
+      return html`<p class="notice notice-ok">확정됨${card.confirmedAt ? ' · ' + fmtWhen(card.confirmedAt) : ''} · ${nothingToShip() ? '통화 처리 완료' : '출고 대기'}</p>
+        <div class="cd-act-row">
+          ${canShip && !nothingToShip() ? html`<button type="button" class="btn btn-primary btn-lg" data-act="ship">${shipWord()}</button>` : ''}
+          ${canEdit ? html`<button type="button" class="btn btn-lg" data-act="reopen">확정 취소 및 수정</button>` : ''}
+          ${canEdit ? html`<button type="button" class="btn" data-act="cancel">카드 취소</button>` : ''}
+        </div>`;
     }
     if (s === 'shipped') {
-      return html`<p class="notice notice-ok">${shipWord()}${card.shippedAt ? ` · ${fmtWhen(card.shippedAt)}` : ''}</p>
-        <button type="button" class="btn btn-lg btn-block" data-act="reopen">출고 되돌리기</button>`;
+      return html`<p class="notice notice-ok">${shipWord()}${card.shippedAt ? ' · ' + fmtWhen(card.shippedAt) : ''}</p>
+        ${canShip ? html`<button type="button" class="btn btn-lg btn-block" data-act="unship">출고 되돌리기</button>` : ''}`;
     }
     if (s === 'cancelled') {
-      return html`<p class="notice">취소된 주문입니다.</p><button type="button" class="btn btn-lg btn-block" data-act="reopen">취소 되돌리기</button>`;
+      return html`<p class="notice">취소된 카드입니다.</p>${canEdit ? html`<button type="button" class="btn btn-lg btn-block" data-act="reopen">취소 되돌리기</button>` : ''}`;
     }
     return '';
   }
@@ -259,8 +298,9 @@ export function mountCard(el, o) {
   function callbackView() {
     if (card.callback) {
       return html`<p class="cd-cb-on"><span class="chip chip-callback">다시 전화할 곳</span> <span>${card.callbackReason || '이유를 적지 않았습니다'}</span></p>
-        <button type="button" class="btn btn-block" data-act="cb-off">다시 전화할 곳에서 빼기</button>`;
+        ${canEdit ? html`<button type="button" class="btn btn-block" data-act="cb-off">다시 전화할 곳에서 빼기</button>` : ''}`;
     }
+    if (!canEdit) return '';
     if (cbOpen) {
       const first = (card.askBack || [])[0];
       return html`<label class="field"><span>왜 다시 전화하나요?</span><input id="cd-cb-reason" class="input" value="${first ? askText(first) : ''}" placeholder="예: 품번 확인" autocomplete="off"></label>
@@ -270,13 +310,14 @@ export function mountCard(el, o) {
   }
 
   function reexView() {
+    if (!canEdit) return '';
     const locked = card && card.status !== 'draft';
     const ai = o.meta?.aiEnabled !== false;
     const hasText = Boolean(call.transcript || (call.segments || []).length);
     return html`<h3>AI 로 다시 정리</h3>
       <p class="help">낱말 사전(현장 말 · 거래처 · 차종)을 고친 뒤 누르면, 고친 낱말을 반영해 카드를 새로 만듭니다. 손으로 고친(「사람이 고침」) 칸은 그대로 두고, 빈칸과 AI 초안 칸만 새로 채웁니다. <a href="#/glossary">낱말 사전 열기</a></p>
-      ${locked ? html`<p class="notice notice-warn">${card.statusLabel || '확정'} 상태의 카드는 먼저 위의 「${({ confirmed: '다시 고치기', shipped: '출고 되돌리기', cancelled: '취소 되돌리기' })[card.status] || '되돌리기'}」로 확인 필요 상태로 돌린 뒤 다시 정리할 수 있습니다.</p>` : ''}
-      ${!ai ? html`<p class="notice notice-warn">AI 키 없음 — 지금은 다시 정리를 할 수 없습니다.</p>` : ''}
+      ${locked ? html`<p class="notice notice-warn">${card.statusLabel || '확정'} 상태의 카드는 먼저 위의 「${({ confirmed: '확정 취소 및 수정', shipped: '출고 되돌리기', cancelled: '취소 되돌리기' })[card.status] || '되돌리기'}」로 확인 필요 상태로 돌린 뒤 다시 정리할 수 있습니다.</p>` : ''}
+      ${!ai ? html`<p class="notice notice-warn">지금은 AI로 다시 정리할 수 없습니다.</p>` : ''}
       ${!hasText ? html`<p class="notice">받아쓴 글이 없어 다시 정리할 수 없습니다.</p>` : ''}
       <button type="button" class="btn btn-block" data-act="reextract" ${locked || !ai || !hasText || reexBusy ? html`disabled` : ''}>${reexBusy ? html`<span class="spinner" aria-hidden="true"></span> 다시 정리하는 중… (10~30초)` : 'AI 로 다시 정리'}</button>`;
   }
@@ -287,7 +328,7 @@ export function mountCard(el, o) {
   }
 
   function lockNotice() {
-    if (card.status === 'confirmed') return html`<p class="notice notice-ok cd-lock">확정된 카드입니다. 고치려면 아래 「다시 고치기」를 누르세요.</p>`;
+    if (card.status === 'confirmed') return html`<p class="notice notice-ok cd-lock">확정된 카드입니다. 고치려면 아래 「확정 취소 및 수정」을 누르세요.</p>`;
     if (card.status === 'shipped') return html`<p class="notice notice-ok cd-lock">출고까지 끝난 카드입니다. 고치려면 아래 「출고 되돌리기」를 누르세요.</p>`;
     if (card.status === 'cancelled') return html`<p class="notice cd-lock">취소된 주문입니다. 고치려면 아래 「취소 되돌리기」를 누르세요.</p>`;
     return '';
@@ -301,7 +342,7 @@ export function mountCard(el, o) {
         <div class="cd-sec cd-reex" data-slot="reex">${reexView()}</div>`);
       return;
     }
-    const groups = groupUnsure(card, items);
+    const groups = groupUnsure(localCard(), items);
     const other = groups.get('other') || [];
     render(el, html`
       <div class="cd-card-head"><h2 id="cd-card-h">주문 카드</h2><span data-slot="status">${cardChip(card.status)}</span></div>
@@ -316,10 +357,12 @@ export function mountCard(el, o) {
       <section class="cd-sec cd-ask" aria-labelledby="cd-ask-h" data-slot="ask">${askView()}</section>
       <div class="cd-grid">${fieldBlock(NOTE_FIELD, groups)}</div>
       ${card.aiModel ? html`<p class="cd-model">AI 초안: ${card.aiModel}${card.updatedAt ? ` · 마지막 저장 ${fmtWhen(card.updatedAt)}` : ''}</p>` : ''}
+      <div data-slot="save-status" aria-live="polite">${saveStatus()}</div>
       <section class="cd-sec cd-actions" aria-label="카드 상태 바꾸기" data-slot="actions">${actionsView()}</section>
       <section class="cd-sec cd-callback" aria-label="다시 전화할 곳" data-slot="callback">${callbackView()}</section>
       <section class="cd-sec cd-reex" data-slot="reex">${reexView()}</section>
     `);
+    updateInlineIssues();
     if (activeKey) {
       const b = el.querySelector(`[data-ev="${CSS.escape(activeKey)}"]`);
       if (b) b.classList.add('ev-active'); else activeKey = null;
@@ -329,13 +372,16 @@ export function mountCard(el, o) {
   /** 입력칸은 그대로 두고 표시(칩 · 상태 · 단추)만 새로 그린다 */
   function refreshDecor() {
     if (!card) return;
+    updateInlineIssues();
     el.querySelectorAll('[data-chip]').forEach((s) => render(s, html`${chipFor(s.dataset.chip)}`));
     const st = slot('status'); if (st) render(st, cardChip(card.status));
     const ac = slot('actions'); if (ac) render(ac, actionsView());
+    const save = slot('save-status'); if (save) render(save, saveStatus());
+    const plate = slot('plate-hint'); if (plate) render(plate, plateHint());
   }
   function renderItems() {
     const s = slot('items');
-    if (s) render(s, html`${itemsList(groupUnsure(card, items))}`);
+    if (s) render(s, html`${itemsList(groupUnsure(localCard(), items))}`);
   }
   function renderAsk() { const s = slot('ask'); if (s) render(s, askView()); }
   function renderCallback() { const s = slot('callback'); if (s) render(s, callbackView()); }
@@ -348,146 +394,331 @@ export function mountCard(el, o) {
   }
 
   // ── 저장 ────────────────────────────────────────────────────────
-  function enqueue(fn) {
-    const p = chain.then(fn, fn);
-    chain = p.catch(() => {});
-    return p;
+  function saveStatus() {
+    if (!failure) return '';
+    const diff = latest ? [...pending].map(([key, value]) => {
+      const label = FIELD_LABEL[key] || (key === 'callType' ? '통화 종류' : key);
+      return html`<li><strong>${label}</strong><br>최신 ${shownValue(key, latest[key])}<br>내 입력 ${shownValue(key, value)}</li>`;
+    }) : [];
+    return html`<div class="notice notice-error" role="alert">
+      <p>${failure.message || '입력을 저장하지 못했습니다.'}</p>
+      ${diff.length ? html`<ul>${diff}</ul>` : ''}
+      ${latest ? html`<div class="row">
+        <button type="button" class="btn" data-act="latest">최신 내용 사용</button>
+        ${latest.status === 'draft' ? html`<button type="button" class="btn btn-primary" data-act="apply-mine">내 변경 다시 적용</button>` : ''}
+      </div>` : html`<button type="button" class="btn" data-act="retry-save">다시 저장</button>`}
+    </div>`;
   }
-  function setSaved(keys, state) {
-    for (const k of keys) {
-      const s = el.querySelector(`[data-saved="${CSS.escape(k)}"]`);
-      if (!s) continue;
-      clearTimeout(savedTimers.get(k));
-      s.classList.toggle('is-fail', state === 'fail');
-      s.textContent = state === 'saving' ? '저장 중…' : state === 'ok' ? '✓ 저장됨' : state === 'fail' ? '저장 못 함' : '';
-      if (state === 'ok') savedTimers.set(k, setTimeout(() => { if (s.isConnected) s.textContent = ''; }, 2500));
+
+  function shownValue(key, value) {
+    if (key === 'items') return (value || []).map((item) => [item.part, item.qty, item.partNo].filter(Boolean).join(' ')).join(' · ') || '비어 있음';
+    if (key === 'urgent') return value ? '급함' : '급하지 않음';
+    if (Array.isArray(value)) return value.join(' · ') || '비어 있음';
+    return value ?? '비어 있음';
+  }
+
+  function issueInput(issue) {
+    if (issue.field.startsWith('item:')) {
+      const index = items.findIndex((item, i) => 'item:' + itemId(item, i) === issue.field);
+      return el.querySelector('[data-item="' + (issue.item || 'part') + '"][data-i="' + index + '"]');
+    }
+    return el.querySelector('[data-field="' + CSS.escape(issue.field) + '"]');
+  }
+
+  function updateInlineIssues() {
+    el.querySelectorAll('.cd-input-error').forEach((element) => element.remove());
+    el.querySelectorAll('[data-field][aria-invalid], [data-item][aria-invalid]').forEach((input) => {
+      input.removeAttribute('aria-invalid');
+      input.removeAttribute('aria-describedby');
+    });
+    if (!editable()) return;
+    for (const [index, issue] of confirmationIssues(localCard()).entries()) {
+      if (issue.code === 'unsure_left' || issue.code === 'ask_back_left') continue;
+      const input = issueInput(issue);
+      if (!input) continue;
+      const message = document.createElement('p');
+      message.id = 'cd-field-error-' + index;
+      message.className = 'help cd-input-error';
+      message.textContent = issue.message;
+      const label = input.closest('.cd-sub') || input.closest('.cd-input-row');
+      label?.after(message);
+      input.setAttribute('aria-invalid', 'true');
+      input.setAttribute('aria-describedby', message.id);
     }
   }
-  function warn(r) {
-    const w = r?.warnings;
-    if (Array.isArray(w) && w.length) toast(w.map((x) => (typeof x === 'string' ? x : x?.message || '')).filter(Boolean).join(' / '), 'info');
+
+  function setSaved(keys, state) {
+    for (const key of keys) {
+      const target = el.querySelector('[data-saved="' + CSS.escape(key) + '"]');
+      if (!target) continue;
+      clearTimeout(savedTimers.get(key));
+      target.classList.toggle('is-fail', state === 'fail');
+      target.textContent = state === 'saving' ? '저장 중…' : state === 'ok' ? '저장됨' : state === 'fail' ? '저장 실패' : '';
+      if (state === 'ok') savedTimers.set(key, setTimeout(() => { if (target.isConnected) target.textContent = ''; }, 2500));
+    }
   }
-  /** revert: 실패하면 화면 값을 되돌리는 함수(미리 바꿔 보인 칸) */
-  function save(patch, keys, revert) {
-    if (!editable()) return Promise.resolve();
-    setSaved(keys, 'saving');
-    return enqueue(async () => {
-      try {
-        const r = await api.patch(`/api/cards/${encodeURIComponent(o.callId)}`, patch);
-        if (!alive) return;
-        if (r?.card) card = r.card;
-        setSaved(keys, 'ok');
-        warn(r);
+
+  function remember() {
+    try {
+      if (pending.size) sessionStorage.setItem(storageKey, JSON.stringify({ revision: baseRevision, patch: Object.fromEntries(pending) }));
+      else sessionStorage.removeItem(storageKey);
+    } catch { /* 저장소를 못 쓰면 열린 화면에서 변경을 유지한다. */ }
+  }
+
+  function updateLocalCard() {
+    card = { ...savedCard, ...Object.fromEntries(pending) };
+  }
+
+  function scheduleSave(ms) {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => { flush().catch(() => {}); }, ms);
+  }
+
+  function stage(patch) {
+    if (!editable()) return;
+    for (const [key, value] of Object.entries(patch)) pending.set(key, value);
+    remember();
+    updateLocalCard();
+    setSaved(Object.keys(patch), 'saving');
+    refreshDecor();
+    if (!latest) scheduleSave(1000);
+  }
+
+  async function persistPending() {
+    if (!pending.size) return;
+    const batch = Object.fromEntries(pending);
+    const keys = Object.keys(batch);
+    try {
+      const result = await api.patch('/api/cards/' + encodeURIComponent(o.callId), { ...batch, expectedRevision: baseRevision });
+      savedCard = result?.card || savedCard;
+      baseRevision = savedCard.revision;
+      for (const key of keys) if (pending.get(key) === batch[key]) pending.delete(key);
+      remember();
+      updateLocalCard();
+      retryMs = 2000;
+      failure = null;
+      latest = null;
+      if (alive) {
+        setSaved(keys.filter((key) => !pending.has(key)), 'ok');
         refreshDecor();
-        o.onCardChange(card, { fields: keys });
-      } catch (e) {
-        if (!alive) return;
-        setSaved(keys, 'fail');
-        if (revert) revert();
-        toast(e?.message || '저장하지 못했습니다. 잠시 뒤 다시 해 주세요.', 'error');
+        o.onCardChange(savedCard, { fields: keys });
       }
-    });
+    } catch (e) {
+      failure = e;
+      if (alive && (e.code === 'card_conflict' || e.code === 'locked')) {
+        try { latest = (await api.get('/api/calls/' + encodeURIComponent(o.callId)))?.card || null; }
+        catch { latest = null; }
+      }
+      if (alive) {
+        setSaved(keys, 'fail');
+        refreshDecor();
+        if (e.status === 0 || e.status === 429 || e.status >= 500) {
+          scheduleSave(retryMs);
+          retryMs = Math.min(retryMs * 2, 30000);
+        }
+      }
+      throw e;
+    }
   }
-  function saveItemsSoon(ms) {
-    clearTimeout(itemsTimer);
-    itemsTimer = setTimeout(() => { itemsTimer = null; save({ items: itemsForSave(items) }, ['items']); }, ms);
-  }
-  /** 기다리는 저장을 모두 끝낸다(상태 단추 · 다시 정리 전에) */
+
   async function flush() {
-    if (itemsTimer) { clearTimeout(itemsTimer); itemsTimer = null; save({ items: itemsForSave(items) }, ['items']); }
-    await chain;
+    clearTimeout(saveTimer);
+    const next = chain.then(async () => {
+      if (latest && pending.size) throw failure;
+      while (pending.size) await persistPending();
+    });
+    chain = next.catch(() => {});
+    return next;
   }
+
+  function resolveConflict(applyMine) {
+    if (!latest) return;
+    savedCard = latest;
+    baseRevision = latest.revision;
+    if (!applyMine) pending.clear();
+    latest = null;
+    failure = null;
+    remember();
+    updateLocalCard();
+    items = cloneItems(card.items);
+    renderAll();
+    o.onCardChange(savedCard, { fields: ['all'] });
+    if (applyMine) flush().catch(() => {});
+  }
+
+  function saveItems() { stage({ items: itemsForSave(items) }); }
 
   function saveText(input) {
     if (!editable()) return;
     const key = input.dataset.field;
-    const v = input.value.trim();
-    if (v === String(card[key] ?? '')) return;
-    save({ [key]: v || null }, [key]);
+    const value = input.value.trim() || null;
+    if (value !== card[key]) stage({ [key]: value });
   }
-  function clampQty(v) {
-    const n = num(v);
-    if (n === null) return null;
-    return Math.min(999, Math.max(1, Math.round(n)));
-  }
-  function changeQty(i, d) {
+
+  function changeQty(i, delta) {
     if (!editable() || !items[i]) return;
-    const q = items[i].qty ?? 0;
-    items[i].qty = Math.min(999, Math.max(1, q + d));
-    const input = el.querySelector(`input[data-item="qty"][data-i="${i}"]`);
+    const { qtyMin, qtyMax } = profile();
+    const qty = Number(items[i].qty);
+    items[i].qty = Math.min(qtyMax, Math.max(qtyMin, (Number.isFinite(qty) ? Math.round(qty) : 0) + delta));
+    const input = el.querySelector('input[data-item="qty"][data-i="' + i + '"]');
     if (input) input.value = String(items[i].qty);
-    saveItemsSoon(700);
+    saveItems();
   }
+
   async function deleteItem(i) {
     if (!editable() || !items[i]) return;
-    const it = items[i];
-    const filled = String(it.part || '').trim() || String(it.partNo || '').trim();
-    if (filled && !(await confirmBox(`${i + 1}번째 부품 줄(${it.part || it.partNo})을 지울까요?`))) return;
+    const item = items[i];
+    const named = item.part || item.partNo;
+    if (named && !(await confirmBox((i + 1) + '번째 부품 줄(' + named + ')을 지울까요?'))) return;
     if (!alive) return;
     items.splice(i, 1);
-    if (activeKey && activeKey.startsWith('item:')) activeKey = null;
+    if (activeKey?.startsWith('item:')) activeKey = null;
     renderItems();
-    if (filled) saveItemsSoon(0);
+    saveItems();
   }
+
   function addItem() {
     if (!editable()) return;
-    items.push({ part: '', side: '', qty: 1, partNo: '', quote: null, at: null, seg: null });
+    const id = 'item_' + (globalThis.crypto?.randomUUID?.() || Array.from(crypto.getRandomValues(new Uint8Array(16)), (x) => x.toString(16).padStart(2, '0')).join(''));
+    items.push({ id, part: '', side: '', qty: 1, partNo: '', quote: null, at: null, seg: null });
     renderItems();
-    const input = el.querySelector(`input[data-item="part"][data-i="${items.length - 1}"]`);
-    if (input) input.focus();
+    saveItems();
+    el.querySelector('input[data-item="part"][data-i="' + (items.length - 1) + '"]')?.focus();
   }
+
   function setAsk(list) {
-    const before = card.askBack || [];
-    card = { ...card, askBack: list };
+    if (!editable()) return;
+    stage({ askBack: list });
     renderAsk();
-    refreshDecor();
-    save({ askBack: list }, ['askBack'], () => { card = { ...card, askBack: before }; renderAsk(); refreshDecor(); });
+  }
+
+  function warn(response) {
+    const warnings = response?.warnings;
+    if (Array.isArray(warnings) && warnings.length) toast(warnings.join(' / '), 'info');
+  }
+
+  function handleOnline() {
+    if (pending.size) flush().catch(() => {});
+  }
+
+  function handleUnload(event) {
+    if (!pending.size) return;
+    event.preventDefault();
+    event.returnValue = '';
   }
 
   // ── 상태 바꾸기 · 다시 전화 · 다시 정리 ──────────────────────────
+  function reasonBox(title) {
+    const dialog = document.createElement('dialog');
+    dialog.className = 'dialog';
+    dialog.setAttribute('aria-labelledby', 'cd-reason-title');
+    render(dialog, html`<form method="dialog" class="dialog-body">
+      <h2 id="cd-reason-title">${title}</h2>
+      <label class="field"><span>사유</span><input class="input" name="reason" required pattern=".*[^ ].*" maxlength="300" autofocus></label>
+      <div class="row"><button class="btn" value="back" formnovalidate>돌아가기</button><button class="btn btn-primary" value="ok">확인</button></div>
+    </form>`);
+    document.body.append(dialog);
+    return new Promise((resolve) => {
+      dialog.addEventListener('close', () => {
+        const value = dialog.returnValue === 'ok' ? dialog.querySelector('input').value.trim() : null;
+        dialog.remove();
+        resolve(value);
+      }, { once: true });
+      dialog.showModal();
+    });
+  }
+
   async function setStatus(action, btn) {
     if (busy) return;
     busy = true;
     if (btn) btn.disabled = true;
     try {
+      let reason;
+      if (action === 'cancel' || (action === 'reopen' && card.status === 'confirmed')) {
+        reason = await reasonBox(action === 'cancel' ? '카드 취소' : '확정 취소 및 수정');
+        if (!reason) return;
+      }
+      if (action === 'ship' && !(await confirmBox('이 카드를 ' + shipWord() + '로 바꿀까요?'))) return;
+      if (action === 'unship' && !(await confirmBox('출고 완료를 되돌릴까요? 카드는 확정 상태로 돌아갑니다.'))) return;
+      if (!alive) return;
       await flush();
-      const r = await api.post(`/api/cards/${encodeURIComponent(o.callId)}/${action}`);
+      const result = await api.post('/api/cards/' + encodeURIComponent(o.callId) + '/' + action, { reason, expectedRevision: savedCard?.revision });
       if (!alive) return;
-      if (r?.card) { card = r.card; items = cloneItems(card.items); }
-      warn(r);
+      if (result?.card) {
+        savedCard = result.card;
+        baseRevision = savedCard.revision;
+        updateLocalCard();
+        items = cloneItems(card.items);
+      }
+      busy = false;
       renderAll();
-      o.onCardChange(card, { fields: ['status'] });
-      const msg = action === 'confirm' && nothingToShip() ? '확정했습니다. 처리가 끝난 통화로 표시됩니다.'
-        : action === 'ship' && nonOrder() ? '처리 완료로 바꿨습니다.'
-          : DONE_MSG[action];
-      toast(msg || '바꿨습니다.', 'ok');
+      o.onCardChange(savedCard, { fields: ['status'] });
+      const message = action === 'confirm' && nothingToShip() ? '확정했습니다. 처리한 통화로 표시됩니다.' : DONE_MSG[action];
+      toast(message || '상태를 바꿨습니다.', 'ok');
     } catch (e) {
-      if (!alive) return;
-      toast(e?.message || '바꾸지 못했습니다.', 'error');
-      if (btn && btn.isConnected) btn.disabled = false;
+      if (alive) {
+        toast(e?.message || '상태를 바꾸지 못했습니다.', 'error');
+        focusIssue();
+      }
     } finally {
       busy = false;
+      if (alive) refreshDecor();
     }
   }
-  async function setCallback(on) {
-    if (busy) return;
+
+  function focusIssue() {
+    const first = confirmationIssues(localCard())[0];
+    if (!first) return;
+    issueInput(first)?.focus();
+  }
+
+  async function reviewWarning(id, button) {
+    if (busy || !editable()) return;
     busy = true;
-    const reason = on ? (el.querySelector('#cd-cb-reason')?.value || '').trim() : null;
+    button.disabled = true;
     try {
       await flush();
-      const r = await api.post(`/api/cards/${encodeURIComponent(o.callId)}/callback`, { on, reason: reason || null });
+      const result = await api.post('/api/cards/' + encodeURIComponent(o.callId) + '/review', { id, expectedRevision: savedCard?.revision });
       if (!alive) return;
-      if (r?.card) card = r.card;
-      cbOpen = false;
-      warn(r);
-      renderCallback();
-      refreshDecor();
-      o.onCardChange(card, { fields: ['callback'] });
-      toast(on ? '다시 전화할 곳에 넣었습니다. 오늘 화면의 「다시 전화할 곳」에 보입니다.' : '다시 전화할 곳에서 뺐습니다.', 'ok');
+      savedCard = result.card;
+      baseRevision = savedCard.revision;
+      updateLocalCard();
+      busy = false;
+      renderAll();
+      o.onCardChange(savedCard, { fields: ['unsure'] });
+      toast('사람이 확인한 항목으로 표시했습니다.', 'ok');
     } catch (e) {
-      if (alive) toast(e?.message || '바꾸지 못했습니다.', 'error');
+      if (alive) toast(e?.message || '확인 표시를 저장하지 못했습니다.', 'error');
     } finally {
       busy = false;
+      if (button.isConnected) button.disabled = false;
+      if (alive) refreshDecor();
+    }
+  }
+
+  async function setCallback(on) {
+    if (busy || !canEdit) return;
+    busy = true;
+    const reason = on ? (el.querySelector('#cd-cb-reason')?.value || '').trim() : null;
+    const next = chain.then(async () => {
+      const result = await api.post('/api/cards/' + encodeURIComponent(o.callId) + '/callback', { on, reason: reason || null });
+      if (!pending.size || result.card.revision <= (savedCard?.revision ?? -1) + 1) baseRevision = result.card.revision;
+      savedCard = result.card;
+      updateLocalCard();
+    });
+    chain = next.catch(() => {});
+    try {
+      await next;
+      if (!alive) return;
+      cbOpen = false;
+      renderCallback();
+      o.onCardChange(savedCard, { fields: ['callback'] });
+      toast(on ? '다시 전화할 곳에 넣었습니다.' : '다시 전화할 곳에서 뺐습니다.', 'ok');
+    } catch (e) {
+      if (alive) toast(e?.message || '재연락 표시를 바꾸지 못했습니다.', 'error');
+    } finally {
+      busy = false;
+      if (alive) refreshDecor();
     }
   }
   async function reextract() {
@@ -505,7 +736,7 @@ export function mountCard(el, o) {
       if (r?.call) {
         o.onCallReplaced(r.call);
       } else if (r?.card) {
-        card = r.card; items = cloneItems(card.items); renderAll();
+        savedCard = r.card; baseRevision = savedCard.revision; updateLocalCard(); items = cloneItems(card.items); renderAll();
         o.onCardChange(card, { fields: ['all'] });
       }
       const err = r?.call?.card?.aiError || r?.card?.aiError;
@@ -535,9 +766,11 @@ export function mountCard(el, o) {
     if (!(t instanceof Element)) return;
     const act = t.closest('[data-act]');
     if (act && el.contains(act)) { handleAct(act.dataset.act, act); return; }
+    const review = t.closest('[data-review]');
+    if (review) { reviewWarning(review.dataset.review, review); return; }
     const flag = t.closest('[data-flag]');
     if (flag) {
-      const u = (card?.unsure || [])[Number(flag.dataset.flag)];
+      const u = card?.unsure?.find((warning) => warning.id === flag.dataset.flag);
       setActive(flag.closest('[data-ev]'));
       const r = o.resolve(u);
       if (r) o.onEvidence(r, { play: true, scroll: true });
@@ -570,9 +803,8 @@ export function mountCard(el, o) {
       case 'item-add': addItem(); break;
       case 'urgent':
         if (!editable()) return;
-        card = { ...card, urgent: !card.urgent };
+        stage({ urgent: !card.urgent });
         renderUrgent();
-        save({ urgent: card.urgent }, ['urgent'], () => { card = { ...card, urgent: !card.urgent }; renderUrgent(); });
         break;
       case 'ask-add': {
         const input = el.querySelector('#cd-ask-new');
@@ -582,7 +814,10 @@ export function mountCard(el, o) {
         el.querySelector('#cd-ask-new')?.focus();
         break;
       }
-      case 'confirm': case 'ship': case 'reopen': setStatus(act, btn); break;
+      case 'confirm': case 'ship': case 'unship': case 'reopen': case 'cancel': setStatus(act, btn); break;
+      case 'retry-save': flush().catch(() => focusIssue()); break;
+      case 'latest': resolveConflict(false); break;
+      case 'apply-mine': resolveConflict(true); break;
       case 'cb-open':
         cbOpen = true; renderCallback();
         el.querySelector('#cd-cb-reason')?.focus();
@@ -595,27 +830,21 @@ export function mountCard(el, o) {
     }
   }
 
-  function onChange(e) {
+  function onInput(e) {
     const t = e.target;
-    if (!(t instanceof Element)) return;
+    if (!(t instanceof Element) || !editable() || e.isComposing) return;
     if (t.dataset.field) { saveText(t); return; }
-    if (t.dataset.item) {
-      if (!editable()) return;
-      const i = Number(t.dataset.i);
-      const sub = t.dataset.item;
-      if (!items[i]) return;
-      if (sub === 'qty') {
-        items[i].qty = clampQty(t.value);
-        t.value = items[i].qty ?? '';
-      } else {
-        items[i][sub] = t.value.trim();
-        if (sub === 'part') {
-          const title = t.closest('.cd-item')?.querySelector('.cd-item-title');
-          if (title) title.textContent = items[i].part || '새 부품';
-        }
-      }
-      saveItemsSoon(0);
+    if (!t.dataset.item) return;
+    const i = Number(t.dataset.i);
+    const sub = t.dataset.item;
+    if (!items[i]) return;
+    const value = t.value.trim();
+    items[i][sub] = sub === 'qty' ? (value === '' ? null : Number(value)) : sub === 'partNo' ? normalizePartNo(value) : value;
+    if (sub === 'part') {
+      const title = t.closest('.cd-item')?.querySelector('.cd-item-title');
+      if (title) title.textContent = value || '새 부품';
     }
+    saveItems();
   }
 
   function onKeydown(e) {
@@ -628,7 +857,21 @@ export function mountCard(el, o) {
   }
 
   el.addEventListener('click', onClick);
-  el.addEventListener('change', onChange);
+  el.addEventListener('input', onInput);
+  el.addEventListener('change', onInput);
+  el.addEventListener('compositionend', onInput);
+  window.addEventListener('online', handleOnline);
+  window.addEventListener('beforeunload', handleUnload);
+  if (editable()) {
+    try {
+      const restored = JSON.parse(sessionStorage.getItem(storageKey) || '{}');
+      for (const [key, value] of Object.entries(restored.patch || {})) pending.set(key, value);
+      if (pending.size && Number.isSafeInteger(restored.revision)) baseRevision = restored.revision;
+      updateLocalCard();
+      if (pending.has('items')) items = cloneItems(card.items);
+      if (pending.size) scheduleSave(1000);
+    } catch { /* 저장된 변경이 없으면 서버 값으로 시작한다. */ }
+  }
   el.addEventListener('keydown', onKeydown);
   renderAll();
 
@@ -638,19 +881,25 @@ export function mountCard(el, o) {
     /** 다시 정리 · 새로 읽기로 통화가 바뀌었을 때 */
     update(newCall) {
       call = newCall;
-      card = newCall.card || null;
+      savedCard = newCall.card || null;
+      if (!pending.size) baseRevision = savedCard?.revision;
+      if (savedCard) updateLocalCard();
+      else card = null;
       items = cloneItems(card?.items);
       cbOpen = false;
       renderAll();
     },
     flush,
     destroy() {
-      // 떠나기 전에 기다리던 부품 줄 저장은 보낸다
-      if (itemsTimer) { clearTimeout(itemsTimer); itemsTimer = null; save({ items: itemsForSave(items) }, ['items']); }
       alive = false;
+      if (pending.size) flush().catch(() => {});
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('beforeunload', handleUnload);
       for (const tm of savedTimers.values()) clearTimeout(tm);
       el.removeEventListener('click', onClick);
-      el.removeEventListener('change', onChange);
+      el.removeEventListener('input', onInput);
+      el.removeEventListener('change', onInput);
+      el.removeEventListener('compositionend', onInput);
       el.removeEventListener('keydown', onKeydown);
     },
   };

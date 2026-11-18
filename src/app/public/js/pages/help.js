@@ -58,7 +58,7 @@ export default {
         <div class="page-head"><div>
           <p class="eyebrow">도움말 · 가짜 통화 데모</p>
           <h1>이 데모 사이트 안내</h1>
-          <p class="sub">콜노트(가칭)는 수업 팀 프로젝트로 만든 시험용 사이트입니다.</p>
+          <p class="sub">아맞다는 수업 팀 프로젝트로 만든 시험용 사이트입니다.</p>
         </div></div>
 
         <section class="card help-what" aria-labelledby="h-what">
@@ -118,7 +118,7 @@ export default {
                 <li>크롬으로 이 사이트를 엽니다.</li>
                 <li>오른쪽 위 <span class="kbd">⋮</span> (점 세 개)를 누릅니다.</li>
                 <li>「홈 화면에 추가」 또는 「앱 설치」를 누릅니다.</li>
-                <li>「추가」를 누르면 홈 화면에 콜노트 아이콘이 생깁니다.</li>
+                <li>「추가」를 누르면 홈 화면에 아맞다 아이콘이 생깁니다.</li>
               </ol>
             </div>
             <div class="card help-step">

@@ -1,0 +1,13 @@
+{
+  "at": "2026-11-17T17:43:13.091892+00:00",
+  "command": "docker compose --env-file src/app/.env.example config --format json",
+  "checks": {
+    "private": true,
+    "fixture": true,
+    "paid_disabled": true,
+    "no_api_key": true,
+    "loopback": true,
+    "persistent_data": true
+  },
+  "runtimeBuildAndBoot": "not verified: Docker daemon socket permission denied"
+}

@@ -6,7 +6,8 @@ import os from 'node:os';
 import path from 'node:path';
 
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'cn-'));
-process.env.ANTHROPIC_API_KEY = ''; // 진짜 키가 있어도 시험에서는 쓰지 않는다
+process.env.AI_PROVIDER = 'off';
+process.env.ANTHROPIC_API_KEY = '가짜-키'; // 키가 있어도 꺼진 모드에서는 SDK를 부르지 않는다
 
 const { default: Anthropic } = await import('@anthropic-ai/sdk');
 const ai = await import('../lib/ai.mjs');
@@ -31,6 +32,7 @@ function fakeClient(handler) {
 const apiErr = (Cls, status, type) => new Cls(status, { type: 'error', error: { type, message: 'x' } }, 'x', new Headers());
 
 const CARD = {
+  call_type: '주문',
   customer: '새한카센터', contact: null, car_model: '아반떼 AD', model_year: '2017', plate: null,
   items: [{ part: '앞범퍼', side: null, qty: 1, part_no: null, quote: '앞범퍼 하나 있어요' }],
   urgent: true, due: '오전 중', delivery: '배송', ask_back: [], unsure: [], fixes: [], note: null,
@@ -54,7 +56,7 @@ function walkSchema(s, where, out) {
   if (s.items) walkSchema(s.items, `${where}[]`, out);
 }
 
-test('키도 가짜 클라이언트도 없으면 AI 꺼짐 · no_key', async () => {
+test('꺼진 모드에서는 키가 있어도 AI를 호출하지 않는다', async () => {
   ai.setClientForTest(null);
   assert.equal(ai.aiEnabled(), false);
   await assert.rejects(ai.extractCard(INPUT), (e) => e instanceof ai.AiError && e.code === 'no_key');
@@ -124,6 +126,8 @@ test('extractCard: 거절 · 길이 초과 · JSON 아님 → AiError', async ()
   ai.setClientForTest(fakeClient(() => textResp('주문 카드입니다')));
   await assert.rejects(ai.extractCard(INPUT), (e) => e.code === 'bad_output');
   ai.setClientForTest(fakeClient(() => textResp({ customer: 'x' }))); // items 없음
+  await assert.rejects(ai.extractCard(INPUT), (e) => e.code === 'bad_output');
+  ai.setClientForTest(fakeClient(() => textResp({ ...CARD, items: [{ ...CARD.items[0], qty: '1' }] })));
   await assert.rejects(ai.extractCard(INPUT), (e) => e.code === 'bad_output');
   ai.setClientForTest(fakeClient(() => textResp(CARD)));
   await assert.rejects(ai.extractCard({ transcript: '   ', segments: [] }), (e) => e.code === 'bad_output');

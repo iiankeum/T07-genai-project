@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'cn-'));
 process.env.ADMIN_PASSCODE = 'fake-test-passcode';
 
-const { db } = await import('../lib/db.mjs');
+const { dataDir, db } = await import('../lib/db.mjs');
 const { Router } = await import('../lib/http.mjs');
 const { kstDay, adminLogin } = await import('../lib/security.mjs');
 const { createApp } = await import('../server.mjs');
@@ -70,7 +70,7 @@ before(async () => {
   addCall({ id: 'call_gone', recordedAt: at(dayBefore(2), '08:30'), title: '파일 없음', audio: 'audio/nope.wav' });
 
   // 가짜 WAV: 44바이트 머리 + 1000바이트
-  const dir = path.join(process.env.DATA_DIR, 'audio');
+  const dir = path.join(dataDir(), 'audio');
   fs.mkdirSync(dir, { recursive: true });
   const buf = Buffer.alloc(1044);
   buf.write('RIFF', 0); buf.write('WAVE', 8);
@@ -96,7 +96,7 @@ test('목록: 최신순 · total · 카드 포함 · 글은 빼고', async () =>
   const { res, body } = await get('/api/calls');
   assert.equal(res.status, 200);
   assert.equal(body.total, 7);
-  assert.equal(body.limit, 50);
+  assert.equal(body.limit, 30);
   const ids = body.calls.map((c) => c.id);
   assert.deepEqual(ids.slice(0, 3), ['call_d', 'call_b', 'call_a']);
   const a = body.calls.find((c) => c.id === 'call_a');
@@ -186,10 +186,12 @@ test('오디오: 전체 · Range · 끝에서 · 범위 밖 · 내려받기 · �
   assert.equal(r.res.status, 200);
   assert.equal(r.res.headers.get('content-type'), 'audio/wav');
   assert.equal(r.res.headers.get('accept-ranges'), 'bytes');
+  assert.equal(r.res.headers.get('cache-control'), 'no-store');
   assert.equal(r.body.length, 1044);
 
   r = await get('/api/calls/call_a/audio', { Range: 'bytes=44-99' });
   assert.equal(r.res.status, 206);
+  assert.equal(r.res.headers.get('cache-control'), 'no-store');
   assert.equal(r.res.headers.get('content-range'), 'bytes 44-99/1044');
   assert.equal(r.body.length, 56);
   assert.equal(r.body[0], 44);
@@ -207,7 +209,7 @@ test('오디오: 전체 · Range · 끝에서 · 범위 밖 · 내려받기 · �
   assert.equal(r.res.headers.get('content-range'), 'bytes */1044');
 
   r = await get('/api/calls/call_a/audio?download=1');
-  assert.equal(r.res.headers.get('content-disposition'), 'attachment; filename="callnote-fake-call_a.wav"');
+  assert.equal(r.res.headers.get('content-disposition'), 'attachment; filename="ahmatda-fake-call_a.wav"');
 
   r = await get('/api/calls/call_b/audio');
   assert.equal(r.res.status, 404);
@@ -267,7 +269,7 @@ test('지우기: 관리자만, 카드 · 일감 · 오디오까지', async () =>
   assert.equal(db().prepare("SELECT COUNT(*) AS n FROM calls WHERE id = 'call_a'").get().n, 0);
   assert.equal(db().prepare("SELECT COUNT(*) AS n FROM cards WHERE call_id = 'call_a'").get().n, 0);
   assert.equal(db().prepare("SELECT COUNT(*) AS n FROM jobs WHERE call_id = 'call_a'").get().n, 0);
-  assert.equal(fs.existsSync(path.join(process.env.DATA_DIR, 'audio', 'call_a.wav')), false);
+  assert.equal(fs.existsSync(path.join(dataDir(), 'audio', 'call_a.wav')), false);
 
   res = await fetch(base + '/api/calls/call_a', { method: 'DELETE', headers: { Cookie: `cn_admin=${token}` } });
   assert.equal(res.status, 404);
@@ -275,7 +277,7 @@ test('지우기: 관리자만, 카드 · 일감 · 오디오까지', async () =>
   res = await fetch(base + '/api/calls/call_bad', { method: 'DELETE', headers: { Cookie: `cn_admin=${token}` } });
   assert.equal(res.status, 200);
   assert.equal((await res.json()).audioDeleted, false);
-  assert.ok(fs.existsSync(path.join(process.env.DATA_DIR, 'callnote.sqlite')));
+  assert.ok(fs.existsSync(path.join(dataDir(), 'callnote.sqlite')));
 });
 
 test('찾기: 통화 종류(call_type)로도 찾는다', async () => {
@@ -283,4 +285,33 @@ test('찾기: 통화 종류(call_type)로도 찾는다', async () => {
   const { body } = await get('/api/calls?q=' + encodeURIComponent('반품'));
   assert.deepEqual(body.calls.map((c) => c.id), ['call_e']);
   assert.equal(body.calls[0].card.callType, '반품·교환');
+});
+
+
+test('보드 열 집계는 200건을 넘겨도 정확하고 이력 필터와 페이지를 함께 쓸 수 있다', async () => {
+  for (let i = 0; i < 205; i++) {
+    const id = 'page_' + String(i).padStart(3, '0');
+    addCall({
+      id, recordedAt: at(today, '12:00'), customer: '가짜거래처',
+      card: { status: 'confirmed', customer: '가짜거래처', callback: i % 2 === 0, urgent: i === 0 },
+    });
+    db().prepare("UPDATE cards SET call_type = '배송 문의' WHERE call_id = ?").run(id);
+  }
+  const params = new URLSearchParams({ status: 'confirmed', customer: '가짜거래처', callType: '배송 문의', sort: 'board' });
+  let { body } = await get('/api/calls?' + params);
+  assert.equal(body.total, 205);
+  assert.equal(body.calls.length, 30);
+  assert.equal(body.calls[0].id, 'page_000');
+  params.set('offset', '200');
+  ({ body } = await get('/api/calls?' + params));
+  assert.equal(body.total, 205);
+  assert.equal(body.calls.length, 5);
+  params.delete('offset');
+  params.set('callback', 'true');
+  ({ body } = await get('/api/calls?' + params));
+  assert.equal(body.total, 103);
+  assert.ok(body.calls.every((call) => call.card.callback && call.card.callType === '배송 문의'));
+  params.set('callback', 'false');
+  ({ body } = await get('/api/calls?' + params));
+  assert.equal(body.total, 102);
 });

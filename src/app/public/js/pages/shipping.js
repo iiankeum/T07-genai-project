@@ -87,7 +87,7 @@ export default {
     function csvHref() {
       const qs = new URLSearchParams({ scope: st.scope });
       if (st.scope === 'today') qs.set('day', st.data?.day || kstDay());
-      return `/api/shipping.csv?${qs}`;
+      return api.url(`/api/shipping.csv?${qs}`);
     }
 
     function draw() {

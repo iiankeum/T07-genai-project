@@ -1,14 +1,14 @@
 // 보안: 응답 헤더(CSP 등) · IP 별 빈도 제한 · 하루 전체 상한 · 관리자 세션 · 토큰 비교.
 import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { config, secret } from './config.mjs';
-import { db } from './db.mjs';
+import { globalDb } from './db.mjs';
 import { HttpError } from './http.mjs';
 
 export const CSP = [
   "default-src 'self'",
   "script-src 'self'",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src 'self' https://fonts.gstatic.com data:",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
+  "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:",
   "img-src 'self' data: blob:",
   "media-src 'self' blob:",
   "connect-src 'self'",
@@ -112,7 +112,7 @@ export function kstDay(date = new Date()) {
   return d.toISOString().slice(0, 10);
 }
 export function usageCount(kind, day = kstDay()) {
-  return db().prepare('SELECT count FROM usage WHERE day = ? AND kind = ?').get(day, kind)?.count ?? 0;
+  return globalDb().prepare('SELECT count FROM usage WHERE day = ? AND kind = ?').get(day, kind)?.count ?? 0;
 }
 const DAILY_LIMIT_MESSAGE = '오늘 데모에서 쓸 수 있는 양을 다 썼습니다. 내일 다시 해 주세요.';
 
@@ -122,7 +122,7 @@ export function checkDaily(kind, max, message = DAILY_LIMIT_MESSAGE) {
 }
 /** 하루 사용량을 1 늘린다(상한은 보지 않는다 — 이미 끝난 일을 셀 때) */
 export function addDaily(kind) {
-  db().prepare('INSERT INTO usage(day, kind, count) VALUES(?, ?, 1) ON CONFLICT(day, kind) DO UPDATE SET count = count + 1').run(kstDay(), kind);
+  globalDb().prepare('INSERT INTO usage(day, kind, count) VALUES(?, ?, 1) ON CONFLICT(day, kind) DO UPDATE SET count = count + 1').run(kstDay(), kind);
 }
 /** 하루 상한을 넘으면 429, 아니면 1 늘린다 */
 export function takeDaily(kind, max, message = DAILY_LIMIT_MESSAGE) {
@@ -160,13 +160,19 @@ export function adminLogin(passcode) {
   return token;
 }
 export function adminCookie(token, req) {
-  const secure = String(req.headers['x-forwarded-proto'] || '').includes('https') || config.publicBaseUrl.startsWith('https');
+  const secure = secureRequest(req);
   return `${ADMIN_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${SESSION_MS / 1000}${secure ? '; Secure' : ''}`;
 }
 export function adminLogoutCookie() {
   return `${ADMIN_COOKIE}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0`;
 }
-function readCookie(req, name) {
+export function secureRequest(req) {
+  if (req.socket?.encrypted || config.publicBaseUrl.startsWith('https://')) return true;
+  const loopback = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket?.remoteAddress);
+  return config.trustProxy && loopback && String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';
+}
+
+export function readCookie(req, name) {
   const raw = String(req.headers.cookie || '');
   for (const part of raw.split(';')) {
     const [k, ...v] = part.trim().split('=');

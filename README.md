@@ -3,7 +3,18 @@
 > 인간-인공지능협업제품서비스설계 · T07 생성형 AI 팀 프로젝트
 
 ## 한 줄 소개
-(아이디어 확정 후 작성) 누구를 위해, 어떤 문제를, 어떤 생성형 AI로 해결하는가.
+**아맞다**는 자동차 부품 대리점의 전화 주문을 받아쓰고, 통화 근거가 붙은 주문 카드로 정리해 확인과 출고를 돕는다.
+
+## 내 서버에서 시작하기
+
+Docker Engine과 Compose 플러그인을 준비한 뒤 저장소의 루트에서 실행한다.
+
+```sh
+cp src/app/.env.example src/app/.env
+docker compose --env-file src/app/.env up -d --build --wait
+```
+
+[http://127.0.0.1:5600](http://127.0.0.1:5600)에서 가짜 샘플로 체험할 수 있다. 계정 만들기와 로컬 인증 링크 읽기, 데이터 백업은 [자가 호스팅 안내](docs/self-hosting.md)를 따른다. [개발·테스트 안내](src/app/README.md)와 [시스템 구조](docs/architecture.md)도 함께 제공한다.
 
 ## 🚨 Up Next 🚨
 **[ 11/11(수) 22:00 ]** 킥오프 미팅 · 최종 아이템 결정
@@ -44,4 +55,4 @@ src/           # 소스 코드 (7번 제품은 src/app/)
 ```
 
 ## 라이선스
-MIT License (LICENSE 파일 참고)
+[MIT 라이선스](LICENSE) · [제3자 구성요소 고지](THIRD_PARTY_NOTICES.md)

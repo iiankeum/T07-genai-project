@@ -45,6 +45,10 @@ export function hasSecret(name) {
 }
 
 const dataDirDefault = path.join(APP_DIR, '.data');
+const aiProvider = str(env.AI_PROVIDER, 'off').toLowerCase();
+if (!['off', 'fixture', 'anthropic'].includes(aiProvider)) {
+  throw new Error('AI_PROVIDER 값은 off, fixture, anthropic 중 하나여야 합니다.');
+}
 
 export const config = Object.freeze({
   port: int(env.PORT, 5600),
@@ -55,6 +59,8 @@ export const config = Object.freeze({
   awsRegion: str(env.AWS_REGION, 'ap-northeast-2'),
   commit: readCommit(),
   startedAt: new Date().toISOString(),
+  aiProvider,
+  allowPaidAi: env.ALLOW_PAID_AI === '1',
   // Claude 모델. 기본은 claude-opus-5-5 (claude-api 스킬 기본값). 바꾸려면 CLAUDE_MODEL.
   model: str(env.CLAUDE_MODEL, 'claude-opus-5-5'),
   // 공개 데모: 가짜 통화만 받는다

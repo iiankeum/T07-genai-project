@@ -1,6 +1,6 @@
 // 무료 체험 신청(최소 항목 + 개인정보 수집 · 이용 동의). 신청 내용은 관리자만 본다(routes/admin.mjs).
 // 응답 · 로그에 신청 내용(개인정보)을 남기지 않는다.
-import { db, newId, nowIso } from '../lib/db.mjs';
+import { globalDb, newId, nowIso } from '../lib/db.mjs';
 import { HttpError, readJson, cleanText } from '../lib/http.mjs';
 import { limit, ipHash } from '../lib/security.mjs';
 
@@ -83,10 +83,10 @@ export function register(router) {
 
     // 형식이 맞는 신청만 횟수에 센다(잘못 적어 다시 보내는 사람이 막히지 않게)
     limit('trial', ip);
-    if (db().prepare('SELECT COUNT(*) AS n FROM trials').get().n >= MAX_TRIALS) {
+    if (globalDb().prepare('SELECT COUNT(*) AS n FROM trials').get().n >= MAX_TRIALS) {
       throw new HttpError(503, 'trial_full', '지금은 신청을 받을 수 없습니다. 잠시 뒤 다시 해 주세요.');
     }
-    db().prepare('INSERT INTO trials(id, created_at, name, org, contact, role, message, consent_at, ip_hash, extra) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    globalDb().prepare('INSERT INTO trials(id, created_at, name, org, contact, role, message, consent_at, ip_hash, extra) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
       .run(newId('trial'), now, name, org, contact, role, message, now, ipHash(ip), JSON.stringify(extra));
     console.log('[trial] 새 신청 1건');
     return { ok: true };

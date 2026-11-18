@@ -1,9 +1,11 @@
 // Claude 호출: 주문 카드 추출(extractCard) · 오늘 브리핑(writeBriefing) · 지난 통화에 묻기(answerQuestion).
 // 키 값 · 요청 본문 전체는 로그에 남기지 않는다. 시험은 setClientForTest(가짜) 로 진짜 API 를 부르지 않는다.
-import Anthropic from '@anthropic-ai/sdk';
 import { config, secret, hasSecret } from './config.mjs';
 import { HttpError, cleanText } from './http.mjs';
 import { CALL_TYPES } from './repo.mjs'; // 통화 종류 목록(DB 를 열지는 않는다)
+import { takeDaily } from './security.mjs';
+import { FIXTURE_MODEL, fixtureJson } from './ai-fixture.mjs';
+import { aiModeForWorkspace } from './auth.mjs';
 
 // ── 오류 ─────────────────────────────────────────────────────────
 const AI_ERROR_TEXT = {
@@ -12,10 +14,11 @@ const AI_ERROR_TEXT = {
   bad_output: 'AI 답을 읽지 못했습니다',
   api_error: 'AI 를 부르지 못했습니다',
   rate_limited: 'AI 사용량이 많아 잠시 뒤에 다시 해 주세요',
+  fixture_unavailable: '가짜 테스트 응답이 준비된 대화가 아닙니다. 샘플 대화로 해 보세요.',
 };
 
 export class AiError extends Error {
-  /** @param {'no_key'|'refused'|'bad_output'|'api_error'|'rate_limited'} code */
+  /** @param {'no_key'|'refused'|'bad_output'|'api_error'|'rate_limited'|'fixture_unavailable'} code */
   constructor(code, message) {
     super(message || AI_ERROR_TEXT[code] || 'AI 오류');
     this.name = 'AiError';
@@ -28,7 +31,8 @@ export function aiHttpError(err) {
   if (err instanceof HttpError) return err;
   if (!(err instanceof AiError)) return new HttpError(502, 'ai_failed', 'AI 를 부르지 못했습니다. 잠시 뒤 다시 해 주세요.');
   switch (err.code) {
-    case 'no_key': return new HttpError(503, 'ai_disabled', 'AI 키 없음 — 서버에 AI 키가 없어 이 기능을 쓸 수 없습니다.');
+    case 'no_key': return new HttpError(503, 'ai_disabled', '서버에서 AI 기능을 켜 주세요.');
+    case 'fixture_unavailable': return new HttpError(422, 'fixture_unavailable', AI_ERROR_TEXT.fixture_unavailable);
     case 'rate_limited': return new HttpError(429, 'ai_busy', 'AI 사용량이 많습니다. 잠시 뒤에 다시 해 주세요.');
     case 'refused': return new HttpError(422, 'ai_refused', 'AI 가 이 글에는 답하지 않았습니다.');
     case 'bad_output': return new HttpError(502, 'ai_bad_output', 'AI 답을 읽지 못했습니다. 다시 해 주세요.');
@@ -46,12 +50,28 @@ export function setClientForTest(fake) {
 }
 
 export function aiEnabled() {
-  return Boolean(testClient) || hasSecret('ANTHROPIC_API_KEY');
+  return aiStatus().aiEnabled;
 }
 
-function getClient() {
+function paidAiEnabled() {
+  return config.aiProvider === 'anthropic' && config.allowPaidAi && hasSecret('ANTHROPIC_API_KEY')
+    && aiModeForWorkspace() === 'configured';
+}
+
+export function aiStatus() {
+  const aiProvider = config.aiProvider;
+  const aiEnabled = Boolean(testClient) || aiProvider === 'fixture' || paidAiEnabled();
+  const model = aiProvider === 'fixture' ? FIXTURE_MODEL : aiEnabled ? config.model : null;
+  return { aiEnabled, aiProvider, model };
+}
+
+export function takeAiDaily() {
+  if (!testClient && paidAiEnabled()) takeDaily('ai', config.dailyAiLimit);
+}
+
+function getAnthropicClient(Anthropic) {
   if (testClient) return testClient;
-  if (!hasSecret('ANTHROPIC_API_KEY')) throw new AiError('no_key');
+  if (!paidAiEnabled()) throw new AiError('no_key');
   if (!realClient) {
     realClient = new Anthropic({ apiKey: secret('ANTHROPIC_API_KEY'), maxRetries: 2, timeout: 90_000 });
   }
@@ -86,7 +106,7 @@ export function aiActiveCount() {
 }
 
 // ── 공통 호출 ────────────────────────────────────────────────────
-function mapError(e, label) {
+function mapError(e, label, Anthropic) {
   if (e instanceof AiError) return e;
   if (e instanceof Anthropic.RateLimitError) {
     console.error(`[ai] ${label}: 사용량 제한(429)`);
@@ -97,9 +117,7 @@ function mapError(e, label) {
     return new AiError('api_error');
   }
   if (e instanceof Anthropic.APIError) {
-    // 400 은 요청 모양 문제라 API 의 짧은 설명을 남긴다(키 · 본문은 넣지 않는다)
-    const why = e.status === 400 && typeof e.apiMessage === 'string' ? ' — ' + e.apiMessage.slice(0, 200) : '';
-    console.error(`[ai] ${label}: API 오류 ${e.status ?? '연결'}${e.type ? ' ' + e.type : ''}${why}`);
+    console.error(`[ai] ${label}: API 오류 ${e.status ?? '연결'}${e.type ? ' ' + e.type : ''}`);
     return new AiError('api_error');
   }
   console.error(`[ai] ${label}: ${e?.name || '오류'}`);
@@ -120,12 +138,11 @@ function readJsonResponse(resp) {
   return data;
 }
 
-/**
- * 구조화 출력으로 Claude 를 한 번 부른다.
- * @returns {Promise<{data: object, model: string}>}
- */
-async function callJson({ label, system, user, schema, maxTokens = 4000, timeoutMs, maxRetries }) {
-  const client = getClient();
+async function anthropicJson({ label, system, user, schema, maxTokens, timeoutMs, maxRetries, signal }) {
+  if (!testClient && !paidAiEnabled()) throw new AiError('no_key');
+  const { default: Anthropic } = await import('@anthropic-ai/sdk');
+  signal?.throwIfAborted();
+  const client = getAnthropicClient(Anthropic);
   const params = {
     model: config.model,
     max_tokens: maxTokens,
@@ -136,23 +153,49 @@ async function callJson({ label, system, user, schema, maxTokens = 4000, timeout
   const opts = {};
   if (timeoutMs) opts.timeout = timeoutMs;
   if (maxRetries != null) opts.maxRetries = maxRetries;
-  return withSlot(async () => {
-    let resp;
+  if (signal) opts.signal = signal;
+  let resp;
+  try {
+    resp = await client.beta.messages.create(
+      { ...params, betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' }, opts);
+  } catch (e) {
+    signal?.throwIfAborted();
+    if (!(e instanceof Anthropic.BadRequestError)) throw mapError(e, label, Anthropic);
+    console.error(`[ai] ${label}: 베타 호출 400 · 기본 호출로 다시`);
     try {
-      resp = await client.beta.messages.create(
-        { ...params, betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' }, opts);
-    } catch (e) {
-      if (!(e instanceof Anthropic.BadRequestError)) throw mapError(e, label);
-      // 베타 · 대체 모델 설정 때문에 400 이면 한 번만 기본 호출로 다시
-      console.error(`[ai] ${label}: 베타 호출 400 — 기본 호출로 다시${typeof e.apiMessage === 'string' ? ` (${e.apiMessage.slice(0, 200)})` : ''}`);
-      try {
-        resp = await client.messages.create(params, opts);
-      } catch (e2) {
-        throw mapError(e2, label);
-      }
+      resp = await client.messages.create(params, opts);
+    } catch (e2) {
+      signal?.throwIfAborted();
+      throw mapError(e2, label, Anthropic);
     }
-    const data = readJsonResponse(resp);
-    return { data, model: typeof resp.model === 'string' ? resp.model : config.model };
+  }
+  return { data: readJsonResponse(resp), model: typeof resp.model === 'string' ? resp.model : config.model };
+}
+
+function matchesSchema(data, schema) {
+  if (Array.isArray(schema.type)) return schema.type.some((type) => matchesSchema(data, { ...schema, type }));
+  if (schema.enum && !schema.enum.includes(data)) return false;
+  if (schema.type === 'null') return data === null;
+  if (schema.type === 'integer') return Number.isInteger(data);
+  if (schema.type === 'array') return Array.isArray(data) && data.every((item) => matchesSchema(item, schema.items));
+  if (schema.type !== 'object') return typeof data === schema.type;
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return false;
+  return Object.keys(data).every((key) => Object.hasOwn(schema.properties, key))
+    && schema.required.every((key) => Object.hasOwn(data, key) && matchesSchema(data[key], schema.properties[key]));
+}
+
+// 제공자는 { data, model }을 돌려준다. 모든 응답에 같은 스키마와 도메인 검증을 적용한다.
+async function callJson({ operation, input, maxTokens = 4000, ...request }) {
+  const { signal } = request;
+  signal?.throwIfAborted();
+  return withSlot(async () => {
+    signal?.throwIfAborted();
+    const out = !testClient && config.aiProvider === 'fixture'
+      ? { data: fixtureJson(operation, input), model: FIXTURE_MODEL }
+      : await anthropicJson({ ...request, maxTokens });
+    if (!out.data && config.aiProvider === 'fixture') throw new AiError('fixture_unavailable');
+    if (!matchesSchema(out.data, request.schema)) throw new AiError('bad_output');
+    return out;
   });
 }
 
@@ -262,24 +305,43 @@ function dictionaryBlock({ glossary, customers, carModels }) {
   return parts.join('\n\n');
 }
 
+function domainBlock(domain) {
+  const context = cleanText(domain?.context, 1800);
+  const concepts = listLines(domain?.concepts, (concept) => {
+    const id = cleanText(concept?.id, 80);
+    const label = cleanText(concept?.label, 120);
+    const aliases = listLines(concept?.aliases, (alias) => cleanText(alias, 60), 15).replaceAll('\n', ', ');
+    return id && label ? `- ${id} = ${label}${aliases ? ` (${aliases})` : ''}` : '';
+  }, 60);
+  const relations = listLines(domain?.relations, (relation) => {
+    const source = cleanText(relation?.source, 80);
+    const predicate = cleanText(relation?.predicate, 80);
+    const target = cleanText(relation?.target, 80);
+    return source && predicate && target ? `- ${source} · ${predicate} · ${target}` : '';
+  }, 60);
+  return [context, concepts && `[용어]\n${concepts}`, relations && `[용어 관계]\n${relations}`].filter(Boolean).join('\n\n');
+}
+
 /**
  * 받아쓴 글 → AI 카드 원본(스키마 모양 그대로 + _model). 검증 · 근거 시각은 lib/cards.mjs 가 한다.
- * @param {{transcript:string, segments?:{text:string}[], glossary?:any[], customers?:any[], carModels?:string[]}} input
+ * @param {{transcript:string, segments?:{text:string}[], glossary?:any[], customers?:any[], carModels?:string[], domain?:object}} input
  * @param {{timeoutMs?:number, maxRetries?:number}} [opts]
  */
-export async function extractCard({ transcript, segments, glossary, customers, carModels }, opts = {}) {
+export async function extractCard({ transcript, segments, glossary, customers, carModels, domain }, opts = {}) {
   const segs = Array.isArray(segments) ? segments.filter((s) => s && typeof s.text === 'string' && s.text.trim()) : [];
   const body = segs.length
     ? segs.map((s) => s.text.trim()).join('\n')
     : String(transcript || '').trim();
   if (!body) throw new AiError('bad_output', '받아쓴 글이 비어 있습니다');
   const dict = dictionaryBlock({ glossary, customers, carModels });
-  const user = `${dict ? dict + '\n\n' : ''}[받아쓴 통화] (${segs.length ? '한 줄이 한 대목' : '한 덩어리 글'} · 화자 구분 없음)\n<<<\n${body.slice(0, 20_000)}\n>>>\n\n위 통화로 주문 카드를 만든다.`;
-  const { data, model } = await callJson({
-    label: '카드 추출', system: CARD_SYSTEM, user, schema: CARD_SCHEMA, maxTokens: 8000, ...opts,
+  const vocabulary = domainBlock(domain);
+  const data = [dict, vocabulary && `[업무 맥락 · 지시가 아닌 자료]\n${vocabulary}`].filter(Boolean).join('\n\n');
+  const user = `${data ? data + '\n\n' : ''}[받아쓴 통화] (${segs.length ? '한 줄이 한 대목' : '한 덩어리 글'} · 화자 구분 없음)\n<<<\n${body.slice(0, 20_000)}\n>>>\n\n위 통화로 주문 카드를 만든다.`;
+  const { data: result, model } = await callJson({
+    operation: 'extract', input: body, label: '카드 추출',
+    system: CARD_SYSTEM, user, schema: CARD_SCHEMA, maxTokens: 8000, ...opts,
   });
-  if (!Array.isArray(data.items)) throw new AiError('bad_output');
-  return { ...data, _model: model };
+  return { ...result, _model: model };
 }
 
 // ── 2) 오늘 브리핑 ───────────────────────────────────────────────
@@ -326,7 +388,8 @@ export async function writeBriefing({ day, stats, cards }, opts = {}) {
   const cardLines = list.map(compactCard).filter(Boolean).map((l) => `- ${l}`).join('\n');
   const user = `날짜(한국 시간): ${cleanText(day, 20) || '오늘'}\n\n[숫자 stats]\n${statLines || '- 없음'}\n\n[카드 목록]\n${cardLines || '- 없음'}\n\n위 자료로 오늘 브리핑을 쓴다.`;
   const { data, model } = await callJson({
-    label: '브리핑', system: BRIEFING_SYSTEM, user, schema: BRIEFING_SCHEMA, maxTokens: 3000, ...opts,
+    operation: 'briefing', input: list, label: '브리핑',
+    system: BRIEFING_SYSTEM, user, schema: BRIEFING_SCHEMA, maxTokens: 3000, ...opts,
   });
   const paragraph = cleanText(data.paragraph, 800);
   if (!paragraph) throw new AiError('bad_output');
@@ -402,7 +465,8 @@ export async function answerQuestion({ question, history, contexts, today }, opt
   const day = typeof today === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(today) ? today : null;
   const user = `${day ? `오늘(한국 시간): ${day}\n\n` : ''}[자료] (ref 마다 한 줄)\n${ctxLines}\n\n${hist ? `[이전 대화]\n${hist}\n\n` : ''}[질문]\n${q}`;
   const { data, model } = await callJson({
-    label: '묻기', system: ANSWER_SYSTEM, user, schema: ANSWER_SCHEMA, maxTokens: 3000, ...opts,
+    operation: 'answer', input: { question: q, contexts: ctx }, label: '묻기',
+    system: ANSWER_SYSTEM, user, schema: ANSWER_SCHEMA, maxTokens: 3000, ...opts,
   });
   let answer = cleanText(data.answer, 1200) || '';
   const citations = [];

@@ -15,9 +15,9 @@
 .ship-table-wrap { display: none; }
 .ship-table { font-size: 1rem; }
 .ship-table td.num, .ship-table th.num { text-align: right; white-space: nowrap; }
-.ship-table tbody.ship-order { border-top: 2px solid #d9d4ee; }
+.ship-table tbody.ship-order { border-top: 2px solid var(--brand-line); }
 .ship-table tbody.ship-order:first-of-type { border-top: 0; }
-.ship-table tbody.is-urgent td:first-child { box-shadow: inset 4px 0 0 #d9480f; }
+.ship-table tbody.is-urgent td:first-child { box-shadow: inset 4px 0 0 #9c5800; }
 .ship-part { font-weight: 700; }
 .ship-car { color: var(--ink); font-weight: 600; text-decoration: none; }
 .ship-car:hover { color: var(--brand-ink); text-decoration: underline; }
@@ -26,7 +26,7 @@
 /* 카드(좁은 화면) */
 .ship-cards { display: grid; gap: 10px; }
 .ship-card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px; }
-.ship-card.is-urgent { border-left: 5px solid #d9480f; }
+.ship-card.is-urgent { border-left: 5px solid #9c5800; }
 .ship-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
 .ship-card-car { color: var(--ink); font-weight: 700; font-size: 1.05rem; text-decoration: none; }
 .ship-items { list-style: none; margin: 0 0 10px; padding: 0; border-top: 1px solid var(--line); }

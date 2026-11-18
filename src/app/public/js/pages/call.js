@@ -1,7 +1,7 @@
 // 통화 상세(F02 · F04 · F05 · F06 · F07 다시 정리 · F11): 머리 · 녹음 막대 · 받아쓴 글 · 주문 카드.
 // 카드 칸을 누르면 그 말을 한 문장을 칠하고 그 시각부터 재생한다. 처리 중인 통화는 5초마다 다시 읽는다.
 import { api } from '../api.js';
-import { html, render, toast, copyText, fmtWhen, fmtSec, callChip, SOURCE_LABEL, highlight } from '../ui.js';
+import { html, render, toast, copyText, fmtWhen, fmtClock, fmtSec, callChip, SOURCE_LABEL, highlight, href } from '../ui.js';
 import { WORKING, num, segAtTime, resolveEvidence, buildMarks, transcriptText, groupUnsure, cloneItems } from './call-util.js';
 import { mountCard } from './call-card.js';
 
@@ -36,18 +36,24 @@ export default {
     let audio = null;
     let playingIdx = -1;
     let markIdx = -1;
+    let linkedIdx = -1;
+    let frame = 0;
+    let historyRequest = null;
+    let historyFilter = 'all';
+    let showSummary = false;
     let follow = readPref('cn.follow', '1') === '1';
     let rate = Number(readPref('cn.rate', '1'));
     if (!RATES.includes(rate)) rate = 1;
     let playerVisible = true;
     const target = { seg: ctx.query.seg, at: ctx.query.t };
     let targetDone = ctx.query.seg === undefined && ctx.query.t === undefined;
-    const wideMq = window.matchMedia('(min-width: 1100px)');
+    const wideMq = window.matchMedia('(min-width: 1024px)');
+    const wideHistory = window.matchMedia('(min-width: 1280px)');
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     render(el, html`<div class="page cd-page">
-      <div class="cd-topnav no-print"><a class="btn btn-ghost cd-back" href="${backHref()}">‹ 통화 목록</a></div>
-      <div data-slot="head"><p class="loading">불러오는 중…</p></div>
+      <div class="cd-topnav no-print"><a class="btn btn-ghost btn-sm cd-back" href="${backHref()}"><span aria-hidden="true">←</span> 통화 검색</a><a class="btn btn-sm" href="#/upload">녹음 올리기</a></div>
+      <div data-slot="head"><p class="loading" role="status">불러오는 중…</p></div>
       <div class="cd-player-slot" data-slot="player"></div>
       <div data-slot="progress"></div>
       <nav class="cd-jump no-print hidden" data-slot="jump" aria-label="이 화면 안에서 이동">
@@ -55,8 +61,23 @@ export default {
         <button type="button" class="btn" data-jump="trans">통화 글 보기</button>
       </nav>
       <div class="cd-body hidden" data-slot="body">
-        <section class="card cd-card" id="cd-card" aria-labelledby="cd-card-h" data-slot="card"></section>
+        <details class="card cd-history no-print" data-slot="history" ${wideHistory.matches ? html`open` : ''}>
+          <summary>다른 통화 보기</summary>
+          <h2 id="cd-history-title">최근 통화</h2>
+          <form class="cd-history-search" role="search" aria-label="최근 통화 검색">
+            <label class="sr-only" for="cd-history-q">거래처, 차량, 부품 검색</label>
+            <input class="input input-search" id="cd-history-q" name="q" type="search" maxlength="100" placeholder="통화 검색">
+            <button class="btn btn-sm" type="submit">찾기</button>
+          </form>
+          <div class="cd-history-filters" role="group" aria-label="최근 통화 상태">
+            <button type="button" class="btn btn-sm" data-history="all" aria-pressed="true">전체</button>
+            <button type="button" class="btn btn-sm" data-history="draft" aria-pressed="false">확인 필요</button>
+          </div>
+          <div data-slot="history-results" aria-live="polite"></div>
+        </details>
         <section class="card cd-trans" id="cd-trans" aria-labelledby="cd-trans-h" data-slot="trans"></section>
+        <section class="card cd-card" id="cd-card" aria-labelledby="cd-card-h" data-slot="card"></section>
+        <svg class="cd-connector" data-slot="connector" width="1" height="1" aria-hidden="true" focusable="false"><path/><circle r="3"/><circle r="3"/></svg>
       </div>
       <div class="cd-foot no-print" data-slot="foot"></div>
       <button type="button" class="cd-float hidden" data-act="float"></button>
@@ -69,34 +90,82 @@ export default {
     const segments = () => (Array.isArray(call?.segments) ? call.segments : []);
     const resolve = (ev) => resolveEvidence(segments(), ev);
 
+    const history = slot('history');
+    const historyForm = history.querySelector('form');
+    const historyQuery = historyForm.elements.q;
+    let historyLoaded = false;
+
+    async function loadHistory() {
+      historyRequest?.abort();
+      const ac = new AbortController();
+      historyRequest = ac;
+      const q = historyQuery.value.trim();
+      const results = slot('history-results');
+      if (!historyLoaded) render(results, html`<p class="cd-list-state">불러오는 중…</p>`);
+      try {
+        const data = await api.get('/api/calls', { limit: 8, status: historyFilter, q }, { signal: ac.signal });
+        if (!alive || ac.signal.aborted) return;
+        const rows = (data.calls || []).map((c) => c.id === id ? call || c : c);
+        const total = Number(data.total) || rows.length;
+        if (!q && historyFilter === 'all' && call && !rows.some((c) => c.id === id)) rows.unshift(call);
+        render(results, html`
+          ${rows.length ? html`<ul class="cd-list">${rows.map((c) => {
+            const name = c.card?.customer || c.customer || c.title || '제목 없는 통화';
+            const parts = [c.card?.carModel, c.card?.items?.[0]?.part].filter(Boolean).join(' · ');
+            return html`<li><a class="cd-list-link" href="#/calls/${encodeURIComponent(c.id)}" ${c.id === id ? html`aria-current="page"` : ''}>
+              <div class="cd-list-name"><strong>${name}</strong><span>${fmtClock(c.recordedAt)}</span></div>
+              ${parts ? html`<span class="cd-list-desc">${parts}</span>` : ''}
+              <div class="cd-list-meta">${callChip(c)}${c.durationSec ? html`<span>${fmtSec(c.durationSec)}</span>` : ''}</div>
+            </a></li>`;
+          })}</ul>` : html`<p class="cd-list-state">${q || historyFilter !== 'all' ? '조건에 맞는 통화가 없습니다.' : '최근 통화가 없습니다.'}</p>`}
+          <a href="${backHref()}" class="btn btn-ghost btn-sm cd-list-more">통화 검색${total > rows.length ? ` · ${total}건` : ''} <span aria-hidden="true">→</span></a>
+        `);
+        historyLoaded = true;
+      } catch (e) {
+        if (!alive || ac.signal.aborted) return;
+        render(results, html`<p class="cd-list-state">최근 통화를 불러오지 못했습니다.</p><button type="button" class="btn btn-sm" data-history="retry">다시 불러오기</button>`);
+      }
+    }
+    function onHistoryToggle() {
+      if (history.open && !historyLoaded) void loadHistory();
+    }
+    function onHistoryBreakpoint() { history.open = wideHistory.matches; }
+    function onHistorySearch(event) { event.preventDefault(); void loadHistory(); }
+    history.addEventListener('toggle', onHistoryToggle);
+    historyForm.addEventListener('submit', onHistorySearch);
+    wideHistory.addEventListener('change', onHistoryBreakpoint);
+
     // ── 머리 ──────────────────────────────────────────────────────
     function renderHead() {
       const card = curCard();
       const cust = card?.customer || call.customer;
-      render(slot('head'), html`<header class="card cd-head">
-        <p class="eyebrow">통화 상세</p>
-        <h1 class="cd-title">${call.title || '제목 없는 통화'}</h1>
+      render(slot('head'), html`<header class="cd-head">
+        <div class="cd-identity">
+          <span class="cd-avatar" aria-hidden="true">${cust?.slice(0, 1) || '☎'}</span>
+          <div><h1 class="cd-title">${call.title || '제목 없는 통화'}</h1>
+            <p class="cd-title-meta">${fmtWhen(call.recordedAt)}${call.durationSec ? ` · ${fmtSec(call.durationSec)}` : ''}${call.callerNumber ? ` · ${call.callerNumber}` : ''}</p></div>
+        </div>
         <div class="cd-chips">
           ${callChip({ ...call, card })}
           ${card?.callType && card.callType !== '주문' ? html`<span class="chip cd-type-chip">${card.callType}</span>` : ''}
           ${card?.urgent ? html`<span class="chip chip-urgent">급함</span>` : ''}
           ${card?.callback ? html`<span class="chip chip-callback">다시 전화</span>` : ''}
-          ${call.isFake ? html`<span class="chip chip-fake">가짜 통화</span>` : ''}
+          ${card?.customerByPhone ? html`<span class="chip chip-phone">번호로 확인</span>` : ''}
+          ${call.isFake ? html`<span class="chip chip-fake">예시 통화</span>` : ''}
+          ${call.source ? html`<span class="chip cd-type-chip">${SOURCE_LABEL[call.source] || call.source}</span>` : ''}
         </div>
-        <dl class="cd-facts">
-          <div><dt>거래처</dt><dd>${cust ? html`<a class="cd-cust" href="${custHref(cust)}">${cust}</a>` : html`<span class="muted">확인 필요</span>`}${card?.customerByPhone ? html` <span class="chip chip-phone" title="걸려 온 번호가 거래처 목록의 번호와 같아 그 이름으로 채웠습니다">번호로 확인</span>` : ''}</dd></div>
-          <div><dt>걸려 온 번호</dt><dd>${call.callerNumber || '없음'}${call.callerNumber ? html` <span class="cd-dim">(가운데 가림)</span>` : ''}</dd></div>
-          <div><dt>통화 시각</dt><dd>${fmtWhen(call.recordedAt)}${call.durationSec ? html` · 길이 ${fmtSec(call.durationSec)}` : ''}</dd></div>
-          <div><dt>출처</dt><dd>${SOURCE_LABEL[call.source] || call.source || '알 수 없음'}${call.hasAudio ? '' : ' · 녹음 없음'}</dd></div>
-        </dl>
-        ${call.summary ? html`<p class="cd-summary">${call.summary}</p>` : ''}
       </header>`);
     }
 
     function renderFoot() {
       const cust = curCard()?.customer || call.customer;
-      render(slot('foot'), html`${cust ? html`<a class="btn btn-lg" href="${custHref(cust)}">이 거래처 통화 모아 보기</a>` : ''}<a class="btn btn-ghost btn-lg" href="${backHref()}">통화 목록으로</a>`);
+      render(slot('foot'), html`
+        <a class="btn" href="${href('/assistant', { call: id })}">이 통화로 묻기</a>
+        <a class="btn" data-knowledge href="${knowledgeHref()}">공유 지식 제안</a>
+        ${cust ? html`<a class="btn btn-ghost" href="${custHref(cust)}">이 거래처 통화 모아 보기</a>` : ''}
+      `);
     }
+    function knowledgeHref() { return href('/knowledge', { call: id, seg: markIdx >= 0 ? markIdx : undefined }); }
 
     // ── 진행 상황(받아쓰기 · 정리 중) ──────────────────────────────
     function renderProgress() {
@@ -132,8 +201,8 @@ export default {
 
     // ── 녹음 막대 ─────────────────────────────────────────────────
     function noAudioText() {
-      if (call.source === 'seed') return '이 통화는 대본으로 만든 가짜 통화라 녹음이 없습니다. 받아쓴 글과 카드는 그대로 볼 수 있습니다.';
-      if (call.source === 'live') return '실시간 받아쓰기 체험 통화는 녹음을 저장하지 않습니다. 받아쓴 글과 카드만 있습니다.';
+      if (call.source === 'seed') return '대본으로 만든 예시 통화입니다. 아래에서 대화 기록과 주문 카드를 볼 수 있습니다.';
+      if (call.source === 'live') return '실시간 받아쓰기에서 저장한 대화 기록입니다. 보관된 녹음은 없습니다.';
       return '이 통화에는 녹음 파일이 없습니다.';
     }
     function renderPlayer() {
@@ -141,11 +210,11 @@ export default {
       if (audio) { audio.pause(); audio = null; }
       s.classList.toggle('has-audio', Boolean(call.hasAudio));
       if (!call.hasAudio) {
-        render(s, html`<p class="notice cd-noaudio">${noAudioText()}</p>`);
+        render(s, html`<p class="cd-noaudio">${noAudioText()}</p>`);
         return;
       }
       render(s, html`<section class="card cd-player" aria-label="녹음 듣기">
-        <audio class="cd-audio" controls preload="metadata" src="/api/calls/${encodeURIComponent(id)}/audio">이 브라우저는 녹음 재생을 지원하지 않습니다.</audio>
+        <audio class="cd-audio" controls preload="metadata" src="${api.url('/api/calls/' + encodeURIComponent(id) + '/audio')}">이 브라우저는 녹음 재생을 지원하지 않습니다.</audio>
         <div class="cd-player-row">
           <button type="button" class="btn" data-act="back5" aria-label="5초 뒤로 감기">↺ 5초 뒤로</button>
           <div class="cd-rates" role="group" aria-label="재생 빠르기">
@@ -206,12 +275,25 @@ export default {
       const st = num(s?.start);
       const what = call.hasAudio ? '부터 듣기' : ' 대목 표시';
       return html`<li class="cd-seg ${flags ? 'is-unsure' : ''}" data-i="${i}" id="cd-seg-${i}">
-        ${st !== null ? html`<button type="button" class="cd-time" data-seek="${i}" aria-label="${fmtSec(st)}${what}">${fmtSec(st)}</button>` : html`<span class="cd-time cd-time-none" aria-hidden="true">·</span>`}
         <div class="cd-seg-body">
-          ${s?.speaker ? html`<span class="cd-spk">${s.speaker}</span>` : ''}<span class="cd-text">${highlight(s?.text ?? '', marks)}</span>
-          ${flags ? html`<span class="cd-seg-flag"><button type="button" class="listen-flag" data-seek="${i}">⚠ 들어 보기</button> ${flags.join(' · ')}</span>` : ''}
+          <div class="cd-seg-meta">
+            ${s?.speaker ? html`<span class="cd-spk">${s.speaker}</span>` : ''}
+            ${st !== null ? html`<button type="button" class="cd-time" data-seek="${i}" aria-label="${fmtSec(st)}${what}">${fmtSec(st)}</button>` : ''}
+          </div>
+          <span class="cd-text">${highlight(s?.text ?? '', marks)}</span>
+          ${flags ? html`<span class="cd-seg-flag"><button type="button" class="listen-flag" data-seek="${i}">${call.hasAudio ? '들어 보기' : '근거 표시'}</button> ${flags.join(' · ')}</span>` : ''}
         </div>
       </li>`;
+    }
+    function summaryView(card) {
+      const asks = Array.isArray(card?.askBack) ? card.askBack.filter(Boolean) : [];
+      const checks = Array.isArray(card?.unsure) ? [...new Set(card.unsure.map((u) => u?.reason).filter(Boolean))] : [];
+      return html`<div class="cd-summary-view">
+        <h3>통화 한눈에 보기</h3>
+        <p>${call.summary || '등록된 요약이 없습니다.'}</p>
+        ${asks.length ? html`<h3>다시 물어볼 것</h3><ul>${asks.map((a) => html`<li>${a}</li>`)}</ul>` : ''}
+        ${checks.length ? html`<h3>담당자 확인 항목</h3><ul>${checks.map((reason) => html`<li>${reason}</li>`)}</ul>` : ''}
+      </div>`;
     }
     function renderTranscript() {
       const segs = segments();
@@ -222,25 +304,31 @@ export default {
       const hasText = segs.length || call.transcript;
       render(slot('trans'), html`
         <div class="cd-trans-top">
-          <h2 id="cd-trans-h">통화 글</h2>
-          <div class="cd-trans-tools">
-            ${call.hasAudio && segs.length ? html`<button type="button" class="btn cd-follow" data-act="follow" aria-pressed="${follow}">${follow ? '따라가기 켬' : '따라가기 끔'}</button>` : ''}
-            <button type="button" class="btn" data-act="copy" ${hasText ? '' : html`disabled`}>통화 글 복사</button>
+          <div class="cd-trans-topline">
+            <h2 id="cd-trans-h">대화</h2>
+            <button type="button" class="btn btn-ghost btn-sm" data-act="copy" ${hasText ? '' : html`disabled`}>대화 복사</button>
+          </div>
+          <div class="cd-trans-tools" role="group" aria-label="대화 보기">
+            <button type="button" class="cd-view-tab" data-trans-view="text" aria-pressed="${!showSummary}">대화 기록</button>
+            <button type="button" class="cd-view-tab" data-trans-view="summary" aria-pressed="${showSummary}">통화 요약</button>
           </div>
         </div>
-        ${hasText ? html`<div class="legend cd-legend" role="note" aria-label="색 설명">
-          <span>색 설명:</span><mark class="hl hl-part">부품</mark><mark class="hl hl-car">차종 · 차번호</mark><mark class="hl hl-customer">거래처</mark><mark class="hl hl-urgent">급함</mark>${fixes.length ? html`<mark class="hl hl-fix">고쳐 읽은 말</mark>` : ''}
+        ${showSummary ? summaryView(card) : html`
+        ${hasText ? html`<div class="legend cd-legend" role="note" aria-label="대화 강조 표시">
+          <mark class="hl hl-part">부품</mark><mark class="hl hl-car">차종 · 차번호</mark><mark class="hl hl-customer">거래처</mark><mark class="hl hl-urgent">급함</mark>${fixes.length ? html`<mark class="hl hl-fix">고쳐 읽은 말</mark>` : ''}
         </div>` : ''}
         ${fixes.length ? html`<p class="cd-fixes">받아쓰기를 고쳐 읽은 말: ${fixes.map((f) => html`<span class="cd-fix">${f.heard} → ${f.fixed || '?'}</span>`)}</p>` : ''}
-        ${call.hasAudio && segs.length ? html`<p class="cd-trans-help">시각이나 문장을 누르면 그 대목부터 들립니다.</p>` : ''}
+        ${call.hasAudio && segs.length ? html`<button type="button" class="btn btn-sm cd-follow" data-act="follow" aria-pressed="${follow}">${follow ? '따라가기 켬' : '따라가기 끔'}</button>` : ''}
         ${segs.length
     ? html`<ol class="cd-segs">${segs.map((s, i) => segRow(s, i, marks, flags.get(i)))}</ol>`
     : call.transcript
       ? html`<p class="cd-plain">${highlight(call.transcript, marks)}</p>`
       : html`<p class="cd-empty">${WORKING.includes(call.status) ? '받아쓰는 중입니다. 다 되면 여기에 글이 나옵니다.' : '받아쓴 글이 없습니다.'}</p>`}
+        `}
       `);
       if (playingIdx >= 0) lineEl(playingIdx)?.classList.add('is-playing');
       if (markIdx >= 0) lineEl(markIdx)?.classList.add('is-mark');
+      scheduleConnector();
     }
     const lineEl = (i) => (i >= 0 ? root.querySelector(`#cd-seg-${i}`) : null);
 
@@ -253,6 +341,45 @@ export default {
       lineEl(markIdx)?.classList.remove('is-mark');
       markIdx = i;
       lineEl(i)?.classList.add('is-mark');
+      const proposal = slot('foot').querySelector('[data-knowledge]');
+      if (proposal) proposal.href = knowledgeHref();
+      scheduleConnector();
+    }
+
+    function drawConnector() {
+      frame = 0;
+      const svg = slot('connector');
+      const [path, start, end] = svg.children;
+      svg.classList.remove('is-visible');
+      if (!wideMq.matches || linkedIdx < 0 || linkedIdx !== markIdx || showSummary) return;
+      const source = lineEl(linkedIdx);
+      const field = slot('card').querySelector('.ev-active');
+      if (!source || !field) return;
+      const panel = slot('trans');
+      const panelRect = panel.getBoundingClientRect();
+      const origin = slot('body').getBoundingClientRect();
+      const from = source.getBoundingClientRect();
+      const to = field.getBoundingClientRect();
+      const fromY = from.top + from.height / 2;
+      const toY = to.top + Math.min(to.height / 2, 22);
+      const top = document.querySelector('.topbar')?.offsetHeight || 0;
+      const cover = panel.querySelector('.cd-trans-top')?.getBoundingClientRect().bottom || panelRect.top;
+      if (fromY < Math.max(top, cover) || fromY > panelRect.bottom || toY < top || Math.max(fromY, toY) > window.innerHeight) return;
+      const x1 = from.right - origin.left;
+      const x2 = to.left - origin.left;
+      const y1 = fromY - origin.top;
+      const y2 = toY - origin.top;
+      const mid = (x1 + x2) / 2;
+      if (x2 <= x1) return;
+      path.setAttribute('d', `M ${x1} ${y1} C ${mid} ${y1}, ${mid} ${y2}, ${x2} ${y2}`);
+      start.setAttribute('cx', x1);
+      start.setAttribute('cy', y1);
+      end.setAttribute('cx', x2);
+      end.setAttribute('cy', y2);
+      svg.classList.add('is-visible');
+    }
+    function scheduleConnector() {
+      if (!frame) frame = requestAnimationFrame(drawConnector);
     }
     function panelScrolls() {
       const p = slot('trans');
@@ -295,8 +422,10 @@ export default {
 
     // ── 카드에서 근거 고르기(F05) ──────────────────────────────────
     function onEvidence(r, { play, scroll }) {
+      linkedIdx = r?.segIndex ?? -1;
       if (!r) { markSeg(-1); return; }
       if (r.segIndex >= 0) {
+        if (showSummary) { showSummary = false; renderTranscript(); }
         markSeg(r.segIndex);
         // 좁은 화면에서는 카드를 보고 있으므로 글로 끌고 가지 않는다(칸 아래에 근거 문장이 보인다)
         if (scroll && wideMq.matches) scrollToSeg(r.segIndex, true);
@@ -310,6 +439,7 @@ export default {
       }
     }
     function jumpToTranscript(r) {
+      if (showSummary) { showSummary = false; renderTranscript(); }
       if (r && r.segIndex >= 0) { markSeg(r.segIndex); scrollToSeg(r.segIndex, true); return; }
       slot('trans').scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' });
     }
@@ -330,9 +460,12 @@ export default {
     const measure = () => {
       root.style.setProperty('--cd-top', `${topbar?.offsetHeight || 60}px`);
       root.style.setProperty('--cd-player-h', `${slot('player').classList.contains('has-audio') ? slot('player').offsetHeight : 0}px`);
+      scheduleConnector();
     };
     const ro = 'ResizeObserver' in window ? new ResizeObserver(measure) : null;
-    if (ro) { if (topbar) ro.observe(topbar); ro.observe(slot('player')); }
+    if (ro) { if (topbar) ro.observe(topbar); ro.observe(slot('player')); ro.observe(slot('body')); ro.observe(slot('card')); }
+    window.addEventListener('scroll', scheduleConnector, { capture: true, passive: true });
+    window.addEventListener('resize', scheduleConnector);
 
     // ── 찾기에서 온 대목(?t=&seg=) ─────────────────────────────────
     function applyTarget() {
@@ -382,7 +515,7 @@ export default {
     function apply(c) {
       const prev = call;
       call = c;
-      document.title = `${c.title || '통화 상세'} · 콜노트(가칭)`;
+      document.title = `${c.title || '통화 상세'} · 아맞다`;
       renderHead();
       if (!prev || Boolean(prev.hasAudio) !== Boolean(c.hasAudio)) renderPlayer();
       renderProgress();
@@ -445,9 +578,10 @@ export default {
           const c = await api.get(`/api/calls/${encodeURIComponent(id)}`);
           if (!alive || !call) return;
           call = { ...call, title: c.title, summary: c.summary, customer: c.customer };
-          document.title = `${c.title || '통화 상세'} · 콜노트(가칭)`;
+          document.title = `${c.title || '통화 상세'} · 아맞다`;
           renderHead();
           renderFoot();
+          if (history.open) void loadHistory();
         } catch { /* 다음에 다시 읽으면 된다 */ }
       }, 900);
     }
@@ -456,6 +590,23 @@ export default {
     function onClick(e) {
       const t = e.target;
       if (!(t instanceof Element)) return;
+      const historyBtn = t.closest('[data-history]');
+      if (historyBtn) {
+        if (historyBtn.dataset.history !== 'retry') {
+          historyFilter = historyBtn.dataset.history;
+          history.querySelectorAll('[data-history][aria-pressed]').forEach((b) => b.setAttribute('aria-pressed', String(b === historyBtn)));
+        }
+        void loadHistory();
+        return;
+      }
+      const transTab = t.closest('[data-trans-view]');
+      if (transTab) {
+        const mode = transTab.dataset.transView;
+        showSummary = mode === 'summary';
+        renderTranscript();
+        slot('trans').querySelector(`[data-trans-view="${mode}"]`)?.focus({ preventScroll: true });
+        return;
+      }
       const act = t.closest('[data-act]');
       if (act && !slot('card').contains(act)) {
         switch (act.dataset.act) {
@@ -479,6 +630,8 @@ export default {
       if (jump) {
         const sec = slot(jump.dataset.jump === 'card' ? 'card' : 'trans');
         sec.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' });
+        sec.tabIndex = -1;
+        sec.focus({ preventScroll: true });
         return;
       }
       // 통화 글: 시각 단추나 문장을 누르면 그 대목부터
@@ -498,10 +651,13 @@ export default {
     root.addEventListener('click', onClick);
 
     await load();
+    if (history.open && !historyLoaded && !historyRequest) void loadHistory();
 
     return () => {
       alive = false;
       ctrl?.abort();
+      historyRequest?.abort();
+      cancelAnimationFrame(frame);
       clearTimeout(pollTimer);
       clearTimeout(quietTimer);
       cardCtl?.destroy();
@@ -514,6 +670,11 @@ export default {
       }
       io?.disconnect();
       ro?.disconnect();
+      window.removeEventListener('scroll', scheduleConnector, true);
+      window.removeEventListener('resize', scheduleConnector);
+      wideHistory.removeEventListener('change', onHistoryBreakpoint);
+      history.removeEventListener('toggle', onHistoryToggle);
+      historyForm.removeEventListener('submit', onHistorySearch);
       root.removeEventListener('click', onClick);
     };
   },

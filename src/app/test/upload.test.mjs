@@ -14,7 +14,7 @@ process.env.MAX_UPLOAD_BYTES = '1000000';
 delete process.env.FFMPEG_PATH;
 
 const { makeWav, startServer, sleep } = await import('./fixtures/worker-helpers.mjs');
-const { db, nowIso } = await import('../lib/db.mjs');
+const { dataDir, db, nowIso } = await import('../lib/db.mjs');
 const audio = await import('../lib/audio.mjs');
 const httpLib = await import('../lib/http.mjs');
 const security = await import('../lib/security.mjs');
@@ -87,7 +87,7 @@ test('8kHz 스테레오 WAV → 16k mono 로 바꾸고 원본 임시 파일은 �
   const wav = fs.readFileSync(audio.audioPath(out.audioFile));
   assert.equal(audio.wavInfo(wav).is16kMono, true);
   assert.equal(wav.length, out.bytes);
-  const tmpDir = path.join(process.env.DATA_DIR, 'tmp');
+  const tmpDir = path.join(dataDir(), 'tmp');
   assert.deepEqual(fs.existsSync(tmpDir) ? fs.readdirSync(tmpDir) : [], []);
 });
 
@@ -149,11 +149,11 @@ test('올리기: 틀린 녹음 시각은 지금으로, 걸려 온 번호로 거�
 });
 
 test('올리기: 5분 제한 넘으면 422 too_long, 파일은 남기지 않는다', { skip: !HAS_FFMPEG && 'ffmpeg 없음' }, async () => {
-  const before = fs.readdirSync(path.join(process.env.DATA_DIR, 'audio')).length;
+  const before = fs.readdirSync(path.join(dataDir(), 'audio')).length;
   const r = await post(makeWav(6, { freq: 700 }));
   assert.equal(r.status, 422);
   assert.equal(r.body.error, 'too_long');
-  assert.equal(fs.readdirSync(path.join(process.env.DATA_DIR, 'audio')).length, before);
+  assert.equal(fs.readdirSync(path.join(dataDir(), 'audio')).length, before);
 });
 
 test('올리기: mp3 (ffmpeg 로 만든 시험 파일)', { skip: !HAS_FFMPEG && 'ffmpeg 없음' }, async () => {
@@ -288,7 +288,7 @@ test('multipart 읽기: 글 칸 · 파일 칸(복사 없이 본문을 가리킴)
 
 test('예시 녹음: 가짜 ingest · seed 통화 중 녹음이 있는 것만', async () => {
   const now = nowIso();
-  fs.writeFileSync(path.join(process.env.DATA_DIR, 'audio', 'call_seed1.wav'), makeWav(1, { freq: 800 }));
+  fs.writeFileSync(path.join(dataDir(), 'audio', 'call_seed1.wav'), makeWav(1, { freq: 800 }));
   const ins = db().prepare(`INSERT INTO calls(id, created_at, recorded_at, source, status, title, duration_sec, audio_file, is_fake)
     VALUES(?, ?, ?, ?, 'ready', ?, 1, ?, ?)`);
   ins.run('call_seed1', now, now, 'seed', '예시 통화', 'audio/call_seed1.wav', 1);

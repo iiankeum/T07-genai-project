@@ -3,9 +3,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { config } from '../lib/config.mjs';
-import { db, nowIso } from '../lib/db.mjs';
+import { dataDir, db, nowIso } from '../lib/db.mjs';
+import { forEachWorkspace, requestAccess } from '../lib/auth.mjs';
 import { HttpError, readJson, readForm, sendJson, sendEmpty, cleanText, withUploadSlot } from '../lib/http.mjs';
-import { requireBearer, rateLimit, checkDaily, addDaily, ipHash } from '../lib/security.mjs';
+import { rateLimit, checkDaily, addDaily, ipHash } from '../lib/security.mjs';
 import { dictionaryForAi } from '../lib/repo.mjs';
 import { audioPath, audioFromForm, cleanTmp, cleanOrphanAudio, ffmpegAvailable } from '../lib/audio.mjs';
 import {
@@ -135,7 +136,6 @@ export function register(router) {
   router.get('/api/worker/status', () => workerStatus());
 
   router.post('/api/worker/heartbeat', async ({ req }) => {
-    requireBearer(req, 'WORKER_TOKEN');
     const body = await readJson(req);
     const name = workerName(body.worker);
     touchWorker(name, body);
@@ -143,7 +143,6 @@ export function register(router) {
   });
 
   router.post('/api/worker/claim', async ({ req, res }) => {
-    requireBearer(req, 'WORKER_TOKEN');
     const body = await readJson(req);
     const name = workerName(body.worker);
     touchWorker(name);
@@ -184,7 +183,6 @@ export function register(router) {
   });
 
   router.get('/api/worker/jobs/:jobId/audio', ({ req, res, params, query }) => {
-    requireBearer(req, 'WORKER_TOKEN');
     // 일꾼 이름(?worker= 또는 X-Worker)은 꼭 있어야 한다 — 비우면 400(이름 검사를 건너뛰지 못하게)
     const who = workerName(query.worker || req.headers['x-worker']);
     const job = getJob(params.jobId);
@@ -213,7 +211,6 @@ export function register(router) {
   });
 
   router.post('/api/worker/jobs/:jobId/result', async ({ req, params }) => {
-    requireBearer(req, 'WORKER_TOKEN');
     const body = await readJson(req, RESULT_BODY_LIMIT);
     const name = workerName(body.worker);
     const payload = parseResult(body);
@@ -225,7 +222,6 @@ export function register(router) {
   });
 
   router.post('/api/worker/jobs/:jobId/fail', async ({ req, params }) => {
-    requireBearer(req, 'WORKER_TOKEN');
     const body = await readJson(req);
     const name = workerName(body.worker);
     const retryable = body.retryable === undefined ? true : body.retryable === true;
@@ -237,12 +233,12 @@ export function register(router) {
 
   // 녹음 PC 프로그램 → 서버 (tools/folder-sender.mjs)
   router.post('/api/ingest', async ({ req, res, ip }) => {
-    requireBearer(req, 'INGEST_TOKEN');
     // 화면 올리기와 같은 동시 처리 자리(최대 2건)를 쓴다 — 본문을 읽기 전에 크기 413 · 바쁨 503(보내기 프로그램은 다음 바퀴에 다시 보냄)
     return withUploadSlot(req, async () => {
       rateLimit('ingest', ip, INGEST_RATE.max, INGEST_RATE.windowMs);
       const form = await readForm(req, config.maxUploadBytes);
-      if (config.demoMode && !isTrue(form.get('fake'))) {
+      const demo = requestAccess().demo;
+      if (demo && !isTrue(form.get('fake'))) {
         throw new HttpError(422, 'real_recording_not_accepted', '공개 데모는 가짜(연습) 녹음만 받습니다. fake=true 로 보내 주세요.');
       }
       const recordedAt = parseRecordedAt(form.get('recordedAt'));
@@ -267,7 +263,7 @@ export function register(router) {
         title: cleanText(form.get('title'), 80),
         originalName: file.name,
         uploader: ipHash(ip),
-        isFake: config.demoMode ? true : isTrue(form.get('fake')),
+        isFake: demo || isTrue(form.get('fake')),
       });
       if (out.duplicate) {
         sendJson(res, 200, { callId: out.callId, status: 'duplicate' });
@@ -287,13 +283,16 @@ export function register(router) {
  */
 export function sweepOrphanAudio(minAgeMs = 3600_000) {
   const used = new Set(db().prepare('SELECT DISTINCT audio_file FROM calls WHERE audio_file IS NOT NULL').all()
-    .map((r) => path.resolve(config.dataDir, String(r.audio_file))));
-  return cleanOrphanAudio((rel) => used.has(path.resolve(config.dataDir, rel)) || /^audio\/fx-[^/]*\.wav$/i.test(rel), minAgeMs);
+    .map((r) => path.resolve(dataDir(), String(r.audio_file))));
+  return cleanOrphanAudio((rel) => used.has(path.resolve(dataDir(), rel)) || /^audio\/fx-[^/]*\.wav$/i.test(rel), minAgeMs);
 }
 
 export async function start() {
-  const removed = cleanTmp();
-  if (removed) console.log(`[audio] 남은 임시 파일 ${removed}개를 지웠습니다.`);
+  const onSweepError = (err) => console.error('[worker] 저장소 정리 실패:', err?.code || err?.message);
+  forEachWorkspace(() => {
+    const removed = cleanTmp();
+    if (removed) console.log(`[audio] 남은 임시 파일 ${removed}개를 지웠습니다.`);
+  }, onSweepError);
   // 하루 한 번(시작할 때 · 이후 24시간마다): 주인 없는 녹음 파일 지우기
   const sweepAudio = () => {
     try {
@@ -303,8 +302,8 @@ export async function start() {
       console.error('[audio] 주인 없는 녹음 파일 정리 실패:', e?.message || e);
     }
   };
-  sweepAudio();
-  setInterval(sweepAudio, 24 * 3600_000).unref();
+  forEachWorkspace(sweepAudio, onSweepError);
+  setInterval(() => forEachWorkspace(sweepAudio, onSweepError), 24 * 3600_000).unref();
   ffmpegAvailable().then((ok) => {
     if (!ok) console.warn('[audio] ffmpeg 를 찾지 못했습니다. 16kHz mono WAV 만 받을 수 있습니다(FFMPEG_PATH 확인).');
   }).catch(() => {});
@@ -316,6 +315,7 @@ export async function start() {
       console.error('[jobs] 임대 만료 처리 실패:', e?.message || e);
     }
   };
-  sweep();
-  setInterval(sweep, 30_000).unref();
+  const sweepJobs = () => forEachWorkspace(sweep, onSweepError);
+  sweepJobs();
+  setInterval(sweepJobs, 30_000).unref();
 }

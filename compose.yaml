@@ -1,0 +1,28 @@
+services:
+  app:
+    image: ${AHMATDA_IMAGE:-ahmatda:local}
+    build:
+      context: .
+      args:
+        GIT_COMMIT: ${GIT_COMMIT:-unknown}
+    init: true
+    restart: unless-stopped
+    env_file:
+      - ${AHMATDA_ENV_FILE:-./src/app/.env}
+    environment:
+      HOST: 0.0.0.0
+      PORT: "5600"
+      DATA_DIR: /data
+    ports:
+      - "${AHMATDA_BIND:-127.0.0.1}:${AHMATDA_PORT:-5600}:5600"
+    volumes:
+      - app-data:/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5600/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 10s
+
+volumes:
+  app-data:

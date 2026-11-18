@@ -36,6 +36,7 @@ export default {
   title: '녹음 올리기',
   async mount(el, ctx) {
     const meta = ctx.meta || {};
+    const demo = meta.demo === true;
     const maxMB = Number(meta.limits?.maxUploadMB) || 10;
     const maxSec = Number(meta.limits?.maxAudioSec) || 300;
     const rows = []; // {id, file, status: ready|blocked|uploading|done|duplicate|error, progress, message, callId, call}
@@ -52,7 +53,9 @@ export default {
         <p class="sub">통화 녹음 파일을 올리면 받아쓰고 주문 카드로 정리합니다.</p>
       </div></div>
 
-      <div class="notice notice-warn" role="note"><strong>실제 고객 통화는 올리지 마세요.</strong> 누구나 보는 공개 데모라 가짜(연습) 녹음만 받습니다.</div>
+      <div class="notice notice-warn" role="note">${demo
+        ? html`<strong>실제 고객 통화는 올리지 마세요.</strong> 누구나 보는 공개 데모라 가짜(연습) 녹음만 받습니다.`
+        : html`<strong>녹음 처리 권한과 동의를 확인해 주세요.</strong> 이 작업공간의 구성원에게 녹음과 받아쓴 글이 공유됩니다. <a href="#/help">데이터 처리 안내</a>`}</div>
 
       <section class="card upload-box" aria-labelledby="upTitle">
         <h2 id="upTitle" class="sr-only">파일 고르기</h2>
@@ -68,9 +71,9 @@ export default {
 
         <div class="upload-options">
           <label class="field"><span>녹음 시각</span><input class="input" type="datetime-local" data-ref="when" value="${localNow()}"></label>
-          <label class="field"><span>걸려 온 번호 (가짜 번호만 · 선택)</span><input class="input" type="tel" inputmode="tel" data-ref="caller" maxlength="20" placeholder="예: 010-0000-0000" autocomplete="off"></label>
+          <label class="field"><span>걸려 온 번호 (${demo ? '가짜 번호만 · ' : ''}선택)</span><input class="input" type="tel" inputmode="tel" data-ref="caller" maxlength="20" placeholder="예: 010-0000-0000" autocomplete="off"></label>
         </div>
-        <label class="check upload-confirm"><input type="checkbox" data-ref="fake"><span><strong>가짜(연습) 녹음만 올립니다. 실제 고객 통화는 올리지 않습니다.</strong></span></label>
+        <label class="check upload-confirm"><input type="checkbox" data-ref="fake"><span><strong>${demo ? '가짜(연습) 녹음만 올립니다. 실제 고객 통화는 올리지 않습니다.' : '이 녹음의 수집·처리·공유 권한과 필요한 동의를 확인했습니다.'}</strong></span></label>
         <button type="button" class="btn btn-primary btn-lg btn-block" data-act="upload" disabled>올리기</button>
         <p class="help" data-ref="hint"></p>
         <p class="sr-only" role="status" data-ref="announce"></p>
@@ -102,18 +105,10 @@ export default {
       </div>
 
       <section class="card card-soft upload-f12" aria-labelledby="f12Title">
-        <p class="eyebrow">F12 · 녹음 폴더 자동 보내기</p>
-        <h2 id="f12Title">녹음 폴더를 지켜보다 알아서 보내기</h2>
-        <p>대리점 PC 에 <strong>콜노트 PC 프로그램</strong>(<code>src/pc-agent/</code>, 받아쓰기 일꾼과 한 프로그램)을 깔아 두면, 통화 녹음 폴더에 새 파일이 생길 때마다 이 서버로 보냅니다. 따로 올리지 않아도 1분 안에 통화 목록에 「폴더에서 온 녹음」으로 나타납니다.</p>
-        <p class="small muted">실행 예시(윈도우 · Python 3.10 이상, 설치는 <code>src/pc-agent/README.md</code>). 토큰은 저장소 밖 <code>%USERPROFILE%\.t07-secrets\ingest.env</code> 에서 읽습니다 — 토큰 값은 화면 · 메신저 · 저장소에 붙여 두지 마세요. 공개 데모에는 <strong>가짜(연습) 녹음만 담은 폴더</strong>를 지정합니다.</p>
-        <pre class="upload-cmd" data-ref="cmd"></pre>
-        <ul class="small upload-f12-notes">
-          <li>아직 쓰는 중인 파일은 기다렸다가, 다 써진 녹음 파일만 보냅니다. 원래 파일 이름(전화번호가 들어 있을 수 있음)은 보내지 않습니다.</li>
-          <li><strong>공개 데모에는 가짜(연습) 녹음만</strong> — 프로그램이 「가짜 녹음」(fake=true) 표시를 붙여 보내고, 서버는 가짜가 아닌 녹음을 받지 않습니다.</li>
-          <li>이미 녹음이 쌓여 있는 폴더라면 <code>--skip-existing</code> 을 붙이세요(처음 켤 때 있던 파일은 올리지 않습니다).</li>
-          <li>같은 파일을 다시 보내도 한 번만 들어갑니다. 인터넷이 끊기면 30초 · 1분 · 2분… 간격으로 다시 보냅니다.</li>
-          <li>받아쓰기 일꾼이 꺼져 있으면 줄을 서서 기다렸다가 켜지면 차례로 받아씁니다.</li>
-        </ul>
+        <h2 id="f12Title">PC의 녹음 폴더 연결하기</h2>
+        <p>PC 프로그램이 새 녹음을 찾아 전송하고, 같은 파일은 한 번만 처리합니다. 원본 녹음은 변경하지 않습니다.</p>
+        <p>${demo ? '공개 데모에는 가짜 녹음이 담긴 폴더만 연결하세요.' : '작업공간 관리자가 연결용 토큰과 녹음 처리 권한을 확인한 뒤 연결해 주세요.'} 받아쓰기 PC가 꺼져 있으면 서버에서 기다렸다가 연결 후 처리합니다.</p>
+        <div class="row"><a class="btn" href="#/settings/integrations">수집·AI 설정</a><a class="btn btn-ghost" href="#/help">설치와 처리 방식 보기</a></div>
       </section>
     </div>`);
 
@@ -124,8 +119,6 @@ export default {
     const fakeBox = ref('fake');
     const upBtn = root.querySelector('[data-act="upload"]');
 
-    // F12 실행 예시: 이 사이트 주소를 넣고, 토큰 값은 쓰지 않는다
-    ref('cmd').textContent = 'python callnote_agent.py watch "C:\\가짜통화"';
 
     // ── 파일 줄 ──
     function addFiles(list) {
@@ -168,6 +161,7 @@ export default {
         </div>
         ${['uploading', 'done', 'duplicate'].includes(r.status) ? html`<div class="upload-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}" aria-label="올리기 진행"><i style="width:${pct}%"></i></div>` : ''}
         <div class="upload-row-msg">${label}${message ? html` <span>${message}</span>` : ''}
+          ${r.status === 'error' && !busy ? html`<button class="btn btn-sm" type="button" data-act="retry" data-id="${r.id}">다시 시도 준비</button>` : ''}
           ${r.callId ? html` <a class="upload-link" href="${callLink(r.callId)}">${cardReady ? '카드 열기 ›' : '통화 보기 ›'}</a>` : ''}</div>
       </li>`;
     }
@@ -236,7 +230,7 @@ export default {
         fd.append('file', r.file, r.file.name);
         fd.append('recordedAt', recordedAt);
         if (caller) fd.append('callerNumber', caller);
-        fd.append('fakeConfirm', 'yes');
+        fd.append(demo ? 'fakeConfirm' : 'recordingConsent', 'yes');
         let lastPaint = 0;
         try {
           const out = await api.upload('/api/calls/upload', fd, (p) => {
@@ -320,7 +314,7 @@ export default {
         ? html`<ul class="upload-samples">${usable.map((s) => html`<li>
             <div class="upload-sample-title">${s.title || '예시 녹음'}${s.durationSec ? html` <span class="muted small">${fmtSec(s.durationSec)}</span>` : ''}</div>
             <div class="row">
-              <a class="btn btn-sm" href="${safePath(s.url)}" download>내려받기</a>
+              <a class="btn btn-sm" href="${api.url(safePath(s.url))}" download>내려받기</a>
               ${s.callId ? html`<a class="btn btn-sm btn-ghost" href="${callLink(s.callId)}">받아쓴 결과 보기</a>` : ''}
             </div></li>`)}</ul>`
         : html`<p class="muted">예시 녹음 준비 중입니다.</p>`);
@@ -335,6 +329,9 @@ export default {
       else if (b.dataset.act === 'remove') {
         const i = rows.findIndex((r) => String(r.id) === b.dataset.id);
         if (i >= 0 && !busy) { rows.splice(i, 1); renderRows(); }
+      } else if (b.dataset.act === 'retry') {
+        const row = rows.find((r) => String(r.id) === b.dataset.id);
+        if (row && !busy && row.status === 'error') { row.status = 'ready'; row.message = ''; renderRows(); }
       }
     };
     const onChange = (e) => {

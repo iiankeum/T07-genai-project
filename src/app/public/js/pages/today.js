@@ -5,8 +5,6 @@ import { partsText, callHref } from './board.js';
 
 const REFRESH_MS = 30_000;
 const LIST_MAX = 6;
-// AI 요약을 저절로 부른 날(화면을 다시 열어도 같은 날은 한 번만 — AI 비용 아끼기)
-const AUTO_TRIED = new Set();
 const TODO_KIND = {
   callback: { icon: '☎', label: '다시 전화' },
   confirm: { icon: '✓', label: '확인 · 확정' },
@@ -110,13 +108,14 @@ export default {
     function briefPart(d) {
       const meta = st.meta || {};
       const b = d.briefing;
+      const fixture = b ? b.mode === 'fixture' : meta.aiProvider === 'fixture';
       const isToday = d.isToday !== false && st.day === kstDay();
       let body;
       if (st.brief === 'loading') {
         body = html`<p class="brief-wait"><span class="spinner" aria-hidden="true"></span>AI 가 ${isToday ? '오늘' : '그날'} 통화를 읽는 중입니다. 잠시만 기다려 주세요.</p>`;
       } else if (b && b.paragraph) {
         body = html`<p class="brief-text">${b.paragraph}</p>
-          ${Array.isArray(b.todos) && b.todos.length ? html`<h3 class="brief-sub">AI 가 고른 먼저 할 일</h3>
+          ${Array.isArray(b.todos) && b.todos.length ? html`<h3 class="brief-sub">${fixture ? '먼저 확인할 일' : 'AI 가 고른 먼저 할 일'}</h3>
             <ol class="brief-todos">${b.todos.map((t) => html`<li>${t.callId
               ? html`<a href="${callHref(t.callId)}"><strong>${t.title}</strong>${t.why ? html`<span class="brief-why">${t.why}</span>` : ''}</a>`
               : html`<strong>${t.title}</strong>${t.why ? html`<span class="brief-why">${t.why}</span>` : ''}`}</li>`)}</ol>` : ''}`;
@@ -129,7 +128,7 @@ export default {
       }
       const canMake = meta.aiEnabled !== false && num(d.stats?.calls) > 0 && st.brief !== 'loading';
       return html`<section class="card today-brief" aria-labelledby="brief-h">
-        <div class="card-title"><h2 id="brief-h">AI 한 단락 요약</h2><span class="chip chip-ai">AI 초안</span></div>
+        <div class="card-title"><h2 id="brief-h">AI 한 단락 요약</h2><span class="chip chip-ai">${fixture ? '가짜 테스트 응답' : 'AI 초안'}</span></div>
         ${aiOffNotice(meta)}
         ${st.brief === 'error' ? html`${errorBox(st.briefErr)}` : ''}
         ${body}
@@ -285,10 +284,7 @@ export default {
       }
       st.loading = false;
       draw();
-      if (st.data && !st.error) {
-        maybeAutoBrief();
-        loadSumText(day);
-      }
+      if (st.data && !st.error) loadSumText(day);
     }
 
     async function loadSumText(day) {
@@ -300,15 +296,6 @@ export default {
         st.sumDay = day;
         if (st.showText && changed) draw();
       } catch { /* 누를 때 다시 부른다 */ }
-    }
-
-    function maybeAutoBrief() {
-      const d = st.data;
-      if (!d || (d.briefing && !d.briefing.stale) || st.meta?.aiEnabled !== true) return;
-      if (num(d.stats?.calls) === 0) return;
-      if (AUTO_TRIED.has(st.day) || st.brief === 'loading') return;
-      AUTO_TRIED.add(st.day);
-      makeBrief();
     }
 
     async function makeBrief() {
