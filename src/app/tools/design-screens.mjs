@@ -56,7 +56,14 @@ try {
 
  assert.equal(await page.locator('.tabbar').isVisible(),false,'no global nav in detail');
  assert.ok(await page.locator('.cd-actions').evaluate(el=>{const r=el.getBoundingClientRect();return r.bottom<=innerHeight+1&&r.top>innerHeight*.5;}),'current action visible at viewport bottom');
+ await page.evaluate(()=>scrollTo(0,0));await page.waitForTimeout(100);
  await page.screenshot({path:path.join(dir,'call-mobile-fake.png')});
+ assert.ok(await page.locator('.cd-items').evaluate(el=>Boolean(el.compareDocumentPosition(document.querySelector('.cd-card-section')) & Node.DOCUMENT_POSITION_FOLLOWING)),'items precede basic edit form');
+ const activeBefore=await page.locator('.ev-active').count();await page.locator('[data-item="qty"]').first().click();assert.equal(await page.locator('.ev-active').count(),activeBefore,'editing quantity does not select or play evidence');
+ await page.locator('.cd-confirm-issues summary').click();await page.locator('[data-act="issue-jump"]').first().click();assert.ok(await page.evaluate(()=>document.activeElement.matches('[data-field],[data-item],[data-review],[data-resolve],#cd-ask-new,[data-act="item-add"]')),'issue link focuses resolving control');
+ await page.setViewportSize({width:1440,height:1000});await page.goto(base+'/#/calls/fx-c51');await page.locator('.cd-items').waitFor();if(await page.locator('.cd-confirm-issues').evaluate(el=>el.open))await page.locator('.cd-confirm-issues summary').click();await page.evaluate(()=>{scrollTo(0,0);document.querySelector('.cd-card-scroll').scrollTop=0;});await page.waitForTimeout(300);await page.screenshot({path:path.join(dir,'call-desktop-initial-fake.png')});
+ await page.setViewportSize({width:390,height:844});await page.goto(base+'/#/calls/fx-c51');await page.locator('.cd-actions').waitFor();
+
  await page.locator('.cd-card input').last().scrollIntoViewIfNeeded();
  await page.evaluate(()=>scrollTo(0,document.documentElement.scrollHeight));await page.waitForTimeout(200);
  assert.ok(await page.locator('.cd-card input').last().evaluate(el=>el.getBoundingClientRect().bottom<=document.querySelector('.cd-actions').getBoundingClientRect().top),'last input clears fixed actions at page end');

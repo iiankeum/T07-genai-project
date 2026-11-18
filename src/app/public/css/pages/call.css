@@ -471,3 +471,40 @@ body[data-page="call"] { background:#fff; }
 .cd-seg.is-search-match .cd-text,.cd-plain.is-search-match{background:#fff7d6;box-decoration-break:clone;-webkit-box-decoration-break:clone}
 .cd-seg.is-search-current .cd-text,.cd-plain.is-search-current{outline:2px solid #a87600;outline-offset:3px;border-radius:2px}
 @media(max-width:420px){.cd-trans-search{flex-wrap:wrap}.cd-trans-search .input{flex-basis:calc(100% - 100px)}.cd-search-count{order:4;width:100%;min-height:16px}}
+
+/* 품목 검토 우선: 차량 맥락은 요약하되 모든 기본정보 입력은 아래에 유지한다. */
+.cd-order-context { display:flex; align-items:center; justify-content:space-between; gap:12px; padding-bottom:14px; border-bottom:1px solid var(--line); }
+.cd-order-context > div { display:grid; gap:5px; min-width:0; }
+.cd-order-context span { font-size:13px; color:var(--muted); overflow-wrap:anywhere; }
+.cd-order-context button { flex-shrink:0; }
+.cd-draft-note { color:var(--muted); font-size:12px; line-height:1.6; margin:14px 0; }
+.cd-card-scroll > .cd-items { padding-top:0; border-top:0; }
+.cd-item .cd-item-grid { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+.cd-item .cd-sub-part { grid-column:1; grid-row:1; }
+.cd-item .cd-sub-qty { grid-column:2; grid-row:1; }
+.cd-item .cd-sub-side { grid-column:1; grid-row:2; }
+.cd-item .cd-sub-no { grid-column:2; grid-row:2; }
+@media(max-width:420px) { .cd-order-context { align-items:flex-start; flex-wrap:wrap; } }
+
+.cd-issue-link { font:inherit; text-align:left; color:inherit; background:none; border:0; padding:6px 0; cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
+@media(max-width:1023px) {
+ .cd-overview { margin-bottom:12px; }
+ .cd-topnav { margin-bottom:12px; }
+ .cd-head { gap:8px; }
+ .cd-title-meta { margin-top:4px; line-height:18px; }
+ .cd-body > .cd-history { order:3; margin-top:16px; }
+ .cd-card-head { padding-block:8px; }
+ .cd-order-context { padding-bottom:8px; gap:8px; }
+ .cd-draft-note { margin:8px 0; }
+}
+
+@media(max-width:1023px) {
+ .cd-order-context > div > strong { display:none; } /* 거래처 이름은 바로 위 통화 제목에 유지 */
+ .cd-items > .cd-sec-top { margin-bottom:4px; }
+ .cd-item { padding:8px 0 16px; }
+ .cd-item-head { margin-bottom:4px; }
+}
+
+.cd-items > .cd-sec-top { margin-bottom:4px; }
+.cd-item { padding:8px 0 16px; }
+.cd-item-head { margin-bottom:4px; }

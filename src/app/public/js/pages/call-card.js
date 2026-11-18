@@ -286,7 +286,7 @@ export function mountCard(el, o) {
       const why = issues.length
         ? html`<details class="cd-confirm-issues" ${issuesOpen ? html`open` : ''}>
           <summary id="cd-confirm-why">확정 전 확인 ${issues.length}건</summary>
-          <ul class="cd-why">${issues.map((issue) => html`<li>${issue.message}</li>`)}</ul>
+          <ul class="cd-why">${issues.map((issue, index) => html`<li><button type="button" class="cd-issue-link" data-act="issue-jump" data-issue="${index}">${issue.message} →</button></li>`)}</ul>
         </details>`
         : html`<p class="cd-action-state">${nothingToShip() ? '확정하면 처리가 완료됩니다.' : '확정하면 출고 대기로 이동합니다.'}</p>`;
       return html`${why}<div class="cd-action-buttons">
@@ -352,6 +352,10 @@ export function mountCard(el, o) {
     return html`<span>${pending.size ? '저장 중…' : '자동 저장'}</span>`;
   }
 
+  function contextView() {
+    return html`<div><strong>${card.customer || '거래처 미입력'}</strong><span>${card.carModel || '차종 미입력'} · ${card.plate || '차번호 미입력'}</span></div><button class="btn btn-ghost btn-sm" type="button" data-act="basic-jump">차량·거래처 확인</button>`;
+  }
+
   function renderAll() {
     evMap = new Map();
     if (!card) {
@@ -378,6 +382,9 @@ export function mountCard(el, o) {
       <div class="cd-card-scroll" tabindex="0" role="region" aria-label="주문 카드 내용">
         <div data-slot="save-status" tabindex="-1" aria-live="polite">${saveStatus()}</div>
         ${card.aiError ? html`<p class="notice notice-warn" role="note">AI 초안을 만들지 못했습니다. 주문 정보를 직접 채워 주세요. ${card.aiError}</p>` : ''}
+        <div class="cd-order-context" data-slot="order-context">${contextView()}</div>
+        <p class="cd-draft-note">AI 초안 · 품목·수량과 확인 항목을 검토하세요.</p>
+        ${itemsSection(groups)}
         <section class="cd-card-section" aria-labelledby="cd-fields-h">
           <div class="cd-sec-top cd-fields-head">
             <h3 id="cd-fields-h">기본 정보</h3>
@@ -390,7 +397,6 @@ export function mountCard(el, o) {
           </div>
           <div class="cd-grid">${TOP_FIELDS.map((f) => fieldBlock(f, groups))}${typeBlock()}</div>
         </section>
-        ${itemsSection(groups)}
         <section class="cd-sec" aria-labelledby="cd-delivery-h">
           <h3 id="cd-delivery-h">배송 및 요청사항</h3>
           <div class="cd-grid">${WHEN_FIELDS.map((f) => fieldBlock(f, groups))}${urgentBlock(groups)}${fieldBlock(NOTE_FIELD, groups)}</div>
@@ -415,6 +421,7 @@ export function mountCard(el, o) {
   function refreshDecor() {
     if (!card) return;
     updateInlineIssues();
+    if (slot('order-context')) render(slot('order-context'), contextView());
     el.querySelectorAll('[data-chip]').forEach((s) => render(s, html`${chipFor(s.dataset.chip)}`));
     const st = slot('status'); if (st) render(st, cardChip(card.status));
     const ac = slot('actions');
@@ -843,13 +850,21 @@ export function mountCard(el, o) {
     const play = t.closest('.ev-play');
     if (!play && t.closest('button, a')) return;
     // 이미 고른 칸을 고치려고 다시 누른 것이면 녹음을 처음부터 다시 틀지 않는다
-    if (!play && t.matches('input, textarea, select') && activeKey === block.dataset.ev) return;
+    // 편집과 근거 확인을 분리: 입력 클릭은 값 편집만, 명시적 근거 버튼만 재생/이동한다.
+    if (!play) return;
     selectBlock(block, true);
   }
 
   function handleAct(act, btn) {
     switch (act) {
       case 'to-trans': o.onJumpToTranscript(activeKey ? evMap.get(activeKey) : null); break;
+      case 'issue-jump': {
+        const issue = confirmationIssues(localCard())[Number(btn.dataset.issue)];
+        if (!issue) break;
+        const target = issue.code === 'ask_back_left' ? el.querySelector('[data-resolve]') || el.querySelector('#cd-ask-new') : issue.code === 'unsure_left' ? el.querySelector('[data-review]') : issue.field === 'items' ? el.querySelector('[data-act="item-add"]') : issueInput(issue);
+        target?.scrollIntoView({block:'center'}); target?.focus({preventScroll:true}); break;
+      }
+      case 'basic-jump': { const input = el.querySelector('[data-field="customer"]'); input?.scrollIntoView({block:'center'}); input?.focus({preventScroll:true}); break; }
       case 'status-jump': slot('actions')?.focus(); break;
       case 'save-error': slot('save-status')?.focus(); break;
       case 'item-add': addItem(); break;

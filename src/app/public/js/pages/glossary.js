@@ -120,25 +120,37 @@ export default {
       const pending = item.revisions.filter((revision) => revision.status === 'pending');
       const history = item.revisions.filter((revision) => revision.status !== 'pending');
       render(ref('detail'), html`
+        <button class="btn btn-ghost kn-back-list" type="button" data-act="back-list">← 목록으로</button>
         <div class="kn-detail-header">
           <div>
             <p class="kn-item-meta">${KIND_LABEL[item.kind]}${item.version ? ` · 버전 ${item.version}` : ''}</p>
-            <h2>${item.term}</h2>
-            <div class="ka-actions">${statusChip(item.status)}${item.status === 'approved' ? html`<span class="help">다음 AI 요청에 참조</span>` : ''}</div>
+            <h2 id="kn-detail-title" tabindex="-1">${item.term}</h2>
+            <div class="ka-actions">${statusChip(item.status)}${item.status === 'approved' ? html`<span class="help">현재 사용하는 승인본</span>` : html`<span class="help">아직 AI가 참고하지 않는 내용</span>`}</div>
           </div>
           <div class="ka-actions">
             ${canPropose && item.status !== 'archived' ? html`<button type="button" class="btn" data-act="edit">수정 제안</button>` : ''}
             ${canReview && item.status !== 'archived' ? html`<button type="button" class="btn btn-ghost" data-act="archive">보관</button>` : ''}
           </div>
         </div>
+        ${pending.length ? html`<section class="kn-section kn-review">
+          <h3>검토할 제안 ${pending.length}건</h3>
+          <p class="help">${item.status === 'approved' ? '아래 수정안은 아직 적용되지 않았습니다. 승인하면 현재 승인본을 대신합니다.' : '아래 제안은 아직 적용되지 않았습니다. 내용을 확인하고 승인해야 AI가 참고합니다.'}</p>
+          ${pending.map((rev) => html`<div class="kn-history-row">
+            <div><strong>${rev.content.term} ${item.version ? '수정안' : '제안'}</strong><span class="help">${fmtWhen(rev.createdAt)}</span></div>
+            <div class="ka-actions">
+              <button class="btn" type="button" data-act="compare" data-id="${rev.id}">내용 검토</button>
+              ${canReview ? html`<button class="btn" type="button" data-act="reject" data-id="${rev.id}">반려</button><button class="btn btn-primary" type="button" data-act="approve" data-id="${rev.id}">승인</button>` : ''}
+            </div>
+          </div>`)}
+        </section>` : ''}
         ${item.aliases.length ? html`<div class="ka-actions kn-aliases">${item.aliases.map((alias) => html`<span class="chip chip-ai">${alias}</span>`)}</div>` : ''}
         <section class="kn-section">
-          <h3>정의와 사용 맥락</h3>
+          <h3>어떤 뜻인가요?</h3>
           ${item.standard ? html`<p><strong>표준 표현</strong> ${item.standard}</p>` : ''}
           ${item.phone ? html`<p><strong>전화번호</strong> ${item.phone}</p>` : ''}
           <p class="ka-prewrap">${item.note || '등록된 설명이 없어요.'}</p>
         </section>
-        ${item.relations.length ? html`<section class="kn-section"><h3>연결된 지식</h3>
+        ${item.relations.length ? html`<section class="kn-section"><h3>함께 알아둘 정보</h3>
           <ul class="kn-relations">${item.relations.map(({ relation, target }) => html`<li>
             <span>${relation}</span>
             <button class="btn btn-ghost" type="button" data-act="relation" data-value="${target}">${target} →</button>
@@ -149,19 +161,9 @@ export default {
           ${callSource(item)}
           <p class="help">마지막 변경 ${fmtWhen(item.updatedAt)}</p>
         </section>
-        ${pending.length ? html`<section class="kn-section kn-review">
-          <h3>검토 대기 ${pending.length}건</h3>
-          <p class="help">승인한 버전이 AI 요청에 반영됩니다.</p>
-          ${pending.map((rev) => html`<div class="kn-history-row">
-            <div><strong>${rev.content.term} ${item.version ? '수정안' : '제안'}</strong><span class="help">${fmtWhen(rev.createdAt)}</span></div>
-            <div class="ka-actions">
-              <button class="btn" type="button" data-act="compare" data-id="${rev.id}">내용 검토</button>
-              ${canReview ? html`<button class="btn" type="button" data-act="reject" data-id="${rev.id}">반려</button><button class="btn btn-primary" type="button" data-act="approve" data-id="${rev.id}">승인</button>` : ''}
-            </div>
-          </div>`)}
-        </section>` : ''}
-        <section class="kn-section">
-          <h3>변경 이력</h3>
+
+        <details class="kn-section kn-history">
+          <summary>변경 이력 <span>${history.length}건</span></summary>
           ${history.length ? history.map((rev) => html`<div class="kn-history-row">
             <div><strong>${rev.version ? `버전 ${rev.version} · ` : ''}${STATUS[rev.status]}</strong>
               <span class="help">${fmtWhen(rev.reviewedAt || rev.createdAt)}</span>
@@ -173,7 +175,7 @@ export default {
                 ? html`<button class="btn" type="button" data-act="restore" data-id="${rev.id}">복원 제안</button>` : ''}
             </div>
           </div>`) : html`<p class="help">승인, 반려, 복원 이력이 여기에 표시됩니다.</p>`}
-        </section>`);
+        </details>`);
     }
 
     let detail = null;
@@ -193,7 +195,10 @@ export default {
         if (disposed || seq !== detailSeq) return;
         detail = item;
         paintDetail(item);
-        if (focusDetail && window.matchMedia('(max-width: 720px)').matches) ref('detail').scrollIntoView({ block: 'start' });
+        if (focusDetail) {
+          ref('detail').querySelector('#kn-detail-title').focus({ preventScroll: true });
+          ref('detail').scrollIntoView({ block: 'start', behavior: 'instant' });
+        }
       } catch (error) {
         if (disposed || seq !== detailSeq) return;
         render(ref('detail'), html`${errorBox(error)}<button type="button" class="btn" data-act="reload">다시 불러오기</button>`);
@@ -417,7 +422,10 @@ export default {
         ref('filters').querySelector(`[data-value="${filter}"]`)?.focus();
       } else if (act === 'select') {
         await select(id, true);
-        ref('list').querySelector('[aria-pressed="true"]')?.focus({ preventScroll: true });
+      } else if (act === 'back-list') {
+        const button = ref('list').querySelector('[aria-pressed="true"]');
+        (button || root.querySelector('#kn-search')).focus({ preventScroll: true });
+        (button || ref('list')).scrollIntoView({ block: 'center', behavior: 'instant' });
       } else if (act === 'reload') load();
       else if (act === 'new') suggest(category ? {kind: category} : {});
       else if (act === 'edit' && detail) suggest(detail, detail.id);
@@ -430,7 +438,7 @@ export default {
           filter = 'all'; category = ''; q = '';
           ref('kinds').value = '';
           root.querySelector('#kn-search').value = '';
-          select(exact.id);
+          select(exact.id, true);
         } else suggest({ term: value, kind: '업무 절차' }, null, '연결할 지식 제안');
       } else if (detail && act === 'reject') {
         dialogState = { type: 'reject', id: detail.id, revision: id };
