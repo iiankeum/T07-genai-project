@@ -1,0 +1,27 @@
+{
+  "reproduced": true,
+  "scope": "actual live module + fake save only; AI disabled, no mic permission or audio capture",
+  "saveEnabledDuringSecondExample": true,
+  "payload": {
+    "url": "/api/live/save",
+    "body": {
+      "text": "아반떼 앞범퍼 두 개 급해요",
+      "segments": [
+        {
+          "start": 0.4,
+          "end": 2.9,
+          "text": "아반떼 앞범퍼 두 개 급해요",
+          "speaker": "정비소"
+        }
+      ],
+      "durationSec": 3.4
+    }
+  },
+  "visibleLinesAfterSaved": [
+    "아반떼 앞범퍼 두 개 급해요",
+    "쏘렌토 엠큐포 뒷쇼바 좌우로 하나씩, 내일 오전까지"
+  ],
+  "settledMarkupRenderedAsText": true,
+  "errors": [],
+  "external": []
+}

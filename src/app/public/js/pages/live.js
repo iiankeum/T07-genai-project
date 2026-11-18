@@ -211,7 +211,7 @@ export default {
         <p class="live-text">${index >= 0 ? highlight(l.text, marks) : l.text}${extra === 'is-typing' ? html`<span class="live-caret" aria-hidden="true"></span>` : ''}</p>
       </article>`;
       if (repaint) {
-        render(ref('settled'), st.lines.map((l, i) => line(l, i)));
+        render(ref('settled'), html`${st.lines.map((l, i) => line(l, i))}`);
         paintedTail = tail;
         paintedCard = st.card;
         paintedLines = st.lines;
@@ -273,9 +273,9 @@ export default {
       pauseBtn.classList.toggle('hidden', !sample);
       pauseBtn.setAttribute('aria-pressed', String(st.paused));
       pauseBtn.textContent = st.paused ? '재개' : '일시 정지';
-      saveBtn.disabled = st.saving || sample || Boolean(st.saved) || !st.lines.length;
+      saveBtn.disabled = st.saving || Boolean(st.typing) || sample || Boolean(st.saved) || !st.lines.length;
       resetBtn.disabled = st.saving;
-      root.querySelectorAll('[data-act="example"]').forEach((b) => { b.disabled = sample || st.saving; });
+      root.querySelectorAll('[data-act="example"]').forEach((b) => { b.disabled = sample || Boolean(st.typing) || st.saving; });
     }
     function setMode(mode) { st.mode = mode; updateButtons(); }
 
@@ -480,6 +480,7 @@ export default {
       if (reduceMotion) return Promise.resolve(!disposed && token === playToken);
       return new Promise((resolve) => {
         st.typing = { who, text: '', start };
+        updateButtons();
         const chars = Array.from(text);
         const step = Math.max(18, Math.min(45, Math.round(700 / chars.length)));
         let i = 0;
@@ -490,7 +491,7 @@ export default {
           st.typing.text = chars.slice(0, i).join('');
           renderLines();
           if (i < chars.length) later(tick, step);
-          else { st.typing = null; resolve(true); }
+          else { st.typing = null; updateButtons(); resolve(true); }
         };
         tick();
       });
@@ -545,6 +546,7 @@ export default {
       st.sampleStarted = false;
       const token = playToken;
       const start = st.lines.length ? lastEnd() + 0.6 : 0.4;
+      setState('예시 문장을 입력하는 중입니다. 문장이 완성되면 저장할 수 있어요.');
       const done = await typeLine('정비소', text, start, token);
       if (!done || disposed || token !== playToken) return;
       pushLine({ who: '정비소', text, start, end: start + Math.max(1.2, Array.from(text).length / 6) });
@@ -557,7 +559,7 @@ export default {
     // ── 저장 · 지우기 ──
     let saveCtrl = null;
     async function save() {
-      if (st.saving || st.saved || st.mode === 'sample') return;
+      if (st.saving || st.saved || st.typing || st.mode === 'sample') return;
       st.saving = true; // 저장하는 동안에는 미리보기 정리를 부르지 않는다(서버가 카드를 만든다)
       cancel(idleTimer);
       cancel(gapTimer);
