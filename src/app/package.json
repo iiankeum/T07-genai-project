@@ -14,7 +14,8 @@
     "test": "node --import ./tools/no-paid-ai.mjs --test",
     "test:offline": "node --test test/ai-offline.test.mjs",
     "test:e2e": "node tools/browser-e2e.mjs",
-    "test:upload-e2e": "node tools/upload-browser-e2e.mjs"
+    "test:upload-e2e": "node tools/upload-browser-e2e.mjs",
+    "test:card-recovery-e2e": "node tools/card-recovery-browser-e2e.mjs"
   },
   "license": "MIT",
   "dependencies": {

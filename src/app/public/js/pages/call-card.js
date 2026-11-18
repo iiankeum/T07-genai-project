@@ -59,7 +59,13 @@ export function mountCard(el, o) {
   const canEdit = role === 'admin' || role === 'reception';
   const canShip = role === 'admin' || role === 'shipping';
   const pending = new Map();
-  const storageKey = 'cn.card.pending:' + (o.meta?.access?.workspace?.id || 'demo') + ':' + o.callId;
+  // 계정 전환 후 다른 사람의 임시입력을 복구·자동저장하지 않는다.
+  // 이전 사용자 구분 없는 키는 작성자를 알 수 없어 읽거나 삭제하지 않는다.
+  const demo = o.meta?.demo === true || o.meta?.access?.demo === true;
+  const userId = demo ? 'demo' : o.meta?.access?.user?.id;
+  const workspaceId = o.meta?.access?.workspace?.id || (demo ? 'demo' : null);
+  const storageKey = typeof userId === 'string' && userId && typeof workspaceId === 'string' && workspaceId
+    ? 'cn.card.pending:v2:' + [userId, workspaceId, o.callId].map(encodeURIComponent).join(':') : null;
   let saveTimer = null;
   let failure = null;
   let latest = null;
@@ -502,6 +508,7 @@ export function mountCard(el, o) {
   }
 
   function remember() {
+    if (!storageKey) return; // 신원이 없으면 현재 화면 메모리에서만 유지한다.
     try {
       if (pending.size) sessionStorage.setItem(storageKey, JSON.stringify({ revision: baseRevision, patch: Object.fromEntries(pending) }));
       else sessionStorage.removeItem(storageKey);
@@ -907,7 +914,7 @@ export function mountCard(el, o) {
   el.addEventListener('compositionend', onInput);
   window.addEventListener('online', handleOnline);
   window.addEventListener('beforeunload', handleUnload);
-  if (editable()) {
+  if (editable() && storageKey) {
     try {
       const restored = JSON.parse(sessionStorage.getItem(storageKey) || '{}');
       for (const [key, value] of Object.entries(restored.patch || {})) pending.set(key, value);

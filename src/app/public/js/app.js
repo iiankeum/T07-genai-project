@@ -206,10 +206,10 @@ window.addEventListener('ahmatda:workspace-changed', () => {
   notice.className = 'notice notice-warn';
   notice.setAttribute('role', 'alert');
   const text = document.createElement('p');
-  text.textContent = '다른 탭에서 작업공간을 바꿨습니다. 이 화면의 전송과 저장은 중단했습니다. 입력 내용을 확인한 뒤 새 작업공간을 열어 주세요.';
+  text.textContent = '다른 탭에서 계정 또는 작업공간이 바뀌었습니다. 이 화면의 전송과 저장은 중단했습니다. 입력 내용을 확인한 뒤 현재 계정과 작업공간을 새로 열어 주세요.';
   const button = document.createElement('button');
   button.className = 'btn';
-  button.textContent = '새 작업공간 열기';
+  button.textContent = '현재 계정·작업공간 새로 열기';
   button.addEventListener('click', () => location.reload());
   notice.append(text, button);
   (document.getElementById('workspaceNoticeSlot') || document.body).prepend(notice);
