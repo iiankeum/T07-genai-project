@@ -47,7 +47,8 @@
     "test:trial-submit-e2e": "node tools/trial-submit-browser-e2e.mjs",
     "test:upload-batch-e2e": "node tools/upload-batch-browser-e2e.mjs",
     "test:copy-focus-e2e": "node tools/copy-focus-browser-e2e.mjs",
-    "test:item-delete-focus-e2e": "node tools/item-delete-focus-browser-e2e.mjs"
+    "test:item-delete-focus-e2e": "node tools/item-delete-focus-browser-e2e.mjs",
+    "test:calls-pending-search-e2e": "node tools/calls-pending-search-browser-e2e.mjs"
   },
   "license": "MIT",
   "dependencies": {

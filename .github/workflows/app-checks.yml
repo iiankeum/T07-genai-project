@@ -130,6 +130,8 @@ jobs:
         run: npm run test:copy-focus-e2e
       - name: Mobile item deletion keyboard continuity (fake data only)
         run: npm run test:item-delete-focus-e2e
+      - name: Calls pending search survives detail navigation (fake data only)
+        run: npm run test:calls-pending-search-e2e
       - uses: actions/upload-artifact@v4
         if: always()
         with:

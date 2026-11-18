@@ -1,0 +1,432 @@
+{
+  "scope": "actual calls/call modules and isolated router, fake API; no real account/search backend",
+  "results": [
+    {
+      "width": 360,
+      "big": false,
+      "edit": "type",
+      "back": "history",
+      "pass": false,
+      "error": "visible pending search survives return\n\n'' !== '가짜 새 검색'\n",
+      "queries": [
+        {
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        },
+        {
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        }
+      ]
+    },
+    {
+      "width": 360,
+      "big": false,
+      "edit": "type",
+      "back": "link",
+      "pass": false,
+      "error": "visible pending search survives return\n\n'' !== '가짜 새 검색'\n",
+      "queries": [
+        {
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        },
+        {
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        }
+      ]
+    },
+    {
+      "width": 360,
+      "big": false,
+      "edit": "clear",
+      "back": "history",
+      "pass": false,
+      "error": "visible pending search survives return\n\n'부품' !== ''\n",
+      "queries": [
+        {
+          "q": "부품",
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        },
+        {
+          "q": "부품",
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        }
+      ]
+    },
+    {
+      "width": 360,
+      "big": false,
+      "edit": "clear",
+      "back": "link",
+      "pass": false,
+      "error": "visible pending search survives return\n\n'부품' !== ''\n",
+      "queries": [
+        {
+          "q": "부품",
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        },
+        {
+          "q": "부품",
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        }
+      ]
+    },
+    {
+      "width": 360,
+      "big": true,
+      "edit": "type",
+      "back": "history",
+      "pass": false,
+      "error": "visible pending search survives return\n\n'' !== '가짜 새 검색'\n",
+      "queries": [
+        {
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        },
+        {
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        }
+      ]
+    },
+    {
+      "width": 360,
+      "big": true,
+      "edit": "type",
+      "back": "link",
+      "pass": false,
+      "error": "visible pending search survives return\n\n'' !== '가짜 새 검색'\n",
+      "queries": [
+        {
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        },
+        {
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        }
+      ]
+    },
+    {
+      "width": 360,
+      "big": true,
+      "edit": "clear",
+      "back": "history",
+      "pass": false,
+      "error": "visible pending search survives return\n\n'부품' !== ''\n",
+      "queries": [
+        {
+          "q": "부품",
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        },
+        {
+          "q": "부품",
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        }
+      ]
+    },
+    {
+      "width": 360,
+      "big": true,
+      "edit": "clear",
+      "back": "link",
+      "pass": false,
+      "error": "visible pending search survives return\n\n'부품' !== ''\n",
+      "queries": [
+        {
+          "q": "부품",
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        },
+        {
+          "q": "부품",
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "big": false,
+      "edit": "type",
+      "back": "history",
+      "pass": false,
+      "error": "visible pending search survives return\n\n'' !== '가짜 새 검색'\n",
+      "queries": [
+        {
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        },
+        {
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "big": false,
+      "edit": "type",
+      "back": "link",
+      "pass": false,
+      "error": "visible pending search survives return\n\n'' !== '가짜 새 검색'\n",
+      "queries": [
+        {
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        },
+        {
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "big": false,
+      "edit": "clear",
+      "back": "history",
+      "pass": false,
+      "error": "visible pending search survives return\n\n'부품' !== ''\n",
+      "queries": [
+        {
+          "q": "부품",
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        },
+        {
+          "q": "부품",
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "big": false,
+      "edit": "clear",
+      "back": "link",
+      "pass": false,
+      "error": "visible pending search survives return\n\n'부품' !== ''\n",
+      "queries": [
+        {
+          "q": "부품",
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        },
+        {
+          "q": "부품",
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "big": true,
+      "edit": "type",
+      "back": "history",
+      "pass": false,
+      "error": "visible pending search survives return\n\n'' !== '가짜 새 검색'\n",
+      "queries": [
+        {
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        },
+        {
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "big": true,
+      "edit": "type",
+      "back": "link",
+      "pass": false,
+      "error": "visible pending search survives return\n\n'' !== '가짜 새 검색'\n",
+      "queries": [
+        {
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        },
+        {
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "big": true,
+      "edit": "clear",
+      "back": "history",
+      "pass": false,
+      "error": "visible pending search survives return\n\n'부품' !== ''\n",
+      "queries": [
+        {
+          "q": "부품",
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        },
+        {
+          "q": "부품",
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "big": true,
+      "edit": "clear",
+      "back": "link",
+      "pass": false,
+      "error": "visible pending search survives return\n\n'부품' !== ''\n",
+      "queries": [
+        {
+          "q": "부품",
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        },
+        {
+          "q": "부품",
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "big": true,
+      "edit": "type60",
+      "back": "history",
+      "pass": false,
+      "error": "changed search resets pagination, whitespace-only preserves it\n\n60 !== 30\n",
+      "queries": [
+        {
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        },
+        {
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "30"
+        },
+        {
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        },
+        {
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "30"
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "big": true,
+      "edit": "type60",
+      "back": "link",
+      "pass": false,
+      "error": "changed search resets pagination, whitespace-only preserves it\n\n60 !== 30\n",
+      "queries": [
+        {
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        },
+        {
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "30"
+        },
+        {
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "0"
+        },
+        {
+          "status": "cancelled",
+          "limit": "30",
+          "offset": "30"
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "big": true,
+      "edit": "space60",
+      "back": "history",
+      "pass": true,
+      "shown": "부품",
+      "urlQuery": "부품",
+      "sent": "부품",
+      "normalDebounceAndClear": true,
+      "cancelledFilterPreserved": true,
+      "detailUrl": "#/calls/fake-1"
+    },
+    {
+      "width": 390,
+      "big": true,
+      "edit": "space60",
+      "back": "link",
+      "pass": true,
+      "shown": "부품",
+      "urlQuery": "부품",
+      "sent": "부품",
+      "normalDebounceAndClear": true,
+      "cancelledFilterPreserved": true,
+      "detailUrl": "#/calls/fake-1"
+    },
+    {
+      "runError": "pending search return failed"
+    }
+  ],
+  "errors": [],
+  "blocked": []
+}
