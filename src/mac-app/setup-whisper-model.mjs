@@ -5,7 +5,6 @@ import {createReadStream,createWriteStream} from 'node:fs';
 import {createHash} from 'node:crypto';
 import https from 'node:https';
 import path from 'node:path';
-import {homedir} from 'node:os';
 import {fileURLToPath} from 'node:url';
 import {Transform} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
@@ -15,6 +14,32 @@ export const MODEL=Object.freeze({name:'faster-whisper-small',license:'MIT',revi
  {name:'vocabulary.txt',size:459861,sha256:'34ce3fe1c5041027b3f8d42912270993f986dbc4bb34cf27f951e34a1e453913'},
  {name:'model.bin',size:483546902,sha256:'3e305921506d8872816023e4c273e75d2419fb89b24da97b4fe7bce14170d671'},
 ]});
+const CACHE_ROOT='.whisper-verified-cache';
+const CACHE_MANIFEST='manifest.json';
+function manifest(model){
+ if(!model||typeof model.name!=='string'||typeof model.license!=='string'||typeof model.source!=='string'||!/^https:\/\//.test(model.source)||!/^[a-f0-9]{40}$/.test(model.revision||'')||!Array.isArray(model.files)||!model.files.length)throw Error('invalid_model_manifest');
+ const names=new Set();
+ for(const item of model.files){if(!item||!/^[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(item.name||'')||['manifest.json','ahmatda-manifest.json'].includes(item.name)||names.has(item.name)||!Number.isSafeInteger(item.size)||item.size<1||!/^[a-f0-9]{64}$/.test(item.sha256||''))throw Error('invalid_model_manifest');names.add(item.name);}
+ return {name:model.name,license:model.license,revision:model.revision,source:model.source,files:model.files.map(({name,size,sha256})=>({name,size,sha256}))};
+}
+export function cacheKey(model=MODEL){return createHash('sha256').update(JSON.stringify(manifest(model))).digest('hex');}
+export function cacheDirectory(root,model=MODEL){return path.join(root,CACHE_ROOT,cacheKey(model));}
+async function checkedCache(root,model){
+ const cache=cacheDirectory(root,model);await directory(cache);const file=path.join(cache,CACHE_MANIFEST),expected=JSON.stringify(manifest(model));
+ // 완료파일 재사용의 경계를 manifest와 namespace 두 곳에서 확인한다.
+ let handle;try{handle=await fs.open(file,fs.constants.O_RDONLY|fs.constants.O_NOFOLLOW|fs.constants.O_NONBLOCK);}catch(e){if(e.code!=='ENOENT')throw Error('unsafe_cache_manifest');}
+ if(handle){try{const stat=await handle.stat();if(!stat.isFile()||stat.size>65536||(await handle.readFile('utf8'))!==expected)throw Error('cache_manifest_mismatch');}finally{await handle.close();}}
+ else await fs.writeFile(file,expected,{flag:'wx',mode:0o600});
+ const allowed=new Set([CACHE_MANIFEST,...model.files.map(x=>x.name)]);if((await fs.readdir(cache)).some(name=>!allowed.has(name)))throw Error('unexpected_cache_entry');
+ return cache;
+}
+async function cachedFile(cache,item,signal){
+ const file=path.join(cache,item.name);let stat;try{stat=await fs.lstat(file);}catch(e){if(e.code==='ENOENT')return null;throw e;}
+ if(!stat.isFile()||stat.isSymbolicLink())throw Error('unsafe_cached_file');
+ if(await verifyFile(file,item,signal))return file;
+ // 잘못된 캐시의 정규파일만 지운다. 설치된 모델과 링크 대상은 건드리지 않는다.
+ await fs.unlink(file);return null;
+}
 async function directory(dir){const parent=path.dirname(dir);if(parent!==dir)await directory(parent);try{await fs.mkdir(dir,{mode:0o700});}catch(e){if(e.code!=='EEXIST')throw e;}const s=await fs.lstat(dir);if(!s.isDirectory()||s.isSymbolicLink())throw Error('unsafe_path');}
 export async function verifyFile(file,item,signal){signal?.throwIfAborted();let s;try{s=await fs.lstat(file);}catch(e){if(e.code==='ENOENT')return false;throw e;}if(!s.isFile()||s.isSymbolicLink()||s.size!==item.size)return false;const hash=createHash('sha256');for await(const c of createReadStream(file,{signal}))hash.update(c);return hash.digest('hex')===item.sha256;}
 export function approvedURL(value,item,redirect=false,model=MODEL){
@@ -42,20 +67,33 @@ export function download(url,target,item,{signal,onProgress=()=>{},redirects=0}=
  });
 }
 export async function inspect(root,{model=MODEL,signal}={}){
- const files=[];for(const item of model.files)files.push(await verifyFile(path.join(root,'whisper-small',item.name),item,signal));
+ manifest(model);let modelDirectory=false;try{const stat=await fs.lstat(path.join(root,'whisper-small'));modelDirectory=stat.isDirectory()&&!stat.isSymbolicLink();}catch(e){if(e.code!=='ENOENT')throw e;}const files=[];for(const item of model.files)files.push(modelDirectory&&await verifyFile(path.join(root,'whisper-small',item.name),item,signal));
  let runtimePresent=false;try{await fs.access(path.join(root,'whisper-venv/bin/python'));runtimePresent=true;}catch{}
  return {event:'status',model:model.name,license:model.license,revision:model.revision,source:model.source,downloadBytes:model.files.reduce((s,x)=>s+x.size,0),modelVerified:files.every(Boolean),filesVerified:files.filter(Boolean).length,totalFiles:files.length,runtimePresent,runtimeVerified:false,inferenceVerified:false,automaticRuntimeInstall:false,automaticServerStart:false,cloudEnabled:false};
 }
 export async function prepare(root,{model=MODEL,signal,emit=()=>{},transfer=download}={}){
- root=path.resolve(root);await directory(root);const lock=path.join(root,'.whisper-prepare.lock');let owned=false,stage;
+ manifest(model);root=path.resolve(root);await directory(root);const lock=path.join(root,'.whisper-prepare.lock');let owned=false,stage;
  try{
   try{await fs.mkdir(lock,{mode:0o700});owned=true;}catch(e){if(e.code==='EEXIST')throw Error('preparation_busy_or_interrupted_lock');throw e;}
   const state=await inspect(root,{model,signal});emit(state);if(state.modelVerified){emit({event:'ready',model:model.name,inferenceVerified:false});return;}
   const dest=path.join(root,'whisper-small');
   try{await fs.lstat(dest);throw Error('existing_incomplete_model_preserved');}catch(e){if(e.code!=='ENOENT')throw e;}
-  const disk=await fs.statfs(root);if(disk.bavail*disk.bsize<state.downloadBytes+64*1024*1024)throw Error('insufficient_disk_space');
-  stage=await fs.mkdtemp(path.join(root,'.whisper-stage-'));emit({event:'preparing',model:model.name,downloadBytes:state.downloadBytes,source:model.source,license:model.license});
-  for(const item of model.files){signal?.throwIfAborted();const file=path.join(stage,item.name);await transfer(`${model.source}/resolve/${model.revision}/${item.name}`,file,item,{signal,onProgress:completed=>emit({event:'progress',file:item.name,completed,total:item.size})});if(!await verifyFile(file,item,signal))throw Error('checksum_mismatch');}
+  const disk=await fs.statfs(root);if(disk.bavail*disk.bsize<state.downloadBytes*2+64*1024*1024)throw Error('insufficient_disk_space');
+  const cache=await checkedCache(root,model);
+  stage=await fs.mkdtemp(path.join(root,'.whisper-stage-'));emit({event:'preparing',model:model.name,downloadBytes:state.downloadBytes,source:model.source,license:model.license,resumeMode:'verified-files-only'});
+  let index=0;
+  for(const item of model.files){
+   signal?.throwIfAborted();const file=path.join(stage,item.name),cached=await cachedFile(cache,item,signal);
+   if(cached){await fs.copyFile(cached,file,fs.constants.COPYFILE_EXCL);if(!await verifyFile(file,item,signal))throw Error('cached_copy_checksum_mismatch');emit({event:'progress',file:item.name,completed:item.size,total:item.size,reusedVerifiedFile:true});}
+   else{
+    await transfer(`${model.source}/resolve/${model.revision}/${item.name}`,file,item,{signal,onProgress:completed=>emit({event:'progress',file:item.name,completed,total:item.size})});
+    if(!await verifyFile(file,item,signal))throw Error('checksum_mismatch');
+    // 완성 파일만 cache에 게시한다. 부분 전송과 복사 중간 파일은 stage와 함께 삭제된다.
+    const ready=path.join(stage,`.cache-ready-${index++}`);await fs.copyFile(file,ready,fs.constants.COPYFILE_EXCL);if(!await verifyFile(ready,item,signal))throw Error('cache_copy_checksum_mismatch');signal?.throwIfAborted();
+    // 같은 파일시스템의 hard-link 생성은 기존 cache 경로를 덮어쓰지 않는 원자적 게시다.
+    await fs.link(ready,path.join(cache,item.name));await fs.unlink(ready);
+   }
+  }
   await fs.writeFile(path.join(stage,'ahmatda-manifest.json'),JSON.stringify(model,null,2),{flag:'wx',mode:0o600});signal?.throwIfAborted();
   // 다른 설치기의 파일이 생겼으면 덮어쓰지 않는다. 비어 있는 디렉터리도 보존한다.
   try{await fs.lstat(dest);throw Error('destination_created_during_prepare');}catch(e){if(e.code!=='ENOENT')throw e;}
