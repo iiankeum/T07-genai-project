@@ -316,10 +316,20 @@ export default {
       const modalMutation = dialog.open;
       const submit = dialog.querySelector('button[type="submit"]');
       const progress = ref('mutation-status');
+      const lockedControls = modalMutation
+        ? [...dialog.querySelectorAll('input, select, textarea, button')].map(control => ({control, disabled:control.disabled}))
+        : [];
       if (submit) submit.disabled = true;
       if (modalMutation) {
         submit?.form?.setAttribute('aria-busy', 'true');
-        if (progress) { progress.textContent = '저장 중입니다. 완료될 때까지 잠시 기다려 주세요.'; progress.hidden = false; }
+        lockedControls.forEach(({control}) => { control.disabled = true; });
+        if (progress) {
+          progress.textContent = '저장 중에는 내용을 수정할 수 없어요. 완료될 때까지 잠시 기다려 주세요.';
+          progress.hidden = false;
+          progress.tabIndex = -1;
+          progress.focus();
+          progress.scrollIntoView({block:'center', behavior:'instant'});
+        }
         if (ref('form-error')) ref('form-error').textContent = '';
       }
       try {
@@ -345,7 +355,8 @@ export default {
         busy = false;
         submit?.form?.removeAttribute('aria-busy');
         if (progress) progress.hidden = true;
-        if (submit) submit.disabled = false;
+        if (lockedControls.length) lockedControls.forEach(({control, disabled}) => { control.disabled = disabled; });
+        else if (submit) submit.disabled = false;
       }
     }
 
@@ -353,6 +364,7 @@ export default {
       const form = event.target;
       if (!form.dataset.form) return;
       event.preventDefault();
+      if (busy) return;
       const fields = new FormData(form);
       const get = (key) => String(fields.get(key) || '').trim();
       if (form.dataset.form === 'reject') {
