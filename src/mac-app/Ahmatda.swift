@@ -87,6 +87,11 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
     private var childReady = false
     private var failed = false
     private var closing = false
+    private var preparationShown = false
+    private var preparationAlert: NSAlert?
+    private var aiEnvironment: [String: String] = [:]
+    private let probeDelegate = LocalProbeDelegate()
+    private var probeSession: URLSession?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1180, height: 800),
@@ -160,7 +165,8 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
             "ALLOW_PAID_AI": "0", "ANTHROPIC_API_KEY": "",
             "FFMPEG_PATH": "ffmpeg", "FFPROBE_PATH": "ffprobe",
         ]
-        env.merge(try AIConfiguration.environment(in: storage)) { _, localValue in localValue }
+        aiEnvironment = try AIConfiguration.environment(in: storage)
+        env.merge(aiEnvironment) { _, localValue in localValue }
         env.merge(try workerEnvironment(in: storage)) { _, localValue in localValue }
         proc.environment = env
 
@@ -375,7 +381,10 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
         }
         addMenu("아맞다", [NSMenuItem(title: "아맞다 종료", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")])
         var navigation = [command("링크 열기…", #selector(openLink), "l"), command("새로고침", #selector(reload), "r")]
-        if localMode { navigation.append(command("로컬 자료 폴더 열기", #selector(revealStorage))) }
+        if localMode {
+            navigation.append(command("로컬 AI 준비 상태…", #selector(showPreparation)))
+            navigation.append(command("로컬 자료 폴더 열기", #selector(revealStorage)))
+        }
         addMenu("이동", navigation)
         addMenu("편집", [
             NSMenuItem(title: "잘라내기", action: #selector(NSText.cut(_:)), keyEquivalent: "x"),
@@ -384,6 +393,58 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
             NSMenuItem(title: "전체 선택", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a"),
         ])
         NSApp.mainMenu = menu
+    }
+
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        guard localStorage != nil, !preparationShown else { return }
+        preparationShown = true
+        showPreparation()
+    }
+
+    @objc private func showPreparation() {
+        guard localStorage != nil, preparationAlert == nil, !closing else { return }
+        let alert = NSAlert()
+        preparationAlert = alert
+        alert.messageText = "이 Mac의 AI 준비 상태"
+        alert.informativeText = "로컬 모델 연결을 확인하고 있어요…"
+        alert.addButton(withTitle: "수동 업무 계속")
+        alert.addButton(withTitle: "다시 확인")
+        alert.addButton(withTitle: "모델 준비 안내")
+        alert.beginSheetModal(for: window) { [weak self] answer in
+            guard let self else { return }
+            self.probeSession?.invalidateAndCancel()
+            self.probeSession = nil
+            self.preparationAlert = nil
+            if answer == .alertSecondButtonReturn { self.showPreparation() }
+            if answer == .alertThirdButtonReturn { self.showPreparationGuide() }
+        }
+        let common = "\n\n받아쓰기: 상태 미검증. 별도 일꾼이 필요하며 이 화면에서는 전사를 시험하지 않아요.\n유료 AI는 꺼져 있고, 녹음이나 원문은 외부로 보내지 않아요."
+        if aiEnvironment["AI_PROVIDER"] == "off" {
+            alert.informativeText = "주문 정리 AI: 꺼짐. 수동 업무만 사용하도록 설정되어 있어요." + common
+            return
+        }
+        let config = URLSessionConfiguration.ephemeral
+        config.connectionProxyDictionary = [:]
+        config.timeoutIntervalForRequest = 3
+        config.timeoutIntervalForResource = 3
+        let probe = URLSession(configuration: config, delegate: probeDelegate, delegateQueue: nil)
+        probeSession = probe
+        let model = aiEnvironment["OLLAMA_MODEL"] ?? "qwen3:4b"
+        probe.dataTask(with: URL(string: "http://127.0.0.1:11434/api/tags")!) { [weak self, weak alert] data, response, _ in
+            let message = LocalModelStatus.message(data: data, statusCode: (response as? HTTPURLResponse)?.statusCode, model: model)
+            DispatchQueue.main.async {
+                guard let self, let alert, self.preparationAlert === alert else { return }
+                alert.informativeText = message + common
+            }
+        }.resume()
+    }
+
+    private func showPreparationGuide() {
+        let alert = NSAlert()
+        alert.messageText = "모델을 자동으로 내려받지 않아요"
+        alert.informativeText = "현재는 개발 검증용 앱이에요.\n\n1. 공식 Ollama를 준비하고 로컬 서버를 실행해요.\n2. 설정된 모델을 준비해요: \(aiEnvironment["OLLAMA_MODEL"] ?? "qwen3:4b")\n3. 이동 → 로컬 AI 준비 상태에서 다시 확인해요.\n\n음성 받아쓰기는 faster-whisper 일꾼이 별도로 필요해요. 모델 다운로드·자동 설치 기능은 아직 없어요.\n계정 가입 후 인증 링크는 이동 → 로컬 자료 폴더 열기의 data/outbox에 저장돼요."
+        alert.addButton(withTitle: "확인")
+        alert.beginSheetModal(for: window)
     }
 
     @objc private func openLink() {
@@ -433,14 +494,20 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
 
     func applicationWillTerminate(_ notification: Notification) {
         closing = true
+        probeSession?.invalidateAndCancel()
         stopChild()
         if let child, child.isRunning { child.waitUntilExit() }
         if lock >= 0 { Darwin.close(lock) }
     }
 }
 
-let app = NSApplication.shared
-private let delegate = Ahmatda()
-app.delegate = delegate
-app.setActivationPolicy(.regular)
-app.run()
+@main
+private enum AhmatdaMain {
+    static func main() {
+        let app = NSApplication.shared
+        let delegate = Ahmatda()
+        app.delegate = delegate
+        app.setActivationPolicy(.regular)
+        withExtendedLifetime(delegate) { app.run() }
+    }
+}

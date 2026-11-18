@@ -69,7 +69,7 @@ if [[ -n $(git -C "$repo" status --porcelain -- src/app src/mac-app) ]]; then
 fi
 
 swiftc -target "$(uname -m)-apple-macosx14.0" -module-cache-path "$stage/module-cache" \
-    -O "$source_dir/Ahmatda.swift" -o "$macos/Ahmatda"
+    -O "$source_dir/Ahmatda.swift" "$source_dir/LocalModelStatus.swift" -o "$macos/Ahmatda"
 plutil -lint "$bundle/Contents/Info.plist" >/dev/null
 codesign --force --sign - "$macos/node"
 codesign --force --sign - "$bundle"

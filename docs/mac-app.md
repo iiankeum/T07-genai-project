@@ -4,7 +4,7 @@
 
 같은 웹 화면을 macOS 창에서 연다. 기본 실행은 이 Mac의 Node 24와 SQLite를 사용한다. 로그인, 통화 업로드·조회, 주문 카드와 배송 처리는 로컬 워크스페이스에서 이루어진다. 파일 받아쓰기는 별도로 준비한 faster-whisper CPU 일꾼이 맡고, 주문 카드 초안·질문 답변은 Ollama가 `qwen3:4b`로 처리한다.
 
-> 검증 상태: Apple Silicon 빌드·ad hoc 서명·번들 소스와 의존성·Node/SQLite 초기화·부모 종료 연동을 확인했다. 앱 GUI 설치 흐름과 실제 Whisper/Ollama 추론은 미검증이다. 아래 모델 준비와 오프라인 확인은 설치 후 수행할 절차다.
+> 검증 상태: Apple Silicon 빌드·ad hoc 서명·번들 소스와 의존성·Node/SQLite 초기화·부모 종료 연동을 확인했다. Mac 앱 실제 기동·로그인 화면·준비 상태 안내와 버튼 동작을 확인했다. 새 사용자 설치 전체 흐름·파일 선택과 실제 Whisper/Ollama 추론은 별도 검증 대상이다. 아래 모델 준비와 오프라인 확인은 설치 후 수행할 절차다.
 
 터미널 없는 일반 사용자 설치와 모델 준비의 목표·미구현 범위는 [Mac 릴리즈 계획](mac-release-plan.md)을 따른다. 현재 문서는 개발 검증용 수동 경로다.
 
@@ -42,6 +42,19 @@ bash src/mac-app/build.sh
 3. 로그인하여 워크스페이스를 만든다. 계정과 워크스페이스, 통화, 녹음과 카드는 `~/Library/Application Support/Ahmatda/data`에 저장된다. 앱을 종료하거나 업데이트해도 이 자료는 남는다.
 
 앱은 로컬 노드 서버에 유료 AI를 끈 상태와 빈 API 키를 전달한다. Mac 앱은 기존 데모 서버나 원격 GPU 일꾼에 연결하지 않는다. ⌘Q로 앱을 닫으면 같이 시작한 Node 서버가 종료된다. Ollama와 CPU 일꾼은 따로 시작하고 종료한다. 앱의 기동·상태 로그는 Console에서 `org.ininhyeop.t07.ahmatda`로 검색한다.
+
+### 로컬 AI 준비 상태
+
+앱이 켜지면 로컬 AI 상태를 먼저 표시한다. **이동 → 로컬 AI 준비 상태**에서도 다시 확인할 수 있다. Ollama 연결 안 됨, 설정 모델 없음, 설치 확인, AI 꺼짐을 구분한다. `127.0.0.1:11434/api/tags`만 조회하며 리다이렉트는 따르지 않는다. 설치 확인은 실제 추론 성공을 뜻하지 않는다.
+
+**수동 업무 계속**으로 모델 없이 업무 화면을 사용할 수 있다. **모델 준비 안내**는 현재 개발용 수동 준비 방법을 설명한다. 자동 다운로드·전사 일꾼 상태 검증·일반 사용자 설치 마법사는 아직 제공하지 않는다.
+
+준비 상태 판정의 회귀 테스트:
+
+```sh
+swiftc src/mac-app/LocalModelStatus.swift src/mac-app/tests/main.swift -o /tmp/ahmatda-model-status-tests
+/tmp/ahmatda-model-status-tests
+```
 
 ### Ollama 준비와 사용
 
