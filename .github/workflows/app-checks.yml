@@ -124,6 +124,8 @@ jobs:
         run: npm run test:today-race-e2e
       - name: Trial submission preserves pending input (fake policy and API)
         run: npm run test:trial-submit-e2e
+      - name: Upload batch explicit selection (fake WAV and API only)
+        run: npm run test:upload-batch-e2e
       - uses: actions/upload-artifact@v4
         if: always()
         with:
