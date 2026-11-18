@@ -61,6 +61,10 @@ try {
  assert.equal(await page.locator('.tabbar').isVisible(),false,'no global nav in detail');
  assert.ok(await page.locator('.cd-actions').evaluate(el=>{const r=el.getBoundingClientRect();return r.bottom<=innerHeight+1&&r.top>innerHeight*.5;}),'current action visible at viewport bottom');
  await page.evaluate(()=>scrollTo(0,0));await page.waitForTimeout(100);
+ assert.ok(await page.locator('.cd-card-head').evaluate(el=>el.getBoundingClientRect().height<=48),'mobile repeated title is compact while status remains');
+ assert.equal(await page.locator('#cd-card-h').textContent(),'주문 카드','section accessible name preserved');
+ assert.ok(await page.locator('[data-act="basic-jump"]').evaluate(el=>el.getBoundingClientRect().height>=44),'basic info touch target preserved');
+ assert.ok(await page.locator('.cd-card [data-item="part"]').first().evaluate(el=>{const r=el.getBoundingClientRect(),bar=document.querySelector('.cd-actions').getBoundingClientRect();return r.top>=0&&r.bottom<=bar.top;}),'first item is readable above fixed action bar on entry');
  await page.screenshot({path:path.join(dir,'call-mobile-fake.png')});
  assert.ok(await page.locator('.cd-items').evaluate(el=>Boolean(el.compareDocumentPosition(document.querySelector('.cd-card-section')) & Node.DOCUMENT_POSITION_FOLLOWING)),'items precede basic edit form');
  const activeBefore=await page.locator('.ev-active').count();await page.locator('[data-item="qty"]').first().click();assert.equal(await page.locator('.ev-active').count(),activeBefore,'editing quantity does not select or play evidence');

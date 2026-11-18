@@ -513,3 +513,15 @@ body[data-page="call"] { background:#fff; }
 .cd-item .input { font-size:.9412rem; line-height:1.5; }
 .cd-field-top label,.cd-sub > span { font-size:.8235rem; line-height:1.4286; }
 .cd-card .cd-item .input { font-size:.9412rem; line-height:1.5; }
+
+/* 좁은 화면: 탭과 중복된 제목은 접근성 이름으로 남기고 실제 편집을 앞당긴다. */
+@media(max-width:1023px) {
+ .cd-card-head > .cd-pane-title > h2 { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
+ .cd-card-head { padding-block:4px; }
+ .cd-card-head > .cd-pane-title { min-height:28px; }
+ .cd-card-scroll { padding-top:12px; }
+ .cd-order-context { flex-wrap:nowrap; align-items:center; }
+ .cd-order-context > div { flex:1 1 0; min-width:0; }
+ .cd-order-context > button { max-width:45%; min-height:44px; padding-inline:8px; font-size:.7647rem; }
+ .cd-card-scroll > .cd-items { margin-top:12px; }
+}
