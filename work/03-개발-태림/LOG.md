@@ -1,3 +1,13 @@
+## 2026-11-18 20:11 KST · Whisper 바이트 재개와 전송 엔진 공유
+
+- 돌린 사람 · 도구 · 작업방: 신*림 · ChatGPT dot · 아맞다 직접 작업
+- 한 일: Whisper 바이트 재개를 구현하고 두 모델의 HTTP/부분 검증 엔진만 공유했다. 소스별 승인 URL 정책은 그대로 유지했다.
+- 왜: 전사 모델도 중간 실패 시 처음부터 받지 않게 하고 검증 로직 중복을 줄인다.
+- 어떻게: 구현·통합·보안리뷰 3개 에이전트. mock HTTPS 재개/응답오류/목적지·hash보존과 두 모델 회귀, 분리 Resources import 실행 검증. 리뷰 권고에 따라 Whisper 합계·2배공간 overflow를 보완했다.
+- 결과물: [공유 모듈](../../src/mac-app/model-range-download.mjs), 모델 wrapper·build.sh·시험, [로드맵](../../docs/mac-release-plan.md). 두 모델80·helper178·Node175개 통과. 7829cbc CI 모두 통과.
+- AI가 판단한 것 · 사람이 확인할 것: 실제 CDN Range·대용량 중단복구·취소 hash시간은 미검증이다. 부분SHA는 로컬변경탐지이며 전체 pinned SHA가 설치 근거다. 캐시관리·stale lock 복구는 남는다.
+- 다음 할 일: 실제 다운로드 검증은 별도다. 현재 앱/ZIP·AGY시안·기존모델은 유지. 외부요청·유료API·배포·병합 없음.
+
 ## 2026-11-18 20:05 KST · 주문 모델 바이트 이어받기와 복구 검증
 
 - 돌린 사람 · 도구 · 작업방: 신*림 · ChatGPT dot · 아맞다 직접 작업

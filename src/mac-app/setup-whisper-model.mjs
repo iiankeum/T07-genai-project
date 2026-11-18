@@ -1,13 +1,11 @@
+import {downloadHTTP,resumeHTTP,validatedPartial} from './model-range-download.mjs';
 import {resolveStorageRoot} from './whisper-runtime-profile.mjs';
 // 개발용 Whisper 가중치 준비. Python 설치·실행·음성 전송·추론은 하지 않는다.
 import fs from 'node:fs/promises';
-import {createReadStream,createWriteStream} from 'node:fs';
+import {createReadStream} from 'node:fs';
 import {createHash} from 'node:crypto';
-import https from 'node:https';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {Transform} from 'node:stream';
-import {pipeline} from 'node:stream/promises';
 export const MODEL=Object.freeze({name:'faster-whisper-small',license:'MIT',revision:'536b0662742c02347bc0e980a01041f333bce120',source:'https://huggingface.co/Systran/faster-whisper-small',files:[
  {name:'config.json',size:2370,sha256:'b55496ac7940a7ae47d2c01eab40edfd8701feec1229d9cce3b40014383fb828'},
  {name:'tokenizer.json',size:2203239,sha256:'fb7b63191e9bb045082c79fd742a3106a12c99513ab30df4a0d47fa6cb6fd0ab'},
@@ -18,8 +16,8 @@ const CACHE_ROOT='.whisper-verified-cache';
 const CACHE_MANIFEST='manifest.json';
 function manifest(model){
  if(!model||typeof model.name!=='string'||typeof model.license!=='string'||typeof model.source!=='string'||!/^https:\/\//.test(model.source)||!/^[a-f0-9]{40}$/.test(model.revision||'')||!Array.isArray(model.files)||!model.files.length)throw Error('invalid_model_manifest');
- const names=new Set();
- for(const item of model.files){if(!item||!/^[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(item.name||'')||['manifest.json','ahmatda-manifest.json'].includes(item.name)||names.has(item.name)||!Number.isSafeInteger(item.size)||item.size<1||!/^[a-f0-9]{64}$/.test(item.sha256||''))throw Error('invalid_model_manifest');names.add(item.name);}
+ const names=new Set();let total=0;
+ for(const item of model.files){if(!item||!/^[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(item.name||'')||['manifest.json','ahmatda-manifest.json'].includes(item.name)||names.has(item.name)||!Number.isSafeInteger(item.size)||item.size<1||!/^[a-f0-9]{64}$/.test(item.sha256||''))throw Error('invalid_model_manifest');names.add(item.name);total+=item.size;if(!Number.isSafeInteger(total)||!Number.isSafeInteger(total*2+64*1024*1024))throw Error('model_size_overflow');}
  return {name:model.name,license:model.license,revision:model.revision,source:model.source,files:model.files.map(({name,size,sha256})=>({name,size,sha256}))};
 }
 export function cacheKey(model=MODEL){return createHash('sha256').update(JSON.stringify(manifest(model))).digest('hex');}
@@ -49,44 +47,37 @@ export function approvedURL(value,item,redirect=false,model=MODEL){
  // 공식 model.bin의 302 응답에서 확인한 정확한 Xet 객체 경로. 다른 모델·CDN은 거절한다.
  return redirect&&item.name==='model.bin'&&u.hostname==='us.aws.cdn.hf.co'&&u.pathname==='/xet-bridge-us/655f212f4f2c90ed74120fdd/429ffc84492c1122da005d7274fc397bf142fe12066eb7e4612dc25c579db2ea';
 }
-export function download(url,target,item,{signal,onProgress=()=>{},redirects=0}={}){
- return new Promise((resolve,reject)=>{
-  if(!approvedURL(url,item,redirects>0))return reject(Error('unapproved_source'));
-  const request=https.get(url,{signal,agent:false,headers:{'user-agent':'Ahmatda-whisper-preparer/1'}},response=>{
-   if([301,302,303,307,308].includes(response.statusCode)){
-    const location=response.headers.location;response.destroy();if(!location||redirects>=3)return reject(Error('redirect_limit'));
-    let next;try{next=new URL(location,url).href;}catch{return reject(Error('unapproved_redirect'));}
-    if(!approvedURL(next,item,true))return reject(Error('unapproved_redirect'));
-    download(next,target,item,{signal,onProgress,redirects:redirects+1}).then(resolve,reject);return;
-   }
-   if(response.statusCode!==200){response.destroy();return reject(Error('download_http_'+response.statusCode));}
-   if(response.headers['content-length']!==undefined&&Number(response.headers['content-length'])!==item.size){response.destroy();return reject(Error('size_mismatch'));}
-   let bytes=0,last=0;const limit=new Transform({transform(chunk,enc,done){bytes+=chunk.length;if(bytes>item.size)return done(Error('size_limit'));if(Date.now()-last>250){last=Date.now();onProgress(bytes);}done(null,chunk);}});
-   pipeline(response,limit,createWriteStream(target,{flags:'wx',mode:0o600}),{signal}).then(()=>{if(bytes!==item.size)throw Error('size_mismatch');onProgress(bytes);resolve();}).catch(reject);
-  });request.setTimeout(30_000,()=>request.destroy(Error('download_timeout')));request.on('error',reject);
- });
-}
+const descriptor=item=>({digest:`sha256:${item.sha256}`,size:item.size});
+export function download(url,target,item,options={}){return downloadHTTP(url,target,descriptor(item),{...options,approved:(value,_descriptor,redirect)=>approvedURL(value,item,redirect)});}
+export function partialDirectory(root,model=MODEL){return path.join(root,'.whisper-partial-cache',cacheKey(model));}
 export async function inspect(root,{model=MODEL,signal}={}){
  manifest(model);let modelDirectory=false;try{const stat=await fs.lstat(path.join(root,'whisper-small'));modelDirectory=stat.isDirectory()&&!stat.isSymbolicLink();}catch(e){if(e.code!=='ENOENT')throw e;}const files=[];for(const item of model.files)files.push(modelDirectory&&await verifyFile(path.join(root,'whisper-small',item.name),item,signal));
  let runtimePresent=false;try{await fs.access(path.join(root,'whisper-venv/bin/python'));runtimePresent=true;}catch{}
  return {event:'status',model:model.name,license:model.license,revision:model.revision,source:model.source,downloadBytes:model.files.reduce((s,x)=>s+x.size,0),modelVerified:files.every(Boolean),filesVerified:files.filter(Boolean).length,totalFiles:files.length,runtimePresent,runtimeVerified:false,inferenceVerified:false,automaticRuntimeInstall:false,automaticServerStart:false,cloudEnabled:false};
 }
-export async function prepare(root,{model=MODEL,signal,emit=()=>{},transfer=download}={}){
+export async function prepare(root,{model=MODEL,signal,emit=()=>{},transfer=download,requestGet,statfs=fs.statfs}={}){
  manifest(model);root=path.resolve(root);await directory(root);const lock=path.join(root,'.whisper-prepare.lock');let owned=false,stage;
  try{
   try{await fs.mkdir(lock,{mode:0o700});owned=true;}catch(e){if(e.code==='EEXIST')throw Error('preparation_busy_or_interrupted_lock');throw e;}
   const state=await inspect(root,{model,signal});emit(state);if(state.modelVerified){emit({event:'ready',model:model.name,inferenceVerified:false});return;}
   const dest=path.join(root,'whisper-small');
   try{await fs.lstat(dest);throw Error('existing_incomplete_model_preserved');}catch(e){if(e.code!=='ENOENT')throw e;}
-  const disk=await fs.statfs(root);if(disk.bavail*disk.bsize<state.downloadBytes*2+64*1024*1024)throw Error('insufficient_disk_space');
-  const cache=await checkedCache(root,model);
-  stage=await fs.mkdtemp(path.join(root,'.whisper-stage-'));emit({event:'preparing',model:model.name,downloadBytes:state.downloadBytes,source:model.source,license:model.license,resumeMode:'verified-files-only'});
+  const cache=await checkedCache(root,model);let savedBytes=0;
+  for(const item of model.files){
+   if(await cachedFile(cache,item,signal))savedBytes+=item.size;
+   else if(transfer===download)savedBytes+=(await validatedPartial(partialDirectory(root,model),descriptor(item))).offset;
+  }
+  // 최종 stage와 독립 완료 캐시를 모두 확보한다. 검증된 기존 바이트만 차감한다.
+  const disk=await statfs(root);if(disk.bavail*disk.bsize<state.downloadBytes*2-savedBytes+64*1024*1024)throw Error('insufficient_disk_space');
+  stage=await fs.mkdtemp(path.join(root,'.whisper-stage-'));emit({event:'preparing',model:model.name,downloadBytes:state.downloadBytes,source:model.source,license:model.license,resumeMode:transfer===download?'verified-files-and-byte-range':'verified-files-only'});
   let index=0;
   for(const item of model.files){
    signal?.throwIfAborted();const file=path.join(stage,item.name),cached=await cachedFile(cache,item,signal);
    if(cached){await fs.copyFile(cached,file,fs.constants.COPYFILE_EXCL);if(!await verifyFile(file,item,signal))throw Error('cached_copy_checksum_mismatch');emit({event:'progress',file:item.name,completed:item.size,total:item.size,reusedVerifiedFile:true});}
    else{
-    await transfer(`${model.source}/resolve/${model.revision}/${item.name}`,file,item,{signal,onProgress:completed=>emit({event:'progress',file:item.name,completed,total:item.size})});
+    const url=`${model.source}/resolve/${model.revision}/${item.name}`,options={signal,onProgress:completed=>emit({event:'progress',file:item.name,completed,total:item.size})};
+    if(transfer===download)await resumeHTTP(url,file,descriptor(item),{...options,cache:partialDirectory(root,model),get:requestGet,approved:(value,_descriptor,redirect)=>approvedURL(value,item,redirect)});
+    else await transfer(url,file,item,options);
     if(!await verifyFile(file,item,signal))throw Error('checksum_mismatch');
     // 완성 파일만 cache에 게시한다. 부분 전송과 복사 중간 파일은 stage와 함께 삭제된다.
     const ready=path.join(stage,`.cache-ready-${index++}`);await fs.copyFile(file,ready,fs.constants.COPYFILE_EXCL);if(!await verifyFile(ready,item,signal))throw Error('cache_copy_checksum_mismatch');signal?.throwIfAborted();
