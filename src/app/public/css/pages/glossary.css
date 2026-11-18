@@ -47,3 +47,11 @@
 .kn-history > summary { cursor:pointer; min-height:44px; display:list-item; font-weight:650; padding:12px 0; }
 .kn-history > summary span { color:var(--muted); font-weight:400; }
 .kn-detail .kn-review { margin:16px 0 24px; padding:16px; border:1px solid var(--brand-line); border-radius:12px; background:var(--brand-wash); }
+
+/* 제안 초안을 떠나지 않고 출처 문장을 읽는다. */
+.kn-source-preview summary { min-height:44px; display:flex; align-items:center; cursor:pointer; font-weight:600; }
+.kn-source-preview-body { max-height:240px; overflow:auto; overflow-wrap:anywhere; padding:8px; border:1px solid var(--line); border-radius:8px; }
+.kn-source-preview-body ol { margin:0; padding-left:24px; }
+.kn-source-preview-body li { padding:6px 4px; }
+.kn-source-preview-body .is-source { background:var(--brand-wash); }
+.kn-source-preview > a { display:inline-flex; min-height:44px; align-items:center; }

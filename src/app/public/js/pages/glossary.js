@@ -244,6 +244,44 @@ export default {
       if (button) button.disabled = dialog.querySelectorAll('[data-relation-row]').length >= 10;
     }
 
+    function sourcePreview(data) {
+      const to = href('/calls/' + encodeURIComponent(data.sourceCallId), { seg: data.sourceSegIndex, t: data.sourceCall?.segment?.start });
+      return html`<details class="kn-source-preview" data-source-preview>
+        <summary>출처 대화 확인</summary>
+        <p class="help">작성 중인 내용을 유지하며 대화를 확인합니다. 녹음은 통화 화면에서 들을 수 있어요.</p>
+        <p class="help" data-source-meta></p>
+        <div class="kn-source-preview-body" data-source-body tabindex="0" role="region" aria-label="출처 대화 원문"></div>
+        <a href="${to}" data-act="source-leave">통화 화면으로 이동 (작성 내용은 저장되지 않음)</a>
+      </details>`;
+    }
+
+    async function loadSourcePreview() {
+      const state = dialogState;
+      const panel = dialog.querySelector('[data-source-preview]');
+      const body = panel?.querySelector('[data-source-body]');
+      if (!body || state?.type !== 'suggest' || !state.data.sourceCallId || state.sourceLoading || state.sourceLoaded) return;
+      const current = () => !disposed && root.isConnected && dialog.open && dialogState === state && body.isConnected;
+      state.sourceLoading = true;
+      render(body, html`<p role="status">출처 대화를 불러오는 중…</p>`);
+      try {
+        const call = await api.get('/api/calls/' + encodeURIComponent(state.data.sourceCallId));
+        if (!current()) return;
+        const segments = Array.isArray(call?.segments) ? call.segments : [];
+        const selected = state.data.sourceSegIndex;
+        render(panel.querySelector('[data-source-meta]'), html`<strong>${call?.title || '출처 통화'}</strong>${call?.recordedAt ? html` · ${fmtWhen(call.recordedAt)}` : ''}`);
+        render(body, html`${segments.length ? html`<ol>${segments.map((segment, index) => html`<li class="${selected != null && Number(selected) === index ? 'is-source' : ''}">${selected != null && Number(selected) === index ? html`<strong>선택한 문장</strong> ` : ''}${segment?.text || ''}</li>`)}</ol>`
+          : html`<p class="ka-prewrap">${call?.transcript || '등록된 대화 원문이 없습니다.'}</p>`}`);
+        const selectedLine = body.querySelector('.is-source');
+        if (panel.open && selectedLine) body.scrollTop += selectedLine.getBoundingClientRect().top - body.getBoundingClientRect().top - 8;
+        state.sourceLoaded = true;
+      } catch (error) {
+        if (current()) render(body, html`${errorBox(error)}<button type="button" class="btn" data-act="source-retry">출처 다시 불러오기</button>`);
+      } finally { state.sourceLoading = false; }
+    }
+    root.addEventListener('toggle', event => {
+      if (event.target.matches?.('[data-source-preview]') && event.target.open && !busy) loadSourcePreview();
+    }, true);
+
     function suggest(initial = {}, id = null, title) {
       if (!canPropose) return;
       const data = { kind: '현장말', ...initial };
@@ -259,7 +297,7 @@ export default {
           <label class="field" data-ref="phone"><span>거래처 전화번호</span><input class="input" name="phone" type="tel" maxlength="20" value="${data.phone || ''}" placeholder="010-0000-0199"></label>
           <label class="field"><span>정의와 업무에서의 의미</span><textarea class="textarea" name="note" rows="3" maxlength="2000" required>${data.note || ''}</textarea></label>
           <label class="field"><span>출처와 근거</span><input class="input" name="evidenceNote" maxlength="300" value="${data.evidenceNote || ''}" placeholder="예: 공급사 문서명과 확인 날짜" ${!data.sourceCallId ? 'required' : ''}></label>
-          ${data.sourceCallId ? html`<p class="help">${callSource(data)}</p>` : ''}
+          ${data.sourceCallId ? sourcePreview(data) : ''}
           <fieldset class="kn-relation-editor"><legend>함께 알아둘 정보 <span>(선택)</span></legend>
             <p class="help" id="kn-relations-help">다른 용어나 부품과의 관계를 적어 두세요. 예: 앞 브레이크 패드 → 함께 쓰는 부품 → 앞 디스크. 최대 10개.</p>
             <div data-ref="relation-rows">${(data.relations || []).map(relationRow)}</div>
@@ -435,8 +473,18 @@ export default {
 
     root.addEventListener('click', async (event) => {
       const btn = event.target.closest('[data-act]');
+      if (btn?.dataset.act === 'source-leave') {
+        event.preventDefault();
+        if (busy || disposed) return;
+        const state = dialogState;
+        if (await confirmBox('작성 내용은 저장되지 않습니다. 통화 화면으로 이동할까요?')) {
+          if (!busy && !disposed && dialog.open && dialogState === state && btn.isConnected) location.hash = btn.getAttribute('href');
+        }
+        return;
+      }
       if (!btn || busy || disposed) return;
       const { act, id, value } = btn.dataset;
+      if (act === 'source-retry') { loadSourcePreview(); return; }
       if (act === 'relation-add') {
         const rows = ref('relation-rows');
         if (!rows || rows.children.length >= 10) return;
