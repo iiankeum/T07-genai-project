@@ -411,3 +411,48 @@ a.today-row:hover .today-row-top strong { color: var(--brand-ink); }
   .today-page .btn { transition: none; }
   .today-page .btn:active { transform: none; }
 }
+
+/* 업무 우선 화면: 통계는 얇게, 지금 할 일은 첫 화면 안에. */
+.today-page { padding-top: 28px; --today-surface-radius: 16px; }
+.today-heading h1 { font-size: 32px; line-height: 44px; font-weight: 700; letter-spacing: -.0253em; }
+.today-date { font-size: 14px; line-height: 20px; font-weight: 500; }
+.today-demo { font-size: 12px; }
+.today-toolbar { margin-top: 16px; }
+.today-stat-row { background: var(--paper); gap: 0; border-radius: 16px; padding: 8px 0; }
+.today-stat-row > li + li { border-left: 1px solid var(--line); }
+.today-stat { min-height: 72px; padding: 8px 20px; gap: 4px; border-radius: 0 !important; background: transparent; }
+.today-stat-label { font-size: 13px; font-weight: 500; }
+.today-stat-value { font-size: 28px; line-height: 36px; font-weight: 650; }
+.today-extra-stats { border: 0; background: transparent; padding: 10px 4px 0; font-size: 12px; gap: 4px 12px; }
+.today-panel-head h2 { font-size: 20px; line-height: 28px; font-weight: 650; }
+.today-priority-group h3 { background: transparent; padding-top: 16px; padding-bottom: 4px; font-size: 12px; font-weight: 600; }
+.today-rows > li + li { border-color: #f2f3f5; }
+.today-row { padding-block: 14px; }
+.today-row-top strong { font-size: 16px; line-height: 24px; font-weight: 600; }
+.today-row-detail { font-size: 14px; line-height: 22px; }
+.today-row-icon { background: var(--brand-soft); color: var(--brand-ink); }
+.today-rail p { font-size: 15px; line-height: 24px; }
+@media (max-width: 560px) {
+  .today-page { padding-top: 20px; }
+  .today-heading { gap: 12px; }
+  .today-heading h1 { font-size: 28px; line-height: 38px; margin-top: 2px; }
+  .today-demo { display: none; } /* 위의 전체 데모 안내는 그대로 유지 */
+  .today-actions .btn { font-size: 14px; font-weight: 600; }
+  .today-toolbar { flex-wrap: nowrap; gap: 8px; margin-top: 12px; }
+  .today-day-switch { padding: 2px; gap: 0; border-radius: 10px; }
+  .today-day-switch button { min-width: 48px; padding-inline: 10px; font-size: 14px; }
+  .today-worker { font-size: 11px; gap: 0; align-items: flex-end; flex-direction: column; }
+  .today-worker-state { font-weight: 500; gap: 4px; }
+  .today-stat-row { grid-template-columns: repeat(5,minmax(0,1fr)); padding: 10px 0; border-radius: 12px; }
+  .today-stat-row > li, .today-stat-row > li:nth-child(-n+2) { grid-column: auto; }
+  .today-stat { min-height: 56px; padding: 0 4px; align-items: center; justify-content: center; gap: 6px; }
+  .today-stat-label { font-size: 11px; line-height: 16px; white-space: nowrap; letter-spacing: -.02em; }
+  .today-stat-value { font-size: 22px; line-height: 28px; }
+  .today-stat-value small { font-size: 11px; margin-left: 2px; }
+  .today-extra-stats { font-size: 11px; gap: 2px 8px; padding-top: 8px; }
+  .today-overview { margin-bottom: 20px; }
+  .today-queue > .today-panel-head { padding-block: 14px; }
+  .today-panel-head h2 { font-size: 18px; line-height: 26px; }
+}
+html.big-text .today-stat-label { font-size: .75rem; white-space: normal; }
+html.big-text .today-heading h1 { font-size: 2rem; line-height: 1.375; }

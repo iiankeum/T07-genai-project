@@ -316,3 +316,21 @@
   .cd-trans-scroll, .cd-card-scroll { overflow: visible; }
   .cd-connector { display: none !important; }
 }
+
+/* 작업 문서와 편집 폼을 구분하고, 강조는 선택된 근거에 집중한다. */
+.cd-title { font-weight: 650; letter-spacing: -.0253em; line-height: 1.375; }
+.cd-pane-title { padding-block: 14px; }
+.cd-pane-title h2 { font-weight: 650; }
+.cd-trans { border-color: transparent; }
+.cd-history { background: #f7f8fa; border-color: transparent; }
+.cd-rail-head { background: #f7f8fa; }
+.cd-spk { font-weight: 500; }
+.cd-time { font-weight: 500; color: var(--muted); }
+.cd-seg.is-mark .cd-time, .cd-time:hover { color: var(--brand-ink); }
+.cd-label { font-weight: 550; color: var(--muted); }
+.cd-card .input { border-color: #dfe1e5; border-radius: 8px; }
+.cd-card .input:focus { border-color: var(--brand); }
+.cd-field.is-unsure .input, .cd-item.is-unsure .input { border-color: #b88a48; background: var(--warn-soft); }
+.cd-field.ev-active, .cd-item.ev-active { border-color: var(--brand-line); }
+.cd-list-link strong { font-weight: 600; }
+.cd-connector path { stroke-width: 1.5; }

@@ -75,12 +75,18 @@ try {
     await page.goto(demo.baseURL + '/#/');
     await page.getByRole('heading', { name: '지금 처리할 일', exact: true }).waitFor();
     await page.locator('#today-priority a').first().waitFor();
+    await page.evaluate(() => document.fonts.ready);
+    assert.equal(await page.evaluate(() => document.fonts.check('16px \"Pretendard JP Variable\"')), true, 'bundled font loads without external network');
     assert.equal(briefPosts, 0);
     assert.ok(await page.locator('#today-priority a').count() >= 3);
     await screenshot('09-today-work-queue-fake');
     await page.setViewportSize({ width: 360, height: 800 });
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'dashboard horizontal overflow');
+    assert.ok(await page.locator('#today-priority a').first().evaluate(el => el.getBoundingClientRect().bottom < innerHeight - 62), 'first task must be visible above bottom navigation');
     await screenshot('10-today-mobile-fake');
+    await page.locator('#bigTextBtn').click();
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'large text dashboard horizontal overflow');
+    await page.locator('#bigTextBtn').click();
     await page.setViewportSize({ width: 1440, height: 1000 });
     page.off('request', record);
   });
