@@ -32,6 +32,9 @@ try {
   }
  }
  await page.setViewportSize({width:1440,height:1000});
+ assert.equal(await page.locator('.brand-name').innerText(),'아차');
+ assert.ok((await page.title()).includes('아차'));
+ const manifest=await (await page.request.get(base+'/manifest.webmanifest')).json();assert.equal(manifest.short_name,'아차');
  await page.goto(base+'/#/');await page.locator('#sideNav .nav-link').first().waitFor();
  for(const href of ['#/','#/calls','#/board','#/shipping','#/more','#/settings'])assert.equal(await page.locator(`#sideNav a[href="${href}"]`).count(),1,'desktop primary destination retained');
  assert.equal(await page.locator('#sideNav .lnb-workspace a[href="#/workspaces"]').count(),1,'workspace switch retained');

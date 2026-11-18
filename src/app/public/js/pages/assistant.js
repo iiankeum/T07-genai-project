@@ -40,7 +40,7 @@ export default {
         </details>
         <section class="as-chat" aria-labelledby="as-chat-title">
           <header class="as-chat-head">
-            <div><h2 id="as-chat-title">아맞다 어시스턴트</h2><p class="help">통화와 승인된 지식을 근거로 답변해요.</p></div>
+            <div><h2 id="as-chat-title">아차 어시스턴트</h2><p class="help">통화와 승인된 지식을 근거로 답변해요.</p></div>
             <div class="ka-actions"><button type="button" class="btn" data-act="new">＋ 새 대화</button></div>
           </header>
           <div class="as-history">
@@ -151,7 +151,7 @@ export default {
       const label = isExample ? '예시 대화' : message.mode === 'fixture' ? '테스트 응답' : user ? '' : '근거 기반 응답';
       const citations = Array.isArray(message.citations) ? message.citations : [];
       return html`<article class="ask-msg ${user ? 'is-user' : 'is-bot'}">
-        <div class="as-message-label"><strong>${user ? '나' : '아맞다'}</strong>${label ? html`<span class="chip chip-ai">${label}</span>` : ''}</div>
+        <div class="as-message-label"><strong>${user ? '나' : '아차'}</strong>${label ? html`<span class="chip chip-ai">${label}</span>` : ''}</div>
         <div class="ask-bubble ${message.found === false ? 'is-notfound' : ''}">${message.text}</div>
         ${citations.length ? html`<div class="ask-cites"><p class="ask-cites-head">답변 근거 ${citations.length}건</p>${citations.map(citeView)}</div>` : ''}
       </article>`;

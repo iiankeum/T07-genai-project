@@ -117,7 +117,7 @@ async function route() {
   view.replaceChildren(mount);
   if (r.page === 'notfound') {
     path.textContent = '없는 화면';
-    document.title = '없는 화면 · 아맞다';
+    document.title = '없는 화면 · 아차';
     render(mount, html`<div class="page"><div class="card empty"><h1>이 화면을 찾지 못했습니다</h1><a class="btn btn-primary" href="#/calls">통화 기록 보기</a></div></div>`);
     return;
   }
@@ -139,12 +139,12 @@ async function route() {
       goToLogin(location.hash);
       return;
     }
-    if (r.page === 'more') { renderMore(mount, meta); document.title = '더보기 · 아맞다'; return; }
+    if (r.page === 'more') { renderMore(mount, meta); document.title = '더보기 · 아차'; return; }
     const mod = await import(`./pages/${r.page}.js`);
     if (my !== seq) return;
     const page = mod.default;
     path.textContent = page.title || path.textContent;
-    document.title = `${page.title || ''} · 아맞다`;
+    document.title = `${page.title || ''} · 아차`;
     const ctx = {
       path: r.path,
       params: r.params,
