@@ -121,7 +121,7 @@ test('마감 요약 글(AI 없이)', async () => {
   const [, m, d] = today.split('-').map(Number);
   const dow = '일월화수목금토'[new Date(`${today}T00:00:00Z`).getUTCDay()];
   const lines = body.text.split('\n');
-  assert.equal(lines[0], `[콜노트 마감 요약 · ${m}월 ${d}일(${dow})] 가짜 통화 데모`);
+  assert.equal(lines[0], `[아맞다 마감 요약 · ${m}월 ${d}일(${dow})] 가짜 통화 데모`);
   assert.ok(body.text.includes('통화 9건 · 주문 카드 7건'));
   assert.ok(body.text.includes('확정 2건 · 확인 필요 3건 · 출고 완료 1건'));
   assert.ok(body.text.includes('■ 급한데 아직 출고 안 된 것 2건'));

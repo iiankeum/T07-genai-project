@@ -16,3 +16,17 @@
 ## 선택 사항
 
 받아쓰기 PC에 별도로 설치하는 구성요소와 모델은 [PC 프로그램 설치 안내](src/pc-agent/README.md)에서 버전과 설정을 확인한다. 고지는 [faster-whisper](https://github.com/SYSTRAN/faster-whisper/blob/master/LICENSE), [CTranslate2](https://github.com/OpenNMT/CTranslate2/blob/master/LICENSE), [Whisper](https://github.com/openai/whisper/blob/main/LICENSE), [NVIDIA CUDA](https://docs.nvidia.com/cuda/eula/) 및 실제로 내려받은 모델의 배포 페이지를 참고한다. Claude는 환경설정으로 연결하는 외부 서비스다.
+
+## Mac 실행기와 로컬 모델 (선택)
+
+모델 가중치는 이 저장소나 앱 빌드에 포함하지 않는다. 최초 다운로드는 설치자가 별도로 수행한다. 프로젝트 소스의 MIT와 모델 라이선스를 동일하게 취급하지 않는다.
+
+| 구성요소 | 확인한 고지 | 배포 경계 |
+|---|---|---|
+| Ollama | [MIT](https://github.com/ollama/ollama/blob/main/LICENSE) | 별도 설치. 앱이 자동 설치하거나 클라우드 대체를 사용하지 않는다 |
+| Qwen3-4B | 공식 [모델 카드](https://huggingface.co/Qwen/Qwen3-4B)의 Apache-2.0 | 예제 `qwen3:4b`의 기반 모델. 실제 내려받은 아티팩트의 태그·다이제스트와 고지를 기록해야 한다 |
+| faster-whisper | [MIT](https://github.com/SYSTRAN/faster-whisper/blob/master/LICENSE) | 별도 Python 환경. 기존 CPU 경로 사용 |
+| Whisper | [MIT](https://github.com/openai/whisper/blob/main/LICENSE) | 실제 사용하는 변환 모델의 모델 카드·고지도 함께 확인한다 |
+| 번들 Node.js | [Node.js v24 라이선스](https://github.com/nodejs/node/blob/v24.x/LICENSE) | 실제 배포 Node 버전과 함께 제공된 구성요소 고지를 앱에 포함해야 한다 |
+
+공증·서명·업데이트 및 제3자 아티팩트별 고지 확인은 공개 배포 전 단계다. 현재 소스 빌드가 App Store 또는 서명된 설치 배포 검증을 뜻하지 않는다.

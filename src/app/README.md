@@ -12,7 +12,7 @@ npm ci
 npm run start:offline
 ```
 
-[http://127.0.0.1:5600](http://127.0.0.1:5600)에서 가짜 샘플을 사용한다. `start:offline`은 fixture를 선택하고 유료 AI 호출을 끈다. 직접 설정해서 실행하려면 `.env.example`을 `.env`에 복사하고 `node --env-file=.env server.mjs`를 실행한다. `.env` 파일은 Git에서 제외한다.
+[http://127.0.0.1:5600](http://127.0.0.1:5600)에서 가짜 샘플을 사용한다. `start:offline`은 fixture를 선택하고 유료 AI 호출을 끈다. 이름의 offline은 테스트 모드를 뜻하며 실제 로컬 모델 추론이 아니다. 실제 로컬 모델은 Ollama를 별도로 설치하고 `AI_PROVIDER=ollama`로 Node를 직접 실행한다. Docker는 필수가 아니다. [Mac 앱 안내](../../docs/mac-app.md)는 앱 빌드·음성 모델·언어 모델 준비와 검증 범위를 나눈다. 직접 설정해서 실행하려면 `.env.example`을 `.env`에 복사하고 `node --env-file=.env server.mjs`를 실행한다. `.env` 파일은 Git에서 제외한다.
 
 ## 테스트
 

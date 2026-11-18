@@ -1,0 +1,9 @@
+{
+  "at": "2026-11-17T23:37:38.505Z",
+  "fixtureOnly": true,
+  "paidProviderEnabled": false,
+  "runError": "Server exited: [seed] 가짜 통화 61건을 넣었습니다\nnode:events:487\n      throw er; // Unhandled 'error' event\n      ^\n\nError: listen EPERM: operation not permitted 127.0.0.1:5627\n    at Server.setupListenHandle [as _listen2] (node:net:2145:21)\n    at listenInCluster (node:net:2224:12)\n    at node:net:2448:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)\nEmitted 'error' event on Server instance at:\n    at emitErrorNT (node:net:2203:8)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {\n  code: 'EPERM',\n  errno: -1,\n  syscall: 'listen',\n  address: '127.0.0.1',\n  port: 5627\n}\n\nNode.js v24.19.0\n",
+  "results": [],
+  "pageErrors": [],
+  "blockedExternalOrigins": []
+}

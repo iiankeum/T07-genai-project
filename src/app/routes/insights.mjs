@@ -1,5 +1,6 @@
 // 오늘 대시보드 · 할 일(F10) · AI 브리핑 · 마감 요약 글 · 지난 통화에 묻기(F09) · 출고 목록과 CSV(F14). [C]
 import { config } from '../lib/config.mjs';
+import { requestAccess } from '../lib/auth.mjs';
 import { db, parseJson, nowIso, tx } from '../lib/db.mjs';
 import { assistantHistoryEpoch } from '../lib/assistant-history.mjs';
 import { HttpError, readJson, cleanText } from '../lib/http.mjs';
@@ -31,6 +32,9 @@ function aiHttpError(e) {
     case 'refused': return new HttpError(422, 'ai_refused', 'AI 가 답하지 않았습니다. 다르게 물어봐 주세요.');
     case 'rate_limited': return new HttpError(429, 'ai_busy', 'AI 가 바쁩니다. 잠시 뒤 다시 해 주세요.');
     case 'bad_output': return new HttpError(502, 'ai_bad_output', 'AI 답을 읽지 못했습니다. 다시 해 주세요.');
+    case 'local_unavailable':
+    case 'local_model_unavailable':
+    case 'local_timeout': return configuredAi.aiHttpError(e);
     default:
       console.error('[insights] AI 호출 실패:', e?.code || e?.name || 'error');
       return new HttpError(502, 'ai_error', 'AI 를 부르지 못했습니다. 잠시 뒤 다시 해 주세요.');
@@ -161,7 +165,8 @@ function getBriefing(day, currentStats) {
   const stale = currentStats ? c.statsKey !== statsKey(currentStats) : false;
   return {
     paragraph: c.paragraph, todos: Array.isArray(c.todos) ? c.todos : [], createdAt: r.created_at,
-    model: r.model ?? null, mode: r.model === FIXTURE_MODEL ? 'fixture' : 'ai', stale,
+    model: r.model ?? null, provider: c.provider || (r.model === FIXTURE_MODEL ? 'fixture' : 'anthropic'),
+    mode: r.model === FIXTURE_MODEL ? 'fixture' : c.provider === 'ollama' ? 'local' : 'ai', stale,
   };
 }
 
@@ -200,7 +205,7 @@ export function buildDashboard(day) {
 export function buildBriefingText(day) {
   const entries = loadDay(day);
   const s = computeStats(entries);
-  const lines = [`[콜노트 마감 요약 · ${dayLabel(day)}] 가짜 통화 데모`];
+  const lines = [`[아맞다 마감 요약 · ${dayLabel(day)}]${requestAccess()?.demo ? ' 가짜 통화 데모' : ''}`];
   if (!s.calls) {
     lines.push('이날은 통화가 없습니다.');
     return lines.join('\n');
@@ -266,8 +271,9 @@ async function makeBriefing(day, ip) {
   const stats = computeStats(entries);
   // 숫자가 그대로이고 10분 안에 만든 것이면 그대로 쓴다(숫자가 바뀌었으면 다시 만든다)
   const cached = getBriefing(day, stats);
-  const sameProvider = (cached?.model === FIXTURE_MODEL) === (config.aiProvider === 'fixture');
-  if (cached && sameProvider && !cached.stale && Date.now() - Date.parse(cached.createdAt) < BRIEFING_FRESH_MS) return cached;
+  const expectedModel = config.aiProvider === 'fixture' ? FIXTURE_MODEL : config.aiProvider === 'ollama' ? config.ollamaModel : config.model;
+  const sameProvider = cached?.provider === config.aiProvider && cached?.model === expectedModel;
+  if (cached && (sameProvider || (aiOverride && cached.provider === 'test')) && !cached.stale && Date.now() - Date.parse(cached.createdAt) < BRIEFING_FRESH_MS) return cached;
   const ai = requireAi('writeBriefing');
   // 통화가 없는 날은 AI 도 DB 도 쓰지 않고 문장만 돌려준다(아무 날짜로 DB 를 채우지 못하게)
   if (!entries.length) {
@@ -285,7 +291,7 @@ async function makeBriefing(day, ip) {
     why: cleanText(t?.why, 200),
     callId: ids.has(t?.callId) ? t.callId : null,
   })).filter((t) => t.title).slice(0, 8);
-  const model = cleanText(out?.model, 80) || config.model;
+  const model = cleanText(out?.model, 80) || expectedModel;
   const createdAt = nowIso();
   tx((d) => {
     if (assistantHistoryEpoch(d) !== epoch) {
@@ -293,9 +299,9 @@ async function makeBriefing(day, ip) {
     }
     d.prepare(`INSERT INTO briefings(day, content, model, created_at) VALUES(?, ?, ?, ?)
       ON CONFLICT(day) DO UPDATE SET content = excluded.content, model = excluded.model, created_at = excluded.created_at`)
-      .run(day, JSON.stringify({ paragraph, todos, statsKey: statsKey(stats) }), model, createdAt);
+      .run(day, JSON.stringify({ paragraph, todos, statsKey: statsKey(stats), provider: aiOverride ? 'test' : config.aiProvider }), model, createdAt);
   });
-  return { paragraph, todos, createdAt, model, mode: model === FIXTURE_MODEL ? 'fixture' : 'ai', stale: false };
+  return { paragraph, todos, createdAt, model, provider: aiOverride ? 'test' : config.aiProvider, mode: model === FIXTURE_MODEL ? 'fixture' : config.aiProvider === 'ollama' ? 'local' : 'ai', stale: false };
 }
 
 // ── 지난 통화에 묻기 ──────────────────────────────────────────────
@@ -572,7 +578,7 @@ export async function askGrounded(body, ip, { signal, allowKnowledge = false, se
     })));
   }
   onCallContext?.([...new Set(contexts.map((context) => context.callId).filter(Boolean))]);
-  const mode = config.aiProvider === 'fixture' ? 'fixture' : 'ai';
+  const mode = config.aiProvider === 'fixture' ? 'fixture' : config.aiProvider === 'ollama' ? 'local' : 'ai';
   if (!contexts.length) return { answer: NOT_FOUND, found: false, citations: [], scope, mode, model: null };
 
   signal?.throwIfAborted();

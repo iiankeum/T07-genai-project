@@ -2,26 +2,40 @@
 
 > AI 초안 · 돌린 사람: 신*림 · Codex · 2026-11-18
 
-## 1. 로컬 체험용 설치
+## 1. Node 직접 설치 (기본)
 
-Docker Engine과 Compose 플러그인을 설치하고, 배포할 태그 또는 커밋을 체크아웃한다. 아래 명령은 저장소 루트에서 실행한다. 첫 빌드에서 Node 이미지, Debian 패키지와 npm 의존성을 내려받는다.
+기존 팀 서버의 Node.js 24 + SQLite 직접 실행을 유지한다. Docker는 필요하지 않다. 아래 명령은 새 설치용이며 기존 팀 서버의 환경 파일·GPU 설정을 덮어쓰지 않는다.
+
+```sh
+cd src/app
+npm ci
+umask 077
+cp .env.example .env
+node --env-file=.env server.mjs
+```
+
+브라우저에서 `http://127.0.0.1:5600`을 열고 계정을 만든다. `AUTH_MAIL_MODE=outbox`는 실제 메일을 보내지 않는다. 설치 담당자가 `DATA_DIR/outbox`에 만들어진 인증 JSON의 `url`을 가입한 브라우저에서 열어 인증한다. `DATA_DIR`를 생략하면 `src/app/.data`를 사용한다. 기존 서버에서는 이미 사용하는 서비스 관리자의 중지·시작 절차를 유지한다.
+
+| 실행 방식 | 실제 하는 일 |
+|---|---|
+| `AI_PROVIDER=off` | 자동 AI 처리 없음. 수동 주문 관리 가능 |
+| `AI_PROVIDER=fixture` / `npm run start:offline` | 가짜 대화에 대한 고정 응답. 모델 추론 아님 |
+| `AI_PROVIDER=ollama` | 같은 기기 `127.0.0.1:11434`의 설치된 로컬 모델로 요청. 모델 자동 다운로드·클라우드 대체 없음 |
+| Mac 앱 | 위 웹 앱을 로컬 Node로 실행하는 별도 실행기. [Mac 안내](mac-app.md)의 준비와 검증 범위를 따른다 |
+
+실제 로컬 주문 정리는 Ollama와 모델을 먼저 설치하고 `OLLAMA_NO_CLOUD=1`로 Ollama를 실행한 뒤 `.env`에서 `AI_PROVIDER=ollama`, `OLLAMA_MODEL=qwen3:4b`, `ALLOW_PAID_AI=0`을 지정한다. 모델 준비 전에는 연결/모델 오류를 보여주며 fixture나 Claude로 바꾸지 않는다. 녹음 파일 전사는 별도 Whisper 일꾼이 필요하다. 기존 CPU/CUDA 경로를 유지하며 Apple Metal 음성 전사는 구현하지 않았다.
+
+### Docker 설치 (선택)
+
+Docker Engine/Compose를 이미 사용하는 설치자만 저장소 루트에서 실행한다. 첫 빌드에서 Node 이미지와 패키지를 다운로드한다.
 
 ```sh
 umask 077
 cp src/app/.env.example src/app/.env
 docker compose --env-file src/app/.env up -d --build --wait
-curl -fsS http://127.0.0.1:5600/healthz
 ```
 
-[http://127.0.0.1:5600](http://127.0.0.1:5600)에서 계정을 만든다. 예제의 `AUTH_MAIL_MODE=outbox`는 메일 대신 다음 위치의 JSON 파일을 만든다. 설치를 관리하는 사람이 파일의 `url` 값을 가입한 브라우저에서 열어 주소를 인증한 뒤 로그인한다.
-
-```sh
-docker compose --env-file src/app/.env exec -T app ls -t /data/outbox
-```
-
-위 목록에서 방금 생성된 파일을 골라 `docker compose --env-file src/app/.env exec -T app cat /data/outbox/파일명.json`으로 읽는다. 인증 URL은 만료 전까지 사용 권한이 있는 사람에게만 전달한다. 테스트할 때는 체험 화면의 샘플 대화를 사용한다. 이 구성은 CPU에서 돌아가며 AI fixture를 사용한다. 실제 녹음 파일을 전사하려면 아래의 받아쓰기 일꾼을 연결한다.
-
-Node.js로 직접 실행하거나 테스트하는 방법은 [개발 안내](../src/app/README.md)를 따른다.
+Compose의 `app-data` 볼륨이 컨테이너 `/data`에 연결된다. 인증 outbox도 `/data/outbox`에 있다. **Ollama의 loopback 주소는 컨테이너 자신을 가리킨다.** 이 PR의 Docker 예제는 fixture 체험용이며 호스트 Mac의 Ollama를 자동 연결하지 않는다. 실제 로컬 추론은 Node 직접 실행 또는 Mac 앱 경로로 검증한다.
 
 ## 2. 비공개 운영 설정
 
@@ -34,7 +48,7 @@ Node.js로 직접 실행하거나 테스트하는 방법은 [개발 안내](../s
 | `PUBLIC_BASE_URL` | 인증 링크와 일꾼의 오디오 다운로드 주소에 넣을 접속 주소. 로컬 예제는 `http://127.0.0.1:5600`이다. |
 | `AHMATDA_PORT` | Docker가 호스트에 게시할 포트. 바꾸면 로컬 `PUBLIC_BASE_URL`도 같은 포트로 바꾼다. |
 | `AHMATDA_DOMAIN` | 새 주문 카드에 적용할 업종 프로필과 버전. 기본은 `automotive@1`이다. |
-| `AI_PROVIDER` | 서버 기본은 `off`. 설치 예제 `fixture`는 가짜 샘플에 정해진 응답을 돌려준다. `anthropic`은 Claude 연결에 쓴다. |
+| `AI_PROVIDER` | 서버 기본은 `off`. `fixture`는 고정 응답, `ollama`는 같은 기기 로컬 모델, `anthropic`은 외부 Claude다. |
 | `ALLOW_PAID_AI` · `ANTHROPIC_API_KEY` · `CLAUDE_MODEL` | 실제 Claude 사용 시에만 `ALLOW_PAID_AI=1`과 API 키를 설정한다. 기본 모델은 `claude-opus-5-5`다. 비공개 작업공간은 연동 설정에서 원문 전송을 명시적으로 허용(`configured`)해야 호출된다. `off`와 `masked`는 외부 호출을 차단한다. |
 | `MAX_UPLOAD_BYTES` · `MAX_AUDIO_SEC` | 업로드 한 건의 바이트·초 제한. 기본 10 MiB와 300초다. |
 | `LEGACY_WORKSPACE_OWNER_EMAIL` | 기존 단일 DB를 인계할 때만 설정한다. 이 주소로 가입하고 검증을 마친 소유자에게 기존 데이터를 연결한다. |
@@ -47,7 +61,7 @@ Claude를 연결하면 카드 정리·브리핑·질문 처리에 API 비용이 
 
 브라우저 마이크 체험과 녹음 파일의 일괄 전사는 입력 경로가 다르다. 녹음 파일은 서버에서 16 kHz mono WAV로 변환한 뒤 SQLite 대기열에 들어간다. 일감은 별도 PC에서 실행하는 Whisper 일꾼이 가져와 처리한다.
 
-1. 작업공간 ID를 확인하고 서버의 `WORKER_WORKSPACE_ID`로 지정한다. 랜덤 토큰을 별도로 생성해 서버와 일꾼 PC의 `WORKER_TOKEN`에 같은 값을 넣는다. 설정을 바꾸면 `docker compose --env-file src/app/.env up -d --wait`로 반영한다.
+1. 작업공간 ID를 확인하고 서버의 `WORKER_WORKSPACE_ID`로 지정한다. 랜덤 토큰을 별도로 생성해 서버와 일꾼 PC의 `WORKER_TOKEN`에 같은 값을 넣는다. 설정을 바꾸면 기존 Node 서비스를 재시작한다. Docker를 선택한 경우에만 `docker compose --env-file src/app/.env up -d --wait`로 반영한다.
 2. 받아쓰기 PC에서 [PC 프로그램 설치 안내](../src/pc-agent/README.md)에 따라 `worker`를 실행한다. 일꾼의 `SERVER_URL`은 서버의 `PUBLIC_BASE_URL`과 같은 주소로 지정한다. 첫 실행에서 Whisper 모델을 받는다. NVIDIA GPU를 쓰거나 CPU로 실행할 수 있다.
 3. 화면에서 가짜 녹음을 올리고 통화 상태가 대기, 받아쓰기, 카드 정리 순으로 바뀌는지 확인한다. 일꾼이 꺼져 있으면 대기열에 남는다.
 4. 녹음 폴더의 자동 전송이 필요한 경우, 그 작업공간에서 발급한 ingest 토큰을 녹음 PC의 `INGEST_TOKEN`에 설정한다. `watch` 모드는 가짜 녹음 폴더에서 먼저 확인한다.

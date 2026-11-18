@@ -231,6 +231,12 @@ async function integrations(el, key, account, ctx) {
         <button type="submit" class="btn btn-danger">토큰 폐기</button>${status}
       </form>` : ''}
       <h2>AI 처리 범위</h2>
+      <p class="notice">${ctx.meta?.aiProvider === 'ollama'
+        ? `로컬 모델 설정 · ${ctx.meta.model || 'Ollama'}. 앱 서버와 같은 기기의 Ollama로 처리합니다. 모델 설치와 실행 여부는 실제 요청 시 확인됩니다.`
+        : ctx.meta?.aiProvider === 'fixture' ? '고정 예시 응답 모드입니다. 실제 AI 추론을 하지 않습니다.'
+        : ctx.meta?.aiProvider === 'anthropic' ? '외부 Claude 연결 설정입니다. 아래 동의와 서버의 유료 호출 허용이 모두 필요합니다.'
+        : 'AI 처리가 꺼져 있습니다.'}</p>
+      ${ctx.meta?.aiProvider === 'ollama' ? html`<p>아래 설정은 외부 AI 전송에만 적용됩니다. 로컬 모델을 끄려면 Node 설치의 AI_PROVIDER를 off로 바꾸세요. Mac 앱은 ‘로컬 자료 폴더 열기’에서 ai.json의 provider를 off로 바꾼 뒤 앱을 다시 실행하세요.</p>` : ''}
       <p>서버에서 외부 AI를 켠 경우 ‘서버 AI 사용’으로 저장하면 받아쓴 글 원문과 관련 업무 정보가 외부 AI에 전송될 수 있어요.</p>
       <form id="integration-ai" class="account-form">
         <label>처리 방식<select name="aiMode">
