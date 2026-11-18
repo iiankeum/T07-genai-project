@@ -405,3 +405,60 @@
 }
 @media print { .cd-body { display:block; } .cd-history { display:none; } }
 body[data-page="call"] { background:#fff; }
+
+/* Montage Form control: label → input/accessory → provenance/message. */
+.cd-card { --form-border:#dedfe3; --form-muted:#70737c; }
+.cd-card-head { align-items:center; padding:16px 24px; }
+.cd-card-head .cd-pane-title { padding:0; min-height:32px; gap:10px; }
+.cd-card-head .chip { border:0; border-radius:5px; font-size:11px; padding:3px 7px; }
+.cd-card-scroll { padding:24px; }
+.cd-sec-top { margin-bottom:14px; }
+.cd-sec h3,.cd-card-section h3 { font-size:15px; line-height:22px; font-weight:600; }
+.cd-card-guide { font-size:11px; }
+.cd-card-guide summary { min-height:32px; padding:4px 0; }
+.cd-grid { gap:16px 20px; }
+.cd-field { padding:0; margin:0; border:0; border-radius:0; }
+.cd-field:hover,.cd-field.ev-active,.cd-item.ev-active { background:transparent; border-color:var(--line); }
+.cd-field-top { min-height:20px; margin-bottom:8px; }
+.cd-label,.cd-sub > span { color:#464950; font-size:13px; font-weight:500; }
+.cd-input-row { border:1px solid var(--form-border); border-radius:8px; gap:0; background:#fff; overflow:hidden; }
+.cd-card .cd-input-row > :is(.input,.textarea,.select) { border:0!important; background:transparent!important; border-radius:0; min-height:44px; padding:10px 12px; font-size:14px; }
+.cd-input-row:focus-within { border-color:var(--brand); box-shadow:0 0 0 2px #0066ff14; }
+.cd-field.ev-active .cd-input-row { border-color:var(--brand); }
+.cd-card .cd-input-row:has([aria-invalid="true"]) { border-color:var(--danger); }
+.cd-input-row:has([readonly]),.cd-input-row:has(select:disabled) { background:#f7f8fa; }
+.cd-card .cd-evbtn { border:0; border-radius:0; background:transparent; color:var(--brand); font-size:11px; gap:3px; padding:8px; min-width:44px; min-height:44px; box-shadow:none; }
+.cd-card .cd-evbtn:hover { background:var(--brand-wash); }
+.cd-card .cd-evbtn .cd-icon { display:none; }
+.cd-card .cd-evtime { font-size:10px; }
+.cd-field-meta { display:flex; align-items:center; flex-wrap:wrap; gap:4px 8px; min-height:18px; margin-top:5px; font-size:11px; color:var(--form-muted); }
+.cd-phone-match { font-size:11px; color:var(--form-muted); }
+.cd-card-scroll .cd-provenance.chip-ai { display:inline; width:auto; height:auto; color:var(--form-muted); background:transparent; border:0; border-radius:0; padding:0; font-size:11px; font-weight:400; }
+.cd-card-scroll .cd-chipslot .chip { color:var(--form-muted); background:transparent; border:0; padding:0; font-size:11px; font-weight:400; }
+.cd-saved { font-size:11px; font-weight:400; }
+.cd-field.is-unsure .input,.cd-item.is-unsure .input { background:#fff; border-color:var(--form-border); }
+.cd-flags { margin-top:8px; }
+.cd-flag-row { background:#fffaef; border-radius:8px; padding:10px 12px; gap:6px 10px; color:#8b5b15; }
+.cd-flag-why { order:0; flex-basis:100%; font-size:12px; line-height:19px; }
+.cd-flag-row .cd-flag,.cd-flag-row .cd-reviewed { order:1; border:0; background:transparent; padding:4px 0; font-size:12px; }
+.cd-flag-row .cd-reviewed { margin-left:auto; font-weight:600; color:var(--ink); }
+.cd-quote { padding:12px; margin-top:8px; border:0; border-radius:8px; background:#f5f8ff; font-size:12px; line-height:20px; }
+.cd-sec { margin-top:28px; padding-top:24px; }
+.cd-item-list { gap:0; }
+.cd-item { padding:18px 0; }
+.cd-item-head { gap:8px; margin-bottom:14px; }
+.cd-item-no { display:none; }
+.cd-item-title { font-size:13px; font-weight:600; }
+.cd-item .cd-item-grid { gap:12px; }
+.cd-sub > span { display:block; margin-bottom:7px; }
+.cd-card .cd-item .input { border-color:var(--form-border); background:#fff; min-height:44px; padding:10px 12px; font-size:14px; }
+.cd-confirm-issues { background:#fffaef; border-radius:8px; padding:0 12px; margin-bottom:10px; font-size:12px; }
+.cd-action-buttons { gap:8px; }
+.cd-action-buttons [data-act="cancel"] { color:var(--muted); }
+.cd-action-buttons .cd-primary { min-width:160px; min-height:44px; font-size:14px; }
+@media(max-width:1023px) {
+ .cd-card-head { padding:12px 0; }
+ .cd-card-scroll { padding:20px 0; }
+ .cd-grid { gap:16px 12px; }
+ .cd-card .cd-evtime { display:none; }
+}

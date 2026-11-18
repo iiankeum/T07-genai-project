@@ -101,7 +101,7 @@ export function mountCard(el, o) {
   const humanChecked = () => card && (card.status === 'confirmed' || card.status === 'shipped');
   const aiChip = (checked = false) => (checked || humanChecked()
     ? html`<span class="chip chip-confirmed cd-provenance" title="사람이 확인">사람이 확인</span>`
-    : html`<span class="chip chip-ai cd-provenance" title="AI 초안"><span class="sr-only">AI 초안</span></span>`);
+    : html`<span class="chip chip-ai cd-provenance" title="AI 초안">AI 초안</span>`);
   const editedChip = () => html`<span class="chip chip-edited">사람이 고침</span>`;
   function chipFor(key) {
     if (!card) return '';
@@ -127,7 +127,7 @@ export function mountCard(el, o) {
     if (!r || (r.at === null && r.segIndex < 0)) return '';
     const t = r.at !== null ? fmtSec(r.at) : '';
     const what = o.hasAudio ? `${label} 근거 대목${t ? ` ${t}부터` : ''} 듣기` : `${label} 근거 문장 보기`;
-    return html`<button type="button" class="btn cd-evbtn ev-play" aria-label="${what}" title="${what}">${icon(o.hasAudio ? 'play' : 'evidence')}${t ? html`<span class="cd-evtime">${t}</span>` : ''}</button>`;
+    return html`<button type="button" class="btn cd-evbtn ev-play" aria-label="${what}" title="${what}">${icon(o.hasAudio ? 'play' : 'evidence')}<span>근거</span>${t ? html`<span class="cd-evtime">${t}</span>` : ''}</button>`;
   }
 
   function quoteBox(r) {
@@ -165,17 +165,17 @@ export function mountCard(el, o) {
     const max = profile().textLimits[f.key];
     const pattern = f.key === 'modelYear' && profile().modelYearPattern ? profile().modelYearPattern.source : null;
     return html`<div class="cd-field ${f.wide ? 'cd-field-wide' : ''} ${flags.length ? 'is-unsure' : ''}" data-ev="${f.key}">
-      <div class="cd-field-top">
-        <label class="cd-label" for="${id}">${label}</label>
-        <span class="cd-chipslot" data-chip="${f.key}">${chipFor(f.key)}</span>
-        ${f.key === 'customer' && card.customerByPhone ? html`<span class="chip chip-phone" title="걸려 온 번호가 거래처 목록의 번호와 같아 그 이름으로 채웠습니다">번호로 확인</span>` : ''}
-        <span class="cd-saved" data-saved="${f.key}" aria-live="polite"></span>
-      </div>
+      <div class="cd-field-top"><label class="cd-label" for="${id}">${label}</label></div>
       <div class="cd-input-row">
         ${f.textarea
     ? html`<textarea id="${id}" class="textarea" data-field="${f.key}" maxlength="${max}" rows="2" placeholder="${f.ph}" ${ro ? html`readonly` : ''}>${value}</textarea>`
     : html`<input id="${id}" class="input" data-field="${f.key}" maxlength="${max}" ${pattern ? html`pattern="${pattern}"` : ''} value="${value}" placeholder="${f.ph}" autocomplete="off" spellcheck="false" ${f.mode ? html`inputmode="${f.mode}"` : ''} ${f.list ? html`list="${f.list}"` : ''} ${ro ? html`readonly` : ''}>`}
         ${evButton(r, f.label)}
+      </div>
+      <div class="cd-field-meta">
+        <span class="cd-chipslot" data-chip="${f.key}">${chipFor(f.key)}</span>
+        ${f.key === 'customer' && card.customerByPhone ? html`<span class="cd-phone-match" title="걸려 온 번호가 거래처 목록의 번호와 같아 그 이름으로 채웠습니다">번호 일치</span>` : ''}
+        <span class="cd-saved" data-saved="${f.key}" aria-live="polite"></span>
       </div>
       ${flagsView(flags)}
       ${f.key === 'plate' ? html`<div data-slot="plate-hint">${plateHint()}</div>` : ''}
@@ -207,7 +207,7 @@ export function mountCard(el, o) {
     return html`<li class="cd-item ${flags.length ? 'is-unsure' : ''}" data-ev="item:${i}">
       <div class="cd-item-head">
         <span class="cd-item-no" aria-hidden="true">${n}</span>
-        <span class="cd-item-title">${it.part || '새 부품'}</span>
+        <span class="cd-item-title">품목 ${n}</span>
         <span class="cd-chipslot" data-chip="item:${i}">${chipFor(`item:${i}`)}</span>
         ${evButton(r, `${n}번째 부품`)}
         ${ro ? '' : html`<button type="button" class="btn btn-ghost cd-item-del" data-del="${i}" aria-label="${n}번째 부품 줄 지우기">지우기</button>`}
@@ -241,7 +241,7 @@ export function mountCard(el, o) {
   function itemsSection(groups) {
     return html`<section class="cd-sec cd-items" aria-labelledby="cd-items-h">
       <div class="cd-sec-top">
-        <h3 id="cd-items-h">부품</h3><span data-chip="items">${chipFor('items')}</span><span class="cd-saved" data-saved="items" aria-live="polite"></span>
+        <h3 id="cd-items-h">주문 품목</h3><span data-chip="items">${chipFor('items')}</span><span class="cd-saved" data-saved="items" aria-live="polite"></span>
         ${editable() ? html`<button type="button" class="btn btn-sm cd-add" data-act="item-add">부품 추가</button>` : ''}
       </div>
       ${flagsView(groups.get('items'))}
@@ -380,7 +380,7 @@ export function mountCard(el, o) {
         ${card.aiError ? html`<p class="notice notice-warn" role="note">AI 초안을 만들지 못했습니다. 주문 정보를 직접 채워 주세요. ${card.aiError}</p>` : ''}
         <section class="cd-card-section" aria-labelledby="cd-fields-h">
           <div class="cd-sec-top cd-fields-head">
-            <h3 id="cd-fields-h">거래처 · 차량</h3>
+            <h3 id="cd-fields-h">기본 정보</h3>
             <details class="cd-card-guide cd-origin-guide" ${guideOpen ? html`open` : ''}>
               <summary>근거 · 표시 안내</summary>
               <p><span class="chip chip-ai cd-provenance"></span> AI 초안 <span class="chip chip-edited">사람이 고침</span> <span class="chip chip-confirmed">사람이 확인</span></p>
@@ -392,7 +392,7 @@ export function mountCard(el, o) {
         </section>
         ${itemsSection(groups)}
         <section class="cd-sec" aria-labelledby="cd-delivery-h">
-          <h3 id="cd-delivery-h">수령 · 메모</h3>
+          <h3 id="cd-delivery-h">배송 및 요청사항</h3>
           <div class="cd-grid">${WHEN_FIELDS.map((f) => fieldBlock(f, groups))}${urgentBlock(groups)}${fieldBlock(NOTE_FIELD, groups)}</div>
           <datalist id="cd-delivery-list">${DELIVERY_OPTIONS.map((d) => html`<option value="${d}"></option>`)}</datalist>
         </section>
