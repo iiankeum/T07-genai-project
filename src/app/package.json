@@ -27,7 +27,8 @@
     "test:mobile-return-e2e": "node tools/call-mobile-return-e2e.mjs",
     "test:settings-delete-e2e": "node tools/settings-delete-browser-e2e.mjs",
     "test:form-pending-e2e": "node tools/form-pending-browser-e2e.mjs",
-    "test:calls-return-e2e": "node tools/calls-return-browser-e2e.mjs"
+    "test:calls-return-e2e": "node tools/calls-return-browser-e2e.mjs",
+    "test:calls-refresh-e2e": "node tools/calls-refresh-browser-e2e.mjs"
   },
   "license": "MIT",
   "dependencies": {
