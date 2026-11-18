@@ -38,3 +38,7 @@
 ### 선택 오디오 변환기
 
 `AHMATDA_BUNDLE_AUDIO=1`은 [공식 FFmpeg9.0.2](https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz)를 LGPL2.1-or-later 최소 오디오 구성으로 빌드한 ffmpeg/ffprobe를 포함한다. GPL/version3/nonfree, 네트워크, 외부 라이브러리 자동탐지를 끈다. 대응 원본소스·COPYING.LGPLv2.1·LICENSE.md·configure옵션·빌드로그를 `runtime/ffmpeg-audio-9.0.2/redistribution`에 함께 제공한다. [공식 법적 고지](https://ffmpeg.org/legal.html)를 기준으로 최종 재배포 의무를 검토해야 한다. SHA256은 공식 Homebrew소스 메타데이터와 대조했으며 PGP서명은 검증하지 않았다. 앱의 ad hoc검사는 DeveloperID·공증을 뜻하지 않는다.
+
+### 정확한 버전의 추가 원문 고지
+
+CTranslate24.9.0(MIT), FlatBuffers25.12.19(Apache-2.0), Tokenizers0.23.3(Apache-2.0)의 공식tag LICENSE를 `src/mac-app/licenses`와 앱 `ThirdPartySupplemental`에 별도로 포함한다. 출처·해시는 `sources.json`에 기록하며 원본 wheel은 변경하지 않는다. 이는 전체 전이의존성의 고지나 PyAV의 별도 FFmpeg/x264/x265 재배포 의무를 모두 충족했다는 뜻이 아니다. [배포 점검](docs/mac-distribution-audit.md)의 차단 항목을 확인한다.

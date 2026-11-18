@@ -10,7 +10,7 @@
 
 ## 소스에서 빌드하고 설치하기
 
-macOS 14 이상과 Xcode Command Line Tools가 필요하다. 앱은 빌드한 Mac의 아키텍처에 맞춰 만든다. 빌드에는 Node 24 공식 바이너리와 그 배포본의 `LICENSE`를 사용한다. 시스템 라이브러리만 참조하는 Node를 앱에 복사하므로 실행하는 Mac에는 별도 Node 설치가 필요 없다. 배포 서명과 공증은 준비 단계다. 아래에서 만드는 로컬 빌드에는 ad hoc 서명을 사용한다.
+앱 셸의 선언상 최소 버전은 macOS14지만 포함 런타임 전체의 최소지원 버전은 아직 확정하지 않았다. 검증한 Mac은 macOS26.6.1이다. Ollama 일부 라이브러리의26.2 요구와 구버전 대체경로 미검증을 [배포 점검](mac-distribution-audit.md)에서 확인한다. 빌드에는 Xcode Command Line Tools가 필요하다. 앱은 빌드한 Mac의 아키텍처에 맞춰 만든다. 빌드에는 Node 24 공식 바이너리와 그 배포본의 `LICENSE`를 사용한다. 시스템 라이브러리만 참조하는 Node를 앱에 복사하므로 실행하는 Mac에는 별도 Node 설치가 필요 없다. 배포 서명과 공증은 준비 단계다. 아래에서 만드는 로컬 빌드에는 ad hoc 서명을 사용한다.
 
 ```sh
 # 최초 빌드 준비. npm 패키지가 없는 경우 실행한다.
@@ -200,3 +200,5 @@ AHMATDA_BUNDLE_OLLAMA=1 AHMATDA_BUNDLE_WHISPER=1 AHMATDA_BUNDLE_AUDIO=1 bash src
 ## 10분 유지 검증
 
 가짜 임시 공간의 실Whisper 일꾼을600초 유지하며6초 간격 online검사100회를 통과했다. 프로세스 재시작 없이 전사→fixture카드 ready, 브라우저 해제→감독기 종료,5601/11435 해제를 확인했다. [증거](../work/03-개발-태림/자료/real-local-audio-20261118/managed-worker-10min-fake-input.json). 수시간/수일 운영·메모리누수·현장 음성품질·실LLM 시험은 아니다. `real-managed-worker.mjs --run-real-local-model --soak-seconds=600`으로 재현한다.
+
+배포 전에는 [서명·OS 호환성·라이선스 점검](mac-distribution-audit.md)의 차단 항목을 해소해야 한다. 현재 ZIP은 개발 검증용이다.

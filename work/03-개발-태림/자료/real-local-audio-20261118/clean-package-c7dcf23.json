@@ -1,0 +1,23 @@
+{
+  "at": "2026-11-18T07:39:22.280Z",
+  "revision": "c7dcf23f1954f8e8fb028219191c981329157c9f",
+  "sameMacTemporaryHome": true,
+  "systemPathOnly": true,
+  "bundledNodeHealth": true,
+  "bundledPythonImports": {
+    "whisper": "1.2.1",
+    "ctranslate2": "4.9.0",
+    "numpy": "2.5.5"
+  },
+  "bundledAudioCommands": true,
+  "localFontServed": true,
+  "privateDataPatternsFound": [],
+  "files": 8450,
+  "adHocIntegrityVerified": true,
+  "serverStopped": true,
+  "limits": [
+    "동일 Mac에서 ZIP을 새 임시폴더에 풀고 빈 HOME/PATH로 시험",
+    "실물 신규 Mac·Gatekeeper 허용·Developer ID/공증·사용자 가입 검증 아님",
+    "실모델 추론·OS 네트워크 차단·수일운영 시험 아님"
+  ]
+}

@@ -1,3 +1,12 @@
+## 2026-11-18 16:43 KST · 빈 HOME 패키지 점검과 배포 차단 기록
+- 돌린 사람 · 도구 · 작업방: 신*림(taejs) · ChatGPT dot · 아맞다 직접 작업
+- 한 일: 동일Mac의 새폴더/빈HOME/시스템PATH에서 ZIP 런타임과 폰트를 검사하고 최소OS·서명·라이선스 차단항목을 문서화했다. 누락원문3개는 공식정확버전에서 별도고지로추가했다.
+- 왜: 기존개발환경 성공을 새Mac/외부배포 성공으로 오인하지 않게 한다.
+- 어떻게: 내부읽기검토1개, c7dcf23 ZIP검사·번들Node/Python/audio실행·빈데이터서버종료·비밀파일패턴검사. 원문3개 HTTPS출처/SHA기록. vendorwheel수정없음.
+- 결과물: [배포 점검](../../docs/mac-distribution-audit.md) · [빈 HOME 증거](자료/real-local-audio-20261118/clean-package-c7dcf23.json) · [고지 출처](../../src/mac-app/licenses/sources.json)
+- AI 가 판단한 것 · 사람이 확인할 것: 실물새Mac시험아님. Ollama일부26.2요구/구버전fallback미검증, spctl내부오류는허용아님, PyAV별도FFmpeg/x264/x265재배포의무미해결. 추가원문은전이의존성전체해결이아님.
+- 다음 할 일: 보완패키지재빌드/검증·CI. 인증서발급·보안완화·유료API·배포·병합 없음.
+
 ## 2026-11-18 16:41 KST · 감독기 SIGTERM 입력 핸들 종료 보완
 - 돌린 사람 · 도구 · 작업방: 신*림(taejs) · ChatGPT dot · 아맞다 직접 작업
 - 한 일: SIGTERM 후 열린 stdin 때문에 CLI가 남는 결함을 수정하고 수명관리 회귀를16개로 늘렸다.
