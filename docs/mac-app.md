@@ -33,7 +33,7 @@ AHMATDA_NODE_LICENSE=/path/to/node24/LICENSE \
 bash src/mac-app/build.sh
 ```
 
-빌드 결과물은 `out/Ahmatda.app`에 둔다. `.env`, SQLite, 로컬 녹음, 사용자 파일, Ollama와 Whisper 모델은 번들에 포함하지 않는다. 녹음 파일 업로드에는 `ffmpeg`와 `ffprobe`가 필요하다. 실행기는 `/opt/homebrew/bin`과 `/usr/local/bin`을 포함한 고정 경로에서 두 명령을 찾는다.
+빌드 결과물은 `out/Ahmatda.app`에 둔다. `.env`, SQLite, 로컬 녹음, 사용자 파일, Ollama와 Whisper 모델은 번들에 포함하지 않는다. 다양한 녹음 형식 변환에는 `ffmpeg`와 `ffprobe`가 필요하다. 없으면16kHz mono16bit WAV만 받는다. 실행기는 `/opt/homebrew/bin`과 `/usr/local/bin`을 포함한 고정 경로에서 두 명령을 찾는다.
 
 ## 이 Mac 모드
 
@@ -41,13 +41,13 @@ bash src/mac-app/build.sh
 2. 회원가입 후 **이동 → 로컬 가입 인증 링크 열기**에 가입 이메일을 적는다. 유효한 로컬 인증 화면을 열며 암호 확인은 웹 화면에서 직접 진행한다. 터미널이나 outbox 파일 복사는 필요 없다. 외부 메일 인증이 아닌 이 Mac의 개발용 outbox 방식이며, 서버 로그인·암호·1회용 링크 검사는 그대로 유지한다.
 3. 로그인하여 워크스페이스를 만든다. 계정과 워크스페이스, 통화, 녹음과 카드는 `~/Library/Application Support/Ahmatda/data`에 저장된다. 앱을 종료하거나 업데이트해도 이 자료는 남는다.
 
-앱은 로컬 노드 서버에 유료 AI를 끈 상태와 빈 API 키를 전달한다. Mac 앱은 기존 데모 서버나 원격 GPU 일꾼에 연결하지 않는다. ⌘Q로 앱을 닫으면 같이 시작한 Node 서버가 종료된다. 준비된 앱 전용 Ollama는 앱이 시작·종료하며 CPU 일꾼은 아직 별도로 시작한다. 앱의 기동·상태 로그는 Console에서 `org.ininhyeop.t07.ahmatda`로 검색한다.
+앱은 로컬 노드 서버에 유료 AI를 끈 상태와 빈 API 키를 전달한다. Mac 앱은 기존 데모 서버나 원격 GPU 일꾼에 연결하지 않는다. ⌘Q로 앱을 닫으면 같이 시작한 Node 서버가 종료된다. 준비된 앱 전용 Ollama는 앱이 시작·종료하며 CPU 일꾼은 관리자가 공간을 연결하면 앱과 함께 관리한다. 앱의 기동·상태 로그는 Console에서 `org.ininhyeop.t07.ahmatda`로 검색한다.
 
 ### 로컬 AI 준비 상태
 
-앱이 켜지면 로컬 AI 상태를 먼저 표시한다. **이동 → 로컬 AI 준비 상태**에서도 다시 확인할 수 있다. Ollama 연결 안 됨, 설정 모델 없음, 설치 확인, AI 꺼짐을 구분한다. `127.0.0.1:11434/api/tags`만 조회하며 리다이렉트는 따르지 않는다. 설치 확인은 실제 추론 성공을 뜻하지 않는다.
+앱이 켜지면 로컬 AI 상태를 먼저 표시한다. **이동 → 로컬 AI 준비 상태**에서도 다시 확인할 수 있다. Ollama 연결 안 됨, 설정 모델 없음, 설치 확인, AI 꺼짐을 구분한다. `127.0.0.1:11435/api/tags`만 조회하며 리다이렉트는 따르지 않는다. 설치 확인은 실제 추론 성공을 뜻하지 않는다.
 
-**수동 업무 계속**으로 모델 없이 업무 화면을 사용할 수 있다. **모델 준비 안내**는 현재 개발용 수동 준비 방법을 설명한다. 전사 일꾼 상태 검증·일반 사용자 전체 설치 마법사는 아직 제공하지 않는다. 주문 모델 파일 준비는 아래의 별도 메뉴를 사용한다.
+**수동 업무 계속**으로 모델 없이 업무 화면을 사용할 수 있다. **모델 준비 안내**는 현재 개발용 수동 준비 방법을 설명한다. 전사 실행기의 준비/기동 안내를 표시하지만 실제 전사는 별도 확인해야 한다. 일반 사용자 전체 설치 마법사는 아직 제공하지 않는다. 주문 모델 파일 준비는 아래의 별도 메뉴를 사용한다.
 
 준비 상태 판정의 회귀 테스트:
 
@@ -71,44 +71,18 @@ swiftc src/mac-app/LocalModelStatus.swift src/mac-app/tests/main.swift -o /tmp/a
 
 로컬 AI를 끄려면 자료 폴더의 `ai.json`에 `{"provider":"off"}`를 저장한다. 다른 로컬 모델은 `{"provider":"ollama","model":"모델이름"}`으로 선택한다. 클라우드 모델은 허용하지 않는다. 설정파일을 바꾼 뒤 앱을 다시 연다.
 
-### CPU 받아쓰기 일꾼 준비와 사용
+### CPU 받아쓰기 자동 연결
 
-1. Python 3 가상환경을 로컬 앱 자료 폴더 아래에 만든다. 최초 설치와 모델 받기는 네트워크가 연결된 터미널에서 실행한다. `small`은 한국어를 지원하는 모델이며 Mac 일꾼은 CPU `int8`로 실행한다. [faster-whisper CPU 실행 예제](https://github.com/SYSTRAN/faster-whisper#faster-whisper)
+1. Ollama와 Whisper 실행기를 포함한 개발 앱을 사용하고 **이동 → 받아쓰기 모델 준비**에서 모델을 준비한다.
+2. 직접 회원가입·로그인하여 작업공간을 만든다. 비밀번호·약관 동의는 사용자가 진행한다.
+3. **이동 → 받아쓰기 연결 설정**에서 관리자 계정으로 현재 공간의 로컬 처리를 확인하고 연결한다. 기존 연결이 있으면 교체한다고 화면에 명시한다.
+4. 앱이 실행 중일 때 그 공간의 업로드된 녹음을 CPU Whisper가 처리한다. 화면에서 다른 공간으로 이동해도 연결 공간은 바뀌지 않는다. 연결은30일이며 갱신·해제할 수 있다.
 
-   ```sh
-   ahmatda_local="$HOME/Library/Application Support/Ahmatda"
-   python3 -m venv "$ahmatda_local/whisper-venv"
-   "$ahmatda_local/whisper-venv/bin/python" -m pip install 'faster-whisper==1.2.1' 'numpy==2.5.5'
-   "$ahmatda_local/whisper-venv/bin/python" -c \
-     'import sys; from faster_whisper import download_model; download_model("small", output_dir=sys.argv[1])' \
-     "$ahmatda_local/whisper-small"
-   ```
+앱은 비밀값을 브라우저나 명령 인수로 보내지 않는다. 서버는 토큰hash와 승인관리자·작업공간·만료를 검사한다. 로컬 연결파일은600이며 앱 capability로 묶인다. 외부/없는Origin·잘못된Host·오래된공간헤더·비관리자는 등록할 수 없다. 기존 `worker.env`를 덮어쓰지 않고 기존 서버 일꾼 경로도 유지한다.
 
-2. 로그인하여 워크스페이스를 만든 상태에서 작업공간 ID를 확인한다. 한 번 만든 토큰을 앱과 CPU 일꾼에서 같이 쓴다. 다음 명령은 토큰 내용을 터미널에 출력하지 않는다. `ws_`로 시작하는 실제 로컬 작업공간 ID를 입력한다.
+감독기는2초마다 권한을 확인하고 해제·만료·관리자권한회수·앱종료 시 자기 Python만 종료한다. 모델/실행기를 검사하고 Python격리모드로 시작하며 다운로드는 하지 않는다. 파일/DB 갱신 실패 복구는 시험했지만 전원 손실까지 원자성을 보장하지 않는다. 프로세스 실행 표시는 전사 정확도를 뜻하지 않는다.
 
-   ```sh
-   /usr/bin/sqlite3 "$ahmatda_local/data/accounts.sqlite" 'SELECT id, name FROM workspaces;'
-   printf '로컬 작업공간 ID: '
-   read -r ahmatda_workspace
-   (umask 077; printf 'WORKER_WORKSPACE_ID=%s\nWORKER_TOKEN=%s\n' \
-     "$ahmatda_workspace" "$(openssl rand -hex 32)" > "$ahmatda_local/worker.env")
-   chmod 600 "$ahmatda_local/worker.env"
-   ```
-
-3. 아맞다를 ⌘Q로 끝내고 다시 연 뒤 같은 워크스페이스를 선택한다. 별도 터미널에서 아래처럼 일꾼을 실행한다. 모델에는 내려받은 디렉터리의 전체 경로를 지정한다. `HF_HUB_OFFLINE=1`은 실행 중 Hugging Face 연결을 끈다.
-
-   ```sh
-   ahmatda_local="$HOME/Library/Application Support/Ahmatda"
-   ahmatda_app="$HOME/Applications/Ahmatda.app"
-   env -u SERVER_URL -u WORKER_TOKEN -u INGEST_TOKEN \
-     CALLNOTE_SECRETS_DIR="$ahmatda_local" CALLNOTE_AGENT_HOME="$ahmatda_local/worker" \
-     HF_HUB_OFFLINE=1 "$ahmatda_local/whisper-venv/bin/python" \
-     "$ahmatda_app/Contents/Resources/pc-agent/callnote_agent.py" worker \
-     --server http://127.0.0.1:5601 --env-file "$ahmatda_local/worker.env" \
-     --name mac-cpu --device cpu --model "$ahmatda_local/whisper-small"
-   ```
-
-4. 앱에서 가짜 음성 녹음을 업로드한다. 받아쓴 글이 저장되면 초안 카드를 생성하여 확인한다. 받아쓰기는 파일 업로드 경로에서 확인한다. 웹 화면의 마이크 실시간 받아쓰기는 WebKit의 음성 인식 지원을 따른다.
+실제 가짜 계정·임시 공간에서 **브라우저 연결→업로드→자동 Python/Whisper→전사 저장→브라우저 해제→종료**를 확인했다. [증거](../work/03-개발-태림/자료/real-local-audio-20261118/managed-worker-fake-input.json). 이 시험의 카드 생성은 fixture이며 실Qwen 검증과 구분한다. 재현은 앱을 종료한 뒤 `node src/mac-app/tests/real-managed-worker.mjs --run-real-local-model`로 진행한다. 임시5601과 합성음성만 사용한다.
 
 ## 오프라인 확인
 
@@ -166,7 +140,7 @@ node src/mac-app/tests/real-local-model.mjs --run-real-local-model
 - Swift 상태/인증링크14개, 실행기 감독기/설치19개, Whisper준비10개, 주문모델준비13개 회귀 통과.
 - 실제 Mac 자동AI기동·실추론·종료정리, Whisper준비 메뉴, 없는 가입링크 안전처리 확인.
 - 성공 가입 링크의 파서는 테스트했지만 실제 새 사용자 가입 전체를 네이티브앱으로 끝낸 것은 아니다. 기존 웹 가입 E2E와 별개다.
-- 신규Mac 전체설치, 전사 실행기 설치/자동일꾼, 재개·복구, 현장 음성평가는 남아 있다.
+- 신규Mac 전체설치, 재개·복구, 현장 음성평가는 남아 있다.
 - 이 컴퓨터에서 외부배포용 **Developer ID Application 인증서0개**를 확인했다. ad hoc검증은 완료했지만 정식서명·공증은 진행하지 않았다. 인증서 발급·계정변경·보안우회도 하지 않았다.
 
 ## Ollama를 포함한 개발용 앱 빌드
@@ -196,7 +170,7 @@ node src/mac-app/prepare-whisper-runtime.mjs --prepare-development-runtime
 
 앱 자료 폴더의 `runtime/whisper-portable-3.12.16`에 설치한다. 고정 SHA256·크기 확인 후 오프라인 wheel 설치와 의존성 검사를 실행한다. 기존 폴더는 덮어쓰지 않고 실패·취소 시 임시 파일을 정리한다. 개인 Python 경로에 의존하지 않으며 지원 진입점은 `python/bin/python3.12 -I`다. pip 등 생성된 콘솔 스크립트의 shebang은 준비 당시 경로이므로 이동 후 사용하지 않는다.
 
-설치 후 기록하는 파일 목록은 변경 탐지용이다. 공급자 서명이나 독립적인 배포 인증을 대체하지 않는다. `inferenceVerified:false`는 설치만으로 전사 성공을 주장하지 않는 표시다. 각 배포본·wheel의 라이선스 파일을 보존하며 전체 재배포 고지·서명·공증 검토는 남아 있다. 별도 선택 빌드로 Mac 앱에 포함할 수 있다. 앱 메뉴 연결·자동 일꾼 인증/시작은 별도 단계다.
+설치 후 기록하는 파일 목록은 변경 탐지용이다. 공급자 서명이나 독립적인 배포 인증을 대체하지 않는다. `inferenceVerified:false`는 설치만으로 전사 성공을 주장하지 않는 표시다. 각 배포본·wheel의 라이선스 파일을 보존하며 전체 재배포 고지·서명·공증 검토는 남아 있다. 별도 선택 빌드로 Mac 앱에 포함할 수 있다. 관리자 연결 UI와 자동 일꾼으로 통합했다.
 
 실제 helper로84,241,226B를 모두 신규 다운로드하고 빈 폴더 설치·경로 이동 뒤 Python격리모드에서3.7초 가짜음성을 전사했다. 첫 모델 로드9.75초, 전사1.7초였으며 원문과 같았다. [검증 기록](../work/03-개발-태림/자료/real-local-audio-20261118/portable-whisper-fake-input.json). helper11개 회귀 통과. 이 결과는 앱 자동 설치나 실전화 품질을 뜻하지 않는다.
 
@@ -208,4 +182,4 @@ AHMATDA_BUNDLE_OLLAMA=1 AHMATDA_BUNDLE_WHISPER=1 bash src/mac-app/build.sh
 
 이미 준비된 `runtime/whisper-portable-3.12.16`을 검사해 앱에 포함한다. `AHMATDA_WHISPER_RUNTIME`으로 같은 준비 도구가 만든 경로를 지정할 수 있다. 빌드 중 네트워크 다운로드·pip 실행·전역 설치는 하지 않는다. 모델 파일과 사용자 자료는 포함하지 않는다.
 
-번들의 `install-whisper-runtime.mjs --install-from-bundle`은 전용 private 자료 폴더로 복사·재검증하며 기존 정상 또는 손상 설치를 덮어쓰지 않는다. 기본 `--status`는 읽기 확인이다. 설치helper9개 회귀와 실제 포함빌드·ad hoc검사·빈 폴더 설치·격리Python import를 확인했다. [증거](../work/03-개발-태림/자료/real-local-audio-20261118/whisper-bundle-install.json). 이 단계는 자동 일꾼 등록이나 신규 Mac 전체 설치 검증과 다르다.
+번들의 `install-whisper-runtime.mjs --install-from-bundle`은 전용 private 자료 폴더로 복사·재검증하며 기존 정상 또는 손상 설치를 덮어쓰지 않는다. 기본 `--status`는 읽기 확인이다. 설치helper9개 회귀와 실제 포함빌드·ad hoc검사·빈 폴더 설치·격리Python import를 확인했다. [증거](../work/03-개발-태림/자료/real-local-audio-20261118/whisper-bundle-install.json). 번들 설치 검증은 위 자동일꾼 통합시험과 별개이며 신규 Mac 전체 설치 검증은 아니다.

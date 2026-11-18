@@ -30,6 +30,7 @@ function readCommit() {
 const SECRETS = {
   ANTHROPIC_API_KEY: str(env.ANTHROPIC_API_KEY),
   WORKER_TOKEN: str(env.WORKER_TOKEN),
+  AHMATDA_LOCAL_WORKER_CAPABILITY: str(env.AHMATDA_LOCAL_WORKER_CAPABILITY),
   INGEST_TOKEN: str(env.INGEST_TOKEN),
   ADMIN_PASSCODE: str(env.ADMIN_PASSCODE),
   AWS_ACCESS_KEY_ID: str(env.AWS_ACCESS_KEY_ID),
@@ -90,6 +91,7 @@ export const config = Object.freeze({
   maxAudioSec: int(env.MAX_AUDIO_SEC, 300),
   ffmpegPath: str(env.FFMPEG_PATH, 'ffmpeg'),
   ffprobePath: str(env.FFPROBE_PATH, 'ffprobe'),
+  localMac: env.AHMATDA_LOCAL_MAC === '1',
   workerOnlineSec: 60,
   jobLeaseSec: 600,
   jobMaxAttempts: 3,

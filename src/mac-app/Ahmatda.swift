@@ -2,6 +2,7 @@ import AppKit
 import Darwin
 import OSLog
 import WebKit
+import Security
 
 private enum LaunchError: LocalizedError {
     case usage, alreadyOpen, missingBundle, aiConfiguration, workerConfiguration
@@ -104,6 +105,12 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
     private var runtimeReady = false
     private var runtimeCompletion: ((Bool) -> Void)?
     private var runtimeNotice = ""
+    private var workerCapability = ""
+    private var whisperWorkerProcess: Process?
+    private var whisperWorkerInput: Pipe?
+    private var whisperWorkerOutput: Pipe?
+    private var whisperWorkerBuffer = Data()
+    private var whisperWorkerNotice = "받아쓰기 연결 설정에서 작업공간을 연결해 주세요."
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1180, height: 800),
@@ -147,6 +154,12 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
                                   attributes: [.posixPermissions: 0o700])
         try files.setAttributes([.posixPermissions: 0o700], ofItemAtPath: storage.path)
         localStorage = storage
+        let dataDirectory = storage.appendingPathComponent("data", isDirectory: true)
+        try files.createDirectory(at: dataDirectory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        let dataAttributes = try files.attributesOfItem(atPath: dataDirectory.path)
+        guard dataAttributes[.type] as? FileAttributeType == .typeDirectory,
+              (dataAttributes[.ownerAccountID] as? NSNumber)?.uint32Value == getuid() else { throw LaunchError.workerConfiguration }
+        try files.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dataDirectory.path)
         let fd = Darwin.open(storage.appendingPathComponent("launcher.lock").path,
                              O_CREAT | O_RDWR | O_CLOEXEC | O_NOFOLLOW, 0o600)
         guard fd >= 0 else { throw CocoaError(.fileWriteNoPermission) }
@@ -155,6 +168,7 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
             throw LaunchError.alreadyOpen
         }
         lock = fd
+        workerCapability = try localWorkerCapability(in: storage)
 
         guard let resources = Bundle.main.resourceURL,
               let executable = Bundle.main.url(forAuxiliaryExecutable: "node") else { throw LaunchError.missingBundle }
@@ -174,6 +188,7 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
             "HOST": "127.0.0.1", "PORT": "5601", "PUBLIC_BASE_URL": "http://127.0.0.1:5601",
             "DATA_DIR": storage.appendingPathComponent("data", isDirectory: true).path,
             "DEMO_MODE": "0", "TRUST_PROXY": "0", "AUTH_MAIL_MODE": "outbox",
+            "AHMATDA_LOCAL_MAC": "1", "AHMATDA_LOCAL_WORKER_CAPABILITY": workerCapability,
             "ALLOW_PAID_AI": "0", "ANTHROPIC_API_KEY": "", "AHMATDA_OLLAMA_PORT": "11435",
             "FFMPEG_PATH": "ffmpeg", "FFPROBE_PATH": "ffprobe",
         ]
@@ -306,6 +321,109 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
         if let runtimeProcess, runtimeProcess.isRunning { runtimeProcess.terminate() }
     }
 
+    // Stable app capability is never exposed to the browser, command arguments or logs.
+    private func localWorkerCapability(in storage: URL) throws -> String {
+        let path = storage.appendingPathComponent("local-worker.capability").path
+        var descriptor = Darwin.open(path, O_RDONLY | O_CLOEXEC | O_NOFOLLOW)
+        if descriptor < 0 && errno == ENOENT {
+            var bytes = [UInt8](repeating: 0, count: 32)
+            guard SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes) == errSecSuccess else { throw LaunchError.workerConfiguration }
+            let value = bytes.map { String(format: "%02x", $0) }.joined()
+            descriptor = Darwin.open(path, O_CREAT | O_EXCL | O_WRONLY | O_CLOEXEC | O_NOFOLLOW, 0o600)
+            guard descriptor >= 0 else { throw LaunchError.workerConfiguration }
+            let count = value.withCString { Darwin.write(descriptor, $0, 64) }
+            let synced = Darwin.fsync(descriptor)
+            Darwin.close(descriptor)
+            guard count == 64, synced == 0 else { throw LaunchError.workerConfiguration }
+            descriptor = Darwin.open(path, O_RDONLY | O_CLOEXEC | O_NOFOLLOW)
+        }
+        guard descriptor >= 0 else { throw LaunchError.workerConfiguration }
+        defer { Darwin.close(descriptor) }
+        var info = stat()
+        guard fstat(descriptor, &info) == 0, (info.st_mode & S_IFMT) == S_IFREG,
+              info.st_uid == getuid(), (info.st_mode & 0o077) == 0, info.st_size == 64 else { throw LaunchError.workerConfiguration }
+        var bytes = [UInt8](repeating: 0, count: 65)
+        guard Darwin.read(descriptor, &bytes, 65) == 64,
+              let value = String(bytes: bytes.prefix(64), encoding: .utf8),
+              value.range(of: "^[a-f0-9]{64}$", options: .regularExpression) != nil else { throw LaunchError.workerConfiguration }
+        return value
+    }
+
+    private func startWhisperWorker() {
+        guard whisperWorkerProcess == nil, child?.isRunning == true, !closing, !failed,
+              !workerCapability.isEmpty, let resources = Bundle.main.resourceURL,
+              let executable = Bundle.main.url(forAuxiliaryExecutable: "node") else { return }
+        let helper = resources.appendingPathComponent("whisper-worker.mjs")
+        guard files.isReadableFile(atPath: helper.path) else {
+            whisperWorkerNotice = "받아쓰기 실행기가 앱에 없습니다. 앱을 업데이트해 주세요."
+            return
+        }
+        let process = Process()
+        process.executableURL = executable
+        process.arguments = [helper.path, "--start"]
+        process.environment = ["HOME": files.homeDirectoryForCurrentUser.path,
+            "PATH": "/usr/bin:/bin:/usr/sbin:/sbin",
+            "AHMATDA_LOCAL_WORKER_CAPABILITY": workerCapability]
+        let input = Pipe(), output = Pipe()
+        process.standardInput = input
+        process.standardOutput = output
+        process.standardError = FileHandle.nullDevice
+        // Only predefined event labels enter the UI; no arbitrary subprocess text is logged.
+        output.fileHandleForReading.readabilityHandler = { [weak self] handle in
+            let data = handle.availableData
+            if data.isEmpty { handle.readabilityHandler = nil; return }
+            DispatchQueue.main.async { self?.receiveWhisperWorkerOutput(data) }
+        }
+        process.terminationHandler = { [weak self] _ in
+            DispatchQueue.main.async {
+                guard let self, !self.closing else { return }
+                self.whisperWorkerNotice = "받아쓰기 실행기가 멈췄어요. 앱을 다시 열고 연결 상태를 확인해 주세요."
+            }
+        }
+        whisperWorkerProcess = process
+        whisperWorkerInput = input
+        whisperWorkerOutput = output
+        do { try process.run() }
+        catch {
+            whisperWorkerProcess = nil
+            whisperWorkerNotice = "받아쓰기 실행기를 시작하지 못했어요. 앱을 다시 열어 주세요."
+        }
+    }
+
+    private func receiveWhisperWorkerOutput(_ data: Data) {
+        whisperWorkerBuffer.append(data)
+        guard whisperWorkerBuffer.count < 65536 else { stopWhisperWorker(); return }
+        while let end = whisperWorkerBuffer.firstIndex(of: 10) {
+            let line = whisperWorkerBuffer.prefix(upTo: end)
+            whisperWorkerBuffer.removeSubrange(...end)
+            guard let object = try? JSONSerialization.jsonObject(with: line) as? [String: Any],
+                  let event = object["event"] as? String else { continue }
+            switch event {
+            case "starting": whisperWorkerNotice = "받아쓰기 실행기를 시작하고 있어요."
+            case "running": whisperWorkerNotice = "받아쓰기 일꾼 실행 중. 실제 전사 성공은 통화 처리 결과에서 확인하세요."
+            case "waiting":
+                switch object["reason"] as? String {
+                case "model_missing": whisperWorkerNotice = "받아쓰기 모델 준비 메뉴에서 모델을 준비해 주세요."
+                case "runtime_missing": whisperWorkerNotice = "받아쓰기 실행기를 준비해 주세요."
+                case "authorization_failed": whisperWorkerNotice = "작업공간의 연결 승인이 만료되거나 해제됐어요. 연결 설정을 확인해 주세요."
+                default: whisperWorkerNotice = "받아쓰기 연결 설정에서 작업공간을 연결해 주세요."
+                }
+            case "error": whisperWorkerNotice = "받아쓰기 실행기를 확인하지 못했어요. 모델 준비와 연결 설정을 확인해 주세요."
+            default: break
+            }
+        }
+    }
+
+    private func stopWhisperWorker() {
+        try? whisperWorkerInput?.fileHandleForWriting.close()
+        if let whisperWorkerProcess, whisperWorkerProcess.isRunning { whisperWorkerProcess.terminate() }
+    }
+
+    @objc private func openWorkerSettings() {
+        guard localStorage != nil else { return }
+        webView?.load(URLRequest(url: URL(string: "http://127.0.0.1:5601/#/settings/integrations")!))
+    }
+
     private func workerEnvironment(in storage: URL) throws -> [String: String] {
         let file = storage.appendingPathComponent("worker.env")
         guard files.fileExists(atPath: file.path) else { return [:] }
@@ -358,6 +476,7 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
                 guard let self, self.child?.isRunning == true, !self.closing, !self.failed else { return }
                 if ready {
                     self.logger.notice("Local health check succeeded")
+                    self.startWhisperWorker()
                     self.prepareLocalWebView()
                 } else {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in self?.checkHealth() }
@@ -489,6 +608,7 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
             navigation.append(command("로컬 AI 준비 상태…", #selector(showPreparation)))
             navigation.append(command("주문 정리 모델 준비…", #selector(confirmModelPreparation)))
             navigation.append(command("받아쓰기 모델 준비…", #selector(confirmWhisperPreparation)))
+            navigation.append(command("받아쓰기 연결 설정…", #selector(openWorkerSettings)))
             navigation.append(command("로컬 가입 인증 링크 열기…", #selector(openLocalVerification)))
             navigation.append(command("로컬 자료 폴더 열기", #selector(revealStorage)))
         }
@@ -525,7 +645,7 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
             if answer == .alertSecondButtonReturn { self.showPreparation() }
             if answer == .alertThirdButtonReturn { self.showPreparationGuide() }
         }
-        let common = "\n\n받아쓰기: 상태 미검증. 별도 일꾼이 필요하며 이 화면에서는 전사를 시험하지 않아요.\n유료 AI는 꺼져 있고, 녹음이나 원문은 외부로 보내지 않아요."
+        let common = "\n\n받아쓰기: " + whisperWorkerNotice + "\n이 화면에서는 실제 전사를 시험하지 않아요. 유료 AI는 꺼져 있고, 녹음이나 원문은 외부로 보내지 않아요."
         if aiEnvironment["AI_PROVIDER"] == "off" {
             alert.informativeText = "주문 정리 AI: 꺼짐. 수동 업무만 사용하도록 설정되어 있어요.\n" + runtimeNotice + common
             return
@@ -754,6 +874,7 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
     }
 
     private func stopChild() {
+        stopWhisperWorker()
         childOutput?.fileHandleForReading.readabilityHandler = nil
         try? childInput?.fileHandleForWriting.close()
         if let child, child.isRunning { child.terminate() }
@@ -767,7 +888,12 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
         stopManagedRuntime()
         if let modelSetupProcess, modelSetupProcess.isRunning { modelSetupProcess.terminate() }
         stopChild()
-        if let child, child.isRunning { child.waitUntilExit() }
+        // Never leave the app quit waiting indefinitely for a stuck Node child.
+        if let child {
+            let deadline = Date().addingTimeInterval(2)
+            while child.isRunning && Date() < deadline { Thread.sleep(forTimeInterval: 0.05) }
+            if child.isRunning { Darwin.kill(child.processIdentifier, SIGKILL) }
+        }
         if lock >= 0 { Darwin.close(lock) }
     }
 }

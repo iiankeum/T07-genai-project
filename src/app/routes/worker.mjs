@@ -133,6 +133,8 @@ function isTrue(v) {
 }
 
 export function register(router) {
+  // server.handleApi validates the bound worker token before this route.
+  router.get('/api/worker/authorization', () => ({ authorized: true }));
   router.get('/api/worker/status', () => workerStatus());
 
   router.post('/api/worker/heartbeat', async ({ req }) => {
