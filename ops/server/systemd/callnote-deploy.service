@@ -1,0 +1,26 @@
+# 콜노트 데모 자동 배포 — /etc/systemd/system/callnote-deploy.service (timer 가 1분마다 부른다)
+# 배포 사용자 callnote-deploy 로 돈다. 저장소 코드는 실행하지 않는다(npm 도 --ignore-scripts).
+# 앱 재시작·로그 보기는 sudoers 의 두 명령만 허용(/etc/sudoers.d/callnote-deploy).
+[Unit]
+Description=callnote T07 demo auto-deploy (origin/dev)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=callnote-deploy
+Group=callnote-deploy
+Environment=HOME=/var/lib/callnote-deploy/home
+Environment=npm_config_cache=/var/lib/callnote-deploy/home/.npm
+ExecStart=/usr/bin/python3 -I /usr/local/lib/callnote-deploy/deploy.py
+TimeoutStartSec=600
+Nice=10
+IOSchedulingClass=idle
+CPUQuota=80%
+MemoryHigh=300M
+MemoryMax=350M
+OOMScoreAdjust=900
+ProtectSystem=full
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/srv/callnote /var/lib/callnote-deploy

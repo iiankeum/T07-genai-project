@@ -1,0 +1,17 @@
+{
+  "name": "콜노트(가칭) — 전화 주문 받아쓰기 데모",
+  "short_name": "콜노트",
+  "description": "부품 대리점 전화 주문을 받아쓰고 주문 카드로 정리하는 데모(가짜 통화)",
+  "lang": "ko",
+  "start_url": "/#/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7f7fb",
+  "theme_color": "#7863da",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

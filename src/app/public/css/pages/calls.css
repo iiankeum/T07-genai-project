@@ -1,0 +1,63 @@
+/* 통화 목록 · 찾기(F08) — pages/calls.js. 다른 화면과 겹치지 않게 cl- 로 시작한다. */
+
+/* 검색칸: 크게 */
+.cl-search { display: flex; gap: 8px; align-items: stretch; margin: 0 0 14px; }
+.cl-search .input { flex: 1; min-width: 0; min-height: 58px; font-size: 1.1rem; border: 2px solid var(--brand-line); border-radius: 14px; }
+.cl-search .input:focus { border-color: var(--brand); }
+.cl-search .input::placeholder { color: #8b8da0; font-size: .95rem; }
+.cl-search .input::-webkit-search-cancel-button { display: none; }
+.cl-clear { flex: none; min-height: 58px; border-radius: 14px; }
+.cl-upload { flex: none; }
+
+/* 거르기 */
+.cl-filters { display: grid; gap: 4px; margin-bottom: 14px; }
+.cl-group { min-width: 0; }
+.cl-group-label { display: block; margin: 0 0 4px; font-size: .9rem; font-weight: 700; color: var(--muted); }
+/* 휴대폰에서도 상태 7개가 다 보이게 줄을 바꾼다(숨은 가로 밀기 없음) */
+.cl-tabs { margin-bottom: 6px; flex-wrap: wrap; overflow: visible; }
+.cl-filters .tab { min-height: var(--tap); padding: 8px 16px; font-size: .95rem; }
+.cl-range { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.cl-row2 { display: grid; gap: 8px; grid-template-columns: minmax(0, 1fr); }
+.cl-cust-select { min-height: var(--tap); }
+@media (min-width: 720px) {
+  .cl-row2 { grid-template-columns: auto minmax(220px, 320px); align-items: end; justify-content: start; gap: 18px; }
+}
+
+/* 결과 머리 */
+.cl-count { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; justify-content: space-between; margin: 4px 2px 10px; color: var(--ink-2); font-size: .95rem; }
+.cl-working { display: inline-flex; align-items: center; gap: 8px; color: #1d4ed8; font-size: .95rem; font-weight: 600; }
+.cl-results { transition: opacity .15s; }
+.cl-results.is-loading { opacity: .55; }
+
+/* 결과 줄: 제목 링크가 줄 전체를 덮고, 안의 다른 링크는 그 위에 */
+.cl-list { list-style: none; margin: 0; padding: 0; }
+.cl-item { position: relative; padding: 14px 16px; border-bottom: 1px solid var(--line); background: #fff; }
+.cl-item:last-child { border-bottom: 0; }
+.cl-item:hover { background: #faf9fe; }
+.cl-top { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: flex-start; justify-content: space-between; }
+.cl-title { flex: 1 1 220px; min-width: 0; color: var(--ink); font-weight: 800; font-size: 1.08rem; line-height: 1.45; text-decoration: none; }
+.cl-title::after { content: ''; position: absolute; inset: 0; border-radius: inherit; }
+.cl-title:focus-visible { outline: none; }
+.cl-title:focus-visible::after { outline: 3px solid #a993f2; outline-offset: -3px; }
+.cl-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.cl-item a:not(.cl-title), .cl-item button { position: relative; z-index: 1; }
+.cl-meta { display: flex; flex-wrap: wrap; gap: 2px 12px; align-items: center; margin: 6px 0 0; color: var(--muted); font-size: 1rem; }
+.cl-cust { display: inline-flex; align-items: center; min-height: var(--tap); padding: 0 12px; border: 1px solid var(--brand-line); border-radius: 999px; background: var(--brand-soft); color: var(--brand-ink); font-weight: 700; text-decoration: none; }
+.cl-cust:hover { background: #e7e0fb; }
+.cl-summary { margin: 6px 0 0; color: var(--ink-2); font-size: .98rem; }
+.cl-error { margin: 6px 0 0; color: var(--danger); font-size: .92rem; }
+
+/* 찾은 문장 */
+.cl-matches { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
+.cl-match { display: flex; gap: 10px; align-items: flex-start; min-height: var(--tap); padding: 10px 12px; border: 1px solid #f0e3a0; border-radius: 10px; background: #fffbe8; color: var(--ink); text-decoration: none; line-height: 1.55; }
+.cl-match:hover { border-color: #e2cd62; background: #fff6cc; }
+.cl-match-time { flex: none; min-width: 3.1em; color: var(--brand-ink); font-weight: 800; font-variant-numeric: tabular-nums; }
+.cl-match-text { min-width: 0; }
+.cl-more-matches { margin: 6px 0 0; color: var(--muted); font-size: .95rem; }
+
+/* 더 보기 · 빈 결과 */
+.cl-more { margin-top: 12px; }
+.cl-empty { background: #fff; border: 1px dashed var(--line); border-radius: var(--radius); }
+.cl-empty p:first-child { color: var(--ink-2); font-size: 1.05rem; }
+.cl-tip { font-size: .92rem; }
+.cl-empty-actions { justify-content: center; }

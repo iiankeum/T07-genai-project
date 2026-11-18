@@ -1,0 +1,197 @@
+/* 통화 상세(F02 · F04 · F05 · F06 · F11) — pages/call.js · call-card.js. 다른 화면과 겹치지 않게 cd- 로 시작한다.
+   좁은 화면: 머리 → 녹음 → 카드 → 글(위에서 아래로). 1100px 이상: 글(왼쪽) · 카드(오른쪽), 녹음 막대는 위에 붙어 있다. */
+
+/* ── 머리 ── */
+.cd-topnav { margin: -8px 0 6px; }
+.cd-back { padding-left: 6px; padding-right: 10px; }
+.cd-head { margin-bottom: 12px; }
+.cd-title { margin: 0 0 8px; font-size: 1.4rem; line-height: 1.35; letter-spacing: -0.6px; }
+.cd-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.cd-facts { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px 18px; margin: 0; }
+.cd-facts > div { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; min-width: 0; min-height: 34px; }
+.cd-facts dt { flex: none; width: 6.4em; color: var(--muted); font-size: .9rem; font-weight: 700; }
+.cd-facts dd { flex: 1; min-width: 0; margin: 0; }
+.cd-cust { display: inline-flex; align-items: center; min-height: var(--tap); font-weight: 800; }
+.cd-dim { color: var(--muted); font-size: .95rem; }
+.cd-type-chip { color: #3a4a7a; background: #e9edf8; border-color: #cfd7ef; }
+.cd-summary { margin: 10px 0 0; padding: 10px 12px; border-radius: 10px; background: #faf9fe; color: var(--ink-2); }
+@media (min-width: 720px) { .cd-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ── 녹음 막대 ── */
+.cd-player-slot { margin-bottom: 12px; }
+.cd-player { padding: 12px 14px; }
+.cd-audio { display: block; width: 100%; height: 48px; }
+.cd-player-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
+.cd-rates { display: flex; flex-wrap: wrap; gap: 6px; }
+.cd-rate { min-width: 64px; padding: 8px 12px; }
+.cd-rate[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: #fff; }
+.cd-player-note { margin: 6px 0 0; color: var(--muted); font-size: .95rem; }
+.cd-player-note:empty { display: none; }
+.cd-noaudio { margin: 0; }
+
+/* ── 처리 중 ── */
+.cd-progress { margin-bottom: 12px; border-color: #cddcff; background: #f7faff; }
+.cd-progress h2 { margin-bottom: 6px; }
+.cd-steps { list-style: none; display: grid; gap: 6px; margin: 6px 0 12px; padding: 0; }
+.cd-step { display: flex; align-items: center; gap: 10px; color: var(--muted); font-weight: 600; }
+.cd-step.is-done { color: var(--ok); }
+.cd-step.is-now { color: #1d4ed8; font-weight: 800; }
+.cd-step-mark { display: inline-flex; justify-content: center; width: 24px; flex: none; }
+.cd-worker { margin: 0 0 8px; padding: 10px 12px; border-radius: 10px; border: 1px solid; }
+.cd-worker.is-off { background: var(--warn-soft); border-color: var(--warn-line); color: var(--warn); }
+.cd-worker.is-on { background: var(--ok-soft); border-color: #bfe3d6; color: var(--ok); }
+.cd-failed { margin-bottom: 12px; }
+.cd-missing .notice { margin-bottom: 12px; }
+
+/* ── 화면 안 이동(좁은 화면) ── */
+.cd-jump { display: flex; gap: 8px; margin: 0 0 12px; }
+.cd-jump .btn { flex: 1 1 0; min-width: 0; padding-left: 8px; padding-right: 8px; }
+
+/* ── 본문 배치 ── */
+.cd-body { display: flex; flex-direction: column; gap: 14px; }
+.cd-body > .card + .card { margin-top: 0; }
+.cd-card, .cd-trans { min-width: 0; scroll-margin-top: calc(var(--cd-top, 60px) + 8px); }
+.cd-card { container-type: inline-size; }
+
+/* ── 통화 글 ── */
+.cd-trans-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.cd-trans-top h2 { margin: 0; }
+.cd-trans-tools { display: flex; flex-wrap: wrap; gap: 6px; }
+.cd-follow[aria-pressed="true"] { background: var(--brand-soft); border-color: var(--brand-line); color: var(--brand-ink); }
+.cd-legend { align-items: center; margin: 0 0 8px; }
+.hl-fix { background: transparent; box-shadow: none; border-radius: 0; border-bottom: 2px dotted #c47f00; }
+.cd-fixes { margin: 0 0 8px; color: var(--muted); font-size: .95rem; }
+.cd-fix { display: inline-block; margin: 2px 6px 2px 0; padding: 0 8px; border-radius: 999px; background: #f2f2f7; color: var(--ink-2); }
+.cd-trans-help { margin: 0 0 8px; color: var(--muted); font-size: .95rem; }
+.cd-segs { list-style: none; margin: 0; padding: 0; }
+.cd-seg { display: flex; align-items: flex-start; gap: 10px; padding: 4px 6px; border: 2px solid transparent; border-radius: 12px; cursor: pointer; scroll-margin-top: 160px; transition: background .2s, border-color .2s; }
+.cd-seg + .cd-seg { margin-top: 2px; }
+.cd-seg:hover { background: #faf9fe; }
+.cd-seg.is-unsure { background: #fffaf0; }
+.cd-seg.is-playing { background: var(--brand-soft); }
+.cd-seg.is-mark { border-color: var(--brand); background: #f5f1ff; box-shadow: 0 0 0 3px rgba(120, 99, 218, .14); }
+.cd-time { flex: none; min-width: 64px; min-height: var(--tap); padding: 0 8px; border: 1px solid var(--brand-line); border-radius: 10px; background: #fff; color: var(--brand-ink); font-weight: 800; font-variant-numeric: tabular-nums; cursor: pointer; }
+.cd-time:hover { background: var(--brand-soft); }
+.cd-time-none { display: inline-flex; align-items: center; justify-content: center; border-color: transparent; background: transparent; color: var(--muted); cursor: inherit; }
+.cd-seg-body { flex: 1; min-width: 0; padding-top: 9px; font-size: 1.02rem; line-height: 1.7; }
+.cd-spk { display: inline-block; margin-right: 6px; padding: 0 8px; border-radius: 6px; background: #eef0f6; color: var(--ink-2); font-size: .8rem; font-weight: 800; vertical-align: 1px; }
+.cd-seg-flag { display: block; margin: 4px 0 2px; color: var(--warn); font-size: .95rem; }
+.cd-seg-flag .listen-flag { min-height: 40px; padding: 4px 10px; }
+.cd-plain { margin: 0; line-height: 1.8; white-space: pre-wrap; }
+.cd-empty { margin: 0; padding: 16px 0; color: var(--muted); }
+
+/* ── 주문 카드 ── */
+.cd-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.cd-card-head h2 { margin: 0; }
+.cd-card-sub { margin: 0 0 12px; color: var(--muted); font-size: .95rem; line-height: 1.8; }
+.cd-lock { margin-bottom: 12px; }
+.cd-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px 16px; }
+@container (min-width: 480px) {
+  .cd-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cd-field-wide { grid-column: 1 / -1; }
+}
+.cd-field { min-width: 0; margin: 0 -8px; padding: 8px; border: 2px solid transparent; border-radius: 12px; cursor: pointer; transition: background .15s, border-color .15s; }
+.cd-field:hover { background: #fbfaff; }
+.cd-field.ev-active, .cd-item.ev-active { border-color: var(--brand); background: #f8f5ff; }
+.cd-field.is-unsure .input, .cd-item.is-unsure .input { border-color: #e9c77e; background: #fffdf5; }
+.cd-field-top { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-height: 28px; margin-bottom: 4px; }
+.cd-label { color: var(--ink-2); font-size: .92rem; font-weight: 800; cursor: pointer; }
+.cd-saved { margin-left: auto; color: var(--ok); font-size: .9rem; font-weight: 700; }
+.cd-saved.is-fail { color: var(--danger); }
+.cd-input-row { display: flex; align-items: stretch; gap: 6px; }
+.cd-input-row > .input, .cd-input-row > .textarea, .cd-input-row > .cd-urgent { flex: 1; min-width: 0; }
+.cd-card .input[readonly], .cd-card .textarea[readonly] { background: #f6f6f9; border-color: #e2e2ea; color: var(--ink-2); }
+.cd-evbtn { flex: none; min-width: 64px; padding: 6px 10px; border-color: var(--brand-line); color: var(--brand-ink); font-variant-numeric: tabular-nums; }
+.cd-evtime { font-size: .9rem; }
+.cd-quote { display: none; margin-top: 8px; padding: 8px 10px; border-left: 4px solid var(--brand); border-radius: 0 8px 8px 0; background: #fff; font-size: 1rem; line-height: 1.6; }
+.ev-active > .cd-quote { display: block; }
+.cd-quote-label { margin-right: 4px; color: var(--brand-ink); font-size: .78rem; font-weight: 800; }
+.cd-quote-text { quotes: '「' '」'; }
+.cd-quote-time { color: var(--muted); font-size: .9rem; font-variant-numeric: tabular-nums; }
+.cd-to-trans { display: flex; margin-top: 4px; padding: 6px 8px; font-size: .92rem; }
+.cd-flags { display: grid; gap: 4px; margin-top: 6px; }
+.cd-flag-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; color: var(--warn); font-size: .95rem; }
+.cd-flag { min-height: var(--tap); padding: 4px 12px; font-size: .9rem; }
+.cd-flag-why { min-width: 0; }
+
+.cd-sec { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.cd-sec h3 { margin: 0; }
+.cd-sec-top { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-bottom: 8px; }
+.cd-other-flags h3 { margin-bottom: 6px; color: var(--warn); }
+
+/* 부품 줄 */
+.cd-item-list { list-style: none; display: grid; gap: 10px; margin: 0; padding: 0; }
+.cd-item { min-width: 0; padding: 10px 12px 12px; border: 2px solid var(--line); border-radius: 12px; background: #fff; cursor: pointer; }
+.cd-item.is-unsure { border-color: var(--warn-line); }
+.cd-item-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.cd-item-no { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: var(--brand-soft); color: var(--brand-ink); font-size: .9rem; font-weight: 800; }
+.cd-item-title { flex: 1; min-width: 0; font-weight: 800; }
+.cd-item-del { color: var(--danger); padding-left: 10px; padding-right: 10px; }
+.cd-item-grid { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 8px; }
+.cd-sub-part, .cd-sub-no { grid-column: 1 / -1; }
+@container (min-width: 560px) {
+  .cd-item-grid { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto; }
+  .cd-sub-part { grid-column: auto; }
+}
+.cd-sub { display: block; min-width: 0; }
+.cd-sub > span { display: block; margin-bottom: 2px; color: var(--muted); font-size: .9rem; font-weight: 700; }
+.cd-qty { display: flex; align-items: stretch; gap: 4px; }
+.cd-qty-btn { width: var(--tap); padding: 0; font-size: 1.3rem; }
+.cd-qty-input { width: 58px; padding: 8px 4px; text-align: center; font-weight: 800; -moz-appearance: textfield; appearance: textfield; }
+.cd-qty-input::-webkit-outer-spin-button, .cd-qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.cd-item-empty { padding: 12px; border: 1px dashed var(--line); border-radius: 12px; color: var(--muted); }
+.cd-add { margin-top: 10px; border-style: dashed; color: var(--brand-ink); }
+.cd-items .help { margin-top: 8px; }
+
+/* 급함 */
+.cd-urgent { justify-content: flex-start; }
+.cd-urgent.is-on { background: #d9480f; border-color: #d9480f; color: #fff; }
+.cd-urgent.is-on:hover { background: #bf3f0d; border-color: #bf3f0d; }
+
+/* 다시 물어볼 것 */
+.cd-ask .help { margin: 0 0 8px; }
+.cd-ask-list { list-style: none; display: grid; gap: 6px; margin: 0 0 8px; padding: 0; }
+.cd-ask-list li { display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 12px; border: 1px solid var(--warn-line); border-radius: 10px; background: #fff7dc; }
+.cd-ask-text { flex: 1; min-width: 0; color: #6b4600; font-weight: 700; }
+.cd-ask-done { flex: none; }
+.cd-ask-none { margin: 0 0 8px; color: var(--ok); font-weight: 700; }
+.cd-ask-add { display: flex; gap: 6px; }
+.cd-ask-add .input { flex: 1; min-width: 0; }
+
+/* 상태 단추 · 다시 전화 · 다시 정리 */
+.cd-actions .notice { margin-bottom: 10px; }
+.cd-why-ok { margin: 0 0 10px; color: var(--muted); font-size: .9rem; }
+.cd-act-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.cd-act-row .btn { flex: 1 1 140px; }
+.cd-cb-on { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 8px; }
+.cd-reex .help { margin: 4px 0 8px; }
+.cd-reex .notice { margin-bottom: 8px; }
+.cd-model { margin: 12px 0 0; color: var(--muted); font-size: .9rem; }
+
+/* ── 아래 · 떠 있는 재생 단추 ── */
+.cd-foot { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.cd-foot .btn { flex: 1 1 220px; }
+.cd-float { position: fixed; right: 16px; bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 25; min-height: 52px; padding: 10px 18px; border: 0; border-radius: 999px; background: var(--brand); color: #fff; font-size: 1rem; font-weight: 800; font-variant-numeric: tabular-nums; box-shadow: 0 8px 24px rgba(60, 40, 140, .3); cursor: pointer; }
+@media (min-width: 900px) { .cd-float { right: 24px; bottom: 24px; } }
+
+/* ── 넓은 화면: 글(왼쪽) · 카드(오른쪽), 녹음 막대는 위에 붙임 ── */
+@media (min-width: 1100px) {
+  .cd-player-slot.has-audio { position: sticky; top: var(--cd-top, 60px); z-index: 15; margin: 0 -4px 12px; padding: 0 4px 8px; background: var(--bg); }
+  .cd-jump { display: none !important; }
+  .cd-to-trans { display: none; }
+  .cd-body { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(380px, 1fr); align-items: start; gap: 16px; }
+  .cd-trans {
+    grid-column: 1; grid-row: 1;
+    position: sticky; top: calc(var(--cd-top, 60px) + var(--cd-player-h, 0px) + 12px);
+    max-height: calc(100vh - var(--cd-top, 60px) - var(--cd-player-h, 0px) - 24px);
+    overflow-y: auto; overscroll-behavior: contain; padding-top: 0;
+  }
+  .cd-trans-top { position: sticky; top: 0; z-index: 2; margin: 0 -16px 8px; padding: 14px 16px 8px; background: #fff; border-bottom: 1px solid var(--line); }
+  .cd-card { grid-column: 2; grid-row: 1; }
+}
+
+@media print {
+  .cd-player-slot, .cd-float, .cd-jump, .cd-evbtn, .cd-to-trans, .cd-actions, .cd-callback, .cd-reex, .cd-add, .cd-item-del, .cd-qty-btn { display: none !important; }
+  .cd-body { display: block; }
+  .cd-trans { max-height: none; overflow: visible; position: static; }
+}

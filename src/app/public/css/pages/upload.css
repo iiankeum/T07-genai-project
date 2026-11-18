@@ -1,0 +1,71 @@
+/* F01 녹음 올리기 화면 — 끌어다 놓기 상자 · 진행 막대 · 흐름 그림 · 일꾼 상태 */
+.upload-page .card + .card, .upload-page .card + .grid-2, .upload-page .grid-2 + .card { margin-top: 14px; }
+.upload-side > .card + .card { margin-top: 0; }
+
+.upload-drop { border: 2px dashed var(--brand-line); border-radius: var(--radius); background: #fbfaff; padding: 26px 16px; text-align: center; transition: background .15s, border-color .15s; }
+.upload-drop.is-drag { background: var(--brand-soft); border-color: var(--brand); }
+.upload-drop-icon { color: var(--brand); }
+.upload-drop-title { margin: 6px 0 2px; font-size: 1.15rem; font-weight: 800; }
+.upload-drop-or { margin: 0 0 10px; color: var(--muted); font-size: .9rem; }
+.upload-pick { cursor: pointer; }
+.upload-pick:focus-within { outline: 3px solid #a993f2; outline-offset: 2px; }
+.upload-drop .help { margin: 12px 0 0; }
+
+.upload-rows { list-style: none; margin: 14px 0 0; padding: 0; }
+.upload-rows:empty { display: none; }
+.upload-row { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px 12px; background: #fff; }
+.upload-row + .upload-row { margin-top: 8px; }
+.upload-row.is-blocked, .upload-row.is-error { border-color: #f4c7c1; background: #fffafa; }
+.upload-row-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.upload-name { font-weight: 700; min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.upload-size { flex: none; }
+.upload-remove { flex: none; }
+.upload-bar { height: 10px; border-radius: 999px; background: #eeedf5; overflow: hidden; margin: 8px 0 4px; }
+.upload-bar i { display: block; height: 100%; background: var(--brand); border-radius: 999px; transition: width .2s; }
+.upload-row.is-done .upload-bar i, .upload-row.is-duplicate .upload-bar i { background: var(--ok); }
+.upload-row-msg { font-size: .92rem; margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; }
+.upload-link { font-weight: 800; display: inline-flex; align-items: center; min-height: var(--tap); }
+
+.upload-options { display: grid; gap: 0 14px; grid-template-columns: minmax(0, 1fr); margin-top: 16px; }
+@media (min-width: 640px) { .upload-options { grid-template-columns: 1fr 1fr; } }
+.upload-confirm { padding: 12px 14px; border: 1px solid var(--warn-line); background: var(--warn-soft); border-radius: var(--radius-sm); margin: 4px 0 12px; color: var(--ink); }
+.upload-box .help:empty { display: none; }
+
+/* 흐름 그림(단계 상자) */
+.upload-flow { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 22px; grid-template-columns: minmax(0, 1fr); counter-reset: step; }
+.upload-flow li { position: relative; counter-increment: step; background: #fff; border: 1px solid var(--brand-line); border-radius: var(--radius-sm); padding: 10px 12px 10px 48px; min-height: 56px; }
+.upload-flow li::before { content: counter(step); position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 26px; height: 26px; border-radius: 50%; background: var(--brand); color: #fff; font-weight: 800; font-size: .85rem; display: flex; align-items: center; justify-content: center; }
+.upload-flow li + li::after { content: '↓'; position: absolute; left: 50%; top: -21px; transform: translateX(-50%); color: var(--brand); font-weight: 800; line-height: 1.2; }
+.upload-flow strong { display: block; }
+.upload-flow span { display: block; color: var(--muted); font-size: .95rem; }
+@media (min-width: 900px) {
+  .upload-flow { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 22px; }
+  .upload-flow li { padding: 40px 10px 10px; text-align: center; }
+  .upload-flow li::before { left: 50%; top: 10px; transform: translateX(-50%); }
+  .upload-flow li + li::after { content: '→'; left: -18px; top: 50%; transform: translateY(-50%); }
+}
+
+/* 일꾼 상태 · 예시 녹음 */
+.upload-worker-state { margin: 0 0 8px; font-weight: 700; }
+.upload-dl { margin: 0 0 8px; }
+.upload-dl div { display: flex; gap: 10px; padding: 4px 0; border-bottom: 1px solid var(--line); }
+.upload-dl dt { color: var(--muted); font-size: .95rem; min-width: 5.5em; }
+.upload-dl dd { margin: 0; font-weight: 600; min-width: 0; }
+.upload-queue { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.upload-queue > div { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 8px 12px; background: #fff; }
+.upload-queue-num { display: block; font-size: 1.6rem; font-weight: 800; line-height: 1.2; }
+.upload-samples { list-style: none; margin: 0; padding: 0; }
+.upload-samples li { padding: 10px 0; border-bottom: 1px solid var(--line); }
+.upload-samples li:last-child { border-bottom: 0; }
+.upload-sample-title { font-weight: 700; margin-bottom: 6px; }
+
+
+/* F12 안내 */
+.upload-f12 p { margin: 0 0 10px; }
+.upload-cmd { white-space: pre-wrap; word-break: break-all; margin: 0 0 10px; }
+.upload-f12-notes { margin: 0; padding-left: 20px; }
+.upload-f12-notes li + li { margin-top: 4px; }
+
+/* 단추는 모두 48px 이상(손가락으로 누르기 쉽게) */
+.upload-page .btn-sm { min-height: var(--tap); }
+.upload-page .card-title h2 { margin: 0; }

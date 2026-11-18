@@ -1,0 +1,64 @@
+/* 출고 목록(F14): 넓은 화면 · 인쇄는 표, 좁은 화면은 주문 카드 */
+.print-only { display: none; }
+.ship-scope .tab { min-height: 48px; padding: 8px 16px; font-size: 1rem; }
+.ship-tools { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
+.ship-total { margin: 0 0 14px; font-size: 1.02rem; color: var(--ink-2); }
+.ship-group { margin: 0 0 24px; }
+.ship-cust { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; margin: 0 0 10px; padding-left: 10px; border-left: 5px solid var(--brand); font-size: 1.25rem; }
+.ship-cust a { color: var(--ink); text-decoration: none; }
+.ship-cust a:hover { color: var(--brand-ink); text-decoration: underline; }
+.ship-cust-n { color: var(--muted); font-size: .9rem; font-weight: 600; }
+.ship-foot { margin: 8px 0 0; color: var(--muted); font-size: .9rem; }
+.partno { font-family: ui-monospace, Consolas, monospace; font-weight: 700; letter-spacing: .3px; }
+
+/* 표(1100px 이상 · 인쇄) */
+.ship-table-wrap { display: none; }
+.ship-table { font-size: 1rem; }
+.ship-table td.num, .ship-table th.num { text-align: right; white-space: nowrap; }
+.ship-table tbody.ship-order { border-top: 2px solid #d9d4ee; }
+.ship-table tbody.ship-order:first-of-type { border-top: 0; }
+.ship-table tbody.is-urgent td:first-child { box-shadow: inset 4px 0 0 #d9480f; }
+.ship-part { font-weight: 700; }
+.ship-car { color: var(--ink); font-weight: 600; text-decoration: none; }
+.ship-car:hover { color: var(--brand-ink); text-decoration: underline; }
+.ship-btn { white-space: nowrap; }
+
+/* 카드(좁은 화면) */
+.ship-cards { display: grid; gap: 10px; }
+.ship-card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px; }
+.ship-card.is-urgent { border-left: 5px solid #d9480f; }
+.ship-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.ship-card-car { color: var(--ink); font-weight: 700; font-size: 1.05rem; text-decoration: none; }
+.ship-items { list-style: none; margin: 0 0 10px; padding: 0; border-top: 1px solid var(--line); }
+.ship-items li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.si-part { font-weight: 700; font-size: 1.05rem; }
+.si-side { color: var(--ink-2); font-weight: 600; }
+.si-qty { font-weight: 800; font-size: 1.05rem; text-align: right; white-space: nowrap; }
+.si-no { grid-column: 1 / -1; font-size: .92rem; }
+.ship-meta { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0 0 12px; }
+.ship-meta div { display: flex; gap: 6px; }
+.ship-meta dt { color: var(--muted); font-size: .9rem; }
+.ship-meta dd { margin: 0; font-weight: 700; }
+.ship-card-act .ship-btn { width: 100%; }
+
+@media (min-width: 1100px) {
+  .ship-table-wrap { display: block; }
+  .ship-cards { display: none; }
+}
+
+@page { margin: 12mm; }
+@media print {
+  .print-only { display: block; margin: 4px 0 0; font-size: 10pt; color: #333; }
+  .ship-cards { display: none !important; }
+  .ship-table-wrap { display: block !important; overflow: visible; border: 0; border-radius: 0; }
+  .ship-table { font-size: 10.5pt; }
+  .ship-table th, .ship-table td { padding: 4px 6px; }
+  .ship-table thead { display: table-header-group; }
+  .ship-order { break-inside: avoid; page-break-inside: avoid; }
+  .ship-cust { break-after: avoid; page-break-after: avoid; font-size: 13pt; border-left-width: 3px; }
+  .ship-cust a, .ship-car { color: #000; text-decoration: none; }
+  .ship-group { margin-bottom: 14px; }
+  .chip { border: 1px solid #999; background: #fff !important; color: #000 !important; }
+  .page-head h1 { font-size: 16pt; }
+  .ship-total { font-size: 10.5pt; }
+}
