@@ -419,8 +419,15 @@ export default {
       const t = e.target;
       if (!(t instanceof Element)) return;
       const link = t.closest('a[href]');
-      if (scope && link?.getAttribute('href')?.startsWith('#/calls/') && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey && e.button === 0) {
-        returnPosition = { scope, hash: hashFor(state), count: calls.length, href: link.getAttribute('href') };
+      if (link?.getAttribute('href')?.startsWith('#/calls/') && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey && e.button === 0) {
+        // 입력 지연 처리 전에 상세를 열어도 뒤로 가기에서 마지막 검색어를 잃지 않는다.
+        clearTimeout(typeTimer);
+        const pendingQuery = input.value.trim() !== state.q;
+        if (pendingQuery) {
+          state.q = input.value.trim();
+          syncUrl(false); // 상세가 쌓이기 전 현재 목록 주소만 교체한다.
+        }
+        if (scope) returnPosition = { scope, hash: hashFor(state), count: pendingQuery ? PAGE : calls.length, href: link.getAttribute('href') };
       }
       const st = t.closest('[data-status]');
       if (st) { if (state.status !== st.dataset.status) { state.status = st.dataset.status; changed(); } return; }
