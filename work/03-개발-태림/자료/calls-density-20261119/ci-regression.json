@@ -1,0 +1,88 @@
+{
+  "fakeDataOnly": true,
+  "metrics": [
+    {
+      "width": 1440,
+      "rows": [
+        {
+          "height": 80,
+          "top": 490.171875,
+          "bottom": 570.171875
+        },
+        {
+          "height": 80,
+          "top": 570.171875,
+          "bottom": 650.171875
+        },
+        {
+          "height": 80,
+          "top": 650.171875,
+          "bottom": 730.171875
+        },
+        {
+          "height": 95,
+          "top": 730.171875,
+          "bottom": 825.171875
+        },
+        {
+          "height": 80,
+          "top": 825.171875,
+          "bottom": 905.171875
+        }
+      ],
+      "fullyVisible": 4,
+      "customerTarget": {
+        "x": 546,
+        "y": 496.171875,
+        "width": 60,
+        "height": 44
+      },
+      "keyboardPrimaryAndCustomer": true,
+      "fullSummaryAccessible": true,
+      "longNameLargeTextNoOverflow": true
+    },
+    {
+      "width": 390,
+      "rows": [
+        {
+          "height": 136,
+          "top": 519.46875,
+          "bottom": 655.46875
+        },
+        {
+          "height": 136,
+          "top": 655.46875,
+          "bottom": 791.46875
+        },
+        {
+          "height": 136,
+          "top": 791.46875,
+          "bottom": 927.46875
+        },
+        {
+          "height": 136,
+          "top": 927.46875,
+          "bottom": 1063.46875
+        },
+        {
+          "height": 136,
+          "top": 1063.46875,
+          "bottom": 1199.46875
+        }
+      ],
+      "fullyVisible": 2,
+      "customerTarget": {
+        "x": 245.703125,
+        "y": 527.46875,
+        "width": 60,
+        "height": 44
+      },
+      "keyboardPrimaryAndCustomer": true,
+      "fullSummaryAccessible": true,
+      "longNameLargeTextNoOverflow": true
+    }
+  ],
+  "errors": [],
+  "external": [],
+  "mutations": []
+}
