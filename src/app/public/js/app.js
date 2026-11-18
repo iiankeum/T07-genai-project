@@ -84,13 +84,14 @@ function renderNav(page, meta) {
 }
 
 function renderMore(el, meta) {
-  const items = [...NAV.filter((n) => !['today', 'board', 'shipping'].includes(n.page) && !Array.isArray(n.page)), LIVE, WORKSPACES, SETTINGS, NOTIFICATIONS, HELP];
-  if (meta?.access?.role === 'admin') items.push(ADMIN);
-  items.push({ href: '#/trial', label: '무료 체험 신청', icon: '✉' });
-  render(el, html`<div class="page">
-    <div class="page-head"><h1>더보기</h1></div>
-    <ul class="menu-list">${items.map((n) => html`<li><a class="menu-link" href="${n.href}"><span class="nav-icon">${icon(n.page)}</span><span>${n.label}</span><span class="menu-arrow" aria-hidden="true">›</span></a></li>`)}</ul>
-  </div>`);
+  const groups = [
+    {title:'통화 기록하기', description:'파일을 올리거나 지금 통화를 받아써요.', items:[LIVE,NAV[4]]},
+    {title:'찾고 물어보기', description:'지난 통화와 팀의 지식을 활용해요.', items:NAV.slice(5)},
+    {title:'내 작업공간', description:'계정, 팀 연결과 화면을 관리해요.', items:[WORKSPACES,SETTINGS,NOTIFICATIONS]},
+    {title:'도움과 관리', description:'사용 안내와 관리 메뉴를 확인해요.', items:[HELP,...(meta?.access?.role==='admin'?[ADMIN]:[]),{href:'#/trial',label:'무료 체험 신청',icon:'✉'}]},
+  ];
+  render(el, html`<div class="page tools-page"><div class="page-head"><div><h1>지식 · 도구</h1><p class="sub">필요한 작업을 골라 이어가세요.</p></div></div><div class="tools-directory">${groups.map(g=>html`<section class="card tools-section"><h2>${g.title}</h2><p>${g.description}</p><ul class="menu-list">${g.items.map(n=>html`<li><a class="menu-link" href="${n.href}"><span class="nav-icon">${icon(n.page)}</span><span>${n.label}</span><span class="menu-arrow" aria-hidden="true">›</span></a></li>`)}</ul></section>`)}</div></div>`);
+
 }
 
 function goToLogin(returnTo) {

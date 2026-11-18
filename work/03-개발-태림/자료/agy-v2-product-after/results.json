@@ -2,6 +2,8 @@
   "fakeData": true,
   "paidAI": false,
   "checks": [
+    "shipping scope and CSV content",
+    "print action and print-only layout",
     "desktop primary and secondary routes retained",
     "workspace switch retained",
     "mobile primary task navigation",
@@ -110,6 +112,18 @@
       "size": "mobile",
       "overflow": false,
       "heading": "설정"
+    },
+    {
+      "name": "tools",
+      "size": "desktop",
+      "overflow": false,
+      "heading": "지식 · 도구"
+    },
+    {
+      "name": "tools",
+      "size": "mobile",
+      "overflow": false,
+      "heading": "지식 · 도구"
     }
   ],
   "errors": []

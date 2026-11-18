@@ -365,3 +365,12 @@ h2, h3, .card-title { font-weight: 650; }
  body .view .page:not(.cd-page) { max-width:1148px; }
  body .view .page.cd-page { max-width:1440px; }
 }
+
+.tools-directory { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px; }
+.tools-section { padding:24px; min-width:0; }
+.tools-section h2 { font-size:18px; line-height:26px; margin:0 0 8px; }
+.tools-section>p { color:var(--muted); font-size:14px; line-height:22px; margin:0 0 16px; }
+.tools-section .menu-list { margin:0; padding:0; border:0; box-shadow:none; }
+.tools-section .menu-link { padding:14px 0; min-height:48px; }
+@media(max-width:640px) { .tools-directory { grid-template-columns:minmax(0,1fr); gap:16px; } .tools-section { padding:20px; } }
+.tools-directory > .tools-section { margin:0; }

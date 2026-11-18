@@ -18,7 +18,7 @@ try {
  browser=await chromium.launch({headless:true});const context=await browser.newContext({reducedMotion:'reduce'});
  await context.route('**/*',r=>new URL(r.request().url()).hostname==='127.0.0.1'?r.continue():r.abort());
  const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
- for(const [name,route] of [['today','/'],['calls','/calls'],['board','/board'],['shipping','/shipping'],['upload','/upload'],['live','/live'],['assistant','/assistant'],['settings','/settings']]){
+ for(const [name,route] of [['today','/'],['calls','/calls'],['board','/board'],['shipping','/shipping'],['upload','/upload'],['live','/live'],['assistant','/assistant'],['settings','/settings'],['tools','/more']]){
   for(const [size,w,h] of [['desktop',1440,1000],['mobile',390,844]]){
    await page.setViewportSize({width:w,height:h});await page.goto(base+'/#'+route);await page.locator('#view h1').first().waitFor();await page.evaluate(()=>document.fonts.ready);await page.waitForTimeout(500);
    if(name==='assistant' && size==='mobile') {
@@ -35,7 +35,7 @@ try {
  await page.goto(base+'/#/');await page.locator('#sideNav .nav-link').first().waitFor();
  for(const href of ['#/','#/calls','#/board','#/shipping','#/more','#/settings'])assert.equal(await page.locator(`#sideNav a[href="${href}"]`).count(),1,'desktop primary destination retained');
  assert.equal(await page.locator('#headerWorkspace a[href="#/workspaces"]').count(),1,'workspace switch retained');
- await page.locator('#sideNav a[href="#/more"]').click();await page.locator('.menu-list').waitFor();
+ await page.locator('#sideNav a[href="#/more"]').click();await page.locator('.tools-directory').waitFor();assert.equal(await page.locator('.tools-section').count(),4);
  for(const href of ['#/upload','#/live','#/assistant','#/ask','#/knowledge','#/settings/notifications','#/help'])assert.equal(await page.locator(`.menu-list a[href="${href}"]`).count(),1,'secondary destination retained');
  await page.setViewportSize({width:390,height:844});
  await page.goto(base+'/#/');await page.locator('#today-priority a').first().waitFor();
@@ -50,6 +50,18 @@ try {
  assert.ok(await page.locator('.cd-card input').last().evaluate(el=>el.getBoundingClientRect().bottom<=document.querySelector('.cd-actions').getBoundingClientRect().top),'last input clears fixed actions at page end');
  await page.locator('[data-jump="trans"]').click();assert.equal(await page.locator('.cd-actions').isVisible(),false,'card actions absent in transcript');
  await page.locator('[data-jump="card"]').click();assert.equal(await page.locator('.cd-actions').isVisible(),true);
+ await page.setViewportSize({width:1440,height:1000});
+ await page.goto(base+'/#/shipping');await page.locator('.ship-tools a[download]').waitFor();
+ await page.locator('[data-act="scope"][data-scope="today"]').click();
+ assert.equal(await page.locator('[data-scope="today"]').getAttribute('aria-pressed'),'true');
+ assert.ok((await page.locator('.ship-tools a[download]').getAttribute('href')).includes('scope=today'),'CSV scope matches screen');
+ const csv=await page.request.get(new URL(await page.locator('.ship-tools a[download]').getAttribute('href'),base).href);
+ assert.equal(csv.status(),200);assert.ok((await csv.text()).includes('거래처'),'CSV includes customer header');
+ await page.locator('[data-act="scope"][data-scope="all"]').click();
+ await page.locator('[data-act="print"]:not([disabled])').waitFor();
+ await page.evaluate(()=>{window.__printCount=0;window.print=()=>window.__printCount++;});
+ await page.locator('[data-act="print"]').click();assert.equal(await page.evaluate(()=>window.__printCount),1,'print triggers once without real print dialog');
+ await page.emulateMedia({media:'print'});assert.equal(await page.locator('.topbar').isVisible(),false,'print hides navigation');await page.emulateMedia({media:'screen'});
  await page.goto(base+'/#/upload');await page.locator('[data-ref="file"]').waitFor();
  await page.locator('[data-ref="file"]').setInputFiles({name:'가짜-invalid.txt',mimeType:'text/plain',buffer:Buffer.from('fake')});
  assert.equal(await page.locator('[data-act="upload"]').isDisabled(),true);assert.equal(await page.locator('.upload-row.is-blocked').count(),1);
@@ -62,5 +74,5 @@ try {
  await page.goto(base+'/#/settings');await page.locator('.settings-directory').waitFor();assert.equal(await page.locator('.settings-destination').count(),7);
  await page.locator('.settings-destination[href="#/settings/display"]').click();await page.getByRole('heading',{name:'화면 설정',exact:true}).waitFor();
  assert.equal(await page.locator('.settings-nav [aria-current="page"]').getAttribute('href'),'#/settings/display');
- assert.deepEqual(errors,[]);await writeFile(path.join(dir,'results.json'),JSON.stringify({fakeData:true,paidAI:false,checks:["desktop primary and secondary routes retained", "workspace switch retained", "mobile primary task navigation", "task queue before metrics", "detail fixed action visibility and last input clearance", "detail transcript/card switch", "8 mobile large-text layouts","responsive assistant disclosure","upload invalid file rejection","upload consent gate without sending audio","7 settings cards and display navigation"],results,errors},null,2));console.log(`PASS ${results.length} viewports`);
+ assert.deepEqual(errors,[]);await writeFile(path.join(dir,'results.json'),JSON.stringify({fakeData:true,paidAI:false,checks:["shipping scope and CSV content", "print action and print-only layout", "desktop primary and secondary routes retained", "workspace switch retained", "mobile primary task navigation", "task queue before metrics", "detail fixed action visibility and last input clearance", "detail transcript/card switch", "8 mobile large-text layouts","responsive assistant disclosure","upload invalid file rejection","upload consent gate without sending audio","7 settings cards and display navigation"],results,errors},null,2));console.log(`PASS ${results.length} viewports`);
 }finally{await browser?.close();child.kill('SIGTERM');await new Promise(r=>child.exitCode!==null?r():child.once('exit',r));await rm(data,{recursive:true,force:true});}
