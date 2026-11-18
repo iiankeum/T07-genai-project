@@ -1,3 +1,12 @@
+## 2026-11-18 16:41 KST · 감독기 SIGTERM 입력 핸들 종료 보완
+- 돌린 사람 · 도구 · 작업방: 신*림(taejs) · ChatGPT dot · 아맞다 직접 작업
+- 한 일: SIGTERM 후 열린 stdin 때문에 CLI가 남는 결함을 수정하고 수명관리 회귀를16개로 늘렸다.
+- 왜: native의 stdin EOF에 가려졌던 단독 종료 신호 경로도 안전하게 끝나야 한다.
+- 어떻게: 내부 검증1개. main finally에서 stdin pause/destroy, 만료·crash backoff·spawn오류·EOF·SIGTERM·SIGKILL fallback·무관자식보존을 임시 mock으로 확인.
+- 결과물: [감독기](../../src/mac-app/whisper-worker.mjs) · [16개 회귀](../../src/mac-app/tests/whisper-worker.test.mjs)
+- AI 가 판단한 것 · 사람이 확인할 것: 16개 및 전체helper90개 통과. 실제 앱/사용자공간은 건드리지 않았다. mock시험은 실Whisper 장기운영을 대신하지 않는다.
+- 다음 할 일: 신규Mac/서명/라이선스 배포차단 문서와개발패키지갱신. 유료API·운영배포·병합 없음.
+
 ## 2026-11-18 16:30 KST · 자동 받아쓰기 10분 유지 확인
 - 돌린 사람 · 도구 · 작업방: 신*림(taejs) · ChatGPT dot · 아맞다 직접 작업
 - 한 일: 가짜 임시 공간에서 실제 Whisper 일꾼600초 유지와 브라우저 연결/해제·프로세스 종료를 확인했다.
