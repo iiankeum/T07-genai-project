@@ -12,9 +12,9 @@ const result = await ollamaJson({
   schema: {type:'object', properties:{items:{type:'array',items:{type:'object',properties:{name:{type:'string'},quantity:{type:'integer'}},required:['name','quantity'],additionalProperties:false}}},required:['items'],additionalProperties:false},
   maxTokens: 256, timeoutMs: 120000,
 });
-assert.equal(result.provider, 'ollama');
+assert.equal(result.model, 'qwen3:4b');
 assert.equal(result.data.items.length, 2);
 assert.ok(result.data.items.some(x => x.name.includes('패드') && x.quantity === 1));
 assert.ok(result.data.items.some(x => x.name.includes('디스크') && x.quantity === 2));
-console.log(JSON.stringify({at:new Date().toISOString(), syntheticInput:true, realInference:true,
+console.log(JSON.stringify({at:new Date().toISOString(), syntheticInput:true, realInference:true, provider:'ollama',
   elapsedMs:Date.now()-started, ...result}, null, 2));
