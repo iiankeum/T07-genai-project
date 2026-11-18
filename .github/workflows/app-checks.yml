@@ -39,6 +39,11 @@ jobs:
           KNOWLEDGE_OUTPUT_DIR: artifacts/e2e/knowledge
           SETTINGS_OUTPUT: artifacts/e2e/settings
           MULTIITEM_OUTPUT: artifacts/e2e/multiitem
+      - name: Fixture interaction regressions (form feedback, asynchronous modal)
+        run: npm run test:interaction-e2e
+        env:
+          FORM_FEEDBACK_OUTPUT_DIR: artifacts/e2e/form-feedback
+          ASSISTANT_FOCUS_OUTPUT: artifacts/e2e/assistant-focus
       - uses: actions/upload-artifact@v4
         if: always()
         with:
