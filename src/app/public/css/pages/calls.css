@@ -159,3 +159,7 @@
 }
 
 .cl-status > .cl-group-label { position:absolute; clip-path:inset(50%); width:1px; height:1px; overflow:hidden; }
+
+/* 깊은 목록에서도 자동 갱신 보류와 명시적 다시보기를 발견할 수 있다. */
+.cl-refresh-note { position: sticky; top: calc(var(--topbar-h, 64px) + 8px); z-index: 10; }
+.cl-refresh-note .notice { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 12px; background: var(--paper); border: 1px solid var(--line); }

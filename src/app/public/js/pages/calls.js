@@ -115,6 +115,7 @@ export default {
     let typeTimer = null;
     let refreshTimer = null;
     let lastUrlAt = 0;
+    let refreshPaused = false;
 
     const remember = () => { try { sessionStorage.setItem('cn.callsHash', hashFor(state)); } catch { /* 무시 */ } };
     remember();
@@ -133,6 +134,7 @@ export default {
         <button type="button" class="btn cl-clear ${state.q ? '' : 'hidden'}" data-act="clear-q" aria-label="검색어 지우기">지우기</button>
       </form>
       <div class="cl-filters" data-slot="filters"></div></section>
+      <div class="cl-refresh-note" data-slot="refresh-note" role="status" hidden></div>
       <div class="cl-results" data-slot="results" aria-live="polite"><p class="loading">불러오는 중…</p></div>
     </div>`);
     const root = el.querySelector('.cl-page');
@@ -209,7 +211,7 @@ export default {
       const matches = Array.isArray(c.matches) ? c.matches : [];
       const shown = matches.slice(0, 3);
       const source = SOURCE_LABEL[c.source] || c.source || '';
-      return html`<li class="cl-item">
+      return html`<li class="cl-item" data-call-id="${c.id}">
         <div class="cl-time"><time datetime="${c.recordedAt}" title="${fmtWhen(c.recordedAt)}">${fmtClock(c.recordedAt)}</time><span>${source}${c.hasAudio ? '' : ' · 녹음 없음'}</span></div>
         <div class="cl-identity"><a class="cl-title" href="#/calls/${encodeURIComponent(c.id)}">${c.customer || card?.customer || c.title || '제목 없는 통화'}</a>
           ${c.customer ? html`<a class="cl-cust" href="${custHref(c.customer)}" aria-label="${c.customer} 통화 모아 보기">거래처 기록 ›</a>` : ''}
@@ -257,7 +259,7 @@ export default {
       render(slot('results'), html`
         <div class="cl-count">
           <span><strong>${total}</strong>건${state.q ? html` · 「${state.q}」 찾음` : ''}</span>
-          ${working ? html`<span class="cl-working"><span class="spinner" aria-hidden="true"></span> 받아쓰는 중 ${working}건 — 10초마다 새로 봅니다</span>` : ''}
+          ${working ? html`<span class="cl-working">${refreshPaused ? '' : html`<span class="spinner" aria-hidden="true"></span>`} ${refreshPaused ? '자동 갱신 멈춤 · 상태가 최신이 아닐 수 있음' : `받아쓰는 중 ${working}건 — 10초마다 새로 봅니다`}</span>` : ''}
         </div>
         ${calls.length ? rowsByDate() : emptyView()}
         ${calls.length < total ? html`<button type="button" class="btn btn-block cl-more" data-act="more">더 보기 (${total - calls.length}건 남음)</button>` : ''}
@@ -277,26 +279,81 @@ export default {
         limit, offset,
       };
     }
+    function pauseRefresh(message) {
+      const position = listPosition();
+      refreshPaused = true;
+      clearTimeout(refreshTimer);
+      const note = slot('refresh-note');
+      note.hidden = false;
+      render(note, html`<p class="notice">${message} 상태가 최신이 아닐 수 있습니다.
+        <button type="button" class="btn btn-sm" data-act="refresh-list">처음 30건부터 새로고침</button></p>`);
+      const working = slot('results').querySelector('.cl-working');
+      if (working) working.textContent = '자동 갱신 멈춤 · 상태가 최신이 아닐 수 있음';
+      restoreListPosition(position);
+    }
+    function listPosition() {
+      const active = document.activeElement;
+      const focused = slot('results').contains(active) ? active : null;
+      const row = focused?.closest('[data-call-id]');
+      const top = document.querySelector('.topbar')?.getBoundingClientRect().bottom || 0;
+      const anchor = [...slot('results').querySelectorAll('[data-call-id]')].find(e => {
+        const r = e.getBoundingClientRect(); return r.bottom > top && r.top < innerHeight;
+      });
+      return { focused, rowId: row?.dataset.callId, href: focused?.getAttribute('href'),
+        act: focused?.dataset.act, anchorId: anchor?.dataset.callId, top: anchor?.getBoundingClientRect().top };
+    }
+    function restoreListPosition(position) {
+      const rows = [...slot('results').querySelectorAll('[data-call-id]')];
+      const row = rows.find(e => e.dataset.callId === position.rowId);
+      const target = position.href
+        ? [...(row || slot('results')).querySelectorAll('a[href]')].find(e => e.getAttribute('href') === position.href)
+        : position.act ? [...slot('results').querySelectorAll('[data-act]')].find(e => e.dataset.act === position.act) : null;
+      target?.focus({ preventScroll: true });
+      const anchor = rows.find(e => e.dataset.callId === position.anchorId);
+      if (anchor) window.scrollBy(0, anchor.getBoundingClientRect().top - position.top);
+    }
     function scheduleRefresh() {
       clearTimeout(refreshTimer);
       refreshTimer = null;
-      if (alive && calls.some((c) => WORKING.has(c.status))) refreshTimer = setTimeout(() => load({ silent: true }), REFRESH_MS);
+      if (!alive || resumeEpoch !== returnEpoch || refreshPaused) return;
+      if (calls.length > 200 && calls.some(c => WORKING.has(c.status))) {
+        pauseRefresh('200건을 넘게 펼쳐 자동 갱신을 잠시 멈췄습니다.'); return;
+      }
+      if (calls.some((c) => WORKING.has(c.status))) refreshTimer = setTimeout(() => load({ silent: true }), REFRESH_MS);
     }
     async function load({ append = false, silent = false } = {}) {
+      if (silent && (refreshPaused || resumeEpoch !== returnEpoch)) return false;
+      if (!silent && !append) { refreshPaused = false; slot('refresh-note').hidden = true; }
       ctrl?.abort();
       ctrl = new AbortController();
       const my = ctrl;
       clearTimeout(refreshTimer);
       if (!append && !silent) slot('results').classList.add('is-loading');
-      const limit = append ? PAGE : silent ? Math.min(100, Math.max(PAGE, calls.length)) : PAGE;
+      const limit = append ? PAGE : silent ? Math.min(200, Math.max(PAGE, calls.length)) : PAGE;
       try {
         const r = await api.get('/api/calls', apiQuery(append ? calls.length : 0, limit), { signal: my.signal });
-        if (!alive || my !== ctrl) return false;
+        if (!alive || my !== ctrl || resumeEpoch !== returnEpoch || !el.isConnected) return false;
         const list = Array.isArray(r?.calls) ? r.calls : [];
+        const position = silent ? listPosition() : null; // 응답 직전 사용자가 현재 보고 있는 위치
+        let focusedLinkMissing = false;
+        if (position?.rowId && position.href) {
+          const nextRow = list.find(c => c.id === position.rowId);
+          if (nextRow) {
+            const preview = document.createElement('ul');
+            render(preview, rowView(nextRow));
+            focusedLinkMissing = ![...preview.querySelectorAll('a[href]')].some(a => a.getAttribute('href') === position.href);
+          }
+        }
+        if (position && (focusedLinkMissing || [position.rowId, position.anchorId].some(id => id && !list.some(c => c.id === id))
+          || (position.act === 'more' && list.length >= Number(r.total)))) {
+          pauseRefresh('보고 있던 위치의 목록이 바뀌어 자동 적용을 멈췄습니다.');
+          return false;
+        }
         const ids = new Set(calls.map((call) => call.id));
         calls = append ? calls.concat(list.filter((call) => !ids.has(call.id))) : list;
         total = Number.isFinite(Number(r?.total)) ? Number(r.total) : calls.length;
         renderResults();
+        if (position) restoreListPosition(position);
       } catch (e) {
         if (e?.name === 'AbortError' || !alive || my !== ctrl) return;
         if (silent) { scheduleRefresh(); return false; }
@@ -388,6 +445,9 @@ export default {
           input.value = '';
           root.querySelector('[data-act="clear-q"]')?.classList.add('hidden');
           changed();
+          break;
+        case 'refresh-list':
+          load().then(ok => { if (ok && alive && el.isConnected) { input.focus({ preventScroll: true }); input.scrollIntoView({ block: 'center' }); } });
           break;
         case 'more': act.disabled = true; act.textContent = '불러오는 중…'; load({ append: true }); break;
         case 'retry': load(); break;
