@@ -42,7 +42,8 @@
     "test:card-first-item-e2e": "node tools/card-first-item-browser-e2e.mjs",
     "test:nonorder-guidance-e2e": "node tools/nonorder-guidance-browser-e2e.mjs",
     "test:customer-status-e2e": "node tools/customer-status-browser-e2e.mjs",
-    "test:knowledge-evidence-e2e": "node tools/knowledge-evidence-browser-e2e.mjs"
+    "test:knowledge-evidence-e2e": "node tools/knowledge-evidence-browser-e2e.mjs",
+    "test:today-race-e2e": "node tools/today-race-browser-e2e.mjs"
   },
   "license": "MIT",
   "dependencies": {

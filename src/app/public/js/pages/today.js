@@ -65,6 +65,16 @@ export default {
     const root = el.firstElementChild;
     const alive = () => !ac.signal.aborted && root.isConnected;
 
+    // 날짜가 A→B→A로 돌아와도 첫 A의 응답은 현재 화면의 응답이 아니다.
+    let viewEpoch = 0, sumSequence = 0, briefSequence = 0, copySequence = 0;
+    let briefRevision = 0;
+    const current = (epoch, day) => alive() && epoch === viewEpoch && day === st.day;
+    function invalidateDay() {
+      viewEpoch++; sumSequence++; briefSequence++; copySequence++;
+      st.sumText = null; st.sumDay = null;
+      st.brief = 'idle'; st.briefErr = null; st.copying = false; st.showText = false;
+    }
+
     function headPart() {
       const today = kstDay();
       const yesterday = yesterdayOf();
@@ -327,6 +337,7 @@ export default {
       const generation = ++loadGeneration;
       const current = () => alive() && generation === loadGeneration && day === st.day;
       const day = st.day;
+      const briefAtStart = briefRevision;
       st.loading = true;
       if (!quiet) draw();
       try {
@@ -338,6 +349,7 @@ export default {
         // 오늘 통화가 0건이면(새벽 · 영업 전) 어제로 바꿔 다시 부른다
         if (st.autoDay && !st.fallback && day === kstDay() && num(data?.stats?.calls) === 0) {
           st.fallback = true;
+          invalidateDay();
           st.day = yesterdayOf();
           return load({ quiet });
         }
@@ -345,10 +357,10 @@ export default {
         if (st.fallback && quiet) {
           const t = await api.get('/api/dashboard', { day: kstDay() }, { signal: ac.signal }).catch(() => null);
           if (!current()) return;
-          if (t && num(t.stats?.calls) > 0) { st.fallback = false; st.day = kstDay(); st.data = null; return load(); }
+          if (t && num(t.stats?.calls) > 0) { st.fallback = false; invalidateDay(); st.day = kstDay(); st.data = null; return load(); }
         }
         // 방금 만든 요약이 아직 목록에 안 실렸으면 들고 있는 것을 쓴다
-        if (data && !data.briefing && st.data?.briefing && st.data.day === data.day) data.briefing = st.data.briefing;
+        if (data && st.data?.briefing && st.data.day === data.day && (!data.briefing || briefAtStart !== briefRevision)) data.briefing = st.data.briefing;
         st.data = data || {};
         st.meta = meta || st.meta;
         st.error = null;
@@ -364,9 +376,11 @@ export default {
     }
 
     async function loadSumText(day) {
+      if (st.copying) return;
+      const epoch = viewEpoch, request = ++sumSequence;
       try {
         const r = await api.get('/api/briefing/text', { day }, { signal: ac.signal });
-        if (!alive() || day !== st.day) return;
+        if (!current(epoch, day) || request !== sumSequence) return;
         const changed = st.sumText !== r?.text;
         st.sumText = typeof r?.text === 'string' ? r.text : '';
         st.sumDay = day;
@@ -375,19 +389,21 @@ export default {
     }
 
     async function makeBrief() {
-      const day = st.day;
+      const day = st.day, epoch = viewEpoch, request = ++briefSequence;
+      const valid = () => current(epoch, day) && request === briefSequence;
       const prev = st.data?.briefing?.createdAt || null;
       st.brief = 'loading';
       st.briefErr = null;
       draw();
       try {
         const b = await api.post('/api/briefing', { day }, { signal: ac.signal });
-        if (!alive() || day !== st.day) return;
+        if (!valid()) return;
+        briefRevision++;
         if (st.data) st.data.briefing = b;
         st.brief = 'idle';
         if (prev && b?.createdAt === prev) toast('10분 안에 만든 요약이 있어 그것을 보여 드립니다.');
       } catch (err) {
-        if (err?.name === 'AbortError' || !alive() || day !== st.day) return;
+        if (err?.name === 'AbortError' || !valid()) return;
         st.brief = 'error';
         st.briefErr = err;
       }
@@ -395,23 +411,27 @@ export default {
     }
 
     async function copySummary() {
-      const day = st.day;
+      const day = st.day, epoch = viewEpoch, request = ++copySequence;
+      const valid = () => current(epoch, day) && request === copySequence;
       st.copying = true;
       try {
         if (st.sumDay !== day) {
           draw();
+          const summaryRequest = ++sumSequence;
           const r = await api.get('/api/briefing/text', { day }, { signal: ac.signal });
-          if (!alive() || day !== st.day) return;
+          if (!valid() || summaryRequest !== sumSequence) return;
           st.sumText = typeof r?.text === 'string' ? r.text : '';
           st.sumDay = day;
         }
-        const ok = await copyText(st.sumText);
-        if (!ok && alive() && day === st.day) st.showText = true;
+        if (!valid()) return;
+        const text = st.sumText;
+        const ok = await copyText(text);
+        if (!ok && valid()) st.showText = true;
       } catch (err) {
-        if (err?.name === 'AbortError' || !alive() || day !== st.day) return;
+        if (err?.name === 'AbortError' || !valid()) return;
         toast(err?.message || '마감 요약을 만들지 못했습니다.', 'error');
       } finally {
-        if (alive() && day === st.day) {
+        if (valid()) {
           st.copying = false;
           draw();
         }
@@ -433,6 +453,7 @@ export default {
       if (act === 'day') {
         const day = b.dataset.day;
         if (!isDay(day) || day === st.day) return;
+        invalidateDay();
         st.day = day;
         st.autoDay = false;
         st.fallback = false;
