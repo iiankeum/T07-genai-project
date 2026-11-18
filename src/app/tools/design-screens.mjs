@@ -45,6 +45,12 @@ try {
  assert.ok(await page.locator('#today-priority').evaluate(el=>Boolean(el.compareDocumentPosition(document.querySelector('.today-overview')) & Node.DOCUMENT_POSITION_FOLLOWING)),'tasks before metrics in DOM');
  for(const route of ['board','shipping']){await page.locator(`.tabbar a[href="#/${route}"]`).click();await page.locator('#view h1').first().waitFor();assert.ok(page.url().endsWith('#/'+route),'one tap primary task');}
  await page.goto(base+'/#/calls/fx-c51');await page.locator('.cd-actions').waitFor();await page.waitForTimeout(300);
+ assert.equal(await page.locator('.cd-history').evaluate(el=>el.open),false,'recent history starts collapsed without removing access');
+ await page.locator('.cd-history > summary').click();await page.locator('.cd-list-link').first().waitFor();
+ await page.locator('#cd-history-q').fill('신흥모터스');await page.locator('.cd-search-submit').click();
+ await page.waitForFunction(()=>document.querySelector('.cd-history-scroll')?.textContent.includes('신흥모터스'));
+ await page.locator('.cd-history > summary').click();
+
  assert.equal(await page.locator('.tabbar').isVisible(),false,'no global nav in detail');
  assert.ok(await page.locator('.cd-actions').evaluate(el=>{const r=el.getBoundingClientRect();return r.bottom<=innerHeight+1&&r.top>innerHeight*.5;}),'current action visible at viewport bottom');
  await page.screenshot({path:path.join(dir,'call-mobile-fake.png')});

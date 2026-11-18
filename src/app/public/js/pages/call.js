@@ -64,13 +64,12 @@ export default {
     const target = { seg: ctx.query.seg, at: ctx.query.t };
     let targetDone = ctx.query.seg === undefined && ctx.query.t === undefined;
     const wideMq = window.matchMedia('(min-width: 1024px)');
-    const wideHistory = window.matchMedia('(min-width: 1360px)');
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     render(el, html`<div class="page cd-page" data-mobile-pane="card">
       <div class="cd-overview">
         <nav class="cd-topnav no-print" aria-label="통화 탐색">
-          <a class="cd-back" href="${backHref()}">${icon('arrow')} 통화 검색</a>
+          <a class="cd-back" href="${backHref()}">${icon('arrow')} 통화 기록으로</a>
           <a class="btn btn-sm" href="#/upload">${icon('upload')} 녹음 올리기</a>
         </nav>
         <div data-slot="head"><p class="loading" role="status">불러오는 중…</p></div>
@@ -81,7 +80,7 @@ export default {
         <button type="button" data-jump="trans" aria-controls="cd-trans" aria-pressed="false">대화 기록</button>
       </nav>
       <div class="cd-body hidden" data-slot="body">
-        <details class="cd-panel cd-history no-print" data-slot="history" ${wideHistory.matches ? html`open` : ''}>
+        <details class="cd-panel cd-history no-print" data-slot="history">
           <summary>${icon('history')} 최근 통화</summary>
           <div class="cd-rail">
             <div class="cd-rail-head">
@@ -157,11 +156,9 @@ export default {
     function onHistoryToggle() {
       if (history.open && !historyLoaded) void loadHistory();
     }
-    function onHistoryBreakpoint() { history.open = wideHistory.matches; }
     function onHistorySearch(event) { event.preventDefault(); void loadHistory(); }
     history.addEventListener('toggle', onHistoryToggle);
     historyForm.addEventListener('submit', onHistorySearch);
-    wideHistory.addEventListener('change', onHistoryBreakpoint);
 
     // ── 머리 ──────────────────────────────────────────────────────
     function workflow(card) {
@@ -754,7 +751,6 @@ export default {
       window.removeEventListener('resize', measure);
       root.removeEventListener('toggle', measure, true);
       root.removeEventListener('input', scheduleConnector);
-      wideHistory.removeEventListener('change', onHistoryBreakpoint);
       history.removeEventListener('toggle', onHistoryToggle);
       historyForm.removeEventListener('submit', onHistorySearch);
       root.removeEventListener('click', onClick);

@@ -350,3 +350,58 @@
  .cd-confirm-issues summary { min-height:36px; }
  .cd-why { max-height:72px; }
 }
+
+/* 신규 검토 패널: 원문과 주문을 함께 대조하며, 최근 기록은 필요할 때 연다. */
+.page.cd-page { --cd-pad:20px; --cd-gap:24px; --cd-panel-radius:12px; padding-top:20px; }
+.cd-overview { margin-bottom:24px; }
+.cd-topnav { margin-bottom:16px; }
+.cd-head { align-items:center; }
+.cd-avatar { display:none; }
+.cd-title { font-size:26px; line-height:36px; }
+.cd-title-meta { font-size:12px; line-height:20px; margin-top:8px; }
+.cd-panel { box-shadow:none; }
+.cd-trans { border:0; border-radius:0; }
+.cd-trans-top { border-bottom:1px solid var(--line); }
+.cd-trans-top .cd-pane-title { padding:0 0 8px; }
+.cd-trans-tools { padding:0; }
+.cd-player { margin:16px 0; padding:12px; border:0; border-radius:12px; background:#f7f8fa; }
+.cd-noaudio { margin:12px 0; padding:12px; border-radius:8px; }
+.cd-trans-scroll { padding:0 8px 16px 0; }
+.cd-card { border:1px solid var(--line); border-radius:12px; }
+.cd-card-head { padding-block:16px; }
+.cd-pane-title h2 { font-size:18px; line-height:26px; }
+.cd-card-scroll { padding:16px 20px 24px; }
+.cd-grid { gap:12px 16px; }
+.cd-field { padding:4px; }
+.cd-label { font-size:13px; font-weight:500; }
+.cd-card .input { min-height:42px; font-size:14px; }
+.cd-item { padding:16px 0; border:0; border-top:1px solid var(--line); border-radius:0; }
+.cd-item:first-child { border-top:0; }
+.cd-sec { margin-top:24px; padding-top:20px; }
+.cd-actions { padding:12px 20px; background:#fff; }
+.cd-history { background:#f8f9fb; border:0; border-radius:8px; }
+.cd-history > summary { display:block; padding:12px 16px; font-size:13px; }
+.cd-history .cd-rail-head { position:static; background:transparent; padding:0 12px 10px; }
+.cd-history .cd-rail-head h2 { display:none; }
+@media(min-width:1024px) {
+ .cd-body { grid-template-columns:minmax(0,1fr) minmax(360px,1.12fr); grid-template-rows:auto minmax(0,1fr); }
+ .cd-history { grid-column:1/-1; max-height:200px; overflow:auto; }
+ .cd-history-scroll { overflow:auto; }
+ .cd-trans,.cd-card { grid-row:2; }
+ .cd-trans { grid-column:1; }
+ .cd-card { grid-column:2; }
+}
+@media(max-width:1023px) {
+ .page.cd-page { --cd-pad:16px; --cd-gap:16px; }
+ .cd-title { font-size:24px; line-height:32px; }
+ .cd-head-status { justify-items:start; }
+ .cd-jump { border:0; border-bottom:1px solid var(--line); border-radius:0; background:transparent; padding:0; gap:24px; }
+ .cd-jump button { border:0; border-bottom:2px solid transparent; border-radius:0; background:transparent; }
+ .cd-jump button[aria-pressed="true"] { border-bottom-color:var(--brand); background:transparent; }
+ .cd-card { border:0; border-radius:0; }
+ .cd-card-head { padding-inline:0; }
+ .cd-card-scroll { padding:16px 4px 24px; }
+ .cd-trans-scroll { padding-right:0; }
+}
+@media print { .cd-body { display:block; } .cd-history { display:none; } }
+body[data-page="call"] { background:#fff; }
