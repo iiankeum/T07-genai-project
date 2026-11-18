@@ -201,3 +201,31 @@ enum LocalModelStorageUsage {
         rows.map { "\($0.title): \(LocalMacPreflight.capacity($0.bytes))" + ($0.bytes.map { " [\($0)바이트]" } ?? "") + ($0.sharedFiles > 0 ? " (공유 파일 \($0.sharedFiles)개 중복 제외)" : "") }.joined(separator: "\n") + "\n\n파일 크기 합계이며 실제 디스크 점유량이나 삭제 시 확보되는 공간은 아니에요. 같은 inode의 하드링크는 위 항목부터 한 번만 계산해요.\n\n위치로 구분했을 뿐 설치 완료·무결성·재개 가능 여부는 검증하지 않았어요. 캐시는 다음 모델 준비 때 다시 검증해요. 조회 실패·심볼릭 링크·항목·깊이·크기 제한 초과는 ‘확인 불가’예요. 준비 작업 중에는 값이 달라질 수 있어요.\n\n실행기·설치 중 임시 폴더·기타 자료는 제외돼요. 읽기 전용으로, 삭제·정리·다운로드는 하지 않아요."
     }
 }
+
+// One explicit server origin only; no credentials, navigation path or persisted choice.
+enum TeamServerAddress {
+    static func validated(_ input: String, confirmed: Bool) -> URL? {
+        guard confirmed, input.utf8.count <= 2048 else { return nil }
+        let raw = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !raw.isEmpty, !raw.contains("\\"),
+              raw.rangeOfCharacter(from: .whitespacesAndNewlines.union(.controlCharacters)) == nil,
+              var parts = URLComponents(string: raw), parts.scheme?.lowercased() == "https",
+              parts.user == nil, parts.password == nil, parts.query == nil, parts.fragment == nil,
+              parts.path.isEmpty || parts.path == "/", let host = parts.host, !host.isEmpty,
+              !host.contains("%"), parts.port == nil || (1...65535).contains(parts.port!) else { return nil }
+        if host.contains(":") {
+            let value = host.hasPrefix("[") && host.hasSuffix("]") ? String(host.dropFirst().dropLast()) : host
+            var address = in6_addr()
+            guard inet_pton(AF_INET6, value, &address) == 1 else { return nil }
+        } else {
+            guard host.utf8.count <= 253, host.unicodeScalars.allSatisfy({ $0.isASCII }),
+                  host.split(separator: ".", omittingEmptySubsequences: false).allSatisfy({ label in
+                      !label.isEmpty && label.utf8.count <= 63 && label.first != "-" && label.last != "-" &&
+                      label.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-") })
+                  }) else { return nil }
+        }
+        parts.scheme = "https"
+        parts.path = "/"
+        return parts.url
+    }
+}

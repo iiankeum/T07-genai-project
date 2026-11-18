@@ -91,3 +91,11 @@ check(LocalModelStorageUsage.report(usage).contains("재개 가능 여부는 검
 check(LocalModelStorageUsage.report(usage).contains("실제 디스크 점유량"), "logical size caveat")
 
 check(LocalModelStorageUsage.adding(UInt64.max, 1) == nil, "size overflow is unknown not wrapped")
+
+check(TeamServerAddress.validated("https://team.example.com", confirmed: true)?.absoluteString == "https://team.example.com/", "server origin normalized")
+check(TeamServerAddress.validated("https://team.example.com:8443/", confirmed: true)?.port == 8443, "explicit TLS port")
+check(TeamServerAddress.validated("https://[::1]:8443", confirmed: true) != nil, "IPv6 origin allowed")
+check(TeamServerAddress.validated("https://team.example.com", confirmed: false) == nil, "cancel no launch destination")
+for bad in ["http://team.example.com", "https://user:secret@team.example.com", "https://user@team.example.com", "https://team.example.com/path", "https://team.example.com/?x=1", "https://team.example.com/#fragment", "https://team.example.com:0", "https://team.example.com:65536", "https://", "not a url", "https://te am.example.com", "https://team.example.com\\\\@evil.test", "https://.example.com", "https://-bad.example.com", "https://example..com", "https://team.example.com/%2e", "https://[bad::ipv6]"] {
+    check(TeamServerAddress.validated(bad, confirmed: true) == nil, "invalid or ambiguous team URL refused")
+}
