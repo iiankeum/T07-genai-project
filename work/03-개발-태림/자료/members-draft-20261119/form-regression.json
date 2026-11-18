@@ -1,0 +1,51 @@
+{
+  "scope": "actual profile/settings and bindForm + deferred fake API/actions; no real accounts",
+  "status": "passed",
+  "results": [
+    {
+      "size": "desktop",
+      "code": "success",
+      "snapshotMatchesDisplay": true,
+      "keyboardCannotMutatePending": true,
+      "duplicateBlocked": true,
+      "otherFormUntouched": true
+    },
+    {
+      "size": "desktop",
+      "code": "bad_name",
+      "snapshotMatchesDisplay": true,
+      "keyboardCannotMutatePending": true,
+      "duplicateBlocked": true,
+      "otherFormUntouched": true
+    },
+    {
+      "size": "mobile",
+      "code": "success",
+      "snapshotMatchesDisplay": true,
+      "keyboardCannotMutatePending": true,
+      "duplicateBlocked": true,
+      "otherFormUntouched": true
+    },
+    {
+      "size": "mobile",
+      "code": "bad_name",
+      "snapshotMatchesDisplay": true,
+      "keyboardCannotMutatePending": true,
+      "duplicateBlocked": true,
+      "otherFormUntouched": true
+    },
+    {
+      "allSubmittersLocked": true,
+      "nonSubmitButtonsUnaffected": true,
+      "genericPayload": true,
+      "checkboxBooleans": true,
+      "originalDisabledPreserved": true,
+      "actualSubmitterPreserved": true,
+      "errorFocusAfterUnlock": true,
+      "retryRestoresHelp": true
+    }
+  ],
+  "requests": 4,
+  "errors": [],
+  "blocked": []
+}

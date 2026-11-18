@@ -1,0 +1,41 @@
+{
+  "scope": "actual settings/account modules + in-browser fake API methods; zero actual API POST or mail sends",
+  "results": [
+    {
+      "action": "cancel",
+      "before": {
+        "email": "draft@example.invalid",
+        "role": "shipping"
+      },
+      "after": {
+        "email": "",
+        "role": "viewer"
+      },
+      "fakeRequests": [
+        {
+          "method": "DELETE",
+          "path": "/api/settings/invites/fake-invite"
+        }
+      ]
+    },
+    {
+      "action": "resend",
+      "before": {
+        "email": "draft@example.invalid",
+        "role": "shipping"
+      },
+      "after": {
+        "email": "",
+        "role": "viewer"
+      },
+      "fakeRequests": [
+        {
+          "method": "POST",
+          "path": "/api/settings/invites/fake-invite/resend"
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "external": []
+}

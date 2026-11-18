@@ -33,7 +33,8 @@
     "test:shipping-revision-e2e": "node tools/shipping-revision-browser-e2e.mjs",
     "test:shipping-order-e2e": "node tools/shipping-response-order-browser-e2e.mjs",
     "test:card-cancel-e2e": "node tools/card-cancel-pending-browser-e2e.mjs",
-    "test:assistant-thread-e2e": "node tools/assistant-thread-draft-browser-e2e.mjs"
+    "test:assistant-thread-e2e": "node tools/assistant-thread-draft-browser-e2e.mjs",
+    "test:members-draft-e2e": "node tools/members-draft-browser-e2e.mjs"
   },
   "license": "MIT",
   "dependencies": {
