@@ -31,7 +31,7 @@
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="theme-color" content="#4f3bb8">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%234f3bb8%27/%3E%3Crect x=%277%27 y=%2712%27 width=%273%27 height=%278%27 rx=%271.5%27 fill=%27white%27/%3E%3Crect x=%2712%27 y=%277%27 width=%273%27 height=%2718%27 rx=%271.5%27 fill=%27white%27/%3E%3Crect x=%2717%27 y=%2710%27 width=%273%27 height=%2712%27 rx=%271.5%27 fill=%27white%27/%3E%3Crect x=%2722%27 y=%2713%27 width=%273%27 height=%276%27 rx=%271.5%27 fill=%27white%27/%3E%3C/svg%3E">
+<link rel="icon" href="../icons/acha.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
@@ -79,9 +79,7 @@
   .top { position: sticky; top: 0; z-index: 20; background: rgba(255,255,255,.96); border-bottom: 1px solid var(--line); }
   .top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 64px; }
   .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 21px; color: var(--ink); text-decoration: none; }
-  .mark { display: inline-flex; align-items: center; gap: 3px; height: 26px; }
-  .mark i { display: block; width: 5px; border-radius: 3px; background: var(--accent); }
-  .mark i:nth-child(1) { height: 12px; } .mark i:nth-child(2) { height: 24px; } .mark i:nth-child(3) { height: 18px; } .mark i:nth-child(4) { height: 10px; }
+  .mark { width: 32px; height: 32px; display: block; flex: none; } /* 「아차」 아이콘 */
   .name-note { font-size: 13px; font-weight: 700; color: var(--amber); background: var(--amber-soft); border-radius: 999px; padding: 2px 9px; }
   .name-note:empty { display: none; }
 
@@ -238,7 +236,7 @@
 <header class="top">
   <div class="wrap">
     <a class="brand" href="#top" aria-label="처음으로">
-      <span class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      <img class="mark" src="../icons/acha.svg" alt="" width="32" height="32">
       <span data-product>아차</span>
       <span class="name-note" data-product-note></span>
     </a>

@@ -49,9 +49,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .fake-banner strong { background: #fff; border: 1px solid var(--warn-line); border-radius: 999px; padding: 1px 10px; }
 .topbar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 10px; background: rgba(255,255,255,.96); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); padding: 8px 16px; min-height: 60px; }
 .brand { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--ink); font-weight: 800; font-size: 1.3rem; letter-spacing: -1px; }
-.brandmark { width: 26px; height: 28px; display: flex; align-items: center; gap: 3px; }
-.brandmark i { display: block; background: var(--brand); border-radius: 3px; width: 5px; height: 14px; }
-.brandmark i:nth-child(2) { height: 26px; } .brandmark i:nth-child(3) { height: 20px; } .brandmark i:nth-child(4) { height: 11px; }
+.brandmark { width: 30px; height: 30px; display: block; flex: none; } /* 「아차」 아이콘(icons/acha.svg, 2026-11-18 확정) */
 .brand-tag { font-size: .7rem; font-weight: 600; color: var(--muted); letter-spacing: 0; border: 1px solid var(--line); border-radius: 999px; padding: 0 8px; }
 .topbar-right { display: flex; align-items: center; gap: 8px; }
 .worker-pill { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; font-size: .8rem; color: var(--muted); border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 4px 10px; min-height: 36px; white-space: nowrap; }
