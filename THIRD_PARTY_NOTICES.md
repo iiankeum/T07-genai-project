@@ -30,3 +30,7 @@
 | 번들 Node.js | [Node.js v24 라이선스](https://github.com/nodejs/node/blob/v24.x/LICENSE) | 실제 배포 Node 버전과 함께 제공된 구성요소 고지를 앱에 포함해야 한다 |
 
 공증·서명·업데이트 및 제3자 아티팩트별 고지 확인은 공개 배포 전 단계다. 현재 소스 빌드가 App Store 또는 서명된 설치 배포 검증을 뜻하지 않는다.
+
+### 이동 가능한 Python 전사 실행기 준비 도구 (개발 전용)
+
+`prepare-whisper-runtime.mjs`는 공식 [Astral python-build-standalone](https://github.com/astral-sh/python-build-standalone/releases/tag/20261110)의 CPython3.12.16과 PyPI 고정 wheel24개를 별도 앱 자료 폴더에 준비한다. 원본 LICENSE 및 wheel의 `dist-info/licenses` 고지는 삭제하지 않는다. Python 배포본에는 자체 종속 구성요소가 있고 PyAV wheel에는 FFmpeg 관련 구성요소가 있으므로 패키지 이름의 단일 라이선스만으로 전체 재배포 조건을 판단하지 않는다. 이 도구와 로컬 전사 검증은 전체 번들의 재배포 고지 검토·Developer ID 서명·공증을 완료했다는 뜻이 아니다. 준비된 실행기는 현재 Mac 앱 빌드에 포함하지 않는다.
