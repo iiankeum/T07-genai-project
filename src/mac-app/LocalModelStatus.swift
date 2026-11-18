@@ -26,3 +26,24 @@ final class LocalProbeDelegate: NSObject, URLSessionTaskDelegate {
         completionHandler(nil)
     }
 }
+
+// 로컬 개발용 outbox만 연다. 서버 인증/암호 검사는 웹 앱에서 그대로 수행한다.
+enum LocalVerificationLink {
+    static func parse(_ data: Data, email: String, now: Date = Date()) -> URL? {
+        guard data.count <= 16384,
+              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              object["kind"] as? String == "verify",
+              (object["to"] as? String)?.lowercased() == email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+              let expiry = object["expiresAt"] as? String,
+              let raw = object["url"] as? String,
+              let parts = URLComponents(string: raw),
+              parts.scheme == "http", parts.host == "127.0.0.1", parts.port == 5601,
+              parts.user == nil, parts.password == nil, parts.query == nil,
+              parts.path == "/", let fragment = parts.fragment,
+              fragment.range(of: #"\A/verify\?token=[A-Za-z0-9_-]{43}\z"#, options: .regularExpression) != nil else { return nil }
+        let dates = ISO8601DateFormatter()
+        dates.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        guard let expires = dates.date(from: expiry), expires > now else { return nil }
+        return parts.url
+    }
+}

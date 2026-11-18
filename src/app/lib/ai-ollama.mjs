@@ -1,5 +1,6 @@
 import http from 'node:http';
 import { AiError } from './ai-error.mjs';
+import { config } from './config.mjs';
 
 const MAX_RESPONSE_BYTES = 1024 * 1024;
 const MAX_TIMEOUT_MS = 120_000;
@@ -10,7 +11,7 @@ async function postJson(path, payload, signal) {
   const response = await new Promise((resolve, reject) => {
     const request = http.request({
       hostname: '127.0.0.1',
-      port: 11434,
+      port: config.ollamaPort,
       path,
       method: 'POST',
       agent: false, // 환경의 전역 HTTP 프록시를 사용하지 않는다.

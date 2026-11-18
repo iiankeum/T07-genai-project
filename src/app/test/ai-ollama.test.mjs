@@ -165,3 +165,15 @@ test('호출자가 취소하면 요청을 중단하며 취소 이유를 전달�
   await assert.rejects(out, (err) => err === reason);
   assert.equal(seen.length, 2);
 });
+
+
+test('앱 전용 Ollama 포트는 두 loopback 포트만 허용한다', async (t) => {
+  t.after(() => delete process.env.AHMATDA_OLLAMA_PORT);
+  process.env.AHMATDA_OLLAMA_PORT = '11435';
+  const { config } = await import('../lib/config.mjs?app-local-port');
+  assert.equal(config.ollamaPort, 11435);
+  for (const [i, value] of ['443', '0', 'http://example.com', '11435/path'].entries()) {
+    process.env.AHMATDA_OLLAMA_PORT = value;
+    await assert.rejects(import(`../lib/config.mjs?invalid-local-port=${i}`), /AHMATDA_OLLAMA_PORT/);
+  }
+});

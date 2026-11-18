@@ -61,6 +61,11 @@ if (aiProvider === 'ollama' && !isLocalOllamaModel(ollamaModel)) {
   throw new Error('OLLAMA_MODEL에 로컬에 설치한 모델 이름과 태그를 지정해 주세요.');
 }
 
+const ollamaPort = str(env.AHMATDA_OLLAMA_PORT, '11434');
+if (!['11434', '11435'].includes(ollamaPort)) {
+  throw new Error('AHMATDA_OLLAMA_PORT는 로컬 Ollama 11434 또는 앱 전용 11435만 허용합니다.');
+}
+
 export const config = Object.freeze({
   port: int(env.PORT, 5600),
   host: str(env.HOST, '127.0.0.1'),
@@ -72,6 +77,7 @@ export const config = Object.freeze({
   startedAt: new Date().toISOString(),
   aiProvider,
   ollamaModel,
+  ollamaPort: Number(ollamaPort),
   allowPaidAi: env.ALLOW_PAID_AI === '1',
   // Claude 모델. 기본은 claude-opus-5-5 (claude-api 스킬 기본값). 바꾸려면 CLAUDE_MODEL.
   model: str(env.CLAUDE_MODEL, 'claude-opus-5-5'),

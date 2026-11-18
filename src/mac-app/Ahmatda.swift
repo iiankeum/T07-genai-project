@@ -97,6 +97,13 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
     private var modelSetupBuffer = Data()
     private var modelSetupAlert: NSAlert?
     private var modelSetupFinished = false
+    private var runtimeProcess: Process?
+    private var runtimeInput: Pipe?
+    private var runtimeOutput: Pipe?
+    private var runtimeBuffer = Data()
+    private var runtimeReady = false
+    private var runtimeCompletion: ((Bool) -> Void)?
+    private var runtimeNotice = ""
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1180, height: 800),
@@ -167,7 +174,7 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
             "HOST": "127.0.0.1", "PORT": "5601", "PUBLIC_BASE_URL": "http://127.0.0.1:5601",
             "DATA_DIR": storage.appendingPathComponent("data", isDirectory: true).path,
             "DEMO_MODE": "0", "TRUST_PROXY": "0", "AUTH_MAIL_MODE": "outbox",
-            "ALLOW_PAID_AI": "0", "ANTHROPIC_API_KEY": "",
+            "ALLOW_PAID_AI": "0", "ANTHROPIC_API_KEY": "", "AHMATDA_OLLAMA_PORT": "11435",
             "FFMPEG_PATH": "ffmpeg", "FFPROBE_PATH": "ffprobe",
         ]
         aiEnvironment = try AIConfiguration.environment(in: storage)
@@ -199,12 +206,104 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
         child = proc
         childInput = input
         childOutput = output
-        try proc.run()
+        if aiEnvironment["AI_PROVIDER"] == "ollama" {
+            startManagedRuntime { [weak self] ready in
+                guard let self, !self.closing else { return }
+                if !ready {
+                    var safe = proc.environment ?? [:]
+                    safe["AI_PROVIDER"] = "off"
+                    proc.environment = safe
+                    self.aiEnvironment["AI_PROVIDER"] = "off"
+                }
+                do { try self.launchLocalNode(proc) }
+                catch { self.fail("로컬 업무 서버를 시작할 수 없어요. 앱을 다시 열어 주세요.") }
+            }
+        } else { try launchLocalNode(proc) }
+    }
+
+    private func launchLocalNode(_ process: Process) throws {
+        try process.run()
         logger.notice("Started local Node process")
         DispatchQueue.main.asyncAfter(deadline: .now() + 20) { [weak self] in
             guard let self, self.webView == nil, !self.closing, !self.failed else { return }
             self.fail("로컬 서버를 확인할 수 없어요. 앱을 다시 실행해 주세요.")
         }
+    }
+
+    private func startManagedRuntime(completion: @escaping (Bool) -> Void) {
+        guard let resources = Bundle.main.resourceURL,
+              let executable = Bundle.main.url(forAuxiliaryExecutable: "node") else { completion(false); return }
+        status.stringValue = "로컬 AI 실행기를 확인하고 있어요…"
+        runtimeCompletion = completion
+        let process = Process()
+        let input = Pipe(), output = Pipe()
+        process.executableURL = executable
+        process.arguments = [resources.appendingPathComponent("local-runtime.mjs").path, "--start"]
+        process.environment = ["HOME": files.homeDirectoryForCurrentUser.path,
+                               "PATH": "/usr/bin:/bin:/usr/sbin:/sbin"]
+        process.standardInput = input
+        process.standardOutput = output
+        process.standardError = FileHandle.nullDevice
+        runtimeProcess = process
+        runtimeInput = input
+        runtimeOutput = output
+        output.fileHandleForReading.readabilityHandler = { [weak self] handle in
+            let data = handle.availableData
+            if data.isEmpty { handle.readabilityHandler = nil; return }
+            DispatchQueue.main.async { self?.receiveRuntime(data) }
+        }
+        process.terminationHandler = { [weak self] _ in
+            DispatchQueue.main.async {
+                guard let self, !self.closing, !self.failed else { return }
+                if self.runtimeReady {
+                    self.fail("앱 전용 AI 실행기가 종료되어 업무 서버를 안전하게 멈췄어요. 앱을 다시 열어 주세요.")
+                } else {
+                    self.runtimeNotice = "실행기를 시작하지 못해 이번에는 수동 업무로 시작했어요. 앱 전용 실행기와 11435 포트를 확인해 주세요."
+                    self.finishRuntimeStartup(false)
+                }
+            }
+        }
+        do { try process.run() }
+        catch {
+            output.fileHandleForReading.readabilityHandler = nil
+            runtimeNotice = "앱 전용 실행기를 찾지 못해 수동 업무로 시작했어요."
+            finishRuntimeStartup(false)
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 45) { [weak self] in
+            guard let self, self.runtimeCompletion != nil, !self.closing else { return }
+            self.stopManagedRuntime()
+            self.runtimeNotice = "실행기 확인 시간이 지나 수동 업무로 시작했어요."
+            self.finishRuntimeStartup(false)
+        }
+    }
+
+    private func finishRuntimeStartup(_ ready: Bool) {
+        guard let completion = runtimeCompletion else { return }
+        runtimeCompletion = nil
+        runtimeReady = ready
+        completion(ready)
+    }
+
+    private func receiveRuntime(_ data: Data) {
+        runtimeBuffer.append(data)
+        guard runtimeBuffer.count < 65536 else { stopManagedRuntime(); finishRuntimeStartup(false); return }
+        while let end = runtimeBuffer.firstIndex(of: 10) {
+            let line = runtimeBuffer.prefix(upTo: end)
+            runtimeBuffer.removeSubrange(...end)
+            guard let value = try? JSONSerialization.jsonObject(with: line) as? [String: Any],
+                  let event = value["event"] as? String else { continue }
+            if event == "ready" { finishRuntimeStartup(true) }
+            if event == "error" {
+                runtimeNotice = "앱 전용 AI 실행기를 준비하지 못해 수동 업무로 시작했어요. 기존의 다른 모델 서버는 변경하지 않았어요."
+                if runtimeReady { fail("앱 전용 AI 실행기 오류로 업무 서버를 멈췄어요. 앱을 다시 열어 주세요.") }
+                else { finishRuntimeStartup(false) }
+            }
+        }
+    }
+
+    private func stopManagedRuntime() {
+        try? runtimeInput?.fileHandleForWriting.close()
+        if let runtimeProcess, runtimeProcess.isRunning { runtimeProcess.terminate() }
     }
 
     private func workerEnvironment(in storage: URL) throws -> [String: String] {
@@ -389,6 +488,8 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
         if localMode {
             navigation.append(command("로컬 AI 준비 상태…", #selector(showPreparation)))
             navigation.append(command("주문 정리 모델 준비…", #selector(confirmModelPreparation)))
+            navigation.append(command("받아쓰기 모델 준비…", #selector(confirmWhisperPreparation)))
+            navigation.append(command("로컬 가입 인증 링크 열기…", #selector(openLocalVerification)))
             navigation.append(command("로컬 자료 폴더 열기", #selector(revealStorage)))
         }
         addMenu("이동", navigation)
@@ -426,7 +527,7 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
         }
         let common = "\n\n받아쓰기: 상태 미검증. 별도 일꾼이 필요하며 이 화면에서는 전사를 시험하지 않아요.\n유료 AI는 꺼져 있고, 녹음이나 원문은 외부로 보내지 않아요."
         if aiEnvironment["AI_PROVIDER"] == "off" {
-            alert.informativeText = "주문 정리 AI: 꺼짐. 수동 업무만 사용하도록 설정되어 있어요." + common
+            alert.informativeText = "주문 정리 AI: 꺼짐. 수동 업무만 사용하도록 설정되어 있어요.\n" + runtimeNotice + common
             return
         }
         let config = URLSessionConfiguration.ephemeral
@@ -436,7 +537,7 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
         let probe = URLSession(configuration: config, delegate: probeDelegate, delegateQueue: nil)
         probeSession = probe
         let model = aiEnvironment["OLLAMA_MODEL"] ?? "qwen3:4b"
-        probe.dataTask(with: URL(string: "http://127.0.0.1:11434/api/tags")!) { [weak self, weak alert] data, response, _ in
+        probe.dataTask(with: URL(string: "http://127.0.0.1:11435/api/tags")!) { [weak self, weak alert] data, response, _ in
             let message = LocalModelStatus.message(data: data, statusCode: (response as? HTTPURLResponse)?.statusCode, model: model)
             DispatchQueue.main.async {
                 guard let self, let alert, self.preparationAlert === alert else { return }
@@ -448,7 +549,7 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
     private func showPreparationGuide() {
         let alert = NSAlert()
         alert.messageText = "모델을 자동으로 내려받지 않아요"
-        alert.informativeText = "현재는 개발 검증용 앱이에요.\n\n1. 공식 Ollama를 준비하고 로컬 서버를 실행해요.\n2. 설정된 모델을 준비해요: \(aiEnvironment["OLLAMA_MODEL"] ?? "qwen3:4b")\n3. 이동 → 로컬 AI 준비 상태에서 다시 확인해요.\n\n음성 받아쓰기는 faster-whisper 일꾼이 별도로 필요해요. 이동 → 주문 정리 모델 준비에서 검증된 실행기의 qwen3:4b 파일을 준비할 수 있어요. 실행기 자동 설치와 시작은 아직 없어요.\n계정 가입 후 인증 링크는 이동 → 로컬 자료 폴더 열기의 data/outbox에 저장돼요."
+        alert.informativeText = "현재는 개발 검증용 앱이에요.\n\n1. 앱 전용 Ollama 실행기를 준비해요. 앱을 다시 열면 11435에서 자동 시작해요.\n2. 설정된 모델을 준비해요: \(aiEnvironment["OLLAMA_MODEL"] ?? "qwen3:4b")\n3. 이동 → 로컬 AI 준비 상태에서 다시 확인해요.\n\n음성 받아쓰기는 faster-whisper 일꾼이 별도로 필요해요. 이동 → 주문 정리 모델 준비에서 검증된 실행기의 qwen3:4b 파일을 준비할 수 있어요. 실행기 자동 설치는 아직 없으며 준비된 실행기는 앱이 시작·종료해요.\n계정 가입 후 이동 → 로컬 가입 인증 링크 열기에서 이메일을 입력하면 터미널 없이 링크를 열 수 있어요."
         alert.addButton(withTitle: "확인")
         alert.beginSheetModal(for: window)
     }
@@ -458,7 +559,7 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
               window.attachedSheet == nil else { return }
         let alert = NSAlert()
         alert.messageText = "주문 정리 모델을 준비할까요?"
-        alert.informativeText = "qwen3:4b · Apache-2.0\n공식 Ollama 배포 서버에서 최대 약 2.50GB를 받으며 통신·저장 공간을 사용해요. 녹음이나 원문은 전송하지 않아요.\n\n검증된 앱 전용 Ollama 실행기가 이미 있어야 해요. 설치된 정상 파일은 재사용하며 해시를 확인해요. 받아쓰기 모델·실행기 자동 설치와 AI 서버 자동 시작은 포함하지 않아요."
+        alert.informativeText = "qwen3:4b · Apache-2.0\n공식 Ollama 배포 서버에서 최대 약 2.50GB를 받으며 통신·저장 공간을 사용해요. 녹음이나 원문은 전송하지 않아요.\n\n검증된 앱 전용 Ollama 실행기가 이미 있어야 해요. 설치된 정상 파일은 재사용하며 해시를 확인해요. 받아쓰기 모델은 별도 메뉴로 준비해요. 실행기 자동 설치는 포함하지 않아요."
         alert.addButton(withTitle: "모델 준비 시작")
         alert.addButton(withTitle: "취소")
         alert.beginSheetModal(for: window) { [weak self] answer in
@@ -466,14 +567,29 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
         }
     }
 
-    private func startModelPreparation() {
+    @objc private func confirmWhisperPreparation() {
+        guard localStorage != nil, modelSetupAlert == nil, modelSetupProcess == nil,
+              window.attachedSheet == nil else { return }
+        let alert = NSAlert()
+        alert.messageText = "받아쓰기 모델을 준비할까요?"
+        alert.informativeText = "faster-whisper-small · MIT\n공식 Hugging Face 저장소에서 약 486MB를 받아 파일 해시를 확인해요. 녹음이나 원문은 전송하지 않아요.\n\n모델 파일만 준비해요. Python·전사 실행기 설치와 일꾼 자동 시작은 별도예요."
+        alert.addButton(withTitle: "모델 준비 시작")
+        alert.addButton(withTitle: "취소")
+        alert.beginSheetModal(for: window) { [weak self] answer in
+            if answer == .alertFirstButtonReturn {
+                self?.startModelPreparation(scriptName: "setup-whisper-model.mjs", title: "받아쓰기 모델 준비")
+            }
+        }
+    }
+
+    private func startModelPreparation(scriptName: String = "setup-local-model.mjs", title: String = "주문 정리 모델 준비") {
         guard let resources = Bundle.main.resourceURL,
               let executable = Bundle.main.url(forAuxiliaryExecutable: "node") else { return }
         let alert = NSAlert()
         modelSetupAlert = alert
         modelSetupFinished = false
         modelSetupBuffer.removeAll()
-        alert.messageText = "주문 정리 모델 준비"
+        alert.messageText = title
         alert.informativeText = "설치된 파일의 무결성과 저장 공간을 확인하고 있어요…"
         alert.addButton(withTitle: "취소")
         alert.beginSheetModal(for: window) { [weak self] _ in
@@ -484,7 +600,7 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
         let process = Process()
         let output = Pipe()
         process.executableURL = executable
-        process.arguments = [resources.appendingPathComponent("setup-local-model.mjs").path, "--prepare"]
+        process.arguments = [resources.appendingPathComponent(scriptName).path, "--prepare"]
         process.environment = ["HOME": files.homeDirectoryForCurrentUser.path,
                                "PATH": "/usr/bin:/bin:/usr/sbin:/sbin"]
         process.standardOutput = output
@@ -538,7 +654,7 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
                 modelSetupAlert?.informativeText = "공식 배포 서버에서 필요한 모델 파일을 준비하고 있어요."
             case "ready":
                 modelSetupFinished = true
-                modelSetupAlert?.informativeText = "모델 파일과 해시 확인이 끝났어요.\n\n이것은 실제 AI 답변 성공을 뜻하지 않아요. 로컬 Ollama 서버를 시작하고 준비 상태를 다시 확인해 주세요. 받아쓰기 준비는 별도예요."
+                modelSetupAlert?.informativeText = "모델 파일과 해시 확인이 끝났어요.\n\n이것은 실제 AI 처리 성공을 뜻하지 않아요. 실행기 준비 후 앱을 다시 열어 상태를 확인해 주세요. 음성 일꾼 자동 시작은 별도예요."
             case "error":
                 modelSetupFinished = true
                 let code = value["code"] as? String ?? ""
@@ -553,6 +669,49 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
                 }
             default: break
             }
+        }
+    }
+
+    @objc private func openLocalVerification() {
+        guard let storage = localStorage, webView != nil, window.attachedSheet == nil else { return }
+        let alert = NSAlert()
+        alert.messageText = "로컬 가입 인증 링크 열기"
+        alert.informativeText = "이 Mac에서 가입한 이메일을 적어 주세요.\n외부 메일함이 아니라 이 Mac에 저장된 가입 링크를 열어요. 암호 확인은 기존 가입 화면에서 진행해요."
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 340, height: 24))
+        field.placeholderString = "가입한 이메일"
+        alert.accessoryView = field
+        alert.window.initialFirstResponder = field
+        alert.addButton(withTitle: "링크 열기")
+        alert.addButton(withTitle: "취소")
+        alert.beginSheetModal(for: window) { [weak self] answer in
+            guard let self, answer == .alertFirstButtonReturn else { return }
+            let outbox = storage.appendingPathComponent("data/outbox", isDirectory: true)
+            var link: URL?
+            if outbox.resolvingSymlinksInPath().standardizedFileURL == outbox.standardizedFileURL,
+               let entries = try? self.files.contentsOfDirectory(at: outbox, includingPropertiesForKeys: [.contentModificationDateKey]) {
+                let recent = entries.filter { $0.pathExtension == "json" }.sorted {
+                    let a = try? $0.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
+                    let b = try? $1.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
+                    return (a ?? .distantPast) > (b ?? .distantPast)
+                }
+                for file in recent.prefix(300) {
+                    guard let attrs = try? self.files.attributesOfItem(atPath: file.path),
+                          attrs[.type] as? FileAttributeType == .typeRegular,
+                          (attrs[.ownerAccountID] as? NSNumber)?.uint32Value == getuid(),
+                          let mode = (attrs[.posixPermissions] as? NSNumber)?.intValue, mode & 0o077 == 0,
+                          let size = (attrs[.size] as? NSNumber)?.intValue, size <= 16384,
+                          let data = try? Data(contentsOf: file) else { continue }
+                    if let candidate = LocalVerificationLink.parse(data, email: field.stringValue), self.allows(candidate) {
+                        link = candidate
+                        break
+                    }
+                }
+            }
+            if let link { self.webView?.load(URLRequest(url: link)); return }
+            let missing = NSAlert()
+            missing.messageText = "유효한 가입 링크가 없어요"
+            missing.informativeText = "가입 이메일을 확인하고, 가입 화면의 인증 메일 다시 받기를 누른 뒤 다시 시도해 주세요."
+            missing.beginSheetModal(for: self.window)
         }
     }
 
@@ -585,6 +744,7 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
     private func fail(_ message: String) {
         failed = true
         logger.error("Launcher stopped with an error")
+        stopManagedRuntime()
         stopChild()
         window.contentView = NSView(frame: window.contentLayoutRect)
         status.frame = window.contentView!.bounds.insetBy(dx: 28, dy: 28)
@@ -604,6 +764,7 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
     func applicationWillTerminate(_ notification: Notification) {
         closing = true
         probeSession?.invalidateAndCancel()
+        stopManagedRuntime()
         if let modelSetupProcess, modelSetupProcess.isRunning { modelSetupProcess.terminate() }
         stopChild()
         if let child, child.isRunning { child.waitUntilExit() }

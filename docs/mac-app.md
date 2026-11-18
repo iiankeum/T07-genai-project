@@ -2,7 +2,7 @@
 
 # 아맞다 Mac 앱
 
-같은 웹 화면을 macOS 창에서 연다. 기본 실행은 이 Mac의 Node 24와 SQLite를 사용한다. 로그인, 통화 업로드·조회, 주문 카드와 배송 처리는 로컬 워크스페이스에서 이루어진다. 파일 받아쓰기는 별도로 준비한 faster-whisper CPU 일꾼이 맡고, 주문 카드 초안·질문 답변은 Ollama가 `qwen3:4b`로 처리한다.
+같은 웹 화면을 macOS 창에서 연다. 기본 실행은 이 Mac의 Node 24와 SQLite를 사용한다. 준비된 앱 전용 Ollama는 11435에서 앱과 함께 시작·종료한다. 로그인, 통화 업로드·조회, 주문 카드와 배송 처리는 로컬 워크스페이스에서 이루어진다. 파일 받아쓰기는 별도로 준비한 faster-whisper CPU 일꾼이 맡고, 주문 카드 초안·질문 답변은 Ollama가 `qwen3:4b`로 처리한다.
 
 > 검증 상태: Apple Silicon 빌드·ad hoc 서명·번들 소스와 의존성·Node/SQLite 초기화·부모 종료 연동을 확인했다. Mac 앱 실제 기동·로그인 화면·준비 상태 안내와 버튼 동작을 확인했다. 실제 qwen3:4b와 앱 adapter로 가짜 주문 1건 추출도 확인했다(약 2.1초). 실제 Whisper와 HTTP 업로드·큐·카드 저장·브라우저 표시도 합성음성1건으로 확인했다. 새 사용자 설치 전체 흐름·파일 선택·상시워커 운영·현장 음성 품질은 별도 검증 대상이다. 아래 모델 준비와 오프라인 확인은 설치 후 수행할 절차다.
 
@@ -38,10 +38,10 @@ bash src/mac-app/build.sh
 ## 이 Mac 모드
 
 1. 앱을 열어 창 제목의 **이 Mac**을 확인한다. 앱은 `127.0.0.1:5601`에서만 듣고, 기본 자체 운영 서버 포트 `5600`과 별개로 동작한다. 로컬 서버가 기동하고 `/healthz`가 정상일 때 업무 화면을 연다.
-2. 회원가입 후 메뉴의 **이동 → 로컬 자료 폴더 열기**에서 `data/outbox`를 연다. 최근 `verify` JSON의 `url` 값을 복사한다. **이동 → 링크 열기**(⌘L)에 붙여 넣어 인증을 마친다. 인증 메일은 이 Mac에 파일로 저장된다.
+2. 회원가입 후 **이동 → 로컬 가입 인증 링크 열기**에 가입 이메일을 적는다. 유효한 로컬 인증 화면을 열며 암호 확인은 웹 화면에서 직접 진행한다. 터미널이나 outbox 파일 복사는 필요 없다. 외부 메일 인증이 아닌 이 Mac의 개발용 outbox 방식이며, 서버 로그인·암호·1회용 링크 검사는 그대로 유지한다.
 3. 로그인하여 워크스페이스를 만든다. 계정과 워크스페이스, 통화, 녹음과 카드는 `~/Library/Application Support/Ahmatda/data`에 저장된다. 앱을 종료하거나 업데이트해도 이 자료는 남는다.
 
-앱은 로컬 노드 서버에 유료 AI를 끈 상태와 빈 API 키를 전달한다. Mac 앱은 기존 데모 서버나 원격 GPU 일꾼에 연결하지 않는다. ⌘Q로 앱을 닫으면 같이 시작한 Node 서버가 종료된다. Ollama와 CPU 일꾼은 따로 시작하고 종료한다. 앱의 기동·상태 로그는 Console에서 `org.ininhyeop.t07.ahmatda`로 검색한다.
+앱은 로컬 노드 서버에 유료 AI를 끈 상태와 빈 API 키를 전달한다. Mac 앱은 기존 데모 서버나 원격 GPU 일꾼에 연결하지 않는다. ⌘Q로 앱을 닫으면 같이 시작한 Node 서버가 종료된다. 준비된 앱 전용 Ollama는 앱이 시작·종료하며 CPU 일꾼은 아직 별도로 시작한다. 앱의 기동·상태 로그는 Console에서 `org.ininhyeop.t07.ahmatda`로 검색한다.
 
 ### 로컬 AI 준비 상태
 
@@ -56,24 +56,20 @@ swiftc src/mac-app/LocalModelStatus.swift src/mac-app/tests/main.swift -o /tmp/a
 /tmp/ahmatda-model-status-tests
 ```
 
-### Ollama 준비와 사용
+### 앱 전용 Ollama 실행기
 
-Ollama를 설치한다. 이미 Ollama 앱이나 데몬이 실행 중이면 종료한 뒤 터미널에서 아래처럼 실행한다. 모델은 최초 한 번 따로 내려받는다. [Ollama macOS 설치](https://docs.ollama.com/macos) · [Ollama 로컬 모드](https://docs.ollama.com/faq#how-do-i-disable-ollamas-cloud-features)
+앱 자료 폴더의 `runtime/ollama-v0.40.16`에 준비된 공식 실행기를 사용한다. **실행기 자동 다운로드·설치는 아직 없다.** 감독기는 고정46파일·10개 라이브러리 링크를 검증하고, 포트 충돌이 없을 때 자기 자식만 시작한다. 다운로드된 실행파일을 임의로 교체하거나 보안 설정을 낮추지 않는다.
 
-```sh
-# 터미널 1. 전용 로컬 모델 서버를 켜 둔다.
-OLLAMA_HOST=127.0.0.1:11434 OLLAMA_NO_CLOUD=1 ollama serve
-```
+- 앱 전용 주소는 `127.0.0.1:11435`다. 일반 Node서버의 기본 Ollama11434는 바꾸지 않는다.
+- 자기 자식의 시작 신호와 정확한 버전 응답을 확인한 뒤에만 앱 AI를 활성화한다.
+- 준비 실패·충돌이면 이번 실행을 AI off 수동모드로 시작한다. 사용자의 다른 모델 서버는 종료·수정하지 않는다.
+- 정상 실행 후 감독기가 죽으면 업무 서버도 멈춰 다른 프로세스로 원문을 보내지 않게 한다.
+- 앱 종료 시 자기 프로세스 그룹만 정리한다. 클라우드는 꺼져 있고 모델 경로는 앱 전용이다.
+- 검증15초·기동15초, 종료 약3초 상한. 앱은 이 준비 이후 업무 서버를 연다.
 
-```sh
-# 터미널 2. 연결된 상태에서 모델을 한 번 준비한다.
-OLLAMA_HOST=127.0.0.1:11434 ollama pull qwen3:4b
-OLLAMA_HOST=127.0.0.1:11434 ollama list
-```
+이 Mac에서 실제 앱 기동→11435 실추론→앱 종료→5601/11435해제를 확인했으며, 기존11434는 유지됐다.
 
-아맞다 창에서 통화 원문으로 카드를 생성하거나 업무 질문을 보낸다. 모델을 준비하지 않았거나 Ollama가 꺼져 있으면 AI 처리 시 로컬 모델 연결·설치 오류가 표시된다. 로그인, 데이터 조회, 수동 편집은 사용할 수 있다.
-
-로컬 AI를 끄려면 **로컬 자료 폴더 열기**에서 `ai.json` 파일을 `{"provider":"off"}`로 저장하고 앱을 다시 시작한다. 설치한 다른 Ollama 모델을 쓰려면 `{"provider":"ollama","model":"qwen3:4b"}`의 모델 값을 그 이름으로 바꾼다. 앱은 이 파일에서 `off`와 로컬 `ollama` 설정만 읽는다.
+로컬 AI를 끄려면 자료 폴더의 `ai.json`에 `{"provider":"off"}`를 저장한다. 다른 로컬 모델은 `{"provider":"ollama","model":"모델이름"}`으로 선택한다. 클라우드 모델은 허용하지 않는다. 설정파일을 바꾼 뒤 앱을 다시 연다.
 
 ### CPU 받아쓰기 일꾼 준비와 사용
 
@@ -82,7 +78,7 @@ OLLAMA_HOST=127.0.0.1:11434 ollama list
    ```sh
    ahmatda_local="$HOME/Library/Application Support/Ahmatda"
    python3 -m venv "$ahmatda_local/whisper-venv"
-   "$ahmatda_local/whisper-venv/bin/python" -m pip install 'faster-whisper>=1.2,<2' numpy
+   "$ahmatda_local/whisper-venv/bin/python" -m pip install 'faster-whisper==1.2.1' 'numpy==2.5.5'
    "$ahmatda_local/whisper-venv/bin/python" -c \
      'import sys; from faster_whisper import download_model; download_model("small", output_dir=sys.argv[1])' \
      "$ahmatda_local/whisper-small"
@@ -147,7 +143,7 @@ node src/mac-app/tests/real-local-model.mjs --run-real-local-model
 
 **이동 → 주문 정리 모델 준비**에서 qwen3:4b의 출처·약2.50GB·Apache-2.0 안내를 보고 시작한다. 공식 배포 서버의 고정 모델 파일을 받아 해시를 검증한다. 이미 정상 설치된 파일은 재사용한다. 기존 모델을 바꾸는 경우 manifest를 백업하고, 실패·취소 시 임시 파일을 정리한다. 녹음·원문·사용자 자격증명은 보내지 않는다.
 
-앱 전용 Ollama0.40.16 CLI 파일의 크기·해시가 일치해야 시작한다. 이것은 전체 런타임 라이브러리 검증이나 서버 실행 확인이 아니다. **런타임 자동 설치·서버 자동 시작·받아쓰기 모델 준비는 아직 포함하지 않는다.**
+앱 전용 Ollama0.40.16 CLI 파일의 크기·해시가 일치해야 시작한다. 이것은 전체 런타임 라이브러리 검증이나 서버 실행 확인이 아니다. 런타임 자동 설치는 아직 없다. 앱이 실행기를 시작하기 전에는 별도 감독기가 전체 파일 무결성과 자기 서버 상태를 추가로 검증한다. 받아쓰기 모델은 별도 메뉴로 준비한다.
 
 - 기본 CLI `node src/mac-app/setup-local-model.mjs --status`는 읽기 검사만 한다. `--prepare`를 명시해야 파일을 받는다.
 - 공식 registry와 그 응답이 지목하는 고정 CDN호스트·digest경로만 허용한다. HTTP·임의 호스트·자격증명·무제한 리다이렉트는 거절한다.
@@ -158,3 +154,17 @@ node src/mac-app/tests/real-local-model.mjs --run-real-local-model
 ## 음성부터 카드까지 검증
 
 가짜 합성음성의 실제 Whisper 전사→HTTP 결과 API→Qwen 카드→SQLite→브라우저 화면을 확인했다. 원문에 없는 거래처·차종 생성 결함을 발견해 사후검증에서 비우고 확인 경고를 표시하도록 보완했다. [범위·결과·재현](../work/03-개발-태림/산출물/v1.6-실제음성-주문카드-검증.md)을 확인한다. 실제 전화 품질과 일반 사용자 설치 완성을 뜻하지 않는다.
+
+## 받아쓰기 모델 준비 메뉴
+
+**이동 → 받아쓰기 모델 준비**는 공식 Systran/faster-whisper-small의 고정revision4파일 약486MB를 내려받아 각각 SHA256을 검증한다. 신규 파일을 모두 확인한 뒤 디렉터리 단위로 반영한다. 실패·취소 때 정상 모델은 유지하고, 기존 불완전 디렉터리를 자동 삭제하거나 덮어쓰지 않는다. 실행기/Python/pip는 설치하거나 실행하지 않는다.
+
+별도 빈 폴더에서486,212,372B 전체 신규 다운로드·4파일 해시·완료 상태를 확인했고, 실제 Mac 메뉴의 기존 설치 재확인도 통과했다. 상태의 `runtimePresent`는 파일 존재만 뜻하며 실행기 무결성·전사 성공으로 표시하지 않는다. 이어받기는 미지원이다.
+
+## 검증과 배포 경계
+
+- Swift 상태/인증링크14개, 실행기 감독기11개, Whisper준비10개, 주문모델준비13개 회귀 통과.
+- 실제 Mac 자동AI기동·실추론·종료정리, Whisper준비 메뉴, 없는 가입링크 안전처리 확인.
+- 성공 가입 링크의 파서는 테스트했지만 실제 새 사용자 가입 전체를 네이티브앱으로 끝낸 것은 아니다. 기존 웹 가입 E2E와 별개다.
+- 신규Mac 전체설치, 전사 실행기 설치/자동일꾼, 재개·복구, 현장 음성평가는 남아 있다.
+- 이 컴퓨터에서 외부배포용 **Developer ID Application 인증서0개**를 확인했다. ad hoc검증은 완료했지만 정식서명·공증은 진행하지 않았다. 인증서 발급·계정변경·보안우회도 하지 않았다.
