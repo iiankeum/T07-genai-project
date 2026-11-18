@@ -96,6 +96,10 @@ jobs:
         run: npm run test:today-order-e2e
         env:
           TODAY_ORDER_OUTPUT: artifacts/e2e/today-order
+      - name: Live example save snapshot and safe DOM (fake API only)
+        run: npm run test:live-example-e2e
+        env:
+          LIVE_EXAMPLE_OUTPUT: artifacts/e2e/live-example
       - uses: actions/upload-artifact@v4
         if: always()
         with:
