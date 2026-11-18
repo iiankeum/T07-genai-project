@@ -117,7 +117,8 @@ export default {
         [s.shipped, '출고 완료', '장'],
         ...Object.entries(s.byType || {}).map(([k, n]) => [n, k, '건']),
       ];
-      return html`<section class="today-overview" aria-label="통화와 주문 현황">
+      return html`<section class="today-overview" aria-labelledby="today-stats-h">
+        <h2 id="today-stats-h">오늘 현황</h2>
         <ul class="today-stat-row">
           ${metric(s.calls, '건', '통화', href('/calls', { ...range, status: 'all' }), 'calls')}
           ${metric(s.cards, '장', '주문 카드', '#/board', 'cards')}
@@ -304,11 +305,11 @@ export default {
       const d = st.data;
       const range = { from: st.day, to: st.day };
       render(root, html`${headPart()}
-        ${d ? html`${metricsPart(d, range)}
-          <div class="today-workspace">
+        ${d ? html`<div class="today-workspace">
             ${queuePart(d, range)}
             <aside class="today-rail" aria-label="브리핑과 마감">${briefPart(d)}${closePart()}</aside>
           </div>
+          ${metricsPart(d, range)}
           ${recentPart(d, range)}
           <p class="today-foot">${st.refreshFailed ? '새로 고치지 못했습니다. ' : ''}30초마다 새로 고침${st.loadedAt ? ` · 마지막 ${fmtClock(st.loadedAt)}` : ''}</p>`
           : html`<div class="today-panel today-load">${st.error
