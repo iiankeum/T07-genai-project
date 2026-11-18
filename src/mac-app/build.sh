@@ -47,6 +47,8 @@ cp "$source_dir/parent-lifetime.mjs" "$resources/"
 cp "$source_dir/setup-local-model.mjs" "$resources/"
 cp "$source_dir/setup-whisper-model.mjs" "$resources/"
 cp "$source_dir/local-runtime.mjs" "$resources/"
+cp "$source_dir/prepare-whisper-runtime.mjs" "$resources/"
+cp "$source_dir/install-whisper-runtime.mjs" "$resources/"
 cp "$repo/src/pc-agent/callnote_agent.py" "$resources/pc-agent/"
 
 # 런타임 소스만 복사한다. Git이 무시하는 .env, .data, 로컬 녹음은 대상에 없다.
@@ -83,6 +85,17 @@ for (const entry of RUNTIME_FILES) {
 await verifyRuntime(process.argv[4]);
 JS
     # vendor의 원본 서명/바이너리 해시를 보존한다. 아래에서 최상위 앱만 ad hoc 서명한다.
+fi
+
+# 선택 개발 패키지: 자체 inventory 변경 탐지 후 portable Python을 그대로 복사한다.
+# 재배포 고지/Developer ID/공증 완료를 뜻하지 않으며 전역 Python·venv를 포함하지 않는다.
+if [[ "${AHMATDA_BUNDLE_WHISPER:-0}" == 1 ]]; then
+    whisper_source=${AHMATDA_WHISPER_RUNTIME:-"$HOME/Library/Application Support/Ahmatda/runtime/whisper-portable-3.12.16"}
+    NODE_OPTIONS= NODE_PATH= "$node_source" --input-type=module - "$source_dir/install-whisper-runtime.mjs" "$whisper_source" "$resources/runtime/whisper-portable-3.12.16" <<'JS'
+import {pathToFileURL} from 'node:url';
+const {copyVerifiedRuntime}=await import(pathToFileURL(process.argv[2]));
+await copyVerifiedRuntime(process.argv[3],process.argv[4]);
+JS
 fi
 
 NODE_OPTIONS= NODE_PATH= "$macos/node" "$source_dir/copy-dependencies.mjs" "$repo/src/app" "$resources/app"

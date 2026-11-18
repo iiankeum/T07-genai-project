@@ -181,7 +181,7 @@ AHMATDA_BUNDLE_OLLAMA=1 bash src/mac-app/build.sh
 
 첫 실행 시 설치 대상이 없으면 번들 원본 검사→임시폴더 복사→재검증→반영한다. 기존 정상 또는 손상 폴더는 덮어쓰지 않는다. lock·디스크여유·취소·심볼릭링크·쓰기권한 검사를 수행한다. 일반 동시실행은 보호하지만 동일 사용자의 적대적인 검사/rename 사이 경로교체까지 보장하는 OS원자성은 아니다.
 
-빈 임시저장소에 실제 공식런타임 설치·전체재검증·재실행 보존을 확인했다. 이것은 새 Mac 전체설치 시험과 다르다. Ollama 포함 빌드의 앱서명 검사는 통과했지만 DeveloperID서명·공증은 아니다. Python/Whisper 실행기는 아직 이 번들에 포함하지 않는다.
+빈 임시저장소에 실제 공식런타임 설치·전체재검증·재실행 보존을 확인했다. 이것은 새 Mac 전체설치 시험과 다르다. Ollama 포함 빌드의 앱서명 검사는 통과했지만 DeveloperID서명·공증은 아니다. Python/Whisper는 아래 별도 선택 플래그로 포함할 수 있다.
 
 ## 이동 가능한 받아쓰기 실행기 준비 (개발자용)
 
@@ -196,6 +196,16 @@ node src/mac-app/prepare-whisper-runtime.mjs --prepare-development-runtime
 
 앱 자료 폴더의 `runtime/whisper-portable-3.12.16`에 설치한다. 고정 SHA256·크기 확인 후 오프라인 wheel 설치와 의존성 검사를 실행한다. 기존 폴더는 덮어쓰지 않고 실패·취소 시 임시 파일을 정리한다. 개인 Python 경로에 의존하지 않으며 지원 진입점은 `python/bin/python3.12 -I`다. pip 등 생성된 콘솔 스크립트의 shebang은 준비 당시 경로이므로 이동 후 사용하지 않는다.
 
-설치 후 기록하는 파일 목록은 변경 탐지용이다. 공급자 서명이나 독립적인 배포 인증을 대체하지 않는다. `inferenceVerified:false`는 설치만으로 전사 성공을 주장하지 않는 표시다. 각 배포본·wheel의 라이선스 파일을 보존하며 전체 재배포 고지·서명·공증 검토는 남아 있다. 현재 Mac 앱 번들에는 포함하지 않으며 앱 메뉴 연결·자동 일꾼 인증/시작도 아직 하지 않는다.
+설치 후 기록하는 파일 목록은 변경 탐지용이다. 공급자 서명이나 독립적인 배포 인증을 대체하지 않는다. `inferenceVerified:false`는 설치만으로 전사 성공을 주장하지 않는 표시다. 각 배포본·wheel의 라이선스 파일을 보존하며 전체 재배포 고지·서명·공증 검토는 남아 있다. 별도 선택 빌드로 Mac 앱에 포함할 수 있다. 앱 메뉴 연결·자동 일꾼 인증/시작은 별도 단계다.
 
 실제 helper로84,241,226B를 모두 신규 다운로드하고 빈 폴더 설치·경로 이동 뒤 Python격리모드에서3.7초 가짜음성을 전사했다. 첫 모델 로드9.75초, 전사1.7초였으며 원문과 같았다. [검증 기록](../work/03-개발-태림/자료/real-local-audio-20261118/portable-whisper-fake-input.json). helper11개 회귀 통과. 이 결과는 앱 자동 설치나 실전화 품질을 뜻하지 않는다.
+
+## 전사 실행기 포함 개발 빌드
+
+```sh
+AHMATDA_BUNDLE_OLLAMA=1 AHMATDA_BUNDLE_WHISPER=1 bash src/mac-app/build.sh
+```
+
+이미 준비된 `runtime/whisper-portable-3.12.16`을 검사해 앱에 포함한다. `AHMATDA_WHISPER_RUNTIME`으로 같은 준비 도구가 만든 경로를 지정할 수 있다. 빌드 중 네트워크 다운로드·pip 실행·전역 설치는 하지 않는다. 모델 파일과 사용자 자료는 포함하지 않는다.
+
+번들의 `install-whisper-runtime.mjs --install-from-bundle`은 전용 private 자료 폴더로 복사·재검증하며 기존 정상 또는 손상 설치를 덮어쓰지 않는다. 기본 `--status`는 읽기 확인이다. 설치helper9개 회귀와 실제 포함빌드·ad hoc검사·빈 폴더 설치·격리Python import를 확인했다. [증거](../work/03-개발-태림/자료/real-local-audio-20261118/whisper-bundle-install.json). 이 단계는 자동 일꾼 등록이나 신규 Mac 전체 설치 검증과 다르다.

@@ -1,3 +1,12 @@
+## 2026-11-18 15:52 KST · 전사 실행기 선택 번들과 private 설치 검증
+- 돌린 사람 · 도구 · 작업방: 신*림(taejs) · ChatGPT dot · 아맞다 직접 작업
+- 한 일: 개발 앱에 portable Python 전사 실행기를 선택 포함하고 private 폴더로 복사·검증하는 helper를 추가했다.
+- 왜: 사용자 개인 Python 설치 없이 앱에 포함된 실행기를 사용하기 위한 단계다.
+- 어떻게: 내부 실행기 작업1개. 네트워크/pip 없는 빌드·설치, 기존 자료 보존, symlink·권한·취소·lock 검사. 실제 포함빌드와 빈 폴더 설치·격리 import 확인.
+- 결과물: [빌드](../../src/mac-app/build.sh) · [설치 helper](../../src/mac-app/install-whisper-runtime.mjs) · [검증 기록](자료/real-local-audio-20261118/whisper-bundle-install.json)
+- AI 가 판단한 것 · 사람이 확인할 것: helper9개·ad hoc검사 통과. 자체 inventory는 변경탐지이며 공급자서명 검증이 아니다. 새Mac전체설치·정식서명공증·재배포최종검토는 남아 있다.
+- 다음 할 일: 명시적 관리자 동의 기반 일꾼 연결과 자동 실행 수명관리. 유료API·운영배포·병합 없음.
+
 ## 2026-11-18 15:46 KST · 개인 Python 의존 없는 전사 실행기 준비
 - 돌린 사람 · 도구 · 작업방: 신*림(taejs) · ChatGPT dot · 아맞다 직접 작업
 - 한 일: 공식 독립 Python3.12.16과 고정 wheel24개로 개발용 전사 실행기를 준비하는 도구를 추가했다.
