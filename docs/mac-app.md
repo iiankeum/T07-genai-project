@@ -4,7 +4,7 @@
 
 같은 웹 화면을 macOS 창에서 연다. 기본 실행은 이 Mac의 Node 24와 SQLite를 사용한다. 로그인, 통화 업로드·조회, 주문 카드와 배송 처리는 로컬 워크스페이스에서 이루어진다. 파일 받아쓰기는 별도로 준비한 faster-whisper CPU 일꾼이 맡고, 주문 카드 초안·질문 답변은 Ollama가 `qwen3:4b`로 처리한다.
 
-> 검증 상태: Apple Silicon 빌드·ad hoc 서명·번들 소스와 의존성·Node/SQLite 초기화·부모 종료 연동을 확인했다. Mac 앱 실제 기동·로그인 화면·준비 상태 안내와 버튼 동작을 확인했다. 새 사용자 설치 전체 흐름·파일 선택과 실제 Whisper/Ollama 추론은 별도 검증 대상이다. 아래 모델 준비와 오프라인 확인은 설치 후 수행할 절차다.
+> 검증 상태: Apple Silicon 빌드·ad hoc 서명·번들 소스와 의존성·Node/SQLite 초기화·부모 종료 연동을 확인했다. Mac 앱 실제 기동·로그인 화면·준비 상태 안내와 버튼 동작을 확인했다. 실제 qwen3:4b와 앱 adapter로 가짜 주문 1건 추출도 확인했다(약 2.1초). 새 사용자 설치 전체 흐름·파일 선택·Whisper 전사·전체 주문 파이프라인은 별도 검증 대상이다. 아래 모델 준비와 오프라인 확인은 설치 후 수행할 절차다.
 
 터미널 없는 일반 사용자 설치와 모델 준비의 목표·미구현 범위는 [Mac 릴리즈 계획](mac-release-plan.md)을 따른다. 현재 문서는 개발 검증용 수동 경로다.
 
@@ -128,3 +128,17 @@ OLLAMA_HOST=127.0.0.1:11434 ollama list
 ```sh
 open "$HOME/Applications/Ahmatda.app" --args --server https://your-ahmatda.example
 ```
+
+## 실모델 검증 기록 (2026-11-18)
+
+공식 Ollama 0.40.16과 qwen3:4b Q4_K_M을 앱 전용 경로에 준비하고 Metal에서 가짜 부품 주문을 추출했다. 앱의 실제 `ai-ollama.mjs`를 사용했으며 유료 제공자는 호출하지 않았다. 모델 약 2.50GB, 추론 메모리 약 3.18GB, 단일 응답 약 2.1초였다. 이는 일반 성능 보장이나 음성 전사 검증이 아니다.
+
+[가짜 입력 실추론 결과](../work/03-개발-태림/자료/e2e-v16-resume-20261118/real-local-model-fake-input.json)에 버전·해시·범위를 기록했다. [Ollama 라이선스](https://github.com/ollama/ollama/blob/main/LICENSE)는 MIT, [Qwen3-4B 모델](https://huggingface.co/Qwen/Qwen3-4B)은 Apache-2.0이다.
+
+모델을 이미 준비한 개발자는 다음으로 재현한다. 다운로드나 서버 자동 시작은 하지 않는다.
+
+```sh
+node src/mac-app/tests/real-local-model.mjs --run-real-local-model
+```
+
+클라우드 기능을 끈 loopback Ollama를 사용했다. OS 네트워크 자체를 차단한 오프라인 시험은 아직 하지 않았다. 앱 메뉴에서도 모델 설치 확인을 실제로 표시했다.
