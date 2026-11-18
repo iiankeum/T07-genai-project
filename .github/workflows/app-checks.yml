@@ -56,6 +56,10 @@ jobs:
         run: npm run test:form-pending-e2e
         env:
           FORM_PENDING_OUTPUT: artifacts/e2e/form-pending
+      - name: Calls list return position (fake API only)
+        run: npm run test:calls-return-e2e
+        env:
+          CALLS_RETURN_OUTPUT: artifacts/e2e/calls-return
       - uses: actions/upload-artifact@v4
         if: always()
         with:

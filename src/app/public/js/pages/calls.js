@@ -12,6 +12,22 @@ const RANGES = [['today', '오늘'], ['yesterday', '어제'], ['week', '이번 �
 const PAGE = 30;
 const REFRESH_MS = 10_000;
 const TYPE_MS = 350;
+// 상세로 이동한 직전 목록의 위치만 탭 메모리에 보관한다. 통화 내용은 저장하지 않는다.
+let returnPosition = null;
+let returnEpoch = 0;
+const clearReturnPosition = () => { returnPosition = null; returnEpoch++; };
+if (typeof window !== 'undefined') {
+  for (const event of ['ahmatda:session-expired', 'ahmatda:workspace-changed'])
+    window.addEventListener(event, clearReturnPosition);
+  window.addEventListener('hashchange', () => {
+    if (!/^#\/calls(?:[/?]|$)/.test(location.hash)) clearReturnPosition();
+  });
+}
+function accessKey(meta) {
+  const a = meta?.access;
+  if (a?.user?.id && a?.workspace?.id) return JSON.stringify([a.user.id, a.workspace.id]);
+  return a?.demo === true ? 'demo' : null;
+}
 const WORKING = new Set(['queued', 'transcribing', 'extracting']);
 const DAY_MS = 86_400_000;
 
@@ -85,6 +101,12 @@ export default {
   title: '통화 기록 · 찾기',
   async mount(el, ctx) {
     const state = stateFromQuery(ctx.query);
+    const scope = accessKey(ctx.meta);
+    const resume = scope && returnPosition?.scope === scope && returnPosition.hash === hashFor(state)
+      ? returnPosition : null;
+    const resumeEpoch = returnEpoch;
+    returnPosition = null; // 한 번 복귀에만 사용. 필터·계정·공간 변경 시 재사용하지 않는다.
+    let restoreCancelled = false;
     let calls = [];
     let total = 0;
     let customers = null;
@@ -269,7 +291,7 @@ export default {
       const limit = append ? PAGE : silent ? Math.min(100, Math.max(PAGE, calls.length)) : PAGE;
       try {
         const r = await api.get('/api/calls', apiQuery(append ? calls.length : 0, limit), { signal: my.signal });
-        if (!alive || my !== ctrl) return;
+        if (!alive || my !== ctrl) return false;
         const list = Array.isArray(r?.calls) ? r.calls : [];
         const ids = new Set(calls.map((call) => call.id));
         calls = append ? calls.concat(list.filter((call) => !ids.has(call.id))) : list;
@@ -277,13 +299,14 @@ export default {
         renderResults();
       } catch (e) {
         if (e?.name === 'AbortError' || !alive || my !== ctrl) return;
-        if (silent) { scheduleRefresh(); return; }
+        if (silent) { scheduleRefresh(); return false; }
         render(slot('results'), html`${errorBox(e)}<button type="button" class="btn" data-act="retry">다시 불러오기</button>`);
-        return;
+        return false;
       } finally {
         if (my === ctrl) slot('results')?.classList.remove('is-loading');
       }
       scheduleRefresh();
+      return true;
     }
     async function loadCustomers() {
       try {
@@ -315,6 +338,7 @@ export default {
 
     // ── 이벤트 ──────────────────────────────────────────────────────
     function onInput() {
+      restoreCancelled = true;
       root.querySelector('[data-act="clear-q"]')?.classList.toggle('hidden', !input.value);
       clearTimeout(typeTimer);
       typeTimer = setTimeout(() => {
@@ -326,6 +350,7 @@ export default {
       }, TYPE_MS);
     }
     function onSubmit(e) {
+      restoreCancelled = true;
       e.preventDefault();
       clearTimeout(typeTimer);
       state.q = input.value.trim();
@@ -333,8 +358,13 @@ export default {
       changed({ push: true });
     }
     function onClick(e) {
+      restoreCancelled = true;
       const t = e.target;
       if (!(t instanceof Element)) return;
+      const link = t.closest('a[href]');
+      if (scope && link?.getAttribute('href')?.startsWith('#/calls/') && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey && e.button === 0) {
+        returnPosition = { scope, hash: hashFor(state), count: calls.length, href: link.getAttribute('href') };
+      }
       const st = t.closest('[data-status]');
       if (st) { if (state.status !== st.dataset.status) { state.status = st.dataset.status; changed(); } return; }
       const rg = t.closest('[data-range]');
@@ -365,6 +395,7 @@ export default {
       }
     }
     function onChange(e) {
+      restoreCancelled = true;
       const id = e.target?.id;
       const filters = { 'cl-cust': 'customer', 'cl-type': 'callType', 'cl-callback': 'callback' };
       if (filters[id]) {
@@ -378,6 +409,12 @@ export default {
       }
     }
 
+    function onNavigationIntent(event) {
+      restoreCancelled = true; // 키보드 탐색·스크롤도 사용자가 새로 선택한 위치를 우선한다.
+    }
+    root.addEventListener('keydown', onNavigationIntent);
+    window.addEventListener('wheel', onNavigationIntent, { passive: true });
+    window.addEventListener('touchstart', onNavigationIntent, { passive: true });
     input.addEventListener('input', onInput);
     root.addEventListener('submit', onSubmit);
     root.addEventListener('click', onClick);
@@ -385,13 +422,30 @@ export default {
 
     renderFilters();
     loadCustomers();
-    await load();
+    const loaded = await load();
+    if (loaded && resume) {
+      // 서버의 페이지 크기·권한 검사를 그대로 사용하며 필요한 범위만 다시 조회한다.
+      while (alive && !restoreCancelled && el.isConnected && resumeEpoch === returnEpoch && hashFor(state) === resume.hash && calls.length < resume.count && calls.length < total) {
+        const before = calls.length;
+        if (!await load({ append: true }) || calls.length <= before) break;
+      }
+      if (alive && !restoreCancelled && el.isConnected && resumeEpoch === returnEpoch && hashFor(state) === resume.hash) {
+        const target = [...slot('results').querySelectorAll('a[href]')].find(a => a.getAttribute('href') === resume.href);
+        if (target) {
+          target.focus({ preventScroll: true });
+          target.scrollIntoView({ block: 'center', behavior: 'instant' });
+        } else input.focus({ preventScroll: true });
+      }
+    }
 
     return () => {
       alive = false;
       ctrl?.abort();
       clearTimeout(typeTimer);
       clearTimeout(refreshTimer);
+      root.removeEventListener('keydown', onNavigationIntent);
+      window.removeEventListener('wheel', onNavigationIntent);
+      window.removeEventListener('touchstart', onNavigationIntent);
       input.removeEventListener('input', onInput);
       root.removeEventListener('submit', onSubmit);
       root.removeEventListener('click', onClick);
