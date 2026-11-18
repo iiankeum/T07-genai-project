@@ -1,7 +1,7 @@
 import {resolveStorageRoot} from './whisper-runtime-profile.mjs';
 // 개발용 모델 준비 helper. 런타임은 앱 업데이트로 제공한다. 모델 외 다운로드·실행·추론 없음.
 import { createHash, randomUUID } from 'node:crypto';
-import { createReadStream, createWriteStream } from 'node:fs';
+import { constants, createReadStream, createWriteStream } from 'node:fs';
 import fs from 'node:fs/promises';
 import https from 'node:https';
 import { isDeepStrictEqual } from 'node:util';
@@ -68,33 +68,88 @@ export function approvedDownloadURL(url,item,redirect=false) {
   return (u.hostname==='registry.ollama.ai' && u.pathname===`/v2/library/qwen3/blobs/${item.digest}` && !u.search) ||
     (u.hostname===MODEL_CDN && u.pathname===`/ollama/docker/registry/v2/blobs/sha256/${hash.slice(0,2)}/${hash}/data`);
 }
-export function download(url, target, item, {signal,onProgress=()=>{},redirects=0}={}) {
+export function download(url, target, item, {signal,onProgress=()=>{},redirects=0,offset=0,get=https.get}={}) {
   // 계정 헤더·토큰·쿠키·요청 본문·로컬 자료는 전송하지 않는다.
   return new Promise((resolve,reject)=>{
+    if(!Number.isSafeInteger(offset)||offset<0||offset>=item.size)return reject(new Error('invalid_resume_offset'));
     const parsed=new URL(url);
     if(!approvedDownloadURL(url,item,redirects>0)) return reject(new Error('unapproved_source'));
-    const request=https.get(parsed,{signal,agent:false,headers:{'user-agent':'Ahmatda-model-preparer/1'}},response=>{
+    let activeResponse,delegated=false;
+    const request=get(parsed,{signal,agent:false,headers:{'user-agent':'Ahmatda-model-preparer/1','accept-encoding':'identity',...(offset?{range:`bytes=${offset}-`}:{})}},response=>{
       // 공식 저장소에서 실제 확인한 CDN의 해당 digest 경로만 허용한다.
       if([301,302,303,307,308].includes(response.statusCode)) {
         const location=response.headers.location; response.destroy();
         if(!location || redirects>=3) {reject(new Error('redirect_limit'));return;}
         let next; try {next=new URL(location,parsed).href;} catch {reject(new Error('unapproved_redirect'));return;}
         if(!approvedDownloadURL(next,item,true)) {reject(new Error('unapproved_redirect'));return;}
-        download(next,target,item,{signal,onProgress,redirects:redirects+1}).then(resolve,reject);return;
+        delegated=true;
+        download(next,target,item,{signal,onProgress,redirects:redirects+1,offset,get}).then(resolve,reject);return;
       }
-      if(response.statusCode!==200) { response.destroy(); reject(new Error('download_http_'+response.statusCode)); return; }
+      const fail=message=>{response.destroy();reject(new Error(message));};
+      if(![200,206].includes(response.statusCode))return fail('download_http_'+response.statusCode);
+      if(response.headers['content-encoding'] && response.headers['content-encoding']!=='identity')return fail('encoded_response');
+      const start=response.statusCode===206?offset:0;
+      if(response.statusCode===206 && (!offset || response.headers['content-range']!==`bytes ${offset}-${item.size-1}/${item.size}`))return fail('invalid_content_range');
+      if(response.statusCode===200 && response.headers['content-range']!==undefined)return fail('invalid_content_range');
       const length=response.headers['content-length'];
-      if(length!==undefined && Number(length)!==item.size) { response.destroy();reject(new Error('size_mismatch'));return; }
+      if((response.statusCode===206 && length===undefined) || (length!==undefined && length!==String(item.size-start)))return fail('size_mismatch');
       let count=0,last=0;
       const limiter=new Transform({transform(chunk,encoding,done){count+=chunk.length;
-        if(count>item.size) return done(new Error('size_limit'));
-        if(Date.now()-last>250){onProgress(count);last=Date.now();}done(null,chunk);}});
-      pipeline(response,limiter,createWriteStream(target,{flags:'wx',mode:0o600}),{signal})
-        .then(()=>{if(count!==item.size) throw new Error('size_mismatch'); onProgress(count); resolve();}).catch(reject);
+        if(count>item.size-start) return done(new Error('size_limit'));
+        if(Date.now()-last>250){onProgress(start+count);last=Date.now();}done(null,chunk);}});
+      activeResponse=response;
+      pipeline(response,limiter,createWriteStream(target,{flags:offset?(constants.O_WRONLY|constants.O_NOFOLLOW|(start?constants.O_APPEND:constants.O_TRUNC)):'wx',mode:0o600}),{signal})
+        .then(()=>{if(count!==item.size-start) throw new Error('size_mismatch'); onProgress(start+count); resolve();}).catch(reject);
     });
     request.setTimeout(30_000,()=>request.destroy(new Error('download_timeout')));
-    request.on('error',reject);
+    // 응답 쓰기가 시작된 뒤에는 pipeline이 닫힌 후에만 실패를 전달한다.
+    request.on('error',error=>{if(activeResponse)activeResponse.destroy(error);else if(!delegated)reject(error);});
   });
+}
+// 부분 캐시는 완료 blob과 분리한다. 중단 시 기록한 부분 SHA도 재사용 전에 검사한다.
+async function partialHash(file){
+  const hash=createHash('sha256');
+  for await(const chunk of createReadStream(file,{flags:constants.O_RDONLY|constants.O_NOFOLLOW}))hash.update(chunk);
+  return hash.digest('hex');
+}
+const resumableFailure=e=>e.name==='AbortError'||['ECONNRESET','ETIMEDOUT','EPIPE','ENETUNREACH','EAI_AGAIN','ERR_STREAM_PREMATURE_CLOSE'].includes(e.code)||e.message==='download_timeout';
+async function validatedPartial(cache,item){
+  // 호출자는 모델 준비 lock을 보유한다. stale lock은 자동 삭제하지 않는다.
+  const key=createHash('sha256').update(JSON.stringify({digest:item.digest,size:item.size})).digest('hex');
+  await safeDirectory(cache);const dir=path.join(cache,key);await safeDirectory(dir);
+  const partial=path.join(dir,'partial'),meta=path.join(dir,'metadata.json');
+  for(const entry of await fs.readdir(dir))if(!['partial','metadata.json'].includes(entry))throw Error('unexpected_partial_entry');
+  for(const file of [partial,meta]){try{const st=await fs.lstat(file);if(!st.isFile()||st.isSymbolicLink())throw Error('unsafe_partial');}catch(e){if(e.code!=='ENOENT')throw e;}}
+  let offset=0;
+  const clean=async()=>{await fs.rm(partial,{force:true});await fs.rm(meta,{force:true});};
+  const existing=await regular(partial),metadata=await regular(meta);
+  if(existing&&metadata){
+    // 크기를 먼저 제한하여 잘못된 캐시를 끝없이 읽지 않는다.
+    if(existing.size<1||existing.size>item.size){await clean();throw Error('partial_integrity_failed');}
+    if(metadata.size>1024){await clean();throw Error('invalid_partial_metadata');}
+    let saved,handle;try{handle=await fs.open(meta,constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK);const info=await handle.stat();if(!info.isFile()||info.size>1024)throw Error('invalid_partial_metadata');saved=JSON.parse(await handle.readFile('utf8'));}catch(e){if(e instanceof SyntaxError||e.message==='invalid_partial_metadata'){await clean();throw Error('invalid_partial_metadata');}throw e;}finally{await handle?.close();}
+    const expected={version:1,digest:item.digest,size:item.size,bytes:existing.size,sha256:await partialHash(partial)};
+    if(!isDeepStrictEqual(saved,expected)){await clean();throw Error('partial_integrity_failed');}
+    offset=existing.size;
+  }else if(existing||metadata){await clean();}
+  return {partial,meta,offset,clean};
+}
+export async function downloadResumable(url,target,item,{cache,signal,onProgress,get}={}){
+  const {partial,meta,offset,clean}=await validatedPartial(cache,item);
+  try{
+    if(offset!==item.size)await download(url,partial,item,{signal,onProgress,offset,get});
+    if(!await verifyFile(partial,item,signal))throw Error('checksum_mismatch');
+    signal?.throwIfAborted();
+    await fs.link(partial,target);await clean();
+  }catch(e){
+    const st=await regular(partial);
+    if(resumableFailure(e)&&st&&st.size>0&&st.size<=item.size){
+      const value={version:1,digest:item.digest,size:item.size,bytes:st.size,sha256:await partialHash(partial)};
+      // 이전 메타데이터를 제거한 뒤 wx로 기록. SIGKILL 중간 상태는 재사용하지 않는다.
+      await fs.rm(meta,{force:true});await fs.writeFile(meta,JSON.stringify(value),{flag:'wx',mode:0o600});
+    }else await clean();
+    throw e;
+  }
 }
 export async function inspect(root,{model=MODEL,runtime=RUNTIME,signal}={}) {
   validateModel(model);await checkModelDirectories(root);const models=path.join(root,'models/ollama');
@@ -114,7 +169,7 @@ export async function inspect(root,{model=MODEL,runtime=RUNTIME,signal}={}) {
     modelVerified:installed.every(Boolean)&&manifest,filesVerified:installed.filter(Boolean).length,totalFiles:installed.length,
     inferenceVerified:false,automaticRuntimeInstall:false,automaticServerStart:false,cloudEnabled:false};
 }
-export async function prepare(root,{model=MODEL,runtime=RUNTIME,signal,emit=()=>{},transfer=download}={}) {
+export async function prepare(root,{model=MODEL,runtime=RUNTIME,signal,emit=()=>{},transfer=download,requestGet,statfs=fs.statfs}={}) {
   validateModel(model);root=path.resolve(root);
   await safeDirectory(root);
   const lock=path.join(root,'.model-prepare.lock');
@@ -138,15 +193,19 @@ export async function prepare(root,{model=MODEL,runtime=RUNTIME,signal,emit=()=>
       try{await fs.lstat(file);throw Error('existing_invalid_blob_preserved');}catch(e){if(e.code!=='ENOENT')throw e;}
       missing.push(item);
     }
-    const required=missing.reduce((sum,item)=>sum+item.size,0)+64*1024*1024;
-    const disk=await fs.statfs(models); if(disk.bavail*disk.bsize<required) throw new Error('insufficient_disk_space');
-    emit({event:'preparing',model:model.name,downloadBytes:missing.reduce((s,x)=>s+x.size,0),source:model.source,license:model.license,resumeMode:'verified-blobs-only'});
+    let cachedBytes=0;
+    if(transfer===download)for(const item of missing)cachedBytes+=(await validatedPartial(path.join(models,'.partial-blobs'),item)).offset;
+    const required=missing.reduce((sum,item)=>sum+item.size,0)-cachedBytes+64*1024*1024;
+    const disk=await statfs(models); if(disk.bavail*disk.bsize<required) throw new Error('insufficient_disk_space');
+    emit({event:'preparing',model:model.name,downloadBytes:missing.reduce((s,x)=>s+x.size,0),source:model.source,license:model.license,resumeMode:transfer===download?'verified-blobs-and-byte-range':'verified-blobs-only'});
     for(const item of reused)emit({event:'progress',digest:item.digest,completed:item.size,total:item.size,reusedVerifiedFile:true});
-    // 각 완료 blob만 보존한다. 실패·취소 중인 부분 파일과 활성 manifest는 분리한다.
+    // 완료 blob과 재개용 부분 파일, 활성 manifest를 각각 분리한다.
     for(const item of missing){
       signal?.throwIfAborted();
       const file=path.join(stage,blobName(item));
-      await transfer(`${model.source}/blobs/${item.digest}`,file,item,{signal,onProgress:completed=>emit({event:'progress',digest:item.digest,completed,total:item.size})});
+      const options={signal,onProgress:completed=>emit({event:'progress',digest:item.digest,completed,total:item.size})};
+      if(transfer===download)await downloadResumable(`${model.source}/blobs/${item.digest}`,file,item,{...options,cache:path.join(models,'.partial-blobs'),get:requestGet});
+      else await transfer(`${model.source}/blobs/${item.digest}`,file,item,options);
       if(!await verifyFile(file,item,signal)) throw new Error('checksum_mismatch');
       signal?.throwIfAborted();
       // hard-link는 원자적인 no-overwrite 게시다. stage 링크를 지워 중복 복사를 피한다.

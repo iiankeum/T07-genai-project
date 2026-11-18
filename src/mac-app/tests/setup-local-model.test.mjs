@@ -48,3 +48,66 @@ test('이전 모델 blob은 새 manifest 준비 후에도 보존',async t=>{cons
 test('활성 동시 lock은 두번째 호출에서 지우지 않는다',async t=>{const root=await fixture(t);let started,release;const ready=new Promise(r=>{started=r;}),wait=new Promise(r=>{release=r;});const first=prepare(root,{model,runtime,transfer:async(...a)=>{started();await wait;await transfer(...a);}});await ready;await assert.rejects(prepare(root,{model,runtime,transfer}),/preparation_busy/);assert.ok(await fs.stat(path.join(root,'.model-prepare.lock')));release();await first;});
 test('완료모델도 symlink blob폴더를 통해 정상으로 오인하지 않는다',async t=>{const root=await fixture(t);await prepare(root,{model,runtime,transfer});const folder=path.join(root,'models/ollama/blobs'),moved=path.join(root,'outside-blobs');await fs.rename(folder,moved);await fs.symlink(moved,folder);await assert.rejects(prepare(root,{model,runtime,transfer:()=>{throw Error('must not download');}}),/unsafe_path/);assert.equal(await fs.readFile(path.join(moved,descriptors[0].digest.replace(':','-')),'utf8'),'config');});
 test('활성 manifest symlink는 전송 전에 거절',async t=>{const root=await fixture(t);await fs.mkdir(path.dirname(manifestPath(root)),{recursive:true});const external=path.join(root,'external');await fs.writeFile(external,'keep');await fs.symlink(external,manifestPath(root));await assert.rejects(prepare(root,{model,runtime,transfer:()=>{throw Error('must not download');}}),/unsafe_manifest/);assert.equal(await fs.readFile(external,'utf8'),'keep');});
+
+// 가짜 HTTPS 응답만 사용한다. 외부 요청은 없다.
+import {Readable} from 'node:stream';
+import {EventEmitter} from 'node:events';
+import {downloadResumable} from '../setup-local-model.mjs';
+function fakeHTTPS(responses,requests=[]){return (url,options,callback)=>{
+ requests.push({url:String(url),headers:options.headers});const req=new EventEmitter();req.setTimeout=()=>req;req.destroy=e=>req.emit('error',e);
+ queueMicrotask(()=>{const spec=responses.shift();if(!spec){req.emit('error',Error('unexpected_request'));return;}
+ const response=Readable.from((async function*(){if(spec.body)yield Buffer.from(spec.body);if(spec.error)await new Promise(r=>setTimeout(r,20));if(spec.error)throw Object.assign(Error('network'),{code:spec.error});})());response.statusCode=spec.status??200;response.headers=spec.headers??{};callback(response);});return req;
+};}
+async function partialFixture(t){const root=await fixture(t);return {root,cache:path.join(root,'cache'),target:path.join(root,'result'),item:{digest:digest('abcdefghij'),size:10},url:`https://registry.ollama.ai/v2/library/qwen3/blobs/${digest('abcdefghij')}`};}
+async function seedPartial(f){await assert.rejects(downloadResumable(f.url,f.target,f.item,{cache:f.cache,get:fakeHTTPS([{body:'abcd',headers:{'content-length':'10'},error:'ECONNRESET'}])}),/network/);}
+test('가짜 HTTPS: 연결 중단 후 정확한 206으로 이어 받고 전체 SHA 검증',async t=>{
+ const f=await partialFixture(t);await seedPartial(f);const requests=[];
+ await downloadResumable(f.url,f.target,f.item,{cache:f.cache,get:fakeHTTPS([{status:206,headers:{'content-range':'bytes 4-9/10','content-length':'6'},body:'efghij'}],requests)});
+ assert.equal(requests[0].headers.range,'bytes=4-');assert.equal(requests[0].headers['accept-encoding'],'identity');assert.equal(await fs.readFile(f.target,'utf8'),'abcdefghij');
+});
+test('Range 미지원 200은 부분을 안전하게 처음부터 대체',async t=>{const f=await partialFixture(t);await seedPartial(f);await downloadResumable(f.url,f.target,f.item,{cache:f.cache,get:fakeHTTPS([{body:'abcdefghij',headers:{'content-length':'10'}}])});assert.equal(await fs.readFile(f.target,'utf8'),'abcdefghij');});
+test('잘못된 206·416·압축·초과 전송은 게시하지 않고 부분 정리',async t=>{
+ for(const spec of [{status:416},{status:206,headers:{'content-range':'bytes 3-9/10','content-length':'7'},body:'defghij'},{status:206,headers:{'content-range':'bytes 4-9/11','content-length':'6'},body:'efghij'},{status:206,headers:{'content-range':'bytes 4-9/10'},body:'efghij'},{headers:{'content-encoding':'gzip'},body:'abc'},{body:'abcdefghijk'}]){
+ const f=await partialFixture(t);await seedPartial(f);await assert.rejects(downloadResumable(f.url,f.target,f.item,{cache:f.cache,get:fakeHTTPS([spec])}));await assert.rejects(fs.stat(f.target));const dir=path.join(f.cache,(await fs.readdir(f.cache))[0]);assert.deepEqual(await fs.readdir(dir),[]);
+ }
+});
+test('부분 손상은 다음 요청 전에 거절·정리',async t=>{const f=await partialFixture(t);await seedPartial(f);const dir=path.join(f.cache,(await fs.readdir(f.cache))[0]);await fs.writeFile(path.join(dir,'partial'),'xxxx');await assert.rejects(downloadResumable(f.url,f.target,f.item,{cache:f.cache,get:()=>{throw Error('network forbidden');}}),/partial_integrity_failed/);assert.deepEqual(await fs.readdir(dir),[]);});
+test('이어 받은 전체 SHA 오류는 완료 blob으로 게시하지 않음',async t=>{const f=await partialFixture(t);await seedPartial(f);await assert.rejects(downloadResumable(f.url,f.target,f.item,{cache:f.cache,get:fakeHTTPS([{status:206,headers:{'content-range':'bytes 4-9/10','content-length':'6'},body:'xxxxxx'}])}),/checksum_mismatch/);await assert.rejects(fs.stat(f.target));});
+test('부분 symlink와 metadata symlink는 보존·거절',async t=>{for(const name of ['partial','metadata.json']){const f=await partialFixture(t);await seedPartial(f);const dir=path.join(f.cache,(await fs.readdir(f.cache))[0]);const outside=path.join(f.root,'outside');await fs.writeFile(outside,'keep');await fs.unlink(path.join(dir,name));await fs.symlink(outside,path.join(dir,name));await assert.rejects(downloadResumable(f.url,f.target,f.item,{cache:f.cache,get:()=>{throw Error('network forbidden');}}),/unsafe_partial/);assert.equal(await fs.readFile(outside,'utf8'),'keep');}});
+test('Range 리다이렉트는 exact CDN 경로만 허용하고 인증헤더 없음',async t=>{const f=await partialFixture(t);await seedPartial(f);const hash=f.item.digest.slice(7),requests=[];const cdn=`https://dd20bb891979d25aebc8bec07b2b3bbc.r2.cloudflarestorage.com/ollama/docker/registry/v2/blobs/sha256/${hash.slice(0,2)}/${hash}/data?signature=fake`;
+ await downloadResumable(f.url,f.target,f.item,{cache:f.cache,get:fakeHTTPS([{status:307,headers:{location:cdn}},{status:206,headers:{'content-range':'bytes 4-9/10','content-length':'6'},body:'efghij'}],requests)});assert.equal(requests.length,2);assert.equal(requests[1].headers.range,'bytes=4-');assert.equal(requests[1].headers.authorization,undefined);assert.equal(requests[1].headers.cookie,undefined);
+});
+test('다른 descriptor namespace는 이전 부분파일을 사용하지 않음',async t=>{const f=await partialFixture(t);await seedPartial(f);const item={digest:digest('new'),size:3},requests=[];await downloadResumable(`https://registry.ollama.ai/v2/library/qwen3/blobs/${item.digest}`,f.target,item,{cache:f.cache,get:fakeHTTPS([{body:'new'}],requests)});assert.equal(requests[0].headers.range,undefined);assert.equal((await fs.readdir(f.cache)).length,2);});
+test('네트워크 중단 부분도 다음 호출에서 재개, 완료 전 manifest 보존',async t=>{
+ const root=await fixture(t);await oldManifest(root);const requests=[];
+ await assert.rejects(prepare(root,{model,runtime,requestGet:fakeHTTPS([{body:'con',headers:{'content-length':'6'},error:'ECONNRESET'}])}),/network/);
+ assert.equal(await fs.readFile(manifestPath(root),'utf8'),'old-active');assert.deepEqual(await fs.readdir(path.dirname(blobPath(root,descriptors[0]))),[]);
+ await prepare(root,{model,runtime,requestGet:fakeHTTPS([{status:206,headers:{'content-range':'bytes 3-5/6','content-length':'3'},body:'fig'},{body:'model'},{body:'template'}],requests)});
+ assert.equal(requests[0].headers.range,'bytes=3-');assert.equal((await inspect(root,{model,runtime})).modelVerified,true);
+ await prepare(root,{model,runtime,requestGet:()=>{throw Error('unexpected network');}});
+});
+test('명시 취소는 검증 전 부분을 보존하고 재개 가능',async t=>{
+ const f=await partialFixture(t),c=new AbortController();
+ const get=(url,options,cb)=>{const req=new EventEmitter();req.setTimeout=()=>req;req.destroy=e=>req.emit('error',e);queueMicrotask(()=>{const response=Readable.from((async function*(){yield Buffer.from('abcd');await new Promise(r=>setTimeout(r,30));c.abort();await new Promise(r=>setTimeout(r,5));})());response.statusCode=200;response.headers={'content-length':'10'};cb(response);});return req;};
+ await assert.rejects(downloadResumable(f.url,f.target,f.item,{cache:f.cache,signal:c.signal,get}),{name:'AbortError'});
+ await downloadResumable(f.url,f.target,f.item,{cache:f.cache,get:fakeHTTPS([{status:206,headers:{'content-range':'bytes 4-9/10','content-length':'6'},body:'efghij'}])});assert.equal(await fs.readFile(f.target,'utf8'),'abcdefghij');
+});
+test('완료목적지가 이미 있으면 덮어쓰지 않는다',async t=>{const f=await partialFixture(t);await fs.writeFile(f.target,'keep');await assert.rejects(downloadResumable(f.url,f.target,f.item,{cache:f.cache,get:fakeHTTPS([{body:'abcdefghij'}])}),{code:'EEXIST'});assert.equal(await fs.readFile(f.target,'utf8'),'keep');});
+test('응답 도중 request error도 pipeline 종료 후 부분 SHA를 기록한다',async t=>{
+ const f=await partialFixture(t);let responseClosed=false;
+ const get=(url,options,cb)=>{const req=new EventEmitter();req.setTimeout=()=>req;req.destroy=e=>req.emit('error',e);queueMicrotask(()=>{const response=new Readable({read(){}});response.statusCode=200;response.headers={'content-length':'10'};response.on('close',()=>{responseClosed=true;});cb(response);response.push(Buffer.from('abcd'));setTimeout(()=>{req.emit('error',Object.assign(Error('request network'),{code:'ECONNRESET'}));response.push(Buffer.from('ef'));},20);});return req;};
+ await assert.rejects(downloadResumable(f.url,f.target,f.item,{cache:f.cache,get}),/request network/);assert.equal(responseClosed,true);
+ const dir=path.join(f.cache,(await fs.readdir(f.cache))[0]),saved=JSON.parse(await fs.readFile(path.join(dir,'metadata.json'),'utf8'));
+ const bytes=await fs.readFile(path.join(dir,'partial'));assert.equal(saved.bytes,bytes.length);assert.equal(saved.sha256,createHash('sha256').update(bytes).digest('hex'));
+ await downloadResumable(f.url,f.target,f.item,{cache:f.cache,get:fakeHTTPS([{status:206,headers:{'content-range':`bytes ${bytes.length}-9/10`,'content-length':String(10-bytes.length)},body:'abcdefghij'.slice(bytes.length)}])});assert.equal(await fs.readFile(f.target,'utf8'),'abcdefghij');
+});
+test('잘못된 JSON·과대 metadata는 정리 후 재시도 가능',async t=>{
+ for(const value of ['{broken','x'.repeat(1025)]){const f=await partialFixture(t);await seedPartial(f);const dir=path.join(f.cache,(await fs.readdir(f.cache))[0]);await fs.writeFile(path.join(dir,'metadata.json'),value);await assert.rejects(downloadResumable(f.url,f.target,f.item,{cache:f.cache,get:()=>{throw Error('no network');}}),/invalid_partial_metadata/);assert.deepEqual(await fs.readdir(dir),[]);await downloadResumable(f.url,f.target,f.item,{cache:f.cache,get:fakeHTTPS([{body:'abcdefghij'}])});assert.equal(await fs.readFile(f.target,'utf8'),'abcdefghij');}
+});
+test('과대 부분은 hash 전에 크기 거절·정리',async t=>{const f=await partialFixture(t);await seedPartial(f);const dir=path.join(f.cache,(await fs.readdir(f.cache))[0]);await fs.truncate(path.join(dir,'partial'),1024*1024*1024);await assert.rejects(downloadResumable(f.url,f.target,f.item,{cache:f.cache,get:()=>{throw Error('no network');}}),/partial_integrity_failed/);assert.deepEqual(await fs.readdir(dir),[]);});
+async function seedPreparePartial(t){const root=await fixture(t);await assert.rejects(prepare(root,{model,runtime,requestGet:fakeHTTPS([{body:'con',headers:{'content-length':'6'},error:'ECONNRESET'}])}),/network/);return root;}
+test('디스크 검사는 검증된 부분만큼 차감하여 잔여 공간으로 재개',async t=>{const root=await seedPreparePartial(t);let checked=0;await prepare(root,{model,runtime,statfs:async()=>{checked++;return {bavail:64*1024*1024+16,bsize:1};},requestGet:fakeHTTPS([{status:206,headers:{'content-range':'bytes 3-5/6','content-length':'3'},body:'fig'},{body:'model'},{body:'template'}])});assert.equal(checked,1);assert.equal((await inspect(root,{model,runtime})).modelVerified,true);});
+test('손상 부분은 공간 차감 전에 거절하고 재시도에서 전체 공간 요구',async t=>{const root=await seedPreparePartial(t),cache=path.join(root,'models/ollama/.partial-blobs');for(const key of await fs.readdir(cache)){const file=path.join(cache,key,'partial');try{await fs.access(file);await fs.writeFile(file,'bad');}catch{}}
+ let checked=0;const options={model,runtime,statfs:async()=>{checked++;return {bavail:64*1024*1024+16,bsize:1};},requestGet:()=>{throw Error('network forbidden');}};
+ await assert.rejects(prepare(root,options),/partial_integrity_failed/);assert.equal(checked,0);await assert.rejects(prepare(root,options),/insufficient_disk_space/);assert.equal(checked,1);
+});
