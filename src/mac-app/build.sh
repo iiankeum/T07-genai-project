@@ -48,6 +48,7 @@ resources="$bundle/Contents/Resources"
 mkdir -p "$macos" "$resources/app" "$resources/pc-agent"
 
 cp "$source_dir/Info.plist" "$bundle/Contents/"
+bash "$source_dir/package-app-icon.sh" "$resources/Ahcha.icns"
 if [[ "$whisper_profile" != default ]]; then
     /usr/libexec/PlistBuddy -c 'Set :CFBundleIdentifier org.ininhyeop.t07.ahmatda.pyavdev' "$bundle/Contents/Info.plist"
     /usr/libexec/PlistBuddy -c 'Set :CFBundleDisplayName 아차-PyAV-개발' "$bundle/Contents/Info.plist"

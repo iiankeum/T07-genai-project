@@ -8,6 +8,8 @@
     <string>아차</string>
     <key>CFBundleExecutable</key>
     <string>Ahmatda</string>
+    <key>CFBundleIconFile</key>
+    <string>Ahcha.icns</string>
     <key>CFBundleIdentifier</key>
     <string>org.ininhyeop.t07.ahmatda</string>
     <key>CFBundleName</key>
