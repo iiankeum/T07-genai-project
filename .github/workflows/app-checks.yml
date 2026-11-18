@@ -32,6 +32,13 @@ jobs:
       - run: npm run test:e2e
       - run: npm run test:upload-e2e
       - run: npm run test:card-recovery-e2e
+      - name: Fixture workflow regressions (search, knowledge, settings, multi-item)
+        run: npm run test:workflow-e2e
+        env:
+          TRANSCRIPT_OUTPUT: artifacts/e2e/transcript
+          KNOWLEDGE_OUTPUT_DIR: artifacts/e2e/knowledge
+          SETTINGS_OUTPUT: artifacts/e2e/settings
+          MULTIITEM_OUTPUT: artifacts/e2e/multiitem
       - uses: actions/upload-artifact@v4
         if: always()
         with:

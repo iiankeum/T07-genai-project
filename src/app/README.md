@@ -23,6 +23,12 @@ npm run test:offline
 
 업로드·오디오 변환을 시험하려면 `ffmpeg`와 `ffprobe`를 PATH에 둔다. 일반 테스트와 오프라인 테스트는 유료 API 키 없이 실행한다. 오프라인 테스트는 합성 WAV·받아쓰기 일꾼 대역·AI fixture로 업로드부터 카드 저장까지 확인한다. fixture는 미리 준비한 샘플을 재현한다. 모델 품질과 지연 시간은 별도로 측정한다.
 
+### 업무 화면 회귀
+
+Playwright Chromium이 준비된 개발 환경에서 `npm run test:workflow-e2e`를 실행한다. 원문 검색 → 공유 지식 → 녹음·AI 연결 설정 → 다품목 주문의 회귀를 순서대로 실행하며 하나라도 실패하면 멈춘다. 개별 실행은 `test:transcript-e2e`, `test:knowledge-e2e`, `test:settings-e2e`, `test:multiitem-e2e`다.
+
+실제 화면 모듈과 가짜 fixture/mock API만 사용한다. 실제 고객 자료·모델 추론·기기 연결·운영 서버 저장은 검증하지 않는다. GitHub Actions는 결과를 `artifacts/e2e/`의 기능별 폴더에 모아 기존 증거 artifact로 보관한다. 로컬 기본 결과 위치와 변경용 환경변수는 각 테스트 파일 첫 부분에 있다. 원격 CI 실행 여부는 해당 커밋의 실행 결과로 별도 확인한다.
+
 ## 주요 경로
 
 | 경로 | 역할 |
