@@ -218,6 +218,9 @@ export default {
     // ── 올리기(하나씩 차례로) ──
     async function uploadAll() {
       if (busy || !fakeBox.checked) return;
+      // 이번 클릭에 포함된 파일만 보낸다. 전송 중 추가한 파일은 다음 확인을 기다린다.
+      const batch = rows.filter((r) => r.status === 'ready');
+      if (!batch.length) return;
       const whenVal = ref('when').value;
       const when = whenVal ? new Date(whenVal) : new Date();
       const recordedAt = Number.isNaN(when.getTime()) ? new Date().toISOString() : when.toISOString();
@@ -225,7 +228,7 @@ export default {
       busy = true;
       renderRows();
       let uploaded = 0;
-      for (const r of rows) {
+      for (const r of batch) {
         if (disposed) return;
         if (r.status !== 'ready') continue;
         r.status = 'uploading';
