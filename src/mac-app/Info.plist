@@ -5,13 +5,15 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>ko</string>
     <key>CFBundleDisplayName</key>
-    <string>아맞다</string>
+    <string>아차</string>
     <key>CFBundleExecutable</key>
     <string>Ahmatda</string>
+    <key>CFBundleIconFile</key>
+    <string>Ahcha.icns</string>
     <key>CFBundleIdentifier</key>
     <string>org.ininhyeop.t07.ahmatda</string>
     <key>CFBundleName</key>
-    <string>아맞다</string>
+    <string>아차</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>

@@ -24,3 +24,26 @@
 .gl-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .gl-del { flex: none; min-height: var(--tap); padding: 8px 12px; font-size: .95rem; }
 .gl-locked { flex: none; display: inline-flex; align-items: center; min-height: var(--tap); padding: 0 4px; color: var(--muted); font-size: .95rem; font-weight: 700; white-space: nowrap; }
+
+/* 지식 연결은 구문 대신 관계/대상의 명시적인 입력으로 작성한다. */
+.kn-relation-editor { min-width:0; margin:8px 0 16px; padding:16px 0; border:0; border-top:1px solid var(--line,#e4e6eb); }
+.kn-relation-editor legend { font-weight:700; padding:0 8px 0 0; }
+.kn-relation-editor legend span { font-weight:400; color:var(--muted); }
+.kn-relation-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto; gap:12px; align-items:end; padding:12px 0; border-bottom:1px solid var(--line,#e4e6eb); }
+.kn-relation-row .field { min-width:0; margin:0; }
+.kn-relation-row .input { min-width:0; width:100%; }
+.kn-relation-remove { margin-bottom:0; min-height:44px; }
+.kn-relation-error { color:var(--danger,#c83232); }
+.kn-relation-error:empty { display:none; }
+.kn-relation-editor [data-act="relation-add"] { margin-top:12px; }
+@media(max-width:560px) { .kn-relation-row { grid-template-columns:minmax(0,1fr); gap:8px; } .kn-relation-remove { justify-self:end; } }
+/* 긴 지식 입력 폼에서도 제목과 닫기를 항상 찾을 수 있게 한다. */
+.kn-page .ka-dialog { --kn-dialog-pad:clamp(16px,2.5vw,24px); }
+.kn-page .ka-dialog-head { position:sticky; top:calc(-1 * var(--kn-dialog-pad)); z-index:2; margin:calc(-1 * var(--kn-dialog-pad)) calc(-1 * var(--kn-dialog-pad)) 16px; padding:12px var(--kn-dialog-pad); background:var(--paper); border-bottom:1px solid var(--line); }
+.kn-page .ka-dialog-head h2 { font-size:1.125rem; }
+.kn-back-list { margin-bottom:12px; }
+.kn-detail #kn-detail-title { scroll-margin-top:24px; }
+.kn-detail #kn-detail-title:focus-visible { outline:2px solid var(--brand); outline-offset:6px; border-radius:4px; }
+.kn-history > summary { cursor:pointer; min-height:44px; display:list-item; font-weight:650; padding:12px 0; }
+.kn-history > summary span { color:var(--muted); font-weight:400; }
+.kn-detail .kn-review { margin:16px 0 24px; padding:16px; border:1px solid var(--brand-line); border-radius:12px; background:var(--brand-wash); }

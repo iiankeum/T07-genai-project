@@ -83,3 +83,79 @@
 .cl-meta { font-size:.73rem; }
 .cl-day-group > h2 { font-size:.88rem; font-weight:550; color:var(--muted); margin:0 0 12px 4px; }
 @media(max-width:719px) { .cl-control,.cl-item { padding:16px; } .cl-tabs { gap:0 8px; } }
+
+/* 독립 Montage 시안 통합: 목록은 평면 행, 검색은 보조 도구로 배치한다. */
+.cl-page { --cl-columns:110px 170px minmax(0,1fr) 170px; }
+.cl-page .page-head { align-items:center; margin-bottom:24px; }
+.cl-control { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:16px; border:0; border-radius:0; padding:0; margin-bottom:24px; background:transparent; }
+.cl-filters { display:contents; }
+.cl-status { order:0; grid-column:1/-1; }
+.cl-tabs { flex-wrap:nowrap; overflow-x:auto; overflow-y:hidden; gap:20px; margin:0; scrollbar-width:thin; }
+.cl-tabs .tab { flex-shrink:0; font-size:14px; padding:12px 0; min-height:48px; }
+.cl-search { order:1; margin:0; max-width:520px; align-self:start; }
+.cl-search .input { min-height:44px; font-size:14px; border-radius:8px; }
+.cl-quick-range { order:2; align-self:start; }
+.cl-quick-range .cl-group { gap:6px; }
+.cl-quick-range .cl-group-label { display:none; }
+.cl-range { gap:0; }
+.cl-range .tab { font-size:13px; padding:8px 10px; }
+.cl-advanced { order:3; grid-column:1/-1; margin-top:-8px; }
+.cl-advanced summary { min-height:36px; }
+.cl-count { margin:0 0 16px; font-size:13px; }
+.cl-day-group + .cl-day-group { margin-top:28px; }
+.cl-day-group > h2 { margin:0 0 10px; font-size:13px; }
+.cl-list { border:0; border-radius:0; overflow:visible; }
+.cl-columns,.cl-item { display:grid; grid-template-columns:var(--cl-columns); column-gap:20px; }
+.cl-columns { padding:12px 16px; background:#f8f8fa; color:var(--muted); font-size:12px; border-bottom:1px solid var(--line); }
+.cl-item { padding:18px 16px; align-items:start; min-height:92px; }
+.cl-time { display:grid; gap:6px; font-size:14px; font-variant-numeric:tabular-nums; }
+.cl-time > span { font-size:11px; line-height:17px; color:var(--muted); }
+.cl-identity,.cl-content { min-width:0; }
+.cl-title { display:block; font-size:15px; font-weight:600; }
+.cl-cust { display:inline-flex; min-height:28px; padding:3px 0; font-size:12px; }
+.cl-context { margin:0; font-size:14px; line-height:22px; }
+.cl-summary { font-size:13px; line-height:21px; margin-top:4px; }
+.cl-chips { gap:4px; justify-content:flex-start; align-items:center; padding-top:1px; }
+.cl-chips .chip { font-size:11px; line-height:18px; padding:2px 6px; border:0; border-radius:5px; }
+.cl-error,.cl-matches,.cl-more-matches { grid-column:2/-1; }
+.cl-matches { margin-top:12px; }
+@media(min-width:900px) { body:has(.cl-page) { background:#fff; } }
+@media(min-width:900px) and (max-width:1199px) {
+ .cl-page { --cl-columns:85px 140px minmax(0,1fr); }
+ .cl-columns > span:last-child { display:none; }
+ .cl-chips { grid-column:3; margin-top:8px; }
+ .cl-control { grid-template-columns:minmax(0,1fr); }
+ .cl-quick-range { order:2; }
+}
+@media(max-width:899px) {
+ .cl-page { background:white; }
+ .cl-columns { display:none; }
+ .cl-control { grid-template-columns:minmax(0,1fr); gap:12px; }
+ .cl-search { max-width:none; }
+ .cl-quick-range { order:2; }
+ .cl-advanced { margin-top:-4px; }
+ .cl-page .page-head { align-items:flex-start; }
+ .cl-page .page-head > .row { width:100%; flex-wrap:nowrap; }
+ .cl-page .page-head > .row .btn { flex:1; padding:8px; font-size:13px; }
+ .cl-item { grid-template-columns:minmax(0,1fr) auto; padding:16px 0; gap:6px 12px; }
+ .cl-identity { grid-column:1; grid-row:1; }
+ .cl-time { grid-column:2; grid-row:1; text-align:right; font-size:12px; max-width:100px; }
+ .cl-time > span { font-size:10px; }
+ .cl-content { grid-column:1/-1; grid-row:2; }
+ .cl-chips { grid-column:1/-1; grid-row:3; margin-top:2px; }
+ .cl-error,.cl-matches,.cl-more-matches { grid-column:1/-1; }
+ .cl-summary { font-size:12px; line-height:20px; }
+ .cl-context { font-size:13px; }
+ .cl-cust { min-height:32px; }
+}
+@media(max-width:899px) {
+ .cl-control { grid-template-columns:minmax(0,1fr) auto; }
+ .cl-search { grid-column:1/-1; }
+ .cl-quick-range { grid-column:1; grid-row:3; }
+ .cl-advanced { grid-column:2; grid-row:3; margin:0; align-self:start; }
+ .cl-advanced[open] { grid-column:1/-1; grid-row:4; }
+ .cl-advanced summary { min-height:44px; white-space:nowrap; }
+ .cl-range .tab { padding-inline:8px; }
+}
+
+.cl-status > .cl-group-label { position:absolute; clip-path:inset(50%); width:1px; height:1px; overflow:hidden; }

@@ -11,7 +11,7 @@ const EXAMPLE = [
 const THREADS = '/api/assistant/threads/';
 
 export default {
-  title: '어시스턴트',
+  title: '업무 도우미',
   mount(el, ctx) {
     let context = null;
     let threads = [];
@@ -27,8 +27,8 @@ export default {
 
     render(el, html`<div class="page as-page">
       <div class="page-head">
-        <div><h1>어시스턴트</h1><p class="sub">통화와 공유 지식을 살펴보고 다음 일을 준비하세요.</p></div>
-        <a class="btn" href="#/ask">지난 통화에 묻기 →</a>
+        <div><h1>업무 도우미</h1><p class="sub">선택한 통화에서 할 일을 정리하고 재연락 문안을 준비하세요.</p></div>
+        <a class="btn" href="#/ask">여러 통화에서 내용 찾기 →</a>
       </div>
       <div class="card ka-split as-layout">
         <details class="as-sidebar" ${matchMedia('(min-width: 901px)').matches ? html`open` : ''}>
@@ -40,7 +40,7 @@ export default {
         </details>
         <section class="as-chat" aria-labelledby="as-chat-title">
           <header class="as-chat-head">
-            <div><h2 id="as-chat-title">아맞다 어시스턴트</h2><p class="help">통화와 승인된 지식을 근거로 답변해요.</p></div>
+            <div><h2 id="as-chat-title">아차 어시스턴트</h2><p class="help">통화와 승인된 지식을 근거로 답변해요.</p></div>
             <div class="ka-actions"><button type="button" class="btn" data-act="new">＋ 새 대화</button></div>
           </header>
           <div class="as-history">
@@ -151,7 +151,7 @@ export default {
       const label = isExample ? '예시 대화' : message.mode === 'fixture' ? '테스트 응답' : user ? '' : '근거 기반 응답';
       const citations = Array.isArray(message.citations) ? message.citations : [];
       return html`<article class="ask-msg ${user ? 'is-user' : 'is-bot'}">
-        <div class="as-message-label"><strong>${user ? '나' : '아맞다'}</strong>${label ? html`<span class="chip chip-ai">${label}</span>` : ''}</div>
+        <div class="as-message-label"><strong>${user ? '나' : '아차'}</strong>${label ? html`<span class="chip chip-ai">${label}</span>` : ''}</div>
         <div class="ask-bubble ${message.found === false ? 'is-notfound' : ''}">${message.text}</div>
         ${citations.length ? html`<div class="ask-cites"><p class="ask-cites-head">답변 근거 ${citations.length}건</p>${citations.map(citeView)}</div>` : ''}
       </article>`;
@@ -283,8 +283,14 @@ export default {
     }
 
     function paintDraft(contents) {
-      render(dialog, html`<div class="ka-dialog-head"><h2 id="as-draft-title">재연락 문안 초안</h2>
+      const focused = dialog.open && dialog.contains(document.activeElement);
+      const focusedAction = focused ? document.activeElement?.dataset.act : null;
+      render(dialog, html`<div class="ka-dialog-head"><h2 id="as-draft-title" tabindex="-1">재연락 문안 초안</h2>
         <button class="btn btn-ghost ka-close" type="button" data-act="close-draft" aria-label="닫기">×</button></div>${contents}`);
+      if (focused && dialog.open) {
+        const replacement = focusedAction ? [...dialog.querySelectorAll('[data-act]')].find(button => button.dataset.act === focusedAction) : null;
+        (replacement || dialog.querySelector('#as-draft-title'))?.focus({ preventScroll: true });
+      }
     }
 
     async function openDraft(id) {

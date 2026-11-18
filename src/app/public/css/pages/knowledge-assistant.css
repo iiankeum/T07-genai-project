@@ -132,3 +132,7 @@
  .as-compose .textarea { flex-basis:100%; min-height:60px; }
  .as-compose .btn { margin-left:auto; }
 }
+/* 긴 재연락 문안에서도 닫기와 제목을 잃지 않는다. */
+.as-page .ka-dialog { --as-dialog-pad:clamp(16px,2.5vw,24px); }
+.as-page .ka-dialog-head { position:sticky; top:calc(-1 * var(--as-dialog-pad)); z-index:2; margin:calc(-1 * var(--as-dialog-pad)) calc(-1 * var(--as-dialog-pad)) 16px; padding:12px var(--as-dialog-pad); background:var(--paper); border-bottom:1px solid var(--line); }
+.as-page .ka-dialog-head h2 { font-size:1.125rem; }

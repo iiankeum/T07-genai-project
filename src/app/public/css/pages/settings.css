@@ -32,3 +32,21 @@
 .settings-home .account-panel { grid-column:1/-1; }
 .settings-home .settings-directory { grid-template-columns:repeat(3,minmax(0,1fr)); }
 @media(max-width:719px) { .settings-home .settings-directory { grid-template-columns:1fr; } }
+
+/* 설정 홈은 목적지를 한 번만 보여주고 내부 화면은 돌아갈 경로를 명시한다. */
+.settings-back { grid-column:1/-1; color:var(--muted); text-decoration:none; width:fit-content; padding:8px 0; }
+.settings-back:hover { color:var(--brand); }
+.settings-home .account-panel { border:0; padding:0; background:transparent; }
+
+.integration-overview { padding-bottom:24px; }
+.integration-overview h2,.integration-step h2 { font-size:1.15rem; margin:0 0 12px; }
+.integration-overview > p,.integration-step > p { color:var(--muted); line-height:1.7; }
+.integration-overview ol { list-style:none; padding:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+.integration-overview a { display:grid; gap:8px; height:100%; padding:14px; border:1px solid var(--line); border-radius:10px; text-decoration:none; color:var(--ink); }
+.integration-overview a span { font-size:.8rem; color:var(--muted); }
+.integration-step { border-top:1px solid var(--line); padding:28px 0; scroll-margin-top:90px; }
+.integration-step h3 { font-size:1rem; margin:24px 0 8px; }
+.integration-step form { margin:16px 0; }
+.integration-advanced { margin:16px 0; color:var(--muted); }
+.integration-advanced summary { cursor:pointer; padding:8px 0; }
+@media(max-width:719px) { .integration-overview ol { grid-template-columns:1fr; } }

@@ -57,6 +57,10 @@ export default {
     let historyRequest = null;
     let historyFilter = 'all';
     let showSummary = false;
+    let transcriptQuery = '';
+    let transcriptMatch = 0;
+    let lastCardInput = null;
+    let cardReturn = null;
     let follow = readPref('cn.follow', '1') === '1';
     let rate = Number(readPref('cn.rate', '1'));
     if (!RATES.includes(rate)) rate = 1;
@@ -64,13 +68,12 @@ export default {
     const target = { seg: ctx.query.seg, at: ctx.query.t };
     let targetDone = ctx.query.seg === undefined && ctx.query.t === undefined;
     const wideMq = window.matchMedia('(min-width: 1024px)');
-    const wideHistory = window.matchMedia('(min-width: 1360px)');
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     render(el, html`<div class="page cd-page" data-mobile-pane="card">
       <div class="cd-overview">
         <nav class="cd-topnav no-print" aria-label="통화 탐색">
-          <a class="cd-back" href="${backHref()}">${icon('arrow')} 통화 검색</a>
+          <a class="cd-back" href="${backHref()}">${icon('arrow')} 통화 기록으로</a>
           <a class="btn btn-sm" href="#/upload">${icon('upload')} 녹음 올리기</a>
         </nav>
         <div data-slot="head"><p class="loading" role="status">불러오는 중…</p></div>
@@ -81,7 +84,7 @@ export default {
         <button type="button" data-jump="trans" aria-controls="cd-trans" aria-pressed="false">대화 기록</button>
       </nav>
       <div class="cd-body hidden" data-slot="body">
-        <details class="cd-panel cd-history no-print" data-slot="history" ${wideHistory.matches ? html`open` : ''}>
+        <details class="cd-panel cd-history no-print" data-slot="history">
           <summary>${icon('history')} 최근 통화</summary>
           <div class="cd-rail">
             <div class="cd-rail-head">
@@ -157,11 +160,9 @@ export default {
     function onHistoryToggle() {
       if (history.open && !historyLoaded) void loadHistory();
     }
-    function onHistoryBreakpoint() { history.open = wideHistory.matches; }
     function onHistorySearch(event) { event.preventDefault(); void loadHistory(); }
     history.addEventListener('toggle', onHistoryToggle);
     historyForm.addEventListener('submit', onHistorySearch);
-    wideHistory.addEventListener('change', onHistoryBreakpoint);
 
     // ── 머리 ──────────────────────────────────────────────────────
     function workflow(card) {
@@ -370,6 +371,13 @@ export default {
           </div>
           ${!showSummary && call.hasAudio && segs.length ? html`<button type="button" class="btn btn-sm cd-follow" data-act="follow" aria-pressed="${follow}">${follow ? '따라가기 켬' : '따라가기 끔'}</button>` : ''}
         </div>
+        ${!showSummary && hasText ? html`<div class="cd-trans-search" role="search" aria-label="이 통화 대화에서 찾기">
+          <label class="sr-only" for="cd-trans-query">대화에서 찾을 말</label>
+          <input id="cd-trans-query" class="input" type="search" maxlength="100" placeholder="대화에서 찾기" value="${transcriptQuery}" aria-describedby="cd-trans-search-count">
+          <span id="cd-trans-search-count" class="cd-search-count" role="status" aria-live="polite"></span>
+          <button type="button" class="btn btn-sm" data-trans-find="prev" aria-label="이전 일치 문장">↑</button>
+          <button type="button" class="btn btn-sm" data-trans-find="next" aria-label="다음 일치 문장">↓</button>
+        </div>` : ''}
       </header>`);
       const scroll = slot('trans-scroll');
       const scrollTop = scroll.scrollTop;
@@ -389,7 +397,37 @@ export default {
       scroll.scrollTop = scrollTop;
       if (playingIdx >= 0) lineEl(playingIdx)?.classList.add('is-playing');
       if (markIdx >= 0) lineEl(markIdx)?.classList.add('is-mark');
+      updateTranscriptSearch();
       scheduleConnector();
+    }
+    function updateTranscriptSearch(step = 0, jump = false) {
+      const all = [...slot('trans-scroll').querySelectorAll('.cd-seg, .cd-plain')];
+      const needle = transcriptQuery.trim().toLocaleLowerCase();
+      const matches = all.filter(line => needle && (line.querySelector('.cd-text') || line).textContent.toLocaleLowerCase().includes(needle));
+      transcriptMatch = matches.length ? (transcriptMatch + step + matches.length) % matches.length : 0;
+      all.forEach(line => {
+        line.classList.toggle('is-search-match', matches.includes(line));
+        line.classList.toggle('is-search-current', matches[transcriptMatch] === line);
+      });
+      const count = root.querySelector('#cd-trans-search-count');
+      if (count) count.textContent = !needle ? '' : matches.length ? `${transcriptMatch + 1}/${matches.length} 문장` : '일치 없음';
+      root.querySelectorAll('[data-trans-find]').forEach(button => { button.disabled = !matches.length; });
+      if (jump && matches.length) {
+        const line = matches[transcriptMatch];
+        if (line.matches('.cd-seg')) scrollToSeg(Number(line.dataset.i), true);
+        else line.scrollIntoView({block:'center', behavior:reduceMotion ? 'auto' : 'smooth'});
+      }
+    }
+    function onTranscriptInput(e) {
+      if (e.target.id !== 'cd-trans-query') return;
+      transcriptQuery = e.target.value;
+      transcriptMatch = 0;
+      updateTranscriptSearch();
+    }
+    function onTranscriptKey(e) {
+      if (e.target.id !== 'cd-trans-query' || e.isComposing) return;
+      if (e.key === 'Enter') { e.preventDefault(); updateTranscriptSearch(e.shiftKey ? -1 : 1, true); }
+      if (e.key === 'Escape') { e.preventDefault(); transcriptQuery = ''; e.target.value = ''; transcriptMatch = 0; updateTranscriptSearch(); }
     }
     const lineEl = (i) => (i >= 0 ? root.querySelector(`#cd-seg-${i}`) : null);
 
@@ -442,6 +480,33 @@ export default {
     }
     function scheduleConnector() {
       if (!frame) frame = requestAnimationFrame(drawConnector);
+    }
+    // 원문 확인 전 편집하던 칸을 기억한다. 저장/데이터 상태와는 분리된 화면 내 이동 정보다.
+    function rememberCardInput(event) {
+      const target = event.target;
+      if (target instanceof HTMLElement && slot('card').contains(target) && target.matches('input[data-field],textarea[data-field],select[data-field],input[data-item]')) lastCardInput = target;
+    }
+    function rememberCardReturn(block = null) {
+      if (wideMq.matches) return;
+      const target = lastCardInput?.isConnected && (!block || block.contains(lastCardInput))
+        ? lastCardInput : block?.querySelector('input[data-field],textarea[data-field],select[data-field],input[data-item]') || block?.querySelector('.cd-evbtn');
+      if (!target) { cardReturn = null; return; }
+      const index = Number(target.dataset.i);
+      cardReturn = { target, field: target.dataset.field, itemField: target.dataset.item,
+        itemId: target.dataset.item ? curCard()?.items?.[index]?.id : null };
+    }
+    function restoreCardReturn() {
+      if (wideMq.matches || !cardReturn) return false;
+      let target = cardReturn.target?.isConnected ? cardReturn.target : null;
+      if (!target && cardReturn.field) target = [...slot('card').querySelectorAll('[data-field]')].find(el => el.dataset.field === cardReturn.field);
+      if (!target && cardReturn.itemId) {
+        const index = curCard()?.items?.findIndex(item => item.id === cardReturn.itemId);
+        target = [...slot('card').querySelectorAll('[data-item]')].find(el => Number(el.dataset.i) === index && el.dataset.item === cardReturn.itemField);
+      }
+      if (!target || target.disabled) return false;
+      target.focus({ preventScroll: true });
+      target.scrollIntoView({ block: 'center', behavior: 'auto' });
+      return true;
     }
     function showMobilePane(name) {
       root.dataset.mobilePane = name;
@@ -502,6 +567,7 @@ export default {
       }
     }
     function jumpToTranscript(r) {
+      rememberCardReturn(slot('card').querySelector('.ev-active'));
       showMobilePane('trans');
       if (!wideMq.matches) slot('trans').focus({ preventScroll: true });
       if (showSummary) { showSummary = false; renderTranscript(); }
@@ -592,7 +658,7 @@ export default {
     function apply(c) {
       const prev = call;
       call = c;
-      document.title = `${c.title || '통화 상세'} · 아맞다`;
+      document.title = `${c.title || '통화 상세'} · 아차`;
       renderHead();
       if (!prev || Boolean(prev.hasAudio) !== Boolean(c.hasAudio)) renderPlayer();
       renderProgress();
@@ -655,7 +721,7 @@ export default {
           const c = await api.get(`/api/calls/${encodeURIComponent(id)}`);
           if (!alive || !call) return;
           call = { ...call, title: c.title, summary: c.summary, customer: c.customer };
-          document.title = `${c.title || '통화 상세'} · 아맞다`;
+          document.title = `${c.title || '통화 상세'} · 아차`;
           renderHead();
           renderFoot();
           if (history.open) void loadHistory();
@@ -667,6 +733,8 @@ export default {
     function onClick(e) {
       const t = e.target;
       if (!(t instanceof Element)) return;
+      const findButton = t.closest('[data-trans-find]');
+      if (findButton) { updateTranscriptSearch(findButton.dataset.transFind === 'prev' ? -1 : 1, true); return; }
       const historyBtn = t.closest('[data-history]');
       if (historyBtn) {
         if (historyBtn.dataset.history !== 'retry') {
@@ -706,7 +774,9 @@ export default {
       const jump = t.closest('[data-jump]');
       if (jump) {
         const name = jump.dataset.jump;
+        if (name === 'trans' && root.dataset.mobilePane === 'card') rememberCardReturn();
         showMobilePane(name);
+        if (name === 'card' && restoreCardReturn()) return;
         const sec = slot(name);
         if (sec.getBoundingClientRect().top < (topbar?.offsetHeight || 60)) {
           sec.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' });
@@ -729,6 +799,9 @@ export default {
       }
     }
     root.addEventListener('click', onClick);
+    root.addEventListener('focusin', rememberCardInput);
+    root.addEventListener('input', onTranscriptInput);
+    root.addEventListener('keydown', onTranscriptKey);
 
     await load();
     if (history.open && !historyLoaded && !historyRequest) void loadHistory();
@@ -754,10 +827,12 @@ export default {
       window.removeEventListener('resize', measure);
       root.removeEventListener('toggle', measure, true);
       root.removeEventListener('input', scheduleConnector);
-      wideHistory.removeEventListener('change', onHistoryBreakpoint);
       history.removeEventListener('toggle', onHistoryToggle);
       historyForm.removeEventListener('submit', onHistorySearch);
       root.removeEventListener('click', onClick);
+      root.removeEventListener('focusin', rememberCardInput);
+      root.removeEventListener('input', onTranscriptInput);
+      root.removeEventListener('keydown', onTranscriptKey);
     };
   },
 };

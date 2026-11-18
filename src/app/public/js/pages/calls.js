@@ -2,7 +2,7 @@
 import { api } from '../api.js';
 import { CALL_TYPES } from '../domain.js';
 import { icon } from '../icons.js';
-import { html, render, fmtWhen, fmtSec, callChip, SOURCE_LABEL, highlight, errorBox, href, kstDay } from '../ui.js';
+import { html, render, fmtWhen, fmtClock, fmtSec, callChip, SOURCE_LABEL, highlight, errorBox, href, kstDay } from '../ui.js';
 
 const STATUS_TABS = [
   ['all', '전체'], ['draft', '확인 필요'], ['callback', '다시 전화'], ['confirmed', '확정'],
@@ -100,12 +100,11 @@ export default {
     render(el, html`<div class="page cl-page">
       <div class="page-head">
         <div>
-          <p class="eyebrow">통화 아카이브</p><h1>통화 기록</h1>
-          <p class="sub">통화 내용을 찾고, 근거에서 주문을 확인하세요.</p>
+          <h1>통화 기록</h1>
         </div>
-        <a class="btn btn-primary cl-upload" href="#/upload">${icon('upload')} 녹음 올리기</a>
+        <div class="row"><a class="btn" href="#/live">${icon('live')} 실시간 받아쓰기</a><a class="btn btn-primary cl-upload" href="#/upload">${icon('upload')} 녹음 올리기</a></div>
       </div>
-      <section class="cl-control" aria-label="통화 검색과 필터"><form class="cl-search" role="search" data-slot="form">
+      <section class="cl-control" aria-label="통화 검색과 필터"><div class="cl-group cl-status" data-slot="statuses"></div><form class="cl-search" role="search" data-slot="form">
         <label class="sr-only" for="cl-q">통화 찾기</label>
         <input id="cl-q" class="input input-search" type="search" enterkeyhint="search" autocomplete="off"
           placeholder="거래처, 차종, 부품 또는 차번호 검색" value="${state.q}" maxlength="100">
@@ -122,13 +121,12 @@ export default {
     function renderFilters() {
       const custList = customers || [];
       const hasCust = state.customer && !custList.some((c) => c.name === state.customer);
-      render(slot('filters'), html`
-        <div class="cl-group">
+      render(slot('statuses'), html`
           <p class="cl-group-label" id="cl-status-l">상태</p>
           <div class="tabs cl-tabs" role="group" aria-labelledby="cl-status-l">
             ${STATUS_TABS.map(([k, label]) => html`<button type="button" class="tab" data-status="${k}" aria-pressed="${state.status === k}">${label}</button>`)}
-          </div>
-        </div>
+          </div>`);
+      render(slot('filters'), html`
         <div class="cl-quick-range">
           <div class="cl-group">
             <p class="cl-group-label" id="cl-range-l">날짜</p>
@@ -190,22 +188,13 @@ export default {
       const shown = matches.slice(0, 3);
       const source = SOURCE_LABEL[c.source] || c.source || '';
       return html`<li class="cl-item">
-        <div class="cl-top">
-          <a class="cl-title" href="#/calls/${encodeURIComponent(c.id)}">${c.customer || card?.customer || c.title || '제목 없는 통화'}</a>
-          <span class="cl-chips">
-            ${callChip(c)}
-            ${card?.callType ? html`<span class="chip">${card.callType}</span>` : ''}
-            ${card?.urgent ? html`<span class="chip chip-urgent">급함</span>` : ''}
-            ${card?.callback ? html`<span class="chip chip-callback">다시 전화</span>` : ''}
-          </span>
+        <div class="cl-time"><time datetime="${c.recordedAt}" title="${fmtWhen(c.recordedAt)}">${fmtClock(c.recordedAt)}</time><span>${source}${c.hasAudio ? '' : ' · 녹음 없음'}</span></div>
+        <div class="cl-identity"><a class="cl-title" href="#/calls/${encodeURIComponent(c.id)}">${c.customer || card?.customer || c.title || '제목 없는 통화'}</a>
+          ${c.customer ? html`<a class="cl-cust" href="${custHref(c.customer)}" aria-label="${c.customer} 통화 모아 보기">거래처 기록 ›</a>` : ''}
         </div>
-        <p class="cl-context">${card?.carModel || '차종 미입력'}${card?.items?.length ? ` · ${card.items.map((item) => item.part).filter(Boolean).join(', ')}` : ''}</p>
-        <p class="cl-meta">
-          <span>${fmtWhen(c.recordedAt)}</span>
-          <span>${source}${c.hasAudio ? '' : ' · 녹음 없음'}</span>
-          ${c.customer ? html`<a class="cl-cust" href="${custHref(c.customer)}" aria-label="${c.customer} 통화 모아 보기">${c.customer} ›</a>` : ''}
-        </p>
-        ${c.summary ? html`<p class="cl-summary">${c.summary}</p>` : ''}
+        <div class="cl-content"><p class="cl-context">${card?.carModel || '차종 미입력'}${card?.items?.length ? ` · ${card.items.map((item) => item.part).filter(Boolean).join(', ')}` : ''}</p>
+        ${c.summary ? html`<p class="cl-summary">${c.summary}</p>` : ''}</div>
+        <div class="cl-chips">${callChip(c)}${card?.callType ? html`<span class="chip">${card.callType}</span>` : ''}${card?.urgent ? html`<span class="chip chip-urgent">급함</span>` : ''}${card?.callback ? html`<span class="chip chip-callback">다시 전화</span>` : ''}</div>
         ${c.status === 'failed' && c.error ? html`<p class="cl-error">실패 이유: ${c.error}</p>` : ''}
         ${shown.length ? html`<ul class="cl-matches" aria-label="찾은 문장">${shown.map((m) => matchView(c, m))}</ul>` : ''}
         ${matches.length > shown.length ? html`<p class="cl-more-matches">이 통화에서 ${matches.length - shown.length}문장 더 찾았습니다 — 통화를 열어 보세요.</p>` : ''}
@@ -237,7 +226,7 @@ export default {
       return [...groups].map(([day, rows]) => html`
         <section class="cl-day-group" aria-label="${day}">
           <h2 class="cl-group-label"><time datetime="${day}">${day}</time></h2>
-          <ul class="list-wrap cl-list">${rows.map(rowView)}</ul>
+          <div class="cl-columns" aria-hidden="true"><span>통화 시간</span><span>거래처</span><span>통화 · 주문 내용</span><span>상태</span></div><ul class="list-wrap cl-list">${rows.map(rowView)}</ul>
         </section>`);
     }
 

@@ -13,7 +13,17 @@
     "start:offline": "node --import ./tools/fixture-mode.mjs server.mjs",
     "test": "node --import ./tools/no-paid-ai.mjs --test",
     "test:offline": "node --test test/ai-offline.test.mjs",
-    "test:e2e": "node tools/browser-e2e.mjs"
+    "test:e2e": "node tools/browser-e2e.mjs",
+    "test:upload-e2e": "node tools/upload-browser-e2e.mjs",
+    "test:card-recovery-e2e": "node tools/card-recovery-browser-e2e.mjs",
+    "test:transcript-e2e": "node tools/transcript-search-e2e.mjs",
+    "test:knowledge-e2e": "node tools/knowledge-relations-browser-e2e.mjs",
+    "test:settings-e2e": "node tools/settings-integrations-browser-e2e.mjs",
+    "test:multiitem-e2e": "node tools/order-multiitem-browser-e2e.mjs",
+    "test:workflow-e2e": "npm run test:transcript-e2e && npm run test:knowledge-e2e && npm run test:settings-e2e && npm run test:multiitem-e2e",
+    "test:form-feedback-e2e": "node tools/form-feedback-browser-e2e.mjs",
+    "test:assistant-focus-e2e": "node tools/assistant-draft-focus-browser-e2e.mjs",
+    "test:interaction-e2e": "npm run test:form-feedback-e2e && npm run test:assistant-focus-e2e"
   },
   "license": "MIT",
   "dependencies": {

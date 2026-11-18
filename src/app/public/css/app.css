@@ -1,13 +1,13 @@
 @font-face { font-family: "Pretendard JP Variable"; src: url("/fonts/PretendardJPVariable.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
-/* Wanted Montage의 light 토큰을 기존 화면의 CSS 변수에 연결한다.
+/* Montage의 의미별 색상 역할을 유지하고 아차 로고의 브랜드색을 연결한다.
    출처와 라이선스는 ../../docs/montage.md를 참고한다. */
 :root {
-  --brand: #0066ff;
-  --brand-ink: #0054d1;
-  --brand-hover: #005eeb;
-  --brand-soft: #eaf2fe;
-  --brand-wash: #f7fbff;
-  --brand-line: #c9defe;
+  --brand: #49738c;
+  --brand-ink: #263f4e;
+  --brand-hover: #355f73;
+  --brand-soft: #eaf3f8;
+  --brand-wash: #f7fafc;
+  --brand-line: #b7cedc;
   --ink: #171719;
   --ink-2: #2e2f33;
   --muted: #5a5c63;
@@ -326,3 +326,67 @@ h2, h3, .card-title { font-weight: 650; }
  .card { padding: 20px; }
  .topbar { padding-inline:16px; }
 }
+
+/* AGY Montage v2 재구성: 전역 탐색을 상단으로 옮기되 기존 라우트·권한은 유지한다. */
+:root { --bg:#f7f7f8; --ink:#171719; --line:rgba(112,115,124,.16); }
+#headerWorkspace { min-width:0; max-width:240px; }
+#headerWorkspace .workspace-switch { margin:0; min-height:44px; padding:6px 12px; background:var(--bg); }
+#headerWorkspace .workspace-copy { position:static; width:auto; height:auto; clip-path:none; }
+#headerWorkspace .workspace-copy > span { display:none; }
+#headerWorkspace .workspace-chevron { position:static; width:auto; height:auto; clip-path:none; }
+.topbar-path { display:none; }
+.topbar .brand { width:auto; }
+.layout { display:block; }
+.topbar { gap:16px; }
+.primary-tabs { list-style:none; }
+.is-guest #headerWorkspace, .is-guest .header-upload, .is-guest .header-live { display:none; }
+/* 독립 신규 시안의 PC LNB. 모바일 하단 탐색과 모든 기존 라우트 유지. */
+.lnb-workspace,.lnb-bottom { min-width:0; }
+@media(min-width:900px) {
+ :root { --side:224px; }
+ body { background:#fff; }
+ .layout { display:grid; grid-template-columns:224px minmax(0,1fr); }
+ .topbar { padding-inline:24px; }
+ .topbar .brand { width:176px; }
+ #headerWorkspace { display:none; }
+ .topbar-path { display:flex; }
+ .header-upload,.header-live { display:none; }
+ .sidenav { position:sticky; top:var(--topbar-h); display:flex; flex-direction:column; height:calc(100dvh - var(--topbar-h)); padding:24px 16px; background:#fafafb; border-right:1px solid var(--line); border-bottom:0; overflow:auto; }
+ .sidenav ul { display:grid; gap:4px; }
+ .sidenav .nav-link { justify-content:flex-start; min-height:44px; padding:12px; border-radius:8px; font-size:14px; white-space:normal; }
+ .sidenav .nav-link.active { background:var(--brand-soft); color:var(--brand); font-weight:600; }
+ .sidenav .nav-link.active::after { display:none; }
+ .lnb-workspace .workspace-switch { min-height:48px; padding:10px 12px; background:white; margin:0 0 32px; }
+ .lnb-workspace .workspace-copy > span { display:none; }
+ .lnb-bottom { margin-top:auto!important; padding-top:32px; }
+ .page { max-width:1280px; margin-inline:auto; }
+ .fake-banner { padding-inline:32px; }
+ .is-guest .topbar .brand { width:auto; }
+}
+@media(max-width:899px) {
+ .header-upload,.header-live { display:none; }
+ .topbar { gap:8px; padding-inline:16px; flex-wrap:wrap; }
+ #headerWorkspace { flex:1; max-width:none; }
+ #headerWorkspace .workspace-switch { border:0; background:transparent; padding:4px; }
+ #headerWorkspace .workspace-symbol { display:none; }
+ #headerWorkspace .workspace-copy strong { max-width:130px; }
+ .topbar-right { margin-left:0; gap:4px; }
+ .worker-pill .worker-text { display:none; }
+ .worker-pill { min-width:24px; padding-inline:6px; }
+}
+@media(min-width:900px) {
+ body .view .page:not(.cd-page) { max-width:1148px; }
+ body .view .page.cd-page { max-width:1440px; }
+}
+
+.tools-directory { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px; }
+.tools-section { padding:24px; min-width:0; }
+.tools-section h2 { font-size:18px; line-height:26px; margin:0 0 8px; }
+.tools-section>p { color:var(--muted); font-size:14px; line-height:22px; margin:0 0 16px; }
+.tools-section .menu-list { margin:0; padding:0; border:0; box-shadow:none; }
+.tools-section .menu-link { padding:14px 0; min-height:48px; }
+@media(max-width:640px) { .tools-directory { grid-template-columns:minmax(0,1fr); gap:16px; } .tools-section { padding:20px; } }
+.tools-directory > .tools-section { margin:0; }
+
+/* 사용자가 지정한 원본 로고. 비율/색/여백을 임의로 변경하지 않는다. */
+.brand-logo { display:block; width:36px; height:36px; object-fit:contain; flex:none; border-radius:8px; }

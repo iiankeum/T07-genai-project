@@ -10,9 +10,9 @@ private enum LaunchError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .usage: return "서버 모드에는 --server와 HTTPS 주소를 지정해 주세요."
-        case .alreadyOpen: return "이 Mac에서 아맞다가 이미 실행 중입니다."
+        case .alreadyOpen: return "이 Mac에서 아차가 이미 실행 중입니다."
         case .missingBundle: return "앱 번들에 Node 또는 서버 파일이 없습니다. 다시 빌드해 주세요."
-        case .aiConfiguration: return "ai.json의 provider를 off 또는 ollama로 설정해 주세요. model에는 설치한 로컬 모델 이름만 지정할 수 있어요."
+        case .aiConfiguration: return "ai.json 파일의 소유자·쓰기 권한과 4KB 이하 크기를 확인해 주세요. 링크 파일은 사용할 수 없어요. provider는 off 또는 ollama, model은 로컬 모델 이름이어야 해요."
         case .workerConfiguration: return "worker.env에 작업공간 ID와 일꾼 토큰을 적고 권한을 600으로 설정해 주세요."
         }
     }
@@ -33,31 +33,6 @@ private enum Mode {
     }
 }
 
-private struct AIConfiguration: Decodable {
-    let provider: String
-    let model: String?
-
-    static func environment(in storage: URL) throws -> [String: String] {
-        let file = storage.appendingPathComponent("ai.json")
-        guard FileManager.default.fileExists(atPath: file.path) else {
-            return ["AI_PROVIDER": "ollama", "OLLAMA_MODEL": "qwen3:4b"]
-        }
-        guard let data = try? Data(contentsOf: file),
-              let config = try? JSONDecoder().decode(AIConfiguration.self, from: data) else {
-            throw LaunchError.aiConfiguration
-        }
-        if config.provider == "off" { return ["AI_PROVIDER": "off"] }
-        let name = config.model ?? "qwen3:4b"
-        guard config.provider == "ollama", name.count <= 128,
-              name.range(of: #"\A(?:[a-z0-9][a-z0-9_-]*/)?[a-z0-9][a-z0-9_.-]*(?::[a-z0-9][a-z0-9_.-]*)?\z"#,
-                         options: [.regularExpression, .caseInsensitive]) != nil,
-              name.range(of: #"(?:^|[/:._-])cloud(?:$|[/:._-])"#,
-                         options: [.regularExpression, .caseInsensitive]) == nil else {
-            throw LaunchError.aiConfiguration
-        }
-        return ["AI_PROVIDER": "ollama", "OLLAMA_MODEL": name]
-    }
-}
 
 private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate {
     private let local = URL(string: "http://127.0.0.1:5601/")!
@@ -92,6 +67,8 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
     private var aiEnvironment: [String: String] = [:]
     private let probeDelegate = LocalProbeDelegate()
     private var probeSession: URLSession?
+    private var modelSelectionProbe: LocalModelProbe?
+    private var modelSelectionOpen = false
     private var modelSetupProcess: Process?
     private var modelSetupOutput: Pipe?
     private var modelSetupBuffer = Data()
@@ -115,10 +92,10 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1180, height: 800),
                           styleMask: [.titled, .closable, .miniaturizable, .resizable],
                           backing: .buffered, defer: false)
-        window.title = "아맞다"
+        window.title = "아차"
         window.isReleasedWhenClosed = false
         window.minSize = NSSize(width: 400, height: 500)
-        status = NSTextField(wrappingLabelWithString: "아맞다를 시작하고 있어요…")
+        status = NSTextField(wrappingLabelWithString: "아차를 시작하고 있어요…")
         status.alignment = .center
         status.frame = window.contentView!.bounds.insetBy(dx: 28, dy: 28)
         status.autoresizingMask = [.width, .height]
@@ -131,12 +108,12 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
             switch try Mode(arguments: Array(CommandLine.arguments.dropFirst())) {
             case .local:
                 origin = local
-                window.title = "아맞다 · 이 Mac"
+                window.title = "아차 · 이 Mac"
                 installMenu(localMode: true)
                 try startLocalServer()
             case let .remote(url):
                 origin = url
-                window.title = "아맞다 · 서버 · \(url.host ?? "")"
+                window.title = "아차 · 서버 · \(url.host ?? "")"
                 installMenu(localMode: false)
                 showWebView(localRules: nil)
             }
@@ -156,7 +133,7 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
         } else { profileData = nil }
         let storageName = try LocalDevelopmentProfile.storageName(
             info: Bundle.main.object(forInfoDictionaryKey: "AhmatdaDevelopmentProfile"), data: profileData)
-        if storageName != "Ahmatda" { window.title = "아맞다 · PyAV 개발 테스트 · 별도 자료" }
+        if storageName != "Ahmatda" { window.title = "아차 · PyAV 개발 테스트 · 별도 자료" }
         let storage = try files.url(for: .applicationSupportDirectory, in: .userDomainMask,
                                     appropriateFor: nil, create: true)
             .appendingPathComponent(storageName, isDirectory: true)
@@ -210,7 +187,8 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
             "FFMPEG_PATH": audioBundled ? ffmpeg.path : "ffmpeg",
             "FFPROBE_PATH": audioBundled ? ffprobe.path : "ffprobe",
         ]
-        aiEnvironment = try AIConfiguration.environment(in: storage)
+        do { aiEnvironment = try LocalAIConfiguration.environment(in: storage) }
+        catch { throw LaunchError.aiConfiguration }
         env.merge(aiEnvironment) { _, localValue in localValue }
         env.merge(try workerEnvironment(in: storage)) { _, localValue in localValue }
         proc.environment = env
@@ -620,7 +598,7 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
             item.target = self
             return item
         }
-        addMenu("아맞다", [NSMenuItem(title: "아맞다 종료", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")])
+        addMenu("아차", [NSMenuItem(title: "아차 종료", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")])
         var navigation = [command("링크 열기…", #selector(openLink), "l"), command("새로고침", #selector(reload), "r")]
         navigation.append(command("팀 서버 열기…", #selector(openTeamServer)))
         if localMode {
@@ -628,6 +606,7 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
             navigation.append(command("이 Mac 점검…", #selector(showMacPreflight)))
             navigation.append(command("모델·재개 캐시 공간…", #selector(showModelStorageUsage)))
             navigation.append(command("로컬 AI 준비 상태…", #selector(showPreparation)))
+            navigation.append(command("주문 정리 모델 선택…", #selector(selectLocalModel)))
             navigation.append(command("주문 정리 모델 준비…", #selector(confirmModelPreparation)))
             navigation.append(command("받아쓰기 모델 준비…", #selector(confirmWhisperPreparation)))
             navigation.append(command("받아쓰기 연결 설정…", #selector(openWorkerSettings)))
@@ -686,6 +665,97 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
                 alert.informativeText = message + common
             }
         }.resume()
+    }
+
+    @objc private func selectLocalModel() {
+        guard let storage = localStorage, !closing, !failed, !modelSelectionOpen, window.attachedSheet == nil else { return }
+        let snapshot: LocalAIConfiguration.Snapshot
+        do {
+            snapshot = try LocalAIConfiguration.snapshot(in: storage)
+            _ = try LocalAIConfiguration.environment(in: storage)
+        } catch { showModelSelectionResult("기존 ai.json을 안전하게 읽지 못했어요. 파일을 확인한 뒤 다시 시도하세요. 기존 설정은 바꾸지 않았어요."); return }
+        modelSelectionOpen = true
+        let alert = NSAlert()
+        alert.messageText = "주문 정리 모델 선택"
+        alert.informativeText = "이 앱에 설치된 로컬 모델만 선택해요. 저장해도 현재 작업은 바뀌지 않고 다음 앱 재시작부터 적용돼요. 다운로드·실제 답변 생성은 하지 않아요. 기존 설정은 별도 백업으로 남겨요."
+        let choice = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 410, height: 28))
+        choice.addItem(withTitle: "AI 끄기 · 수동 업무")
+        let restoreTitle = "기본 로컬 설정 복원 · qwen3:4b (미검증)"
+        if !runtimeReady || runtimeProcess?.isRunning != true { choice.addItem(withTitle: restoreTitle) }
+        alert.accessoryView = choice
+        alert.addButton(withTitle: "선택 저장")
+        alert.addButton(withTitle: "취소")
+        alert.beginSheetModal(for: window) { [weak self] answer in
+            guard let self else { return }
+            self.modelSelectionProbe?.cancel(); self.modelSelectionProbe = nil
+            guard answer == .alertFirstButtonReturn, !self.closing, !self.failed else { self.modelSelectionOpen = false; return }
+            let restoreDefault = choice.titleOfSelectedItem == restoreTitle
+            let selected = choice.indexOfSelectedItem == 0 ? nil : (restoreDefault ? "qwen3:4b" : choice.titleOfSelectedItem)
+            func save() {
+                guard !self.closing, !self.failed else { self.modelSelectionOpen = false; return }
+                do {
+                    try LocalAIConfiguration.save(in: storage, model: selected, expected: snapshot)
+                    self.modelSelectionOpen = false
+                    self.showModelSelectionResult("설정을 저장했어요. 현재 작업은 그대로이며, 다음 앱 재시작부터 적용돼요. 실제 답변 생성 성공을 확인한 것은 아니에요.")
+                } catch {
+                    self.modelSelectionOpen = false
+                    self.showModelSelectionResult("설정을 저장하지 못했어요. 파일 권한이나 다른 편집으로 인한 변경을 확인하고 다시 열어 주세요. 기존 설정을 자동으로 덮어쓰지 않아요.")
+                }
+            }
+            if restoreDefault {
+                DispatchQueue.main.async {
+                    guard !self.closing, !self.failed, self.window.attachedSheet == nil else { self.modelSelectionOpen = false; return }
+                    let confirm = NSAlert()
+                    confirm.messageText = "기본 로컬 설정을 복원할까요?"
+                    confirm.informativeText = "qwen3:4b를 다음 앱 재시작부터 사용하도록 설정해요. 모델 설치·연결·답변 생성은 아직 확인하지 않았어요. 다운로드는 하지 않으며, 모델이 없으면 준비 메뉴를 이용해야 해요. 현재 작업은 바뀌지 않아요."
+                    confirm.addButton(withTitle: "미검증 기본 설정 저장")
+                    confirm.addButton(withTitle: "취소")
+                    confirm.beginSheetModal(for: self.window) { answer in
+                        if answer == .alertFirstButtonReturn { DispatchQueue.main.async { save() } }
+                        else { self.modelSelectionOpen = false }
+                    }
+                }
+                return
+            }
+            guard let selected else { DispatchQueue.main.async { save() }; return }
+            guard self.runtimeReady, self.runtimeProcess?.isRunning == true else {
+                self.modelSelectionOpen = false
+                DispatchQueue.main.async { self.showModelSelectionResult("앱 전용 실행기가 연결되지 않아 저장하지 않았어요.") }; return
+            }
+            var request = URLRequest(url: URL(string: "http://127.0.0.1:11435/api/show")!)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try? JSONSerialization.data(withJSONObject: ["model":selected])
+            self.modelSelectionProbe = LocalModelProbe(request: request) { [weak self] data, status in
+                guard let self else { return }
+                self.modelSelectionProbe = nil
+                guard !self.closing, !self.failed, self.runtimeReady, self.runtimeProcess?.isRunning == true,
+                      LocalModelSelection.verifiedLocal(data: data, status: status) else {
+                    self.modelSelectionOpen = false
+                    self.showModelSelectionResult("설치된 로컬 모델인지 확인하지 못해 저장하지 않았어요. 원격 모델은 사용할 수 없어요."); return
+                }
+                save()
+            }
+        }
+        guard runtimeReady, runtimeProcess?.isRunning == true else {
+            alert.informativeText += "\n\n앱 전용 실행기가 연결되지 않았어요. AI 끄기 또는 별도 확인을 거쳐 미검증 기본 설정을 복원할 수 있어요."
+            return
+        }
+        modelSelectionProbe = LocalModelProbe(request: URLRequest(url: URL(string: "http://127.0.0.1:11435/api/tags")!)) { [weak self, weak alert] data, status in
+            guard let self, let alert, alert.window.sheetParent != nil, self.modelSelectionOpen, !self.closing, !self.failed else { return }
+            self.modelSelectionProbe = nil
+            guard self.runtimeReady, self.runtimeProcess?.isRunning == true else { return }
+            let names = LocalModelSelection.names(data: data, status: status)
+            choice.addItems(withTitles: names)
+            if let current = self.aiEnvironment["OLLAMA_MODEL"], names.contains(current), self.aiEnvironment["AI_PROVIDER"] == "ollama" { choice.selectItem(withTitle: current) }
+            if names.isEmpty { alert.informativeText += "\n\n선택 가능한 설치 모델을 찾지 못했어요. AI 끄기만 저장할 수 있어요." }
+        }
+    }
+
+    private func showModelSelectionResult(_ text: String) {
+        guard !closing, !failed, window.attachedSheet == nil else { return }
+        let alert = NSAlert(); alert.messageText = "로컬 모델 설정"; alert.informativeText = text
+        alert.addButton(withTitle: "확인"); alert.beginSheetModal(for: window)
     }
 
     private func showPreparationGuide() { showGettingStarted() }
@@ -1017,7 +1087,7 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
     @objc private func openLink() {
         guard let webView else { return }
         let prompt = NSAlert()
-        prompt.messageText = "아맞다 링크 열기"
+        prompt.messageText = "아차 링크 열기"
         let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 360, height: 24))
         prompt.accessoryView = field
         prompt.window.initialFirstResponder = field
@@ -1063,6 +1133,7 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
 
     func applicationWillTerminate(_ notification: Notification) {
         closing = true
+        modelSelectionProbe?.cancel()
         probeSession?.invalidateAndCancel()
         stopManagedRuntime()
         if let modelSetupProcess, modelSetupProcess.isRunning { modelSetupProcess.terminate() }

@@ -5,7 +5,7 @@ import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {spawnSync} from 'node:child_process';
 import {isDeepStrictEqual} from 'node:util';
-const NAMES=new Set(['.model-prepare.lock','.whisper-prepare.lock']);
+const NAMES=new Set(['.model-prepare.lock','.whisper-prepare.lock','.whisper-install.lock','.whisper-pyav-lgpl-dev-install.lock']);
 const BUSY='preparation_busy_or_interrupted_lock';
 async function directoryChain(dir){const parent=path.dirname(dir);if(parent!==dir)await directoryChain(parent);const stat=await fs.lstat(dir);if(!stat.isDirectory()||stat.isSymbolicLink())throw Error('unsafe_lock_path');}
 function same(a,b){return a.dev===b.dev&&a.ino===b.ino;}

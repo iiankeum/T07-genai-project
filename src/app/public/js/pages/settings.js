@@ -3,9 +3,9 @@ import { html, render, fmtWhen } from '../ui.js';
 import { bindForm, roleName } from './account.js';
 
 const sections = [
-  ['profile', '프로필'], ['workspace', '워크스페이스 정보'], ['members', '구성원·권한'],
+  ['profile', '프로필'], ['workspace', '업체 정보'], ['members', '구성원·권한'],
   ['notifications', '알림 설정'], ['display', '화면 설정'], ['data', '데이터·개인정보'],
-  ['integrations', '수집·AI 설정'],
+  ['integrations', '녹음·AI 연결'],
 ];
 const sectionDescriptions = {profile:'이름, 연락처와 로그인 정보',workspace:'상호, 대표 번호와 영업시간',members:'팀원 초대와 역할 관리',notifications:'놓치지 않을 업무 알림',display:'글씨 크기와 화면 보기',data:'녹음·기록 보관과 개인정보',integrations:'로컬 받아쓰기와 AI 연결'};
 const roles = ['admin', 'reception', 'shipping', 'viewer'];
@@ -22,8 +22,8 @@ function show(el, active, body) {
   const section = sections.find(([key]) => key === active);
   render(el, html`<div class="page account-page settings-page ${section ? '' : 'settings-home'}">
     <div class="page-head"><div><p class="eyebrow">내 작업공간</p><h1>${section?.[1] || '설정'}</h1><p class="sub">${section ? sectionDescriptions[active] : '내 계정과 팀의 작업 환경을 관리하세요.'}</p></div></div>
-    <nav class="account-links settings-nav" aria-label="설정 메뉴">${sections.map(([key, label]) => html`
-      <a href="#/settings/${key}" ${key === active ? html`aria-current="page"` : ''}>${label}</a>`)}</nav>
+    ${section ? html`<a class="settings-back" href="#/settings">← 전체 설정</a><nav class="account-links settings-nav" aria-label="설정 메뉴">${sections.map(([key, label]) => html`
+      <a href="#/settings/${key}" ${key === active ? html`aria-current="page"` : ''}>${label}</a>`)}</nav>` : ''}
     <section class="panel account-panel">${body}</section>
   </div>`);
 }
@@ -218,20 +218,14 @@ async function integrations(el, key, account, ctx) {
   async function draw(token) {
     const rr = await api.get('/api/settings/integrations');
     show(el, key, html`
-      ${rr.localWorker?.available ? html`<h2>이 Mac에서 받아쓰기</h2>
-        <p>${rr.localWorker.connected ? '현재 작업공간이 연결돼 있어요.' : rr.localWorker.configuredElsewhere ? '다른 작업공간의 연결이 있어요. 새 연결을 시작하면 기존 연결은 즉시 해제돼요.' : '전사 모델과 실행기를 준비한 뒤 이 작업공간을 연결하세요.'}</p>
-        <p>승인은 30일 동안 유효해요. 앱이 열려 있을 때 이 작업공간의 녹음을 이 Mac에서 처리해요. 화면에서 다른 공간을 선택해도 연결된 공간은 자동으로 바뀌지 않아요.</p>
-        <form id="local-worker-connect" class="account-form">
-          <label class="account-check"><input name="confirm" type="checkbox" required> 현재 작업공간의 로컬 받아쓰기에 동의하고 기존 연결이 있으면 교체해요.</label>
-          ${save(rr.localWorker.connected ? '연결 갱신' : '이 Mac에서 받아쓰기 연결')}${status}
-        </form>
-        ${rr.localWorker.connected ? html`<form id="local-worker-disconnect" class="account-form">
-          <label class="account-check"><input name="confirm" type="checkbox" required> 이 작업공간의 로컬 받아쓰기 연결을 해제해요.</label>
-          <button type="submit" class="btn btn-danger">연결 해제</button>${status}
-        </form>` : ''}` : ''}
-      <h2>녹음 폴더 연결</h2>
+      <div class="integration-overview"><h2>녹음이 주문으로 정리되는 과정</h2><p>필요한 단계만 연결하세요. 아래 표시는 연결 설정 상태이며, 실제 처리 성공을 뜻하지 않습니다.</p><ol>
+        <li><a href="#integration-ingest" data-step="integration-ingest"><strong>1. 녹음 가져오기</strong><span>${rr.ingestConfigured ? '폴더 연결용 토큰 발급됨' : '파일 직접 올리기 가능'}</span></a></li>
+        <li><a href="#integration-transcribe" data-step="integration-transcribe"><strong>2. 글로 받아쓰기</strong><span>${rr.localWorker?.connected ? '이 작업공간에 Mac 연결됨' : ctx.meta?.worker?.online ? '받아쓰기 실행기 응답 있음' : '실행기 연결 확인 필요'}</span></a></li>
+        <li><a href="#integration-ai-step" data-step="integration-ai-step"><strong>3. 주문 정리</strong><span>${ctx.meta?.aiProvider === 'ollama' ? '로컬 모델 설정됨' : ctx.meta?.aiProvider === 'fixture' ? '고정 예시 모드' : ctx.meta?.aiProvider === 'anthropic' ? '외부 AI 설정 확인' : 'AI 꺼짐'}</span></a></li>
+      </ol></div>
+      <section class="integration-step" id="integration-ingest" tabindex="-1"><h2>1. 녹음 가져오기</h2><p>가끔 올린다면 파일을 직접 선택하세요. 반복해서 올린다면 폴더 전송 프로그램을 연결할 수 있어요.</p><a class="btn" href="#/upload">녹음 파일 직접 올리기</a>
+      <h3>폴더에서 자동으로 가져오기</h3>
       <p>${rr.ingestConfigured ? '연결용 토큰이 발급됐어요.' : '연결용 토큰을 발급해 폴더 전송 프로그램에 설정해 주세요.'}</p>
-      <p>받아쓰기 처리 · ${ctx.meta?.worker?.online ? '연결됨' : '대기 중'}</p>
       ${token ? html`<label>새 연결용 토큰<input class="token-output" type="text" readonly value="${token}"></label>
         <p>토큰은 이 화면에서 한 번 보여요. 폴더 전송 프로그램에 입력해 주세요.</p>` : ''}
       <form id="integration-token" class="account-form">
@@ -242,21 +236,39 @@ async function integrations(el, key, account, ctx) {
         <label class="account-check"><input name="confirm" type="checkbox" required> 폴더 전송 연결을 해제합니다.</label>
         <button type="submit" class="btn btn-danger">토큰 폐기</button>${status}
       </form>` : ''}
-      <h2>AI 처리 범위</h2>
+      </section><section class="integration-step" id="integration-transcribe" tabindex="-1"><h2>2. 글로 받아쓰기</h2><p>녹음에서 대화 내용을 만듭니다. ${ctx.meta?.worker?.online ? '실행기 응답이 있어요. 개별 녹음의 완료 여부는 통화 기록에서 확인하세요.' : '현재 실행기의 응답이 확인되지 않았어요. 연결 후 통화 기록에서 처리 상태를 확인하세요.'}</p>
+      ${rr.localWorker?.available ? html`<h3>이 Mac에서 처리하기</h3>
+        <p>${rr.localWorker.connected ? '현재 작업공간이 연결돼 있어요.' : rr.localWorker.configuredElsewhere ? '다른 작업공간의 연결이 있어요. 새 연결을 시작하면 기존 연결은 즉시 해제돼요.' : '전사 모델과 실행기를 준비한 뒤 이 작업공간을 연결하세요.'}</p>
+        <p>승인은 30일 동안 유효해요. 앱이 열려 있을 때 이 작업공간의 녹음을 이 Mac에서 처리해요. 화면에서 다른 공간을 선택해도 연결된 공간은 자동으로 바뀌지 않아요.</p>
+        <form id="local-worker-connect" class="account-form">
+          <label class="account-check"><input name="confirm" type="checkbox" required> 현재 작업공간의 로컬 받아쓰기에 동의하고 기존 연결이 있으면 교체해요.</label>
+          ${save(rr.localWorker.connected ? '연결 갱신' : '이 Mac에서 받아쓰기 연결')}${status}
+        </form>
+        ${rr.localWorker.connected ? html`<form id="local-worker-disconnect" class="account-form">
+          <label class="account-check"><input name="confirm" type="checkbox" required> 이 작업공간의 로컬 받아쓰기 연결을 해제해요.</label>
+          <button type="submit" class="btn btn-danger">연결 해제</button>${status}
+        </form>` : ''}` : ''}
+      ${!rr.localWorker?.available ? html`<p class="help">이 화면에서는 Mac 연결을 설정할 수 없어요. 받아쓰기 실행기가 준비된 기기에서 연결을 설정해 주세요.</p>` : ''}
+      </section><section class="integration-step" id="integration-ai-step" tabindex="-1"><h2>3. 주문 정리</h2>
+      <p>받아쓴 글을 바탕으로 주문 초안을 만듭니다. 담당자의 확인과 확정은 별도입니다.</p>
       <p class="notice">${ctx.meta?.aiProvider === 'ollama'
         ? `로컬 모델 설정 · ${ctx.meta.model || 'Ollama'}. 앱 서버와 같은 기기의 Ollama로 처리합니다. 모델 설치와 실행 여부는 실제 요청 시 확인됩니다.`
         : ctx.meta?.aiProvider === 'fixture' ? '고정 예시 응답 모드입니다. 실제 AI 추론을 하지 않습니다.'
         : ctx.meta?.aiProvider === 'anthropic' ? '외부 Claude 연결 설정입니다. 아래 동의와 서버의 유료 호출 허용이 모두 필요합니다.'
         : 'AI 처리가 꺼져 있습니다.'}</p>
-      ${ctx.meta?.aiProvider === 'ollama' ? html`<p>아래 설정은 외부 AI 전송에만 적용됩니다. 로컬 모델을 끄려면 Node 설치의 AI_PROVIDER를 off로 바꾸세요. Mac 앱은 ‘로컬 자료 폴더 열기’에서 ai.json의 provider를 off로 바꾼 뒤 앱을 다시 실행하세요.</p>` : ''}
+      ${ctx.meta?.aiProvider === 'ollama' ? html`<details class="integration-advanced"><summary>관리자용: 로컬 모델 끄기</summary><p>아래 설정은 외부 AI 전송에만 적용됩니다. 로컬 모델을 끄려면 Node 설치의 AI_PROVIDER를 off로 바꾸세요. Mac 앱은 ‘로컬 자료 폴더 열기’에서 ai.json의 provider를 off로 바꾼 뒤 앱을 다시 실행하세요.</p></details>` : ''}
       <p>서버에서 외부 AI를 켠 경우 ‘서버 AI 사용’으로 저장하면 받아쓴 글 원문과 관련 업무 정보가 외부 AI에 전송될 수 있어요.</p>
       <form id="integration-ai" class="account-form">
         <label>처리 방식<select name="aiMode">
           ${[['off', '외부 AI 사용 안 함'], ['masked', '가림 처리 미지원 · 외부 전송 차단'], ['configured', '서버 AI 사용 · 외부 전송 허용']].map(([value, label]) => html`
             <option value="${value}" ${rr.aiMode === value ? html`selected` : ''}>${label}</option>`)}
         </select></label>${save()}${status}
-      </form>
+      </form></section>
     `);
+    el.querySelectorAll('[data-step]').forEach(link => link.addEventListener('click', event => {
+      event.preventDefault(); const target = el.querySelector('#' + link.dataset.step);
+      target?.scrollIntoView({block:'start'}); target?.focus({preventScroll:true});
+    }));
     const localConnect=el.querySelector('#local-worker-connect');
     if(localConnect) bindForm(localConnect,async()=>{await api.post('/api/settings/local-worker',{confirm:true});await draw();});
     const localDisconnect=el.querySelector('#local-worker-disconnect');

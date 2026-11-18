@@ -315,3 +315,29 @@ test('보드 열 집계는 200건을 넘겨도 정확하고 이력 필터와 페
   ({ body } = await get('/api/calls?' + params));
   assert.equal(body.total, 102);
 });
+
+test('가짜 날짜 경계: KST 통화일 복합필터와 희망 일정 문구순은 시간순과 구분', async t => {
+  const day = '2030-01-02', customer = '가짜 날짜 경계 거래처';
+  const start = at(day, '00:00'), end = at(calls.addDays(day, 1), '00:00');
+  const cases = [
+    ['date_before', new Date(Date.parse(start) - 1).toISOString(), '오후 2시', false],
+    ['date_start', start, '오전 10시', true],
+    ['date_last', new Date(Date.parse(end) - 1).toISOString(), '오전 9시', false],
+    ['date_end', end, '   ', false],
+  ];
+  t.after(() => { for (const [id] of cases) { db().prepare('DELETE FROM cards WHERE call_id=?').run(id); db().prepare('DELETE FROM calls WHERE id=?').run(id); } });
+  for (const [id, recordedAt, due, urgent] of cases) {
+    addCall({ id, recordedAt, customer, card: { status: 'confirmed', customer, due, urgent } });
+    db().prepare("UPDATE cards SET call_type = '주문' WHERE call_id = ?").run(id);
+  }
+  const query = new URLSearchParams({customer, status:'confirmed', callType:'주문', from:day, to:day, sort:'board'});
+  let {body} = await get('/api/calls?' + query);
+  assert.deepEqual(body.calls.map(c => c.id), ['date_start', 'date_last']);
+  query.delete('from'); query.delete('to'); query.set('sort', 'due');
+  ({body} = await get('/api/calls?' + query));
+  // 문구순 정책: 오전 10시는 오전 9시보다 앞. 날짜·시간을 임의로 해석하지 않는다.
+  assert.deepEqual(body.calls.map(c => c.id), ['date_start', 'date_last', 'date_before', 'date_end']);
+  query.set('callType', '배송 문의');
+  ({body} = await get('/api/calls?' + query));
+  assert.equal(body.total, 0);
+});

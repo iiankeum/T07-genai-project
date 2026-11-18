@@ -36,8 +36,8 @@ const NAV = [
   { href: '#/board', label: '주문 보드', icon: '▦', page: 'board' },
   { href: '#/shipping', label: '출고 목록', icon: '⇪', page: 'shipping' },
   { href: '#/upload', label: '녹음 올리기', icon: '⤒', page: 'upload' },
-  { href: '#/assistant', label: '어시스턴트', icon: '✧', page: 'assistant' },
-  { href: '#/ask', label: '지난 통화에 묻기', icon: '?', page: 'ask' },
+  { href: '#/assistant', label: '업무 도우미', icon: '✧', page: 'assistant' },
+  { href: '#/ask', label: '통화 내용 찾기', icon: '?', page: 'ask' },
   { href: '#/knowledge', label: '공유 지식', icon: '◇', page: 'glossary' },
 ];
 const SETTINGS = { href: '#/settings', label: '설정', icon: '⚙', page: 'settings' };
@@ -77,25 +77,26 @@ const isActive = (item, page) => (Array.isArray(item.page) ? item.page.includes(
 
 function renderNav(page, meta) {
   const workspace = meta?.access?.workspace;
-  const foot = [SETTINGS, HELP, ...(meta?.access?.role === 'admin' ? [ADMIN] : [])];
-  const link = (n) => html`<a class="nav-link ${isActive(n, page) ? 'active' : ''}" href="${n.href}" title="${n.label}" ${isActive(n, page) ? html`aria-current="page"` : ''}><span class="nav-icon">${icon(n.page)}</span><span class="nav-label">${n.label}</span></a>`;
-  render(document.getElementById('sideNav'), html`
-    <a class="workspace-switch" href="${WORKSPACES.href}" title="워크스페이스 선택"><span class="workspace-symbol">${icon('account')}</span><span class="workspace-copy"><strong>${workspace?.name || '워크스페이스'}</strong><span>${meta?.access?.demo === false ? '내 작업공간' : '예시 데이터로 체험 중'}</span></span><span class="workspace-chevron" aria-hidden="true">⌄</span></a>
-    <a class="btn btn-primary nav-cta" href="${LIVE.href}" title="${LIVE.label}" ${page === LIVE.page ? html`aria-current="page"` : ''}>${icon('live')}<span class="nav-cta-label">${LIVE.label}</span></a>
-    <div class="nav-group"><p class="nav-group-label">업무</p><ul>${NAV.slice(0, 5).map((n) => html`<li>${link(n)}</li>`)}</ul></div>
-    <div class="nav-group"><p class="nav-group-label">지식과 도구</p><ul>${NAV.slice(5).map((n) => html`<li>${link(n)}</li>`)}</ul></div>
-    <div class="sidenav-foot">${foot.map(link)}</div>`);
+  const workspaceLink = html`<a class="workspace-switch" href="${WORKSPACES.href}" title="워크스페이스 선택"><span class="workspace-copy"><strong>${workspace?.name || '워크스페이스'}</strong><span>${meta?.access?.demo === false ? '내 작업공간' : '예시 데이터로 체험 중'}</span></span><span class="workspace-chevron" aria-hidden="true">⌄</span></a>`;
+  const navActive = (n) => n.href === '#/knowledge?tab=customer' ? page === 'glossary' && new URLSearchParams(location.hash.split('?')[1]).get('tab') === 'customer' : n.page === 'glossary' ? page === 'glossary' && new URLSearchParams(location.hash.split('?')[1]).get('tab') !== 'customer' : isActive(n, page);
+  const link = (n) => html`<li><a class="nav-link ${navActive(n)?'active':''}" href="${n.href}" ${navActive(n)?html`aria-current="page"`:''}>${icon(n.page)}<span>${n.label}</span></a></li>`;
+  render(document.getElementById('headerWorkspace'), workspaceLink);
+  render(document.getElementById('sideNav'), html`<div class="lnb-workspace">${workspaceLink}</div>
+    <div class="nav-group"><p class="nav-group-label">업무</p><ul>${NAV.slice(0,4).map(link)}</ul></div>
+    <div class="nav-group"><p class="nav-group-label">찾기와 관리</p><ul>${[NAV[6],NAV[5],{href:'#/knowledge?tab=customer',label:'거래처',page:'glossary'},NAV[7],{href:'#/more',label:'모든 도구',page:'more'}].map(link)}</ul></div>
+    <div class="nav-group lnb-bottom"><ul>${[SETTINGS,HELP].map(link)}</ul></div>`);
   render(document.getElementById('tabBar'), html`${TABS.map((t) => html`<a class="tab-link ${isActive(t, page) ? 'active' : ''}" href="${t.href}" ${isActive(t, page) ? html`aria-current="page"` : ''}><span class="tab-icon">${icon(t.page)}</span><span>${t.label}</span></a>`)}`);
 }
 
 function renderMore(el, meta) {
-  const items = [...NAV.filter((n) => !['today', 'board', 'shipping'].includes(n.page) && !Array.isArray(n.page)), LIVE, WORKSPACES, SETTINGS, NOTIFICATIONS, HELP];
-  if (meta?.access?.role === 'admin') items.push(ADMIN);
-  items.push({ href: '#/trial', label: '무료 체험 신청', icon: '✉' });
-  render(el, html`<div class="page">
-    <div class="page-head"><h1>더보기</h1></div>
-    <ul class="menu-list">${items.map((n) => html`<li><a class="menu-link" href="${n.href}"><span class="nav-icon">${icon(n.page)}</span><span>${n.label}</span><span class="menu-arrow" aria-hidden="true">›</span></a></li>`)}</ul>
-  </div>`);
+  const groups = [
+    {title:'통화 기록하기', description:'파일을 올리거나 지금 통화를 받아써요.', items:[LIVE,NAV[4]]},
+    {title:'찾고 물어보기', description:'지난 통화와 팀의 지식을 활용해요.', items:[...NAV.slice(5),{href:'#/knowledge?tab=customer',label:'거래처',page:'glossary'}]},
+    {title:'내 작업공간', description:'계정, 팀 연결과 화면을 관리해요.', items:[WORKSPACES,SETTINGS,NOTIFICATIONS]},
+    {title:'도움과 관리', description:'사용 안내와 관리 메뉴를 확인해요.', items:[HELP,...(meta?.access?.role==='admin'?[ADMIN]:[]),{href:'#/trial',label:'무료 체험 신청',icon:'✉'}]},
+  ];
+  render(el, html`<div class="page tools-page"><div class="page-head"><div><h1>모든 도구</h1><p class="sub">필요한 작업을 골라 이어가세요.</p></div></div><div class="tools-directory">${groups.map(g=>html`<section class="card tools-section"><h2>${g.title}</h2><p>${g.description}</p><ul class="menu-list">${g.items.map(n=>html`<li><a class="menu-link" href="${n.href}"><span class="nav-icon">${icon(n.page)}</span><span>${n.label}</span><span class="menu-arrow" aria-hidden="true">›</span></a></li>`)}</ul></section>`)}</div></div>`);
+
 }
 
 function goToLogin(returnTo) {
@@ -117,7 +118,7 @@ async function route() {
   view.replaceChildren(mount);
   if (r.page === 'notfound') {
     path.textContent = '없는 화면';
-    document.title = '없는 화면 · 아맞다';
+    document.title = '없는 화면 · 아차';
     render(mount, html`<div class="page"><div class="card empty"><h1>이 화면을 찾지 못했습니다</h1><a class="btn btn-primary" href="#/calls">통화 기록 보기</a></div></div>`);
     return;
   }
@@ -139,12 +140,12 @@ async function route() {
       goToLogin(location.hash);
       return;
     }
-    if (r.page === 'more') { renderMore(mount, meta); document.title = '더보기 · 아맞다'; return; }
+    if (r.page === 'more') { renderMore(mount, meta); document.title = '더보기 · 아차'; return; }
     const mod = await import(`./pages/${r.page}.js`);
     if (my !== seq) return;
     const page = mod.default;
     path.textContent = page.title || path.textContent;
-    document.title = `${page.title || ''} · 아맞다`;
+    document.title = `${page.title || ''} · 아차`;
     const ctx = {
       path: r.path,
       params: r.params,
@@ -210,10 +211,10 @@ window.addEventListener('ahmatda:workspace-changed', () => {
   notice.className = 'notice notice-warn';
   notice.setAttribute('role', 'alert');
   const text = document.createElement('p');
-  text.textContent = '다른 탭에서 작업공간을 바꿨습니다. 이 화면의 전송과 저장은 중단했습니다. 입력 내용을 확인한 뒤 새 작업공간을 열어 주세요.';
+  text.textContent = '다른 탭에서 계정 또는 작업공간이 바뀌었습니다. 이 화면의 전송과 저장은 중단했습니다. 입력 내용을 확인한 뒤 현재 계정과 작업공간을 새로 열어 주세요.';
   const button = document.createElement('button');
   button.className = 'btn';
-  button.textContent = '새 작업공간 열기';
+  button.textContent = '현재 계정·작업공간 새로 열기';
   button.addEventListener('click', () => location.reload());
   notice.append(text, button);
   (document.getElementById('workspaceNoticeSlot') || document.body).prepend(notice);

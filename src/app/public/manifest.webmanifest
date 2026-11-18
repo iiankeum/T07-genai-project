@@ -1,6 +1,6 @@
 {
-  "name": "아맞다 — 전화 주문 관리",
-  "short_name": "아맞다",
+  "name": "아차 — 전화 주문 관리",
+  "short_name": "아차",
   "description": "부품 대리점 전화 주문을 받아쓰고 주문 카드로 정리하는 데모(가짜 통화)",
   "lang": "ko",
   "start_url": "/#/",
@@ -9,9 +9,11 @@
   "background_color": "#f7f7f8",
   "theme_color": "#0066ff",
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
-    { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+    {
+      "src": "/assets/ahcha-logo-original.jpeg",
+      "sizes": "1254x1254",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
   ]
 }

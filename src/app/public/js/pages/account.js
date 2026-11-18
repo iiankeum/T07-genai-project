@@ -28,11 +28,27 @@ export function formValues(form) {
   return body;
 }
 
+let feedbackSequence = 0;
 export function bindForm(form, action) {
+  const feedback = form.querySelector('[role="status"]');
+  if (!feedback.id) {
+    let id;
+    do { id = `account-feedback-${++feedbackSequence}`; } while (document.getElementById(id));
+    feedback.id = id;
+  }
+  const linkedFields = new Set();
+  function clearErrorLinks() {
+    for (const field of linkedFields) {
+      const ids = (field.getAttribute('aria-describedby') || '').split(/\s+/).filter(id => id && id !== feedback.id);
+      if (ids.length) field.setAttribute('aria-describedby', ids.join(' '));
+      else field.removeAttribute('aria-describedby');
+    }
+    linkedFields.clear();
+  }
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const feedback = form.querySelector('[role="status"]');
     const button = event.submitter ?? form.querySelector('button[type="submit"]');
+    clearErrorLinks();
     form.querySelectorAll('[aria-invalid]').forEach((input) => input.removeAttribute('aria-invalid'));
     button.disabled = true;
     feedback.hidden = true;
@@ -50,7 +66,14 @@ export function bindForm(form, action) {
       const field = form.elements.namedItem(errors[err.code]);
       if (field) {
         field.setAttribute('aria-invalid', 'true');
+        const ids = new Set((field.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean));
+        if (!ids.has(feedback.id)) linkedFields.add(field);
+        ids.add(feedback.id);
+        field.setAttribute('aria-describedby', [...ids].join(' '));
         field.focus();
+      } else {
+        feedback.tabIndex = -1;
+        feedback.focus();
       }
     } finally {
       button.disabled = false;

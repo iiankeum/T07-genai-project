@@ -10,7 +10,7 @@ import { db, globalDb, withWorkspace } from './lib/db.mjs';
 import { Router, HttpError, sendJson, clientIp } from './lib/http.mjs';
 import { securityHeaders, checkOrigin } from './lib/security.mjs';
 import { countVisit, cleanSrc } from './lib/visits.mjs';
-import { accountDb, browserAccess, productAccess, demoAccess, requireRole, workerAccess, ingestAccess } from './lib/auth.mjs';
+import { accountDb, me, browserAccess, productAccess, demoAccess, requireRole, workerAccess, ingestAccess } from './lib/auth.mjs';
 import { domainFor } from './public/js/domain.js';
 
 const PUBLIC_DIR = path.join(APP_DIR, 'public');
@@ -47,9 +47,20 @@ export async function buildRouter() {
   return { router, starters };
 }
 
+const ACTOR_BOUND_AUTH_MUTATIONS = new Set([
+  '/api/auth/profile', '/api/auth/preferences', '/api/auth/password/change',
+  '/api/auth/workspaces', '/api/auth/workspaces/switch', '/api/auth/invite/accept', '/api/auth/logout',
+]);
+
 function handleApi(route, ctx) {
   const { pattern, handler } = route;
   const { req } = ctx;
+  if (req.method !== 'GET' && req.method !== 'HEAD' && ACTOR_BOUND_AUTH_MUTATIONS.has(pattern)) {
+    const expectations = [req.headers['x-ahmatda-actor'], ctx.query?.actor].filter(value => value !== undefined);
+    if (expectations.length && expectations.some(value => value !== me(req).user?.id)) {
+      throw new HttpError(409, 'actor_changed', '다른 화면에서 로그인 계정이 바뀌었습니다. 입력 내용을 확인하고 새로고침한 뒤 다시 시도해 주세요.');
+    }
+  }
   if (pattern === '/healthz' || pattern.startsWith('/api/auth/') ||
       ['/api/trial', '/api/trial/policy', '/api/trial-signup'].includes(pattern)) return handler(ctx);
   if (pattern === '/api/meta') {
@@ -71,8 +82,14 @@ function handleApi(route, ctx) {
     return config.demoMode ? withWorkspace(demoAccess(), () => handler(ctx)) : handler(ctx);
   }
   const access = productAccess(req);
-  const expectedWorkspace = req.headers['x-ahmatda-workspace'] ?? ctx.query?.workspace;
-  if (expectedWorkspace !== undefined && expectedWorkspace !== access.workspace.id) {
+  // Expectations bind an already-rendered browser view, not authentication itself.
+  // Check both carriers so a fresh header cannot override an old media/export URL.
+  const expectedActors = [req.headers['x-ahmatda-actor'], ctx.query?.actor].filter(value => value !== undefined);
+  if (expectedActors.some(value => value !== access.user?.id)) {
+    throw new HttpError(409, 'actor_changed', '다른 화면에서 로그인 계정이 바뀌었습니다. 입력 내용을 확인하고 새로고침한 뒤 다시 시도해 주세요.');
+  }
+  const expectedWorkspaces = [req.headers['x-ahmatda-workspace'], ctx.query?.workspace].filter(value => value !== undefined);
+  if (expectedWorkspaces.some(value => value !== access.workspace.id)) {
     throw new HttpError(409, 'workspace_changed', '다른 화면에서 워크스페이스가 바뀌었습니다. 새로고침한 뒤 다시 시도해 주세요.');
   }
   return withWorkspace(access, () => {

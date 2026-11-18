@@ -59,7 +59,13 @@ export function mountCard(el, o) {
   const canEdit = role === 'admin' || role === 'reception';
   const canShip = role === 'admin' || role === 'shipping';
   const pending = new Map();
-  const storageKey = 'cn.card.pending:' + (o.meta?.access?.workspace?.id || 'demo') + ':' + o.callId;
+  // 계정 전환 후 다른 사람의 임시입력을 복구·자동저장하지 않는다.
+  // 이전 사용자 구분 없는 키는 작성자를 알 수 없어 읽거나 삭제하지 않는다.
+  const demo = o.meta?.demo === true || o.meta?.access?.demo === true;
+  const userId = demo ? 'demo' : o.meta?.access?.user?.id;
+  const workspaceId = o.meta?.access?.workspace?.id || (demo ? 'demo' : null);
+  const storageKey = typeof userId === 'string' && userId && typeof workspaceId === 'string' && workspaceId
+    ? 'cn.card.pending:v2:' + [userId, workspaceId, o.callId].map(encodeURIComponent).join(':') : null;
   let saveTimer = null;
   let failure = null;
   let latest = null;
@@ -95,7 +101,7 @@ export function mountCard(el, o) {
   const humanChecked = () => card && (card.status === 'confirmed' || card.status === 'shipped');
   const aiChip = (checked = false) => (checked || humanChecked()
     ? html`<span class="chip chip-confirmed cd-provenance" title="사람이 확인">사람이 확인</span>`
-    : html`<span class="chip chip-ai cd-provenance" title="AI 초안"><span class="sr-only">AI 초안</span></span>`);
+    : html`<span class="chip chip-ai cd-provenance" title="AI 초안">AI 초안</span>`);
   const editedChip = () => html`<span class="chip chip-edited">사람이 고침</span>`;
   function chipFor(key) {
     if (!card) return '';
@@ -121,7 +127,7 @@ export function mountCard(el, o) {
     if (!r || (r.at === null && r.segIndex < 0)) return '';
     const t = r.at !== null ? fmtSec(r.at) : '';
     const what = o.hasAudio ? `${label} 근거 대목${t ? ` ${t}부터` : ''} 듣기` : `${label} 근거 문장 보기`;
-    return html`<button type="button" class="btn cd-evbtn ev-play" aria-label="${what}" title="${what}">${icon(o.hasAudio ? 'play' : 'evidence')}${t ? html`<span class="cd-evtime">${t}</span>` : ''}</button>`;
+    return html`<button type="button" class="btn cd-evbtn ev-play" aria-label="${what}" title="${what}">${icon(o.hasAudio ? 'play' : 'evidence')}<span>근거</span>${t ? html`<span class="cd-evtime">${t}</span>` : ''}</button>`;
   }
 
   function quoteBox(r) {
@@ -159,17 +165,17 @@ export function mountCard(el, o) {
     const max = profile().textLimits[f.key];
     const pattern = f.key === 'modelYear' && profile().modelYearPattern ? profile().modelYearPattern.source : null;
     return html`<div class="cd-field ${f.wide ? 'cd-field-wide' : ''} ${flags.length ? 'is-unsure' : ''}" data-ev="${f.key}">
-      <div class="cd-field-top">
-        <label class="cd-label" for="${id}">${label}</label>
-        <span class="cd-chipslot" data-chip="${f.key}">${chipFor(f.key)}</span>
-        ${f.key === 'customer' && card.customerByPhone ? html`<span class="chip chip-phone" title="걸려 온 번호가 거래처 목록의 번호와 같아 그 이름으로 채웠습니다">번호로 확인</span>` : ''}
-        <span class="cd-saved" data-saved="${f.key}" aria-live="polite"></span>
-      </div>
+      <div class="cd-field-top"><label class="cd-label" for="${id}">${label}</label></div>
       <div class="cd-input-row">
         ${f.textarea
     ? html`<textarea id="${id}" class="textarea" data-field="${f.key}" maxlength="${max}" rows="2" placeholder="${f.ph}" ${ro ? html`readonly` : ''}>${value}</textarea>`
     : html`<input id="${id}" class="input" data-field="${f.key}" maxlength="${max}" ${pattern ? html`pattern="${pattern}"` : ''} value="${value}" placeholder="${f.ph}" autocomplete="off" spellcheck="false" ${f.mode ? html`inputmode="${f.mode}"` : ''} ${f.list ? html`list="${f.list}"` : ''} ${ro ? html`readonly` : ''}>`}
         ${evButton(r, f.label)}
+      </div>
+      <div class="cd-field-meta">
+        <span class="cd-chipslot" data-chip="${f.key}">${chipFor(f.key)}</span>
+        ${f.key === 'customer' && card.customerByPhone ? html`<span class="cd-phone-match" title="걸려 온 번호가 거래처 목록의 번호와 같아 그 이름으로 채웠습니다">번호 일치</span>` : ''}
+        <span class="cd-saved" data-saved="${f.key}" aria-live="polite"></span>
       </div>
       ${flagsView(flags)}
       ${f.key === 'plate' ? html`<div data-slot="plate-hint">${plateHint()}</div>` : ''}
@@ -201,7 +207,7 @@ export function mountCard(el, o) {
     return html`<li class="cd-item ${flags.length ? 'is-unsure' : ''}" data-ev="item:${i}">
       <div class="cd-item-head">
         <span class="cd-item-no" aria-hidden="true">${n}</span>
-        <span class="cd-item-title">${it.part || '새 부품'}</span>
+        <span class="cd-item-title">품목 ${n}</span>
         <span class="cd-chipslot" data-chip="item:${i}">${chipFor(`item:${i}`)}</span>
         ${evButton(r, `${n}번째 부품`)}
         ${ro ? '' : html`<button type="button" class="btn btn-ghost cd-item-del" data-del="${i}" aria-label="${n}번째 부품 줄 지우기">지우기</button>`}
@@ -235,7 +241,7 @@ export function mountCard(el, o) {
   function itemsSection(groups) {
     return html`<section class="cd-sec cd-items" aria-labelledby="cd-items-h">
       <div class="cd-sec-top">
-        <h3 id="cd-items-h">부품</h3><span data-chip="items">${chipFor('items')}</span><span class="cd-saved" data-saved="items" aria-live="polite"></span>
+        <h3 id="cd-items-h">주문 품목</h3><span data-chip="items">${chipFor('items')}</span><span class="cd-saved" data-saved="items" aria-live="polite"></span>
         ${editable() ? html`<button type="button" class="btn btn-sm cd-add" data-act="item-add">부품 추가</button>` : ''}
       </div>
       ${flagsView(groups.get('items'))}
@@ -280,7 +286,7 @@ export function mountCard(el, o) {
       const why = issues.length
         ? html`<details class="cd-confirm-issues" ${issuesOpen ? html`open` : ''}>
           <summary id="cd-confirm-why">확정 전 확인 ${issues.length}건</summary>
-          <ul class="cd-why">${issues.map((issue) => html`<li>${issue.message}</li>`)}</ul>
+          <ul class="cd-why">${issues.map((issue, index) => html`<li><button type="button" class="cd-issue-link" data-act="issue-jump" data-issue="${index}">${issue.message} →</button></li>`)}</ul>
         </details>`
         : html`<p class="cd-action-state">${nothingToShip() ? '확정하면 처리가 완료됩니다.' : '확정하면 출고 대기로 이동합니다.'}</p>`;
       return html`${why}<div class="cd-action-buttons">
@@ -346,6 +352,10 @@ export function mountCard(el, o) {
     return html`<span>${pending.size ? '저장 중…' : '자동 저장'}</span>`;
   }
 
+  function contextView() {
+    return html`<div><strong>${card.customer || '거래처 미입력'}</strong><span>${card.carModel || '차종 미입력'} · ${card.plate || '차번호 미입력'}</span></div><button class="btn btn-ghost btn-sm" type="button" data-act="basic-jump">차량·거래처 확인</button>`;
+  }
+
   function renderAll() {
     evMap = new Map();
     if (!card) {
@@ -372,9 +382,12 @@ export function mountCard(el, o) {
       <div class="cd-card-scroll" tabindex="0" role="region" aria-label="주문 카드 내용">
         <div data-slot="save-status" tabindex="-1" aria-live="polite">${saveStatus()}</div>
         ${card.aiError ? html`<p class="notice notice-warn" role="note">AI 초안을 만들지 못했습니다. 주문 정보를 직접 채워 주세요. ${card.aiError}</p>` : ''}
+        <div class="cd-order-context" data-slot="order-context">${contextView()}</div>
+        <p class="cd-draft-note">AI 초안 · 품목·수량과 확인 항목을 검토하세요.</p>
+        ${itemsSection(groups)}
         <section class="cd-card-section" aria-labelledby="cd-fields-h">
           <div class="cd-sec-top cd-fields-head">
-            <h3 id="cd-fields-h">거래처 · 차량</h3>
+            <h3 id="cd-fields-h">기본 정보</h3>
             <details class="cd-card-guide cd-origin-guide" ${guideOpen ? html`open` : ''}>
               <summary>근거 · 표시 안내</summary>
               <p><span class="chip chip-ai cd-provenance"></span> AI 초안 <span class="chip chip-edited">사람이 고침</span> <span class="chip chip-confirmed">사람이 확인</span></p>
@@ -384,9 +397,8 @@ export function mountCard(el, o) {
           </div>
           <div class="cd-grid">${TOP_FIELDS.map((f) => fieldBlock(f, groups))}${typeBlock()}</div>
         </section>
-        ${itemsSection(groups)}
         <section class="cd-sec" aria-labelledby="cd-delivery-h">
-          <h3 id="cd-delivery-h">수령 · 메모</h3>
+          <h3 id="cd-delivery-h">배송 및 요청사항</h3>
           <div class="cd-grid">${WHEN_FIELDS.map((f) => fieldBlock(f, groups))}${urgentBlock(groups)}${fieldBlock(NOTE_FIELD, groups)}</div>
           <datalist id="cd-delivery-list">${DELIVERY_OPTIONS.map((d) => html`<option value="${d}"></option>`)}</datalist>
         </section>
@@ -409,6 +421,7 @@ export function mountCard(el, o) {
   function refreshDecor() {
     if (!card) return;
     updateInlineIssues();
+    if (slot('order-context')) render(slot('order-context'), contextView());
     el.querySelectorAll('[data-chip]').forEach((s) => render(s, html`${chipFor(s.dataset.chip)}`));
     const st = slot('status'); if (st) render(st, cardChip(card.status));
     const ac = slot('actions');
@@ -502,6 +515,7 @@ export function mountCard(el, o) {
   }
 
   function remember() {
+    if (!storageKey) return; // 신원이 없으면 현재 화면 메모리에서만 유지한다.
     try {
       if (pending.size) sessionStorage.setItem(storageKey, JSON.stringify({ revision: baseRevision, patch: Object.fromEntries(pending) }));
       else sessionStorage.removeItem(storageKey);
@@ -836,13 +850,21 @@ export function mountCard(el, o) {
     const play = t.closest('.ev-play');
     if (!play && t.closest('button, a')) return;
     // 이미 고른 칸을 고치려고 다시 누른 것이면 녹음을 처음부터 다시 틀지 않는다
-    if (!play && t.matches('input, textarea, select') && activeKey === block.dataset.ev) return;
+    // 편집과 근거 확인을 분리: 입력 클릭은 값 편집만, 명시적 근거 버튼만 재생/이동한다.
+    if (!play) return;
     selectBlock(block, true);
   }
 
   function handleAct(act, btn) {
     switch (act) {
       case 'to-trans': o.onJumpToTranscript(activeKey ? evMap.get(activeKey) : null); break;
+      case 'issue-jump': {
+        const issue = confirmationIssues(localCard())[Number(btn.dataset.issue)];
+        if (!issue) break;
+        const target = issue.code === 'ask_back_left' ? el.querySelector('[data-resolve]') || el.querySelector('#cd-ask-new') : issue.code === 'unsure_left' ? el.querySelector('[data-review]') : issue.field === 'items' ? el.querySelector('[data-act="item-add"]') : issueInput(issue);
+        target?.scrollIntoView({block:'center'}); target?.focus({preventScroll:true}); break;
+      }
+      case 'basic-jump': { const input = el.querySelector('[data-field="customer"]'); input?.scrollIntoView({block:'center'}); input?.focus({preventScroll:true}); break; }
       case 'status-jump': slot('actions')?.focus(); break;
       case 'save-error': slot('save-status')?.focus(); break;
       case 'item-add': addItem(); break;
@@ -884,7 +906,10 @@ export function mountCard(el, o) {
     const sub = t.dataset.item;
     if (!items[i]) return;
     const value = t.value.trim();
-    items[i][sub] = sub === 'qty' ? (value === '' ? null : Number(value)) : sub === 'partNo' ? normalizePartNo(value) : value;
+    const nextValue = sub === 'qty' ? (value === '' ? null : Number(value)) : sub === 'partNo' ? normalizePartNo(value) : value;
+    // input 뒤 blur/change가 같은 값을 다시 보내면 확정 버튼을 교체하지 않는다.
+    if (Object.is(items[i][sub], nextValue)) return;
+    items[i][sub] = nextValue;
     if (sub === 'part') {
       const title = t.closest('.cd-item')?.querySelector('.cd-item-title');
       if (title) title.textContent = value || '새 부품';
@@ -907,7 +932,7 @@ export function mountCard(el, o) {
   el.addEventListener('compositionend', onInput);
   window.addEventListener('online', handleOnline);
   window.addEventListener('beforeunload', handleUnload);
-  if (editable()) {
+  if (editable() && storageKey) {
     try {
       const restored = JSON.parse(sessionStorage.getItem(storageKey) || '{}');
       for (const [key, value] of Object.entries(restored.patch || {})) pending.set(key, value);

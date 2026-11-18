@@ -409,3 +409,25 @@ test('이어진 질문은 앞 질문의 거래처 · 낱말을 쓴다 · AI 가 
   }]);
   assert.deepEqual(todos.map((t) => [t.kind, t.priority]), [['retry', 2]]);
 });
+
+test('가짜 출고 날짜 경계: today는 희망일·통화일 아닌 KST 확정일, all은 미출고만', async t => {
+  const day = '2030-01-02', customer = '가짜 출고 경계 거래처';
+  const start = at(day, '00:00'), end = at(addDays(day, 1), '00:00');
+  const cases = [
+    ['ship_before', new Date(Date.parse(start)-1).toISOString(), 'confirmed', false],
+    ['ship_start', start, 'confirmed', true],
+    ['ship_last', new Date(Date.parse(end)-1).toISOString(), 'shipped', false],
+    ['ship_end', end, 'confirmed', false],
+  ];
+  t.after(() => { for (const [id] of cases) { db().prepare('DELETE FROM cards WHERE call_id=?').run(id); db().prepare('DELETE FROM calls WHERE id=?').run(id); } });
+  for (const [id, confirmedAt, status, urgent] of cases) addCall({
+    id, customer, recordedAt: at(addDays(day,-10),'09:00'),
+    card: {status, confirmedAt, urgent, due:'다음 달 아무 때나', items:[{part:'가짜 부품',qty:1,partNo:'FAKE-1'}]},
+  });
+  let {body} = await get(`/api/shipping?scope=today&day=${day}`);
+  assert.deepEqual(body.groups.find(g=>g.customer===customer).cards.map(c=>c.callId), ['ship_start','ship_last']);
+  ({body} = await get('/api/shipping?scope=all'));
+  const cards = body.groups.find(g=>g.customer===customer).cards;
+  assert.equal(cards[0].callId,'ship_start');
+  assert.deepEqual(cards.map(c=>c.callId).sort(),['ship_before','ship_end','ship_start']);
+});

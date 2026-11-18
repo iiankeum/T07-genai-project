@@ -25,7 +25,7 @@ function save(key, msgs) {
 }
 
 export default {
-  title: '지난 통화에 묻기',
+  title: '통화 내용 찾기',
   async mount(el, ctx) {
     const meta = ctx.meta || {};
     const access = meta.access;
@@ -38,9 +38,9 @@ export default {
 
     render(el, html`<div class="page page-narrow ask-page">
       <div class="page-head"><div>
-        <p class="eyebrow">F09 · 묻기</p>
-        <h1>지난 통화에 묻기</h1>
-        <p class="sub">사람에게 묻듯 물어보세요.</p>
+        <p class="eyebrow">지난 통화 검색</p>
+        <h1>통화 내용 찾기</h1>
+        <p class="sub">여러 통화에 흩어진 주문·차량·부품 내용을 질문으로 찾아보세요.</p>
       </div><button type="button" class="btn btn-ghost" data-act="clear">대화 지우기</button></div>
       <div class="notice ask-rule" role="note">저장된 통화 글 · 카드만 보고 답합니다. 없으면 지어내지 않고 「찾지 못했어요」라고 합니다.</div>
       <div data-ref="aioff"></div>

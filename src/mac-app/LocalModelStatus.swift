@@ -229,3 +229,180 @@ enum TeamServerAddress {
         return parts.url
     }
 }
+
+
+// 설정 읽기와 명시적 저장은 private 디렉터리 fd에서만 한다. 모델 조회는 UI가 맡는다.
+enum LocalAIConfiguration {
+    static let maximumBytes = 4096
+    private struct Configuration: Decodable { let provider: String; let model: String? }
+    static func allowedMetadata(_ info: stat, owner: uid_t) -> Bool {
+        (info.st_mode & S_IFMT) == S_IFREG && info.st_uid == owner &&
+        (info.st_mode & 0o022) == 0 && info.st_nlink == 1 &&
+        info.st_size >= 0 && info.st_size <= maximumBytes
+    }
+    struct Snapshot: Equatable {
+        let data: Data?
+        let inode: UInt64
+        let modifiedSeconds: Int
+        let modifiedNanoseconds: Int
+    }
+    private static func directoryFD(_ storage: URL) throws -> Int32 {
+        let directory = open(storage.path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
+        guard directory >= 0 else { throw CocoaError(.fileReadNoPermission) }
+        var root = stat()
+        guard fstat(directory, &root) == 0, root.st_uid == geteuid(),
+              (root.st_mode & 0o077) == 0 else { close(directory); throw CocoaError(.fileReadNoPermission) }
+        return directory
+    }
+    static func snapshot(in storage: URL) throws -> Snapshot {
+        let directory = try directoryFD(storage); defer { close(directory) }
+        return try snapshot(directory: directory)
+    }
+    private static func snapshot(directory: Int32) throws -> Snapshot {
+        let fd = openat(directory, "ai.json", O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC)
+        if fd < 0 {
+            if errno == ENOENT { return Snapshot(data: nil, inode: 0, modifiedSeconds: 0, modifiedNanoseconds: 0) }
+            throw CocoaError(.fileReadNoPermission)
+        }
+        defer { close(fd) }
+        var before = stat()
+        guard fstat(fd, &before) == 0, allowedMetadata(before, owner: geteuid()) else {
+            throw CocoaError(.fileReadNoPermission)
+        }
+        var data = Data(), buffer = [UInt8](repeating: 0, count: maximumBytes + 1)
+        while data.count <= maximumBytes {
+            let count = read(fd, &buffer, maximumBytes + 1 - data.count)
+            if count < 0 { if errno == EINTR { continue }; throw CocoaError(.fileReadUnknown) }
+            if count == 0 { break }
+            data.append(contentsOf: buffer.prefix(count))
+        }
+        var after = stat()
+        guard data.count <= maximumBytes, fstat(fd, &after) == 0,
+              allowedMetadata(after, owner: geteuid()), before.st_size == after.st_size,
+              before.st_mtimespec.tv_sec == after.st_mtimespec.tv_sec,
+              before.st_mtimespec.tv_nsec == after.st_mtimespec.tv_nsec,
+              data.count == after.st_size else { throw CocoaError(.fileReadCorruptFile) }
+        return Snapshot(data: data, inode: UInt64(after.st_ino), modifiedSeconds: after.st_mtimespec.tv_sec, modifiedNanoseconds: after.st_mtimespec.tv_nsec)
+    }
+    static func environment(in storage: URL) throws -> [String: String] {
+        guard let data = try snapshot(in: storage).data else { return ["AI_PROVIDER":"ollama", "OLLAMA_MODEL":"qwen3:4b"] }
+        return try environment(data: data)
+    }
+    private static func environment(data: Data) throws -> [String: String] {
+        let config = try JSONDecoder().decode(Configuration.self, from: data)
+        if config.provider == "off" { return ["AI_PROVIDER": "off"] }
+        let name = config.model ?? "qwen3:4b"
+        guard config.provider == "ollama", name.count <= 128,
+              name.range(of: #"\A(?:[a-z0-9][a-z0-9_-]*/)?[a-z0-9][a-z0-9_.-]*(?::[a-z0-9][a-z0-9_.-]*)?\z"#,
+                         options: [.regularExpression, .caseInsensitive]) != nil,
+              name.range(of: #"(?:^|[/:._-])cloud(?:$|[/:._-])"#,
+                         options: [.regularExpression, .caseInsensitive]) == nil else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+        return ["AI_PROVIDER": "ollama", "OLLAMA_MODEL": name]
+    }
+    static func validModel(_ name: String) -> Bool {
+        guard let data = try? JSONSerialization.data(withJSONObject: ["provider":"ollama","model":name]) else { return false }
+        return (try? environment(data: data)) != nil
+    }
+    // 비교와 rename은 단일 CAS가 아니다. 동일 사용자의 악의적 동시 편집까지 보장하지 않는다.
+    @discardableResult static func save(in storage: URL, model: String?, expected: Snapshot) throws -> String? {
+        if let model, !validModel(model) { throw CocoaError(.fileWriteInvalidFileName) }
+        if let old = expected.data { _ = try environment(data: old) }
+        let directory = try directoryFD(storage); defer { close(directory) }
+        guard try snapshot(directory: directory) == expected else { throw CocoaError(.fileWriteFileExists) }
+        let object = model.map { ["provider":"ollama", "model":$0] } ?? ["provider":"off"]
+        let data = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+        let temporary = ".ai-config-" + UUID().uuidString
+        let backup = expected.data == nil ? nil : "ai.json.backup-" + UUID().uuidString
+        func create(_ name: String, _ bytes: Data) throws {
+            let fd = openat(directory, name, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0o600)
+            guard fd >= 0 else { throw CocoaError(.fileWriteNoPermission) }
+            defer { close(fd) }
+            do {
+                try bytes.withUnsafeBytes { buffer in
+                    var offset = 0
+                    while offset < buffer.count {
+                        let count = write(fd, buffer.baseAddress!.advanced(by: offset), buffer.count - offset)
+                        if count < 0 && errno == EINTR { continue }
+                        guard count > 0 else { throw CocoaError(.fileWriteUnknown) }
+                        offset += count
+                    }
+                }
+                guard fsync(fd) == 0 else { throw CocoaError(.fileWriteUnknown) }
+            } catch { unlinkat(directory, name, 0); throw error }
+        }
+        try create(temporary, data)
+        defer { unlinkat(directory, temporary, 0) }
+        // 기존 값의 private 복사본을 남긴다. 기존 설정 파일의 권한·링크는 바꾸지 않는다.
+        if let backup, let old = expected.data { try create(backup, old) }
+        guard try snapshot(directory: directory) == expected else { throw CocoaError(.fileWriteFileExists) }
+        let result = expected.data == nil
+            ? renameatx_np(directory, temporary, directory, "ai.json", UInt32(RENAME_EXCL))
+            : renameat(directory, temporary, directory, "ai.json")
+        guard result == 0 else { throw CocoaError(.fileWriteUnknown) }
+        // rename 이후 fsync 실패로 미적용이라고 오보하지 않는다. 전원 차단 내구성 보장은 아니다.
+        _ = fsync(directory)
+        return backup
+    }
+
+}
+
+
+enum LocalModelSelection {
+    static func names(data: Data?, status: Int?) -> [String] {
+        guard status == 200, let data, data.count <= 1_048_576,
+              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let models = object["models"] as? [[String: Any]], models.count <= 1000 else { return [] }
+        return Array(Set(models.compactMap { item -> String? in
+            guard item["remote_host"] == nil, item["remote_model"] == nil,
+                  let name = item["name"] as? String, LocalAIConfiguration.validModel(name) else { return nil }
+            return name
+        })).sorted()
+    }
+    static func verifiedLocal(data: Data?, status: Int?) -> Bool {
+        guard status == 200, let data, data.count <= 1_048_576,
+              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              object["remote_host"] == nil, object["remote_model"] == nil,
+              let info = object["model_info"] as? [String: Any], !info.isEmpty else { return false }
+        return true
+    }
+}
+
+// 목록/상세 조회만, 1MiB 상한과 redirect 거절. 원문·인증 정보는 전송하지 않는다.
+final class LocalModelProbe: NSObject, URLSessionDataDelegate {
+    private var session: URLSession?
+    private var body = Data()
+    private var status: Int?
+    private var completion: ((Data?, Int?) -> Void)?
+    init(request: URLRequest, completion: @escaping (Data?, Int?) -> Void) {
+        self.completion = completion
+        super.init()
+        let config = URLSessionConfiguration.ephemeral
+        config.connectionProxyDictionary = [:]
+        config.timeoutIntervalForRequest = 3
+        config.timeoutIntervalForResource = 5
+        config.httpCookieStorage = nil
+        config.urlCredentialStorage = nil
+        config.urlCache = nil
+        let session = URLSession(configuration: config, delegate: self, delegateQueue: nil)
+        self.session = session
+        session.dataTask(with: request).resume()
+    }
+    func cancel() { session?.invalidateAndCancel() }
+    func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) { completionHandler(nil) }
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse, completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
+        status = (response as? HTTPURLResponse)?.statusCode
+        completionHandler(status == 200 && response.expectedContentLength <= 1_048_576 ? .allow : .cancel)
+    }
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        guard body.count + data.count <= 1_048_576 else { dataTask.cancel(); return }
+        body.append(data)
+    }
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        let result = error == nil ? body : nil
+        let callback = completion; completion = nil
+        session.finishTasksAndInvalidate()
+        DispatchQueue.main.async { callback?(result, self.status) }
+    }
+}

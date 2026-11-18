@@ -1,0 +1,14 @@
+{
+  "scope": "actual settings.js/API client, mocked native account/config only; no actual tokens, native processing, server authorization, or AI calls",
+  "status": "passed",
+  "results": [
+    "local connection, renewal and disconnect require explicit checked consent; 30-day and workspace boundaries visible",
+    "another workspace connection has replacement warning, no automatic mutation",
+    "unavailable Mac controls hidden; non-admin and demo cannot access integration actions",
+    "ingest token creation, guarded rotation and guarded revoke retain payload behavior",
+    "external AI modes save only configuration; UI distinguishes installed settings from successful processing"
+  ],
+  "mutationCount": 9,
+  "errors": [],
+  "blocked": []
+}

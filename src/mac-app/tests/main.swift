@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 
 func check(_ condition: Bool, _ label: String) {
     precondition(condition, label)
@@ -99,3 +100,95 @@ check(TeamServerAddress.validated("https://team.example.com", confirmed: false) 
 for bad in ["http://team.example.com", "https://user:secret@team.example.com", "https://user@team.example.com", "https://team.example.com/path", "https://team.example.com/?x=1", "https://team.example.com/#fragment", "https://team.example.com:0", "https://team.example.com:65536", "https://", "not a url", "https://te am.example.com", "https://team.example.com\\\\@evil.test", "https://.example.com", "https://-bad.example.com", "https://example..com", "https://team.example.com/%2e", "https://[bad::ipv6]"] {
     check(TeamServerAddress.validated(bad, confirmed: true) == nil, "invalid or ambiguous team URL refused")
 }
+
+
+// 실제 사용자 설정 대신 private 임시 폴더와 가짜 ai.json만 사용한다.
+let aiRoot = FileManager.default.temporaryDirectory.appendingPathComponent("ahcha-config-" + UUID().uuidString)
+try! FileManager.default.createDirectory(at: aiRoot, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
+defer { try? FileManager.default.removeItem(at: aiRoot) }
+let aiFile = aiRoot.appendingPathComponent("ai.json")
+func fakeAI(_ text: String, mode: mode_t = 0o600) {
+    try? FileManager.default.removeItem(at: aiFile)
+    try! Data(text.utf8).write(to: aiFile)
+    precondition(chmod(aiFile.path, mode) == 0)
+}
+func rejectsAI(_ label: String) {
+    do { _ = try LocalAIConfiguration.environment(in: aiRoot); preconditionFailure(label) }
+    catch { check(true, label) }
+}
+check(try! LocalAIConfiguration.environment(in: aiRoot)["OLLAMA_MODEL"] == "qwen3:4b", "missing ai config keeps default")
+fakeAI(#"{"provider":"off"}"#)
+check(try! LocalAIConfiguration.environment(in: aiRoot) == ["AI_PROVIDER":"off"], "off policy preserved")
+fakeAI(#"{"provider":"ollama"}"#)
+check(try! LocalAIConfiguration.environment(in: aiRoot)["OLLAMA_MODEL"] == "qwen3:4b", "missing model keeps default")
+fakeAI(#"{"provider":"ollama","model":"local/custom:latest"}"#, mode: 0o644)
+check(try! LocalAIConfiguration.environment(in: aiRoot)["OLLAMA_MODEL"] == "local/custom:latest", "legacy readable 644 config allowed inside private root")
+var aiInfo = stat(); precondition(lstat(aiFile.path, &aiInfo) == 0)
+check(!LocalAIConfiguration.allowedMetadata(aiInfo, owner: aiInfo.st_uid == 0 ? 1 : 0), "foreign owner metadata rejected without chown")
+for mode: mode_t in [0o620, 0o602, 0o666] {
+    precondition(chmod(aiFile.path, mode) == 0); rejectsAI("group or world writable config refused")
+}
+fakeAI(String(repeating: "x", count: LocalAIConfiguration.maximumBytes + 1)); rejectsAI("oversized config refused")
+fakeAI("{"); rejectsAI("malformed config refused")
+for value in [#"{"provider":"remote"}"#, #"{"provider":"ollama","model":"custom-cloud:latest"}"#, #"{"provider":"ollama","model":"../unsafe"}"#] {
+    fakeAI(value); rejectsAI("existing provider and model policy preserved")
+}
+try! FileManager.default.removeItem(at: aiFile)
+let outsideAI = aiRoot.appendingPathComponent("untouched.json")
+try! Data(#"{"provider":"off"}"#.utf8).write(to: outsideAI)
+try! FileManager.default.createSymbolicLink(atPath: aiFile.path, withDestinationPath: outsideAI.path)
+rejectsAI("config symlink refused")
+check(try! String(contentsOf: outsideAI, encoding: .utf8) == #"{"provider":"off"}"#, "symlink target unchanged")
+try! FileManager.default.removeItem(at: aiFile)
+try! FileManager.default.createSymbolicLink(atPath: aiFile.path, withDestinationPath: aiRoot.appendingPathComponent("missing.json").path)
+rejectsAI("dangling config symlink not treated as absent")
+try! FileManager.default.removeItem(at: aiFile)
+precondition(mkfifo(aiFile.path, 0o600) == 0)
+rejectsAI("FIFO rejected without blocking")
+try! FileManager.default.removeItem(at: aiFile)
+try! FileManager.default.createDirectory(at: aiFile, withIntermediateDirectories: false)
+rejectsAI("directory config refused")
+fakeAI(#"{"provider":"off"}"#)
+let hardlink = aiRoot.appendingPathComponent("alias.json")
+precondition(link(aiFile.path, hardlink.path) == 0)
+rejectsAI("multiply linked config refused")
+try! FileManager.default.removeItem(at: hardlink)
+let rootAlias = aiRoot.appendingPathComponent("root-alias")
+try! FileManager.default.createSymbolicLink(atPath: rootAlias.path, withDestinationPath: aiRoot.path)
+do { _ = try LocalAIConfiguration.environment(in: rootAlias); preconditionFailure("symlink root") }
+catch { check(true, "symlink storage root refused") }
+
+func configSaveRejected(_ expected: LocalAIConfiguration.Snapshot, _ label: String) {
+    do { try LocalAIConfiguration.save(in: aiRoot, model: nil, expected: expected); preconditionFailure(label) }
+    catch { check(true, label) }
+}
+fakeAI(#"{"provider":"off"}"#)
+let initialAI = try! LocalAIConfiguration.snapshot(in: aiRoot)
+let aiBackup = try! LocalAIConfiguration.save(in: aiRoot, model: "qwen3:4b", expected: initialAI)
+check(aiBackup != nil, "existing config gets unique backup")
+check(try! Data(contentsOf: aiRoot.appendingPathComponent(aiBackup!)) == initialAI.data, "backup preserves exact original bytes")
+check(try! LocalAIConfiguration.environment(in: aiRoot)["OLLAMA_MODEL"] == "qwen3:4b", "explicit model selection persisted")
+var savedAI = stat(); precondition(lstat(aiFile.path, &savedAI) == 0)
+check(savedAI.st_mode & 0o777 == 0o600, "saved config private 600")
+configSaveRejected(initialAI, "stale snapshot cannot overwrite new selection")
+let beforeOff = try! LocalAIConfiguration.snapshot(in: aiRoot)
+try! LocalAIConfiguration.save(in: aiRoot, model: nil, expected: beforeOff)
+check(try! LocalAIConfiguration.environment(in: aiRoot) == ["AI_PROVIDER":"off"], "explicit off selection saved")
+fakeAI("invalid")
+configSaveRejected(try! LocalAIConfiguration.snapshot(in: aiRoot), "invalid existing config cannot be silently overwritten")
+try! FileManager.default.removeItem(at: aiFile)
+let absentAI = try! LocalAIConfiguration.snapshot(in: aiRoot)
+check(try! LocalAIConfiguration.save(in: aiRoot, model: nil, expected: absentAI) == nil, "absent config saved exclusively without backup")
+configSaveRejected(absentAI, "new concurrent config protected")
+let validAI = try! LocalAIConfiguration.snapshot(in: aiRoot)
+do { try LocalAIConfiguration.save(in: aiRoot, model: "cloud-model:latest", expected: validAI); preconditionFailure("cloud save") }
+catch { check(true, "cloud model save rejected") }
+check(try! LocalAIConfiguration.snapshot(in: aiRoot) == validAI, "rejected save preserves config")
+let listData = Data(#"{"models":[{"name":"qwen3:4b"},{"name":"qwen3:4b"},{"name":"cloud-model:latest"},{"name":"fake:local","remote_host":"https://example.invalid"},{"name":"../bad"}]}"#.utf8)
+check(LocalModelSelection.names(data:listData,status:200) == ["qwen3:4b"], "model list excludes remote names and deduplicates")
+check(LocalModelSelection.names(data:listData,status:302).isEmpty, "redirect model list rejected")
+check(LocalModelSelection.names(data:Data(repeating:0,count:1_048_577),status:200).isEmpty, "oversized model list rejected")
+for invalidShow in [#"{}"#, #"{"model_info":{}}"#, #"{"model_info":{"architecture":"fake"},"remote_host":"https://example.invalid"}"#, #"{"model_info":{"architecture":"fake"},"remote_model":"fake"}"#] {
+    check(!LocalModelSelection.verifiedLocal(data:Data(invalidShow.utf8),status:200), "unverified or remote model detail refused")
+}
+check(LocalModelSelection.verifiedLocal(data:Data(#"{"model_info":{"architecture":"fake"}}"#.utf8),status:200), "fake local model detail accepted without inference claim")
