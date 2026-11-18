@@ -42,3 +42,8 @@
 ### 정확한 버전의 추가 원문 고지
 
 CTranslate24.9.0(MIT), FlatBuffers25.12.19(Apache-2.0), Tokenizers0.23.3(Apache-2.0)의 공식tag LICENSE를 `src/mac-app/licenses`와 앱 `ThirdPartySupplemental`에 별도로 포함한다. 출처·해시는 `sources.json`에 기록하며 원본 wheel은 변경하지 않는다. 이는 전체 전이의존성의 고지나 PyAV의 별도 FFmpeg/x264/x265 재배포 의무를 모두 충족했다는 뜻이 아니다. [배포 점검](docs/mac-distribution-audit.md)의 차단 항목을 확인한다.
+
+
+### 격리 PyAV 개발 wheel
+
+`prepare-pyav-wheel.mjs`의 결과는 기본 앱에 자동 편입되지 않는 개발 산출물이다. 고정 FFmpeg9.0.2·PyAV19.0.2 소스와 LGPL2.1/PyAV 원문 고지, 빌드 옵션·로그·해시를 결과의 `sources`, `logs`, `build-manifest.json`에 보존한다. 새 FFmpeg의 실제 라이선스 표시와 x264/x265 미포함을 검사하지만, 앱 전체 재배포 의무나 특허 검토를 완료했다고 보지 않는다. 빌드도구는 결과물에 포함하지 않는다. [검증 범위와 제약](docs/mac-distribution-audit.md)을 따른다.

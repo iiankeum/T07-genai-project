@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "pyav": {
+    "version": "19.0.2",
+    "filename": "av-19.0.2.tar.gz",
+    "size": 4277157,
+    "sha256": "bebbc52598886480f4d861c575dc2b020785d6c04e1308680ddcc545e1b94c66",
+    "url": "https://files.pythonhosted.org/packages/23/01/76b6bf563fe907597cf58f10d10168e93fe588b6db9f2658db87e87efa7e/av-19.0.2.tar.gz",
+    "metadataURL": "https://pypi.org/pypi/av/19.0.2/json"
+  },
+  "buildWheels": [
+    {
+      "name": "delocate",
+      "version": "0.13.0",
+      "sha256": "11f7596f88984c33f76b27fe2eea7637d1ce369a9e0b6737bbc706b6426e862c",
+      "url": "https://files.pythonhosted.org/packages/2b/dd/437e601fa9d2b6bf8507256daf52196a226c3b340261f4cde8fac8e853ea/delocate-0.13.0-py3-none-any.whl",
+      "metadataURL": "https://pypi.org/pypi/delocate/0.13.0/json",
+      "filename": "delocate-0.13.0-py3-none-any.whl",
+      "size": 238040
+    },
+    {
+      "name": "macholib",
+      "version": "1.16.4",
+      "sha256": "da1a3fa8266e30f0ce7e97c6a54eefaae8edd1e5f86f3eb8b95457cae90265ea",
+      "url": "https://files.pythonhosted.org/packages/c7/d1/a9f36f8ecdf0fb7c9b1e78c8d7af12b8c8754e74851ac7b94a8305540fc7/macholib-1.16.4-py2.py3-none-any.whl",
+      "metadataURL": "https://pypi.org/pypi/macholib/1.16.4/json",
+      "filename": "macholib-1.16.4-py2.py3-none-any.whl",
+      "size": 38117
+    },
+    {
+      "name": "wheel",
+      "version": "0.48.0",
+      "sha256": "3217dcc807155e45db462d7ef2431f5ddda0d7273b700d05a67b271ceb1287ab",
+      "url": "https://files.pythonhosted.org/packages/2e/29/69cfbb602cd91690c55d38ba9fe53e6a7e76a6fa647bf38f19c138d25449/wheel-0.48.0-py3-none-any.whl",
+      "metadataURL": "https://pypi.org/pypi/wheel/0.48.0/json",
+      "filename": "wheel-0.48.0-py3-none-any.whl",
+      "size": 33320
+    },
+    {
+      "name": "altgraph",
+      "version": "0.17.5",
+      "sha256": "f3a22400bce1b0c701683820ac4f3b159cd301acab067c51c653e06961600597",
+      "url": "https://files.pythonhosted.org/packages/a9/ba/000a1996d4308bc65120167c21241a3b205464a2e0b58deda26ae8ac21d1/altgraph-0.17.5-py2.py3-none-any.whl",
+      "metadataURL": "https://pypi.org/pypi/altgraph/0.17.5/json",
+      "filename": "altgraph-0.17.5-py2.py3-none-any.whl",
+      "size": 21228
+    },
+    {
+      "name": "packaging",
+      "version": "26.3",
+      "sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+      "url": "https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl",
+      "metadataURL": "https://pypi.org/pypi/packaging/26.3/json",
+      "filename": "packaging-26.3-py3-none-any.whl",
+      "size": 129956
+    },
+    {
+      "name": "setuptools",
+      "version": "84.2.1",
+      "sha256": "ca140b45d5325a9478f880e351484f62fef15f336462e449ca0c03c873d589c2",
+      "url": "https://files.pythonhosted.org/packages/ef/55/6dc6d6bb953bdfc52519a0059592c52b6e3b8ad51cf8256dffceb55b0610/setuptools-84.2.1-py3-none-any.whl",
+      "metadataURL": "https://pypi.org/pypi/setuptools/84.2.1/json",
+      "filename": "setuptools-84.2.1-py3-none-any.whl",
+      "size": 876263
+    },
+    {
+      "name": "typing_extensions",
+      "version": "4.16.0",
+      "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+      "url": "https://files.pythonhosted.org/packages/49/d3/b8441a820a491ddfc024b0b0cf0393375b75ea13866d9c66727e54c2fc80/typing_extensions-4.16.0-py3-none-any.whl",
+      "metadataURL": "https://pypi.org/pypi/typing_extensions/4.16.0/json",
+      "filename": "typing_extensions-4.16.0-py3-none-any.whl",
+      "size": 45571
+    },
+    {
+      "name": "Cython",
+      "version": "3.3.1",
+      "sha256": "744bb804252cf204e6bc9b0fac06b3bad7bb14258cefb9f321c59c4c59e9bc17",
+      "url": "https://files.pythonhosted.org/packages/40/3f/362d57b505de56a3a24f84a94b2e09772ebbc9d05402e9c3bbe7b1b780a5/cython-3.3.1-cp312-cp312-macosx_11_0_arm64.whl",
+      "metadataURL": "https://pypi.org/pypi/Cython/3.3.1/json",
+      "filename": "cython-3.3.1-cp312-cp312-macosx_11_0_arm64.whl",
+      "size": 3145239
+    }
+  ]
+}

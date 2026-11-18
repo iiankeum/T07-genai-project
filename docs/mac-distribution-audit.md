@@ -76,3 +76,22 @@ vendor 패키지를 덮어쓰지 않고 자체 `decode_audio_compat.py`를 추�
 Python38개, Node171개, Mac helper90개 회귀가 통과했다. 실제 새 helper의 WAV·MP3·M4A·BytesIO 입력과 기존 worker WAV 배열 모두 정확한 합성문장 전사를 확인했다. 빌드에 들어갈 Python 소스2개만 별도 임시폴더로 복사한 staging 검사도 통과했다. 전체 앱 재빌드·사용자 런타임 교체는 하지 않았다.
 
 [실제 앱 API 시험](../work/03-개발-태림/자료/real-local-audio-20261118/repo-compat-result-fake-input.json), [staging 시험](../work/03-개발-태림/자료/real-local-audio-20261118/staged-compat-result-fake-input.json). 재현 도구는 `src/mac-app/tests/real-pyav-compat.py`다. `--run-synthetic-model-test --fixtures <synthetic.wav/mp3/m4a 폴더> --model <이미 준비된 로컬 모델>`을 명시해야 하며 모델 다운로드를 수행하지 않는다.
+
+
+## 재현 가능한 개발 빌드 도구
+
+`prepare-pyav-wheel.mjs`와 `pyav-build-manifest.json`을 추가했다. 기본/`--status`는 상태만 출력한다. 준비는 다음 명시 명령으로만 수행한다. Python 원본은 내부상대링크를 검증하고 별도 staging에 복사하며 원본 불변을 재검사한다. 기존 출력 디렉터리는 덮어쓰지 않는다.
+
+```sh
+node src/mac-app/prepare-pyav-wheel.mjs --status
+node src/mac-app/prepare-pyav-wheel.mjs --prepare-development-wheel \
+  --python-source /절대경로/기존/python \
+  --output /절대경로/새로운/pyav-build-result \
+  --pkg-config /절대경로/pkg-config
+```
+
+고정 공식 소스2개와 빌드 wheel8개 약20.8MB를 SHA256/크기로 확인한다. archive 경로·링크타입 거절, 원본과 출력 겹침 거절, lock/취소/실패 정리, 출력경합 보존을 검사한다. PyAV 새wheel을 개발 Python 복사본에만 설치해 기존av 제거, 57개 바이너리 아키텍처·의존성·개발서명과 실제 LGPL표시를 감사한다. 결과에는 wheel, 대응소스2개, LGPL/PyAV 원문3개, configure·build·audit로그 및 manifest를 보존한다. 빌드용 Python이나 빌드도구는 결과물에 넣지 않는다.
+
+실제 CLI의 다운로드→컴파일→wheel제작→감사가 성공했고, 새wheel을 또 다른 Python 복사본에 설치하여 staging 앱 소스의3개 포맷·BytesIO·worker WAV 전사를 통과했다. helper103개(새 안전검사13개 포함)도 통과했다. 수동 제작본과 wheel 해시가 달라 **기능적 재현 성공이지 바이트 동일 재현은 아니다.** [증거](../work/03-개발-태림/자료/real-local-audio-20261118/pyav-script-rebuild-fake-input.json).
+
+기존9097030 ZIP과 별도백업의 SHA256이 `c2324131bf44536ff0b8fca1524d64d2adf4c0b98b78e2c32c6f307c784e44dc`로 같음을 확인했다. 기존 앱·지원런타임·기본 WHEELS는 교체하지 않았다. 다음 단계는 새 wheel/대응소스를 검증된 런타임 준비 경로에 편입하고 별도 패키지를 만드는 것이며, 아직 수행하지 않았다. 소스·고지 보존 자체가 모든 법적 의무 충족을 뜻하지 않는다.
