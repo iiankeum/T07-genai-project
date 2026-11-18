@@ -1,0 +1,39 @@
+name: Dev release gate (fake data, no deploy)
+on:
+  pull_request:
+    branches: [dev, integration/ahcha-v16]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  production-upgrade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: candidate
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.ref == 'dev' && github.event.pull_request.base.sha || 'dev' }}
+          path: baseline
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install exactly like deploy.py (no development dependencies or scripts)
+        working-directory: candidate/src/app
+        run: npm ci --omit=dev --ignore-scripts --no-audit --no-fund
+      - name: Old DB upgrade and rollback compatibility; private production smoke
+        working-directory: candidate/src/app
+        env:
+          GATE_BASE_APP: ${{ github.workspace }}/baseline/src/app
+        run: |
+          node tools/dev-release-gate.mjs
+          GATE_DEMO_MODE=1 node tools/dev-release-gate.mjs
+      - name: Guard paid AI and backup restoration with fake data
+        working-directory: candidate/src/app
+        env:
+          AI_PROVIDER: 'off'
+          ALLOW_PAID_AI: '0'
+          ANTHROPIC_API_KEY: ''
+        run: node --import ./tools/no-paid-ai.mjs --test test/backup-restore.test.mjs test/ai-offline.test.mjs
