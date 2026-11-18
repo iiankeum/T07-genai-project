@@ -35,3 +35,24 @@ Ollama26.2 대상은 `mlx_metal_v4/libjaccl.dylib`, `libmlx.dylib`, `libmlxc.dyl
 [빈 HOME 시험 기록](../work/03-개발-태림/자료/real-local-audio-20261118/clean-package-c7dcf23.json). 최신 개발 패키지는 `node src/mac-app/tests/clean-package.mjs --inspect-development-bundle`로 검사하며, 추가원문 고지3개의 해시도 확인한다.
 
 보완 후9097030 개발 ZIP도 동일한 빈 HOME 시험을 통과했고 추가 고지3개의 SHA256을 확인했다. [보완 패키지 기록](../work/03-개발-태림/자료/real-local-audio-20261118/clean-package-9097030.json). 패키지 크기는 약326MB이며 외부배포 차단 항목은 그대로다.
+
+
+## 공식 근거와 안전한 대안 (2026-11-18 추가 점검)
+
+### macOS 하위호환
+
+[Ollama 공식 macOS 문서](https://docs.ollama.com/macos)는 Sonoma14 이상과 Apple M CPU/GPU를 지원 대상으로 적는다. 이는 제품의 일반 지원 안내이며, 현재 묶은 v0.40.16의 모든 dylib가14에서 로드된다는 검증 결과는 아니다. 현재 Mac26.6.1의 성공을14 실기 성공으로 바꾸어 쓰지 않는다.
+
+[v0.40.16 환경 설정 소스](https://raw.githubusercontent.com/ollama/ollama/v0.40.16/envconfig/config.go)에 `OLLAMA_LLM_LIBRARY`는 존재한다. 그러나 변수의 존재만으로 이 패키지에서 CPU 강제 실행 또는 하위OS 대체경로가 성공한다고 판단하지 않는다. 출처가 다른 NVIDIA GPU 비활성화 예시를 Apple Silicon에 적용하지 않았다.
+
+안전한 현재 대안은 실행기 준비 실패 시 로컬 AI를 끄고 업무 서버를 여는 기존 경로다. `Ahmatda.swift`의 `AI_PROVIDER=off` 분기를 확인했고, 실행기 실패·종료·자식 정리 등을 포함한 Mac helper90개를 다시 통과했다. 이는 mock 기반 실패처리 회귀이며 macOS14에서 앱이 실제로 실행된다는 보증은 아니다. 다음 실기 검증은14·15의 시작, 실제 모델 추론, 실패 시 AI꺼짐, 종료 시 포트 회수다. 최소OS 선언과 vendor 바이너리는 변경하지 않았다.
+
+### PyAV 재배포 대안
+
+[PyAV v19.0.2 설치 문서](https://raw.githubusercontent.com/PyAV-Org/PyAV/v19.0.2/docs/overview/installation.rst)는 자체 FFmpeg8.x에 연결한 소스 빌드를 안내한다. [동일 태그 setup.py](https://raw.githubusercontent.com/PyAV-Org/PyAV/v19.0.2/setup.py)는 avcodec·avdevice·avfilter·avformat·avutil·swresample·swscale을 요구한다. 현재 최소 변환기는 static이며 일부 라이브러리를 제외했으므로 그대로 PyAV 대체재가 되지 않는다.
+
+기술적 후보는 별도 shared FFmpeg에서 GPL/nonfree/version3·외부라이브러리 자동탐지·x264/x265를 끄고 필요한 라이브러리를 유지한 뒤 고정 PyAV 소스로 wheel을 다시 만드는 것이다. 공식 문서의8.x와 현재 wheel의9.x 차이도 컴파일·ABI·실제 전사로 검증해야 한다. 이번 점검에서는 새 바이너리를 만들거나 설치하지 않았다.
+
+[FFmpeg 공식 지침](https://ffmpeg.org/legal.html)은 동적 연결, 바이너리에 정확히 대응하는 소스와 빌드 옵션, 고지 및 외부 라이브러리 검토를 안내한다. [n9.0.2 라이선스 원문](https://raw.githubusercontent.com/FFmpeg/FFmpeg/n9.0.2/LICENSE.md)은 x264/x265를 GPL 외부 라이브러리로 구분한다. 기존 wheel의 LGPL3+ 표기와 실제 링크를 함께 검토해야 하며 gpl 플래그 문자열이 없다는 이유만으로 적합하다고 판정하지 않는다. 자체 빌드도 법적 적합성을 자동 보증하지 않는다.
+
+즉시 가능한 보수적 선택은 `AHMATDA_BUNDLE_WHISPER`를 켜지 않아 해당 실행기를 포함하지 않는 것이다. build.sh 기본값0을 코드로 확인했다. 이 경우 터미널 없는 음성 전사 준비라는 제품 목표를 충족하지 못하므로 완성판으로 안내하지 않는다. 현재 개발 ZIP은 기존 그대로 보존하고 외부 배포하지 않았다.
