@@ -72,6 +72,10 @@ jobs:
         run: npm run test:shipping-revision-e2e
         env:
           SHIPPING_REVISION_OUTPUT: artifacts/e2e/shipping-revision
+      - name: Shipping overlapping response order (fake API only)
+        run: npm run test:shipping-order-e2e
+        env:
+          SHIPPING_ORDER_OUTPUT: artifacts/e2e/shipping-order
       - uses: actions/upload-artifact@v4
         if: always()
         with:

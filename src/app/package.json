@@ -30,7 +30,8 @@
     "test:calls-return-e2e": "node tools/calls-return-browser-e2e.mjs",
     "test:calls-refresh-e2e": "node tools/calls-refresh-browser-e2e.mjs",
     "test:card-confirm-e2e": "node tools/card-confirm-pending-browser-e2e.mjs",
-    "test:shipping-revision-e2e": "node tools/shipping-revision-browser-e2e.mjs"
+    "test:shipping-revision-e2e": "node tools/shipping-revision-browser-e2e.mjs",
+    "test:shipping-order-e2e": "node tools/shipping-response-order-browser-e2e.mjs"
   },
   "license": "MIT",
   "dependencies": {

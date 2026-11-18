@@ -1,0 +1,16 @@
+{
+  "status": "passed",
+  "scope": "actual shipping module with controlled fake API promises, not real server/authorization/user test",
+  "results": [
+    "same-scope latest success wins",
+    "older failure cannot replace latest success/error/loading",
+    "superseded success does not clear current loading; latest failure remains visible",
+    "superseded failure does not clear current loading; latest failure remains visible",
+    "all-today-all ABA responses cannot overwrite current generation",
+    "superseded review continuation cannot alter latest success/unblock",
+    "superseded review continuation cannot alter latest failure/block",
+    "unmounted response does not redraw"
+  ],
+  "errors": [],
+  "external": []
+}

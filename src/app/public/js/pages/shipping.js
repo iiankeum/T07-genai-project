@@ -132,7 +132,10 @@ export default {
       render(root, html`${head}${st.reviewNotice ? html`<p class="notice notice-warn" role="status" tabindex="-1" data-ref="shipping-review-notice">${st.reviewNotice}</p>` : ''}${body}`);
     }
 
+    let loadGeneration = 0;
     async function load() {
+      const generation = ++loadGeneration;
+      const current = () => alive() && generation === loadGeneration;
       st.loading = true;
       draw();
       const scope = st.scope;
@@ -141,27 +144,30 @@ export default {
         const query = { scope };
         if (scope === 'today') query.day = kstDay();
         const data = await api.get('/api/shipping', query, { signal: ac.signal });
-        if (!alive() || scope !== st.scope) return;
+        if (!current()) return { generation, status: 'superseded' };
         st.data = data || { groups: [] };
         st.error = null;
         loaded = true;
         if (st.reviewBlocked) st.reviewNotice = '목록을 새로 불러왔습니다. 주문 내용을 다시 확인한 뒤 출고해 주세요.';
         st.reviewBlocked = false;
       } catch (err) {
-        if (err?.name === 'AbortError' || !alive() || scope !== st.scope) return;
+        if (!current()) return { generation, status: 'superseded' };
+        if (err?.name === 'AbortError') return { generation, status: 'aborted' };
         st.error = err;
+        if (st.reviewBlocked) st.reviewNotice = '출고 상태를 변경하지 않았습니다. 최신 목록을 불러오지 못해 출고 처리를 보류했습니다. 새로고침 후 주문 내용을 다시 확인해 주세요.';
       }
       st.loading = false;
       draw();
-      return loaded;
+      return { generation, status: loaded ? 'loaded' : 'failed' };
     }
 
     async function refreshForReview(message) {
       st.reviewBlocked = true;
       st.reviewNotice = '출고 상태를 변경하지 않았습니다. 최신 목록을 확인하는 중입니다.';
-      const loaded = await load();
-      if (!alive()) return;
-      st.reviewNotice = loaded ? message : '출고 상태를 변경하지 않았습니다. 최신 목록을 불러오지 못해 출고 처리를 보류했습니다. 새로고침 후 주문 내용을 다시 확인해 주세요.';
+      const result = await load();
+      // A newer refresh owns both the data and review state, including after scope ABA.
+      if (!alive() || result.generation !== loadGeneration || !['loaded', 'failed'].includes(result.status)) return;
+      st.reviewNotice = result.status === 'loaded' ? message : '출고 상태를 변경하지 않았습니다. 최신 목록을 불러오지 못해 출고 처리를 보류했습니다. 새로고침 후 주문 내용을 다시 확인해 주세요.';
       draw();
       root.querySelector('[data-ref="shipping-review-notice"]')?.focus();
     }
