@@ -129,13 +129,37 @@ export function locateQuote(quote, segs, prepared) {
   return { at: segs[best].start, seg: best };
 }
 
-/** 인용 → {quote, at, seg} (못 찾으면 at/seg 는 null) */
-function evidenceOf(quote, segs, prepared, fallbackText) {
-  const qt = cleanText(quote, 160);
-  let loc = qt ? locateQuote(qt, segs, prepared) : null;
-  if (!loc && fallbackText) loc = locateQuote(fallbackText, segs, prepared);
-  if (!qt && !loc) return null;
-  return { quote: qt ?? (loc ? segs[loc.seg].text.slice(0, 160) : null), at: loc ? loc.at : null, seg: loc ? loc.seg : null };
+/** 실제 원문에 있는 인용만 근거로 쓴다. 유사 문장 탐색은 근거 검증이 아니다. */
+function exactLocation(quote, segs, prepared) {
+  const q = squash(quote);
+  if (!q) return null;
+  for (let i = 0; i < prepared.length; i++) {
+    if (prepared[i].includes(q)) return { at: segs[i].start, seg: i };
+  }
+  for (let i = 0; i + 1 < prepared.length; i++) {
+    if ((prepared[i] + prepared[i + 1]).includes(q)) return { at: segs[i].start, seg: i };
+  }
+  return null;
+}
+
+function evidenceOf(quote, segs, prepared, fallbackText, transcript = segs.map((s) => s.text).join(' ')) {
+  const text = squash(transcript);
+  for (const candidate of [quote, fallbackText]) {
+    const qt = cleanText(candidate, 160);
+    const q = squash(qt);
+    if (!q || !text.includes(q)) continue;
+    const loc = exactLocation(qt, segs, prepared);
+    return { quote: qt, at: loc?.at ?? null, seg: loc?.seg ?? null };
+  }
+  return null;
+}
+
+/** 음성 정정은 실제 들린 말과 유사한 표기인 경우에만 후보로 남긴다. */
+function similarCorrection(heard, fixed) {
+  const a = squash(heard), b = squash(fixed);
+  if (!a || !b || Math.min(a.length, b.length) < 3) return false;
+  const bg = grams(b);
+  return bg.filter((g) => a.includes(g)).length / bg.length >= 0.45;
 }
 
 // ── 값 정리 도우미 ────────────────────────────────────────────────
@@ -239,7 +263,7 @@ export function buildCardFromAi(callRow, aiOut) {
     const v = values0[key];
     if (v == null || v === false) continue;
     const fallback = key === 'urgent' ? null : String(v);
-    const ev = evidenceOf(aiEv[aiKey], segs, prepared, fallback);
+    const ev = evidenceOf(aiEv[aiKey], segs, prepared, fallback, transcript);
     if (ev) evidence[key] = ev;
   }
 
@@ -257,6 +281,39 @@ export function buildCardFromAi(callRow, aiOut) {
     if (customer && squash(customer) !== squash(phoneName)) fixes.push({ heard: customer, fixed: phoneName });
     customer = phoneName;
     byPhone = true;
+  }
+
+  // 사전 목록이나 AI 인용만으로는 값의 근거가 되지 않는다.
+  // 번호 매칭은 별도 검증 경로로 유지하고, 나머지는 원문/승인 별칭/실제 정정 대목을 확인한다.
+  const source = squash(transcript);
+  let rejectedGrounding = false;
+  for (const [, key] of EVIDENCE_KEYS) {
+    const value = key === 'customer' ? customer : key === 'plate' ? plate : values0[key];
+    if (value == null || value === false || (key === 'customer' && byPhone)) continue;
+    const ev = evidence[key];
+    const direct = key !== 'urgent' && source.includes(squash(value));
+    const alias = key !== 'urgent' && dict.glossary.some((g) =>
+      squash(g.standard) === squash(value) && squash(g.term) && source.includes(squash(g.term)));
+    const correction = key !== 'urgent' && ev && (Array.isArray(ai.fixes) ? ai.fixes : []).some((f) =>
+      squash(f.fixed) === squash(value) && squash(f.heard) && source.includes(squash(f.heard)) &&
+      squash(ev.quote).includes(squash(f.heard)) && similarCorrection(f.heard, f.fixed));
+    // 시간/배송/긴급 여부의 의역은 실제 원문 인용이 있을 때만 유지한다.
+    const interpretive = ['urgent', 'due', 'delivery'].includes(key) && Boolean(ev);
+    if (direct || alias || correction || interpretive) {
+      if (correction) {
+        if (!unsure.some((u) => u.field === key)) unsure.push({ id: newId('warn'), field: key, item: null,
+          blocking: true, reason: '원문을 해석하거나 고쳐 읽은 값입니다 — 확인해 주세요', value,
+          at: ev?.at ?? null, seg: ev?.seg ?? null });
+      }
+      continue;
+    }
+    rejectedGrounding = true;
+    unsure.push({ id: newId('warn'), field: key, item: null, blocking: true,
+      reason: '통화 원문에서 이 값의 근거를 찾지 못해 비웠습니다 — 확인해 주세요', value, at: null, seg: null });
+    delete evidence[key];
+    if (key === 'customer') customer = null;
+    else if (key === 'plate') plate = null;
+    else values0[key] = key === 'urgent' ? false : null;
   }
 
   // AI 가 적은 「들어 보기」
@@ -279,7 +336,9 @@ export function buildCardFromAi(callRow, aiOut) {
     if (fixes.length >= MAX_FIXES) break;
     const heard = cleanText(f?.heard, 60);
     const fixed = cleanText(f?.fixed, 60);
-    if (heard && fixed && heard !== fixed) fixes.push({ heard, fixed });
+    const approvedAlias = dict.glossary.some((g) => squash(g.term) === squash(heard) && squash(g.standard) === squash(fixed));
+    if (heard && fixed && heard !== fixed && source.includes(squash(heard)) &&
+        (similarCorrection(heard, fixed) || approvedAlias)) fixes.push({ heard, fixed });
   }
 
   const askBack = (Array.isArray(ai.ask_back) ? ai.ask_back : [])
@@ -301,8 +360,12 @@ export function buildCardFromAi(callRow, aiOut) {
     highlights.push({ text, kind });
   }
 
-  const note = cleanText(ai.note, domain.textLimits.note);
-  const summary = cleanText(ai.summary, 80);
+  // 거부된 정보가 자유 서술을 통해 다시 노출되지 않게 한다. 목록 요약은 검증된 카드로 재구성한다.
+  const note = rejectedGrounding ? null : cleanText(ai.note, domain.textLimits.note);
+  const summary = composeSummary({
+    callType: CALL_TYPES.includes(ai.call_type) ? ai.call_type : '주문',
+    carModel: values0.carModel, items, due: values0.due, delivery: values0.delivery,
+  });
   const values = {
     domain_version: domain.id,
     call_type: CALL_TYPES.includes(ai.call_type) ? ai.call_type : '주문',
@@ -680,7 +743,13 @@ export function composeSummary(card) {
   if (!card) return null;
   const items = (card.items || []).filter((i) => i && i.part);
   const itemText = items.slice(0, 3)
-    .map((i) => `${i.side ? i.side + ' ' : ''}${partBase(i.part) || i.part}${i.qty != null ? ` ${i.qty}개` : ''}`)
+    .map((i) => {
+      const part = partBase(i.part) || i.part;
+      const side = String(i.side || '').trim();
+      const firstWord = part.trim().split(/\s+/)[0];
+      const prefix = side && squash(firstWord) !== squash(side) ? side + ' ' : '';
+      return `${prefix}${part}${i.qty != null ? ` ${i.qty}개` : ''}`;
+    })
     .join(', ') + (items.length > 3 ? ` 외 ${items.length - 3}` : '');
   const type = card.callType && card.callType !== '주문' ? card.callType : null;
   const head = [type, card.carModel, itemText].filter(Boolean).join(' ');
