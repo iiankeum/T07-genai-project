@@ -549,7 +549,7 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
     private func showPreparationGuide() {
         let alert = NSAlert()
         alert.messageText = "모델을 자동으로 내려받지 않아요"
-        alert.informativeText = "현재는 개발 검증용 앱이에요.\n\n1. 앱 전용 Ollama 실행기를 준비해요. 앱을 다시 열면 11435에서 자동 시작해요.\n2. 설정된 모델을 준비해요: \(aiEnvironment["OLLAMA_MODEL"] ?? "qwen3:4b")\n3. 이동 → 로컬 AI 준비 상태에서 다시 확인해요.\n\n음성 받아쓰기는 faster-whisper 일꾼이 별도로 필요해요. 이동 → 주문 정리 모델 준비에서 검증된 실행기의 qwen3:4b 파일을 준비할 수 있어요. 실행기 자동 설치는 아직 없으며 준비된 실행기는 앱이 시작·종료해요.\n계정 가입 후 이동 → 로컬 가입 인증 링크 열기에서 이메일을 입력하면 터미널 없이 링크를 열 수 있어요."
+        alert.informativeText = "현재는 개발 검증용 앱이에요.\n\n1. 앱 전용 Ollama 실행기를 준비해요. 앱을 다시 열면 11435에서 자동 시작해요.\n2. 설정된 모델을 준비해요: \(aiEnvironment["OLLAMA_MODEL"] ?? "qwen3:4b")\n3. 이동 → 로컬 AI 준비 상태에서 다시 확인해요.\n\n음성 받아쓰기는 faster-whisper 일꾼이 별도로 필요해요. 이동 → 주문 정리 모델 준비에서 검증된 실행기의 qwen3:4b 파일을 준비할 수 있어요. Ollama 포함 빌드는 첫 실행에 실행기를 설치하고 앱이 시작·종료해요.\n계정 가입 후 이동 → 로컬 가입 인증 링크 열기에서 이메일을 입력하면 터미널 없이 링크를 열 수 있어요."
         alert.addButton(withTitle: "확인")
         alert.beginSheetModal(for: window)
     }
@@ -559,7 +559,7 @@ private final class Ahmatda: NSObject, NSApplicationDelegate, WKNavigationDelega
               window.attachedSheet == nil else { return }
         let alert = NSAlert()
         alert.messageText = "주문 정리 모델을 준비할까요?"
-        alert.informativeText = "qwen3:4b · Apache-2.0\n공식 Ollama 배포 서버에서 최대 약 2.50GB를 받으며 통신·저장 공간을 사용해요. 녹음이나 원문은 전송하지 않아요.\n\n검증된 앱 전용 Ollama 실행기가 이미 있어야 해요. 설치된 정상 파일은 재사용하며 해시를 확인해요. 받아쓰기 모델은 별도 메뉴로 준비해요. 실행기 자동 설치는 포함하지 않아요."
+        alert.informativeText = "qwen3:4b · Apache-2.0\n공식 Ollama 배포 서버에서 최대 약 2.50GB를 받으며 통신·저장 공간을 사용해요. 녹음이나 원문은 전송하지 않아요.\n\n검증된 앱 전용 Ollama 실행기가 이미 있어야 해요. 설치된 정상 파일은 재사용하며 해시를 확인해요. 받아쓰기 모델은 별도 메뉴로 준비해요. 이 메뉴는 모델 파일만 준비하며 실행기는 Ollama 포함 앱의 첫 실행에서 준비해요."
         alert.addButton(withTitle: "모델 준비 시작")
         alert.addButton(withTitle: "취소")
         alert.beginSheetModal(for: window) { [weak self] answer in
