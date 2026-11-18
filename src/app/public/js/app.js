@@ -77,9 +77,13 @@ const isActive = (item, page) => (Array.isArray(item.page) ? item.page.includes(
 
 function renderNav(page, meta) {
   const workspace = meta?.access?.workspace;
-  const desktop = [NAV[0], NAV[1], NAV[2], NAV[3], { href:'#/more', label:'지식 · 도구', page:['more','assistant','ask','glossary','upload','live','help','admin','trial'] }, SETTINGS];
-  render(document.getElementById('headerWorkspace'), html`<a class="workspace-switch" href="${WORKSPACES.href}" title="워크스페이스 선택"><span class="workspace-symbol">${icon('account')}</span><span class="workspace-copy"><strong>${workspace?.name || '워크스페이스'}</strong><span>${meta?.access?.demo === false ? '내 작업공간' : '예시 데이터로 체험 중'}</span></span><span class="workspace-chevron" aria-hidden="true">⌄</span></a>`);
-  render(document.getElementById('sideNav'), html`<ul class="primary-tabs">${desktop.map(n=>html`<li><a class="nav-link ${isActive(n,page)?'active':''}" href="${n.href}" ${isActive(n,page)?html`aria-current="page"`:''}>${n.label}</a></li>`)}</ul>`);
+  const workspaceLink = html`<a class="workspace-switch" href="${WORKSPACES.href}" title="워크스페이스 선택"><span class="workspace-copy"><strong>${workspace?.name || '워크스페이스'}</strong><span>${meta?.access?.demo === false ? '내 작업공간' : '예시 데이터로 체험 중'}</span></span><span class="workspace-chevron" aria-hidden="true">⌄</span></a>`;
+  const link = (n) => html`<li><a class="nav-link ${isActive(n,page)?'active':''}" href="${n.href}" ${isActive(n,page)?html`aria-current="page"`:''}>${icon(n.page)}<span>${n.label}</span></a></li>`;
+  render(document.getElementById('headerWorkspace'), workspaceLink);
+  render(document.getElementById('sideNav'), html`<div class="lnb-workspace">${workspaceLink}</div>
+    <div class="nav-group"><p class="nav-group-label">업무</p><ul>${NAV.slice(0,4).map(link)}</ul></div>
+    <div class="nav-group"><p class="nav-group-label">지식과 도구</p><ul>${[NAV[5],NAV[7],{href:'#/more',label:'모든 도구',page:'more'}].map(link)}</ul></div>
+    <div class="nav-group lnb-bottom"><ul>${[SETTINGS,HELP].map(link)}</ul></div>`);
   render(document.getElementById('tabBar'), html`${TABS.map((t) => html`<a class="tab-link ${isActive(t, page) ? 'active' : ''}" href="${t.href}" ${isActive(t, page) ? html`aria-current="page"` : ''}><span class="tab-icon">${icon(t.page)}</span><span>${t.label}</span></a>`)}`);
 }
 

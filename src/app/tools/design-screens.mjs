@@ -34,7 +34,7 @@ try {
  await page.setViewportSize({width:1440,height:1000});
  await page.goto(base+'/#/');await page.locator('#sideNav .nav-link').first().waitFor();
  for(const href of ['#/','#/calls','#/board','#/shipping','#/more','#/settings'])assert.equal(await page.locator(`#sideNav a[href="${href}"]`).count(),1,'desktop primary destination retained');
- assert.equal(await page.locator('#headerWorkspace a[href="#/workspaces"]').count(),1,'workspace switch retained');
+ assert.equal(await page.locator('#sideNav .lnb-workspace a[href="#/workspaces"]').count(),1,'workspace switch retained');
  await page.locator('#sideNav a[href="#/more"]').click();await page.locator('.tools-directory').waitFor();assert.equal(await page.locator('.tools-section').count(),4);
  for(const href of ['#/upload','#/live','#/assistant','#/ask','#/knowledge','#/settings/notifications','#/help'])assert.equal(await page.locator(`.menu-list a[href="${href}"]`).count(),1,'secondary destination retained');
  await page.setViewportSize({width:390,height:844});
