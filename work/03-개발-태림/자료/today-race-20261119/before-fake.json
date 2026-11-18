@@ -1,0 +1,39 @@
+{
+  "scope": "actual today UI with deferred fake API; clipboard stub; no backend/AI/auth verification",
+  "results": [
+    {
+      "scenario": "dashboard ABA",
+      "pass": true
+    },
+    {
+      "scenario": "briefing ABA",
+      "pass": false,
+      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'fake obsolete briefing'\n- 'fake latest briefing'\n        ^\n"
+    },
+    {
+      "scenario": "summary preview ABA",
+      "pass": false,
+      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'fake obsolete summary'\n- 'fake latest summary'\n        ^\n"
+    },
+    {
+      "scenario": "summary copy ABA",
+      "pass": false,
+      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'fake obsolete summary'\n- 'fake latest summary'\n        ^\n"
+    },
+    {
+      "scenario": "same-day summary reverse",
+      "pass": false,
+      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'fake obsolete summary'\n- 'fake latest summary'\n        ^\n"
+    },
+    {
+      "scenario": "dashboard refresh versus new briefing",
+      "pass": false,
+      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'fake obsolete briefing'\n- 'fake latest briefing'\n        ^\n"
+    },
+    {
+      "runError": "[{\"scenario\":\"dashboard ABA\",\"pass\":true},{\"scenario\":\"briefing ABA\",\"pass\":false,\"error\":\"Expected values to be strictly equal:\\n+ actual - expected\\n\\n+ 'fake obsolete briefing'\\n- 'fake latest briefing'\\n        ^\\n\"},{\"scenario\":\"summary preview ABA\",\"pass\":false,\"error\":\"Expected values to be strictly equal:\\n+ actual - expected\\n\\n+ 'fake obsolete summary'\\n- 'fake latest summary'\\n        ^\\n\"},{\"scenario\":\"summary copy ABA\",\"pass\":false,\"error\":\"Expected values to be strictly equal:\\n+ actual - expected\\n\\n+ 'fake obsolete summary'\\n- 'fake latest summary'\\n        ^\\n\"},{\"scenario\":\"same-day summary reverse\",\"pass\":false,\"error\":\"Expected values to be strictly equal:\\n+ actual - expected\\n\\n+ 'fake obsolete summary'\\n- 'fake latest summary'\\n        ^\\n\"},{\"scenario\":\"dashboard refresh versus new briefing\",\"pass\":false,\"error\":\"Expected values to be strictly equal:\\n+ actual - expected\\n\\n+ 'fake obsolete briefing'\\n- 'fake latest briefing'\\n        ^\\n\"}]"
+    }
+  ],
+  "blocked": [],
+  "errors": []
+}
