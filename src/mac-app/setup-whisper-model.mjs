@@ -1,3 +1,4 @@
+import {acquireModelLock} from './model-prepare-lock.mjs';
 import {downloadHTTP,resumeHTTP,validatedPartial} from './model-range-download.mjs';
 import {resolveStorageRoot} from './whisper-runtime-profile.mjs';
 // 개발용 Whisper 가중치 준비. Python 설치·실행·음성 전송·추론은 하지 않는다.
@@ -56,9 +57,9 @@ export async function inspect(root,{model=MODEL,signal}={}){
  return {event:'status',model:model.name,license:model.license,revision:model.revision,source:model.source,downloadBytes:model.files.reduce((s,x)=>s+x.size,0),modelVerified:files.every(Boolean),filesVerified:files.filter(Boolean).length,totalFiles:files.length,runtimePresent,runtimeVerified:false,inferenceVerified:false,automaticRuntimeInstall:false,automaticServerStart:false,cloudEnabled:false};
 }
 export async function prepare(root,{model=MODEL,signal,emit=()=>{},transfer=download,requestGet,statfs=fs.statfs}={}){
- manifest(model);root=path.resolve(root);await directory(root);const lock=path.join(root,'.whisper-prepare.lock');let owned=false,stage;
+ manifest(model);root=path.resolve(root);await directory(root);let release,stage;
  try{
-  try{await fs.mkdir(lock,{mode:0o700});owned=true;}catch(e){if(e.code==='EEXIST')throw Error('preparation_busy_or_interrupted_lock');throw e;}
+  release=await acquireModelLock(root,'.whisper-prepare.lock',{signal});
   const state=await inspect(root,{model,signal});emit(state);if(state.modelVerified){emit({event:'ready',model:model.name,inferenceVerified:false});return;}
   const dest=path.join(root,'whisper-small');
   try{await fs.lstat(dest);throw Error('existing_incomplete_model_preserved');}catch(e){if(e.code!=='ENOENT')throw e;}
@@ -89,7 +90,7 @@ export async function prepare(root,{model=MODEL,signal,emit=()=>{},transfer=down
   // 다른 설치기의 파일이 생겼으면 덮어쓰지 않는다. 비어 있는 디렉터리도 보존한다.
   try{await fs.lstat(dest);throw Error('destination_created_during_prepare');}catch(e){if(e.code!=='ENOENT')throw e;}
   await fs.rename(stage,dest);stage=null;emit({event:'ready',model:model.name,inferenceVerified:false});
- }finally{if(stage)await fs.rm(stage,{recursive:true,force:true});if(owned)await fs.rmdir(lock);}
+ }finally{try{if(stage)await fs.rm(stage,{recursive:true,force:true});}finally{if(release)await release();}}
 }
 async function main(){const args=process.argv.slice(2);if(args.length>1||(args.length&&!['--status','--prepare'].includes(args[0])))throw Error('usage: --status | --prepare');const root=await resolveStorageRoot(path.dirname(fileURLToPath(import.meta.url)));const c=new AbortController();process.once('SIGINT',()=>c.abort());process.once('SIGTERM',()=>c.abort());const emit=value=>process.stdout.write(JSON.stringify(value)+'\n');if(args[0]==='--prepare')await prepare(root,{signal:c.signal,emit});else emit(await inspect(root,{signal:c.signal}));}
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))main().catch(error=>{process.stdout.write(JSON.stringify({event:'error',code:error.name==='AbortError'?'cancelled':error.message})+'\n');process.exitCode=1;});

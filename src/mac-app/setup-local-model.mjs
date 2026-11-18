@@ -1,3 +1,4 @@
+import {acquireModelLock} from './model-prepare-lock.mjs';
 import {downloadHTTP,resumeHTTP,validatedPartial} from './model-range-download.mjs';
 import {resolveStorageRoot} from './whisper-runtime-profile.mjs';
 // 개발용 모델 준비 helper. 런타임은 앱 업데이트로 제공한다. 모델 외 다운로드·실행·추론 없음.
@@ -89,10 +90,9 @@ export async function inspect(root,{model=MODEL,runtime=RUNTIME,signal}={}) {
 export async function prepare(root,{model=MODEL,runtime=RUNTIME,signal,emit=()=>{},transfer=download,requestGet,statfs=fs.statfs}={}) {
   validateModel(model);root=path.resolve(root);
   await safeDirectory(root);
-  const lock=path.join(root,'.model-prepare.lock');
-  let owned=false,stage;
+  let release,stage;
   try {
-    try{await fs.mkdir(lock,{mode:0o700});owned=true;}catch(e){if(e.code==='EEXIST')throw new Error('preparation_busy_or_interrupted_lock');throw e;}
+    release=await acquireModelLock(root,'.model-prepare.lock',{signal});
     const state=await inspect(root,{model,runtime,signal});emit(state);
     if(!state.runtimeVerified) throw new Error('runtime_missing_or_unverified_use_app_update');
     if(state.modelVerified){emit({event:'ready',model:model.name,inferenceVerified:false});return;}
@@ -143,8 +143,8 @@ export async function prepare(root,{model=MODEL,runtime=RUNTIME,signal,emit=()=>
     await fs.rename(pending,manifest);
     emit({event:'ready',model:model.name,inferenceVerified:false});
   } finally {
-    if(stage) await fs.rm(stage,{recursive:true,force:true});
-    if(owned) await fs.rmdir(lock);
+    try{if(stage) await fs.rm(stage,{recursive:true,force:true});}
+    finally{if(release) await release();}
   }
 }
 async function main(){

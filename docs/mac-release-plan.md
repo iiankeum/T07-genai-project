@@ -137,3 +137,11 @@ Whisper도 기본 다운로드에서 부분 SHA·메타데이터를 검증하고
 Whisper 설치 공간은 stage와 완료 캐시 양쪽을 확보하고 검증된 cache/partial 바이트만 차감한다. 합계·2배 공간 계산의 safe integer overflow도 거절한다. 앞 절의 Whisper ‘바이트 재개 미구현’과 ‘항상 전체2배 요구’는 이 변경으로 대체한다. 캐시 자동 정리·강제 종료 잠금 복구는 여전히 미완료다.
 
 두 모델80개·helper178개·Node175개 시험 통과. 분리된 Resources fixture에 실제 helper를 복사해 두 모델 inspect를 별도 Node 프로세스로 실행했다. build.sh에는 공통 모듈 복사를 추가했다. 실제 앱/ZIP 재빌드는 하지 않았다. 모든 전송 시험은 mock HTTPS이므로 실제 HF/Ollama CDN Range 지원과 실제 대용량 취소 시간은 미검증이다.
+
+### 모델 준비 강제 종료 잠금 복구
+
+새 준비 도구는 macOS `/usr/bin/lockf`의 fd 잠금으로 두 모델 준비를 각각 직렬화한다. 파일 존재나 PID 재사용을 근거로 잠금을 깨지 않는다. kernel 파일은 삭제·교체하지 않고 Node가 fd를 보유한다. 프로세스가 종료되면 OS 잠금이 풀리며, 다음 실행은 같은 kernel inode와 정확한 새 owner marker가 확인되는 중단 상태만 복구한다.
+
+기존 빈 잠금·불완전 marker·예상 밖 파일·symlink는 자동 삭제하지 않는다. marker 작성 중 강제 종료나 이전 버전의 빈 잠금은 여전히 수동 확인이 필요하다. 런타임 설치기 잠금은 이번 변경 대상이 아니다. stage 정리 실패에도 fd 해제를 보장하도록 독립 리뷰에서 찾은 문제를 수정했다. 영구 0바이트 kernel 파일이 남는 것은 정상이다.
+
+현 Mac26.6.1 arm64에서 실제 임시 자식 SIGKILL·동시 복구·소유권 변경과 모델 mock 회귀92개, 전체 helper190개, Node175개를 통과했다. 사용자 모델이나 앱은 종료하지 않았다. Linux는 고정 `/usr/bin/flock` fd 모드를 사용하며 별도 Ubuntu focused CI를 추가했다. 실행기가 없거나 알 수 없는 OS면 fail closed한다. 이전 macOS·새 Mac 지원을 보장하지 않는다. 앱/ZIP 재빌드, 실제 CDN 다운로드·운영배포·병합은 하지 않았다.

@@ -111,3 +111,5 @@ test('손상 부분은 공간 차감 전에 거절하고 재시도에서 전체 
  let checked=0;const options={model,runtime,statfs:async()=>{checked++;return {bavail:64*1024*1024+16,bsize:1};},requestGet:()=>{throw Error('network forbidden');}};
  await assert.rejects(prepare(root,options),/partial_integrity_failed/);assert.equal(checked,0);await assert.rejects(prepare(root,options),/insufficient_disk_space/);assert.equal(checked,1);
 });
+import {acquireModelLock} from '../model-prepare-lock.mjs';
+test('stage 정리 실패에도 Qwen OS 잠금은 반드시 해제',async t=>{const root=await fixture(t),original=fs.rm;t.mock.method(fs,'rm',async(file,...args)=>{if(path.basename(String(file)).startsWith('.prepare-'))throw Error('fake_cleanup_failure');return original(file,...args);});await assert.rejects(prepare(root,{model,runtime,transfer:async()=>{throw Error('fake_transfer_failure');}}),/fake_cleanup_failure/);const release=await acquireModelLock(root,'.model-prepare.lock');await release();});

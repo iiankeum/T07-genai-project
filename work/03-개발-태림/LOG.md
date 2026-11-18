@@ -1,3 +1,13 @@
+## 2026-11-18 20:21 KST · 모델 준비 강제 종료 잠금 복구
+
+- 돌린 사람 · 도구 · 작업방: 신*림 · ChatGPT dot · 아맞다 직접 작업
+- 한 일: 두 모델 준비에 OS fd 잠금과 새 marker 기반 중단 복구를 추가했다. 기존 빈 잠금은 보존한다.
+- 왜: 강제 종료 후 준비가 영구 중단되는 문제를 PID 추정·잠금 강제 삭제 없이 줄인다.
+- 어떻게: 구현·통합·독립리뷰 3개 에이전트. 실제 임시 자식 SIGKILL, 동시복구, 소유권변경, 심링크와 mock 모델 회귀. stage 정리 실패 시 해제 누락을 리뷰에서 찾아 보완했다.
+- 결과물: [잠금 helper](../../src/mac-app/model-prepare-lock.mjs), 두 모델·build·시험·Ubuntu focused CI, [로드맵](../../docs/mac-release-plan.md). focused92·helper190·Node175 통과. 직전 f43bba3 CI 모두 통과.
+- AI가 판단한 것 · 사람이 확인할 것: 현 Mac26.6.1에서 검증했다. 빈 legacy/미완성 marker와 설치기 잠금 복구는 미완료다. Linux는 신규 CI 결과로 별도 확인하며 하위 macOS 호환성·실제 CDN은 보장하지 않는다.
+- 다음 할 일: CI 확인. 앱/ZIP·AGY·사용자 데이터 유지. 실제 다운로드·유료API·배포·병합 없음.
+
 ## 2026-11-18 20:11 KST · Whisper 바이트 재개와 전송 엔진 공유
 
 - 돌린 사람 · 도구 · 작업방: 신*림 · ChatGPT dot · 아맞다 직접 작업
