@@ -283,8 +283,14 @@ export default {
     }
 
     function paintDraft(contents) {
-      render(dialog, html`<div class="ka-dialog-head"><h2 id="as-draft-title">재연락 문안 초안</h2>
+      const focused = dialog.open && dialog.contains(document.activeElement);
+      const focusedAction = focused ? document.activeElement?.dataset.act : null;
+      render(dialog, html`<div class="ka-dialog-head"><h2 id="as-draft-title" tabindex="-1">재연락 문안 초안</h2>
         <button class="btn btn-ghost ka-close" type="button" data-act="close-draft" aria-label="닫기">×</button></div>${contents}`);
+      if (focused && dialog.open) {
+        const replacement = focusedAction ? [...dialog.querySelectorAll('[data-act]')].find(button => button.dataset.act === focusedAction) : null;
+        (replacement || dialog.querySelector('#as-draft-title'))?.focus({ preventScroll: true });
+      }
     }
 
     async function openDraft(id) {
