@@ -24,10 +24,12 @@ jobs:
         working-directory: candidate/src/app
         run: npm ci --omit=dev --ignore-scripts --no-audit --no-fund
       - name: Old DB upgrade and rollback compatibility; private production smoke
+        shell: bash
         working-directory: candidate/src/app
         env:
           GATE_BASE_APP: ${{ github.workspace }}/baseline/src/app
         run: |
+          set -euo pipefail
           mkdir -p artifacts/release-gate
           node tools/dev-release-gate.mjs | tee artifacts/release-gate/private.json
           GATE_DEMO_MODE=1 node tools/dev-release-gate.mjs | tee artifacts/release-gate/demo.json
