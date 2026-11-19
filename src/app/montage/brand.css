@@ -30,3 +30,6 @@
 .montage-order-card .montage-button:has(.cd-primary){flex:1;}
 .montage-order-card .montage-button>.cd-primary{width:100%;}
 @media(max-width:600px){.montage-order-card{--cd-pad:16px;}.montage-order-card .cd-card-scroll{padding-inline:16px;}.montage-order-card .cd-actions{padding:16px;}.montage-order-card .cd-item-grid{gap:12px}.montage-order-card .cd-grid{gap:16px}}
+
+/* Keep the hit target on the button, not on its decorative labels or icons. */
+.montage-order-card .montage-button > button * { pointer-events: none; }
