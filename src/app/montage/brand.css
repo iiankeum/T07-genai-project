@@ -1,0 +1,35 @@
+/* Official semantic tokens scoped to migrated surfaces. Ahcha brand preserved. */
+.montage-scope{font-family:Pretendard,PretendardJP,sans-serif}
+.montage-control{min-width:0}.montage-input,.montage-textarea{display:block;flex:1;width:100%}.montage-button{display:inline-flex;vertical-align:middle}.montage-button>button{font-family:inherit;min-height:44px}.montage-qty{width:64px;flex:0 1 64px}.montage-control input,.montage-control textarea{font-family:inherit}
+.montage-scope{
+ --semantic-foreground-brand-primary:#355f73;--semantic-foreground-brand-primary-rgb:53,95,115;
+ --semantic-surface-brand-primary:#49738c;--semantic-surface-brand-primary-rgb:73,115,140;
+ --semantic-surface-brand-strong:#355f73;--semantic-surface-brand-strong-rgb:53,95,115;
+ --semantic-surface-brand-heavy:#263f4e;--semantic-surface-brand-heavy-rgb:38,63,78;
+ --semantic-surface-brand-subtle:#eaf3f8;--semantic-surface-brand-subtle-rgb:234,243,248;
+ --semantic-line-brand-primary:#b7cedc;--semantic-line-brand-primary-rgb:183,206,220;
+ --semantic-line-brand-strong:#49738c;--semantic-line-brand-strong-rgb:73,115,140;
+ --semantic-line-brand-focus:#49738c;--semantic-line-brand-focus-rgb:73,115,140;
+}
+/* Order-first sheet. The inherited domain/controller nodes remain unchanged. */
+.montage-order-card{--cd-pad:24px;--cd-gap:16px;background:var(--semantic-background-neutral-primary);border-radius:16px;}
+.montage-order-card .cd-card-head{padding:8px 0;border-bottom:1px solid var(--semantic-line-neutral-primary);}
+.montage-order-card .cd-card-scroll{padding-inline:24px;}
+.montage-order-card .cd-card-section,.montage-order-card .cd-sec{padding-block:24px;}
+.montage-order-card .cd-item{border:0;border-radius:0;box-shadow:none;background:transparent;padding:24px 0;border-bottom:1px solid var(--semantic-line-neutral-primary);}
+.montage-order-card .cd-item-head{margin-bottom:16px;gap:8px;}
+.montage-order-card .cd-item-title{font-size:16px;font-weight:650;}
+.montage-order-card .cd-item-grid{gap:16px;}
+.montage-order-card .cd-grid{gap:20px 16px;}
+.montage-order-card .cd-label,.montage-order-card .cd-sub>span{font-size:13px;line-height:20px;font-weight:600;color:var(--semantic-foreground-neutral-secondary);}
+.montage-order-card .cd-field-meta{margin-top:8px;}
+.montage-order-card .cd-actions{padding:16px 24px;background:var(--semantic-background-neutral-primary);border-top:1px solid var(--semantic-line-neutral-primary);}
+.montage-order-card .cd-quote{border-radius:8px;background:var(--semantic-background-neutral-secondary);padding:12px 16px;}
+.montage-order-card .cd-qty{gap:4px;}
+.montage-order-card .cd-qty .montage-button>button{padding-inline:8px;min-width:36px;}
+.montage-order-card .montage-button:has(.cd-primary){flex:1;}
+.montage-order-card .montage-button>.cd-primary{width:100%;}
+@media(max-width:600px){.montage-order-card{--cd-pad:16px;}.montage-order-card .cd-card-scroll{padding-inline:16px;}.montage-order-card .cd-actions{padding:16px;}.montage-order-card .cd-item-grid{gap:12px}.montage-order-card .cd-grid{gap:16px}}
+
+/* Keep the hit target on the button, not on its decorative labels or icons. */
+.montage-order-card .montage-button > button * { pointer-events: none; }

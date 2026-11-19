@@ -1,0 +1,2 @@
+# Generated third-party bundles retain upstream whitespace and license text.
+src/app/public/montage/** whitespace=-blank-at-eol,cr-at-eol
