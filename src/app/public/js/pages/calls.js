@@ -120,6 +120,14 @@ export default {
     const remember = () => { try { sessionStorage.setItem('cn.callsHash', hashFor(state)); } catch { /* 무시 */ } };
     remember();
 
+    let controls;
+    try {
+      const bundle = await import('/montage/calls.js');
+      await bundle.prepareMontageCalls();
+      controls = bundle;
+    } catch { /* Native search remains available when enhanced assets fail. */ }
+    if (!el.isConnected) return;
+
     render(el, html`<div class="page cl-page">
       <div class="page-head">
         <div>
@@ -139,13 +147,36 @@ export default {
     </div>`);
     const root = el.querySelector('.cl-page');
     const slot = (n) => root.querySelector(`[data-slot="${n}"]`);
-    const input = root.querySelector('#cl-q');
+    const form = slot('form');
+    let montageSearch;
+    let montageStatuses;
+    if (controls) {
+      const host = document.createElement('div');
+      host.className = 'montage-scope cl-montage-search';
+      host.hidden = true;
+      form.append(host);
+      try {
+        montageSearch = controls.mountMontageCallsSearch(host, { query: state.q });
+        if (montageSearch) {
+          montageStatuses = controls.mountMontageCallsStatuses(slot('statuses'));
+          [...form.children].filter(child => child !== host).forEach(child => child.remove());
+          host.hidden = false;
+        } else host.remove();
+      } catch {
+        montageSearch?.destroy();
+        montageSearch = undefined;
+        host.remove(); // Keep the native form if the enhanced assets cannot load.
+      }
+    }
+    const input = montageSearch?.field || root.querySelector('#cl-q');
+    let composing = false;
 
     // ── 거르기 ────────────────────────────────────────────────────
     function renderFilters() {
       const custList = customers || [];
       const hasCust = state.customer && !custList.some((c) => c.name === state.customer);
-      render(slot('statuses'), html`
+      if (montageStatuses) montageStatuses.update(STATUS_TABS, state.status);
+      else render(slot('statuses'), html`
           <p class="cl-group-label" id="cl-status-l">상태</p>
           <div class="tabs cl-tabs" role="group" aria-labelledby="cl-status-l">
             ${STATUS_TABS.map(([k, label]) => html`<button type="button" class="tab" data-status="${k}" aria-pressed="${state.status === k}">${label}</button>`)}
@@ -394,10 +425,11 @@ export default {
     }
 
     // ── 이벤트 ──────────────────────────────────────────────────────
-    function onInput() {
+    function onInput(event) {
       restoreCancelled = true;
       root.querySelector('[data-act="clear-q"]')?.classList.toggle('hidden', !input.value);
       clearTimeout(typeTimer);
+      if (composing || event?.isComposing) return;
       typeTimer = setTimeout(() => {
         const q = input.value.trim();
         if (q === state.q) return;
@@ -406,10 +438,13 @@ export default {
         changed({ push: Date.now() - lastUrlAt > 1500 });
       }, TYPE_MS);
     }
+    function onCompositionStart() { composing = true; clearTimeout(typeTimer); }
+    function onCompositionEnd() { composing = false; onInput(); }
     function onSubmit(e) {
       restoreCancelled = true;
       e.preventDefault();
       clearTimeout(typeTimer);
+      if (composing) return;
       state.q = input.value.trim();
       input.blur(); // 휴대폰 자판 닫기
       changed({ push: true });
@@ -483,6 +518,8 @@ export default {
     window.addEventListener('wheel', onNavigationIntent, { passive: true });
     window.addEventListener('touchstart', onNavigationIntent, { passive: true });
     input.addEventListener('input', onInput);
+    input.addEventListener('compositionstart', onCompositionStart);
+    input.addEventListener('compositionend', onCompositionEnd);
     root.addEventListener('submit', onSubmit);
     root.addEventListener('click', onClick);
     root.addEventListener('change', onChange);
@@ -514,6 +551,10 @@ export default {
       window.removeEventListener('wheel', onNavigationIntent);
       window.removeEventListener('touchstart', onNavigationIntent);
       input.removeEventListener('input', onInput);
+      input.removeEventListener('compositionstart', onCompositionStart);
+      input.removeEventListener('compositionend', onCompositionEnd);
+      montageSearch?.destroy();
+      montageStatuses?.destroy();
       root.removeEventListener('submit', onSubmit);
       root.removeEventListener('click', onClick);
       root.removeEventListener('change', onChange);

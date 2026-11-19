@@ -11,6 +11,7 @@
 | `@anthropic-ai/sdk` · `@opentelemetry/api` | Apache-2.0. 설치된 패키지의 라이선스 파일 및 [npm 잠금 파일](src/app/package-lock.json) |
 | `@babel/runtime` · `@stablelib/base64` · `json-schema-to-ts` · `standardwebhooks` · `ts-algebra` | MIT. 설치된 패키지의 라이선스 파일 및 [npm 잠금 파일](src/app/package-lock.json) |
 | `fast-sha256` | Unlicense. [npm 잠금 파일](src/app/package-lock.json) 및 [패키지 배포처](https://www.npmjs.com/package/fast-sha256) |
+| Wanted Montage UI · React · 브라우저 번들 종속성 | [Wanted Montage MIT 원문](src/app/public/montage/MONTAGE-LICENSE.txt) · [번들 구성요소 고지](src/app/public/montage/BUNDLED-LICENSES.md) |
 | Pretendard JP · Noto Sans KR 웹 글꼴 | [Pretendard 글꼴 고지](https://github.com/orioncactus/pretendard/blob/main/LICENSE) · [Noto Sans KR 글꼴 고지](https://github.com/google/fonts/blob/main/ofl/notosanskr/OFL.txt) |
 
 ## 선택 사항

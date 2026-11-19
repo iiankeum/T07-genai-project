@@ -75,17 +75,63 @@ function ensureCss(page) {
 
 const isActive = (item, page) => (Array.isArray(item.page) ? item.page.includes(page) : item.page === page);
 
+// The hash router and access checks remain the single source of truth.
+let montageShell;
+let currentNav;
 function renderNav(page, meta) {
+  currentNav = { page, meta };
   const workspace = meta?.access?.workspace;
-  const workspaceLink = html`<a class="workspace-switch" href="${WORKSPACES.href}" title="워크스페이스 선택"><span class="workspace-copy"><strong>${workspace?.name || '워크스페이스'}</strong><span>${meta?.access?.demo === false ? '내 작업공간' : '예시 데이터로 체험 중'}</span></span><span class="workspace-chevron" aria-hidden="true">⌄</span></a>`;
-  const navActive = (n) => n.href === '#/knowledge?tab=customer' ? page === 'glossary' && new URLSearchParams(location.hash.split('?')[1]).get('tab') === 'customer' : n.page === 'glossary' ? page === 'glossary' && new URLSearchParams(location.hash.split('?')[1]).get('tab') !== 'customer' : isActive(n, page);
-  const link = (n) => html`<li><a class="nav-link ${navActive(n)?'active':''}" href="${n.href}" ${navActive(n)?html`aria-current="page"`:''}>${icon(n.page)}<span>${n.label}</span></a></li>`;
+  const customerTab = new URLSearchParams(location.hash.split('?')[1]).get('tab') === 'customer';
+  const model = {
+    workspace: { href: WORKSPACES.href, name: workspace?.name || '워크스페이스', demo: meta?.access?.demo !== false },
+    groups: [
+      { label: '업무', items: NAV.slice(0, 4) },
+      { label: '찾기와 관리', items: [NAV[6], NAV[5], { href: '#/knowledge?tab=customer', label: '거래처', page: 'glossary' }, NAV[7], { href: '#/more', label: '모든 도구', page: 'more' }] },
+      { label: '', items: [SETTINGS, HELP] },
+    ].map((group) => ({ ...group, items: group.items.map((item) => ({
+      ...item,
+      active: isActive(item, page) && (item.page !== 'glossary' || customerTab === (item.href === '#/knowledge?tab=customer')),
+    })) })),
+    tabs: TABS.map((item) => ({ ...item, active: isActive(item, page) })),
+  };
+  if (montageShell) { montageShell.update(model); return; }
+  const workspaceLink = html`<a class="workspace-switch" href="${model.workspace.href}" title="워크스페이스 선택"><span class="workspace-copy"><strong>${model.workspace.name}</strong><span>${model.workspace.demo ? '예시 데이터로 체험 중' : '내 작업공간'}</span></span><span class="workspace-chevron" aria-hidden="true">⌄</span></a>`;
+  const link = (n) => html`<li><a class="nav-link ${n.active?'active':''}" href="${n.href}" ${n.active?html`aria-current="page"`:''}>${icon(n.page)}<span>${n.label}</span></a></li>`;
   render(document.getElementById('headerWorkspace'), workspaceLink);
   render(document.getElementById('sideNav'), html`<div class="lnb-workspace">${workspaceLink}</div>
-    <div class="nav-group"><p class="nav-group-label">업무</p><ul>${NAV.slice(0,4).map(link)}</ul></div>
-    <div class="nav-group"><p class="nav-group-label">찾기와 관리</p><ul>${[NAV[6],NAV[5],{href:'#/knowledge?tab=customer',label:'거래처',page:'glossary'},NAV[7],{href:'#/more',label:'모든 도구',page:'more'}].map(link)}</ul></div>
-    <div class="nav-group lnb-bottom"><ul>${[SETTINGS,HELP].map(link)}</ul></div>`);
-  render(document.getElementById('tabBar'), html`${TABS.map((t) => html`<a class="tab-link ${isActive(t, page) ? 'active' : ''}" href="${t.href}" ${isActive(t, page) ? html`aria-current="page"` : ''}><span class="tab-icon">${icon(t.page)}</span><span>${t.label}</span></a>`)}`);
+    ${model.groups.map((g) => html`<div class="nav-group ${g.label ? '' : 'lnb-bottom'}">${g.label ? html`<p class="nav-group-label">${g.label}</p>` : ''}<ul>${g.items.map(link)}</ul></div>`)}`);
+  render(document.getElementById('tabBar'), html`${model.tabs.map((t) => html`<a class="tab-link ${t.active ? 'active' : ''}" href="${t.href}" ${t.active ? html`aria-current="page"` : ''}><span class="tab-icon">${icon(t.page)}</span><span>${t.label}</span></a>`)}`);
+}
+
+async function enhanceShell() {
+  // Never leave the routes without navigation on an absent/failed optional bundle.
+  const slots = {
+    workspace: document.getElementById('headerWorkspace'),
+    sidebar: document.getElementById('sideNav'),
+    mobile: document.getElementById('tabBar'),
+    actions: document.getElementById('headerCommands'),
+  };
+  if (Object.values(slots).some((node) => !node)) return;
+  const originalActions = [...slots.actions.childNodes].map((node) => node.cloneNode(true));
+  try {
+    const { mountMontageShell } = await import('/montage/shell.js');
+    // The CSS/font promise might resolve after a new hash; use the latest nav model.
+    const hadFocus = document.activeElement;
+    const focusHref = Object.values(slots).some((node) => node?.contains(hadFocus)) ? hadFocus?.getAttribute('href') : null;
+    montageShell = await mountMontageShell(slots);
+    if (currentNav) renderNav(currentNav.page, currentNav.meta);
+    if (focusHref && document.activeElement === document.body && !hadFocus.isConnected) {
+      const match = Object.values(slots).flatMap((node) => [...node.querySelectorAll('a')])
+        .find((link) => link.getAttribute('href') === focusHref && link.getClientRects().length);
+      match?.focus({ preventScroll: true });
+    }
+  } catch {
+    if (!montageShell) return; // Failed import or tokens.css: keep the original nodes.
+    montageShell.destroy();
+    montageShell = null;
+    slots.actions.replaceChildren(...originalActions);
+    if (currentNav) renderNav(currentNav.page, currentNav.meta);
+  }
 }
 
 function renderMore(el, meta) {
@@ -224,6 +270,7 @@ window.addEventListener('ahmatda:session-expired', (event) => {
   if (parseHash().page !== 'account') goToLogin(event.detail?.returnTo || location.hash);
 });
 route();
+void enhanceShell();
 refreshWorker();
 setInterval(refreshWorker, 20_000);
 
