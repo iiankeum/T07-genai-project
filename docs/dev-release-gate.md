@@ -31,3 +31,16 @@
 ## 머지 뒤 확인
 
 허용된 검증이 끝나면 정확한 PR head로 일반 merge한다(force 금지). `/_deploy/status.json`의 live.commit과 last.result, `/healthz`의 commit이 실제 dev SHA와 일치하는지 확인한다. 실패/rollback이면 성공이라고 보고하지 않는다. 자료 변경이 필요한 복구는 관리자와 별도 확인한다.
+
+
+## 설정의 가짜/미검증 상태를 먼저 구분하기
+
+저장소 루트에서 다음 명령은 현재 프로세스에 주어진 설정만 진단한다. 실제 서버 접속·메일·모델·DB·백업 검사는 하지 않는다.
+
+```sh
+node src/app/tools/release-readiness.mjs
+```
+
+설정 파일을 의도적으로 검사하려면 Node 24의 `node --env-file=지정경로 src/app/tools/release-readiness.mjs`를 쓸 수 있다. 이때 파일을 읽는 것은 Node 시작 단계다. 진단은 값이나 비밀을 출력하지 않는다. 실제 운영 파일을 공개 저장소/채팅에 붙이지 않는다.
+
+`configured`는 설정만 확인했다는 뜻이고 연동 성공이 아니다. `blocked`는 미구현/체험설정, `unverified`는 실제 확인이 필요한 상태다. 현재 외부 메일 발송이 미구현이고 운영 검증이 남아 항상 `releaseReady:false`, 종료코드2를 낸다. 이 값을 숨기거나 `|| true`로 배포 승인처럼 처리하지 않는다. 인자는 받지 않으며 잘못된 인자에는64를 반환한다.
