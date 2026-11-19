@@ -98,6 +98,7 @@ CREATE TABLE IF NOT EXISTS workers(
 );
 
 CREATE TABLE IF NOT EXISTS glossary(
+  contact_name TEXT,
   id TEXT PRIMARY KEY,
   kind TEXT NOT NULL,                   -- 현장말 | 오인식 | 거래처 | 차종
   term TEXT NOT NULL,                   -- 현장 말 / 틀린 말 / 거래처 이름 / 차종
@@ -135,6 +136,8 @@ CREATE TABLE IF NOT EXISTS trials(
   message TEXT,
   consent_at TEXT NOT NULL,
   ip_hash TEXT,
+  processed INTEGER NOT NULL DEFAULT 0 CHECK(processed IN (0, 1)),
+  processed_at TEXT,
   extra TEXT                            -- JSON: 소개 페이지 양식의 그 밖 칸(업종·하루 통화 수·지역·마케팅 동의 등)
 );
 
@@ -238,7 +241,10 @@ const COLUMNS = [
   ['cards', 'customer_by_phone', 'INTEGER NOT NULL DEFAULT 0'],
   ['cards', 'call_type', "TEXT NOT NULL DEFAULT '주문'"],
   ['glossary', 'phone', 'TEXT'],
+  ['glossary', 'contact_name', 'TEXT'],
   ['trials', 'extra', 'TEXT'],
+  ['trials', 'processed', 'INTEGER NOT NULL DEFAULT 0 CHECK(processed IN (0, 1))'],
+  ['trials', 'processed_at', 'TEXT'],
   ['cards', 'domain_version', "TEXT NOT NULL DEFAULT 'automotive@1'"],
   ['cards', 'field_reviews', "TEXT NOT NULL DEFAULT '{}'"],
   ['cards', 'revision', 'INTEGER NOT NULL DEFAULT 0'],

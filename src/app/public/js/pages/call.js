@@ -1,5 +1,6 @@
 // 통화 상세(F02 · F04 · F05 · F06 · F07 다시 정리 · F11): 최근 통화 · 대화 기록 · 주문 카드.
 // 카드 칸을 누르면 그 말을 한 문장을 칠하고 그 시각부터 재생한다. 처리 중인 통화는 5초마다 다시 읽는다.
+import { activateQuote } from './call-quote.js';
 import { api } from '../api.js';
 import { html, render, toast, copyText, fmtWhen, fmtClock, fmtSec, callChip, SOURCE_LABEL, highlight, href } from '../ui.js';
 import { isShipTarget } from '../domain.js';
@@ -44,6 +45,7 @@ export default {
     const id = ctx.params.id;
     let meta = ctx.meta || {};
     let call = null;
+    let retryPending = false;
     let cardCtl = null;
     let alive = true;
     let ctrl = null;
@@ -70,7 +72,7 @@ export default {
     const wideMq = window.matchMedia('(min-width: 1024px)');
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    render(el, html`<div class="page cd-page" data-mobile-pane="card">
+    render(el, html`<div class="page cd-page cd-desk-page montage-scope" data-mobile-pane="card">
       <div class="cd-overview">
         <nav class="cd-topnav no-print" aria-label="통화 탐색">
           <a class="cd-back" href="${backHref()}">${icon('arrow')} 통화 기록으로</a>
@@ -84,7 +86,7 @@ export default {
         <button type="button" data-jump="trans" aria-controls="cd-trans" aria-pressed="false">대화 기록</button>
       </nav>
       <div class="cd-body hidden" data-slot="body">
-        <details class="cd-panel cd-history no-print" data-slot="history">
+        <details class="cd-panel cd-history no-print" data-slot="history" ${wideMq.matches ? html`open` : ''}>
           <summary>${icon('history')} 최근 통화</summary>
           <div class="cd-rail">
             <div class="cd-rail-head">
@@ -228,7 +230,7 @@ export default {
     function renderProgress() {
       const s = slot('progress');
       if (call.status === 'failed') {
-        render(s, html`<div class="notice notice-error cd-failed" role="alert"><strong>이 통화는 처리하지 못했습니다.</strong> ${call.error || '이유를 알 수 없습니다.'}<br>같은 녹음을 다시 올리거나, 관리자에게 알려 주세요.</div>`);
+        render(s, html`<div class="notice notice-error cd-failed" role="alert"><strong>이 통화는 처리하지 못했습니다.</strong> ${call.error || '이유를 알 수 없습니다.'}<br>${call.hasAudio && !call.transcript && ['admin', 'reception'].includes(meta?.access?.role) ? html`<button type="button" class="btn btn-primary" data-act="retry-transcription" ${retryPending ? 'disabled' : ''}>${retryPending ? '다시 요청하는 중…' : '저장된 녹음으로 다시 받아쓰기'}</button>` : '저장된 녹음과 재시도 권한을 관리자에게 확인해 주세요.'}</div>`);
         return;
       }
       if (!WORKING.includes(call.status)) { render(s, html``); return; }
@@ -240,7 +242,7 @@ export default {
       if (call.status === 'queued') {
         line = w.online
           ? `받아쓰기 일꾼 켜짐 — ${pos ? `줄 ${pos}번째, ` : ''}곧 받아쓰기를 시작합니다.`
-          : `받아쓰기 일꾼 대기 중 — ${pos ? `줄 ${pos}번째` : `기다리는 통화 ${waiting}건`}. 일꾼(GPU PC)이 켜지면 차례로 받아씁니다. 그동안 미리 받아쓴 가짜 통화로 다른 기능을 써 보세요.`;
+          : `받아쓰기 일꾼 대기 중 — ${pos ? `줄 ${pos}번째` : `기다리는 통화 ${waiting}건`}. 받아쓰기 PC가 연결되면 순서대로 처리합니다.`;
       } else if (call.status === 'transcribing') {
         line = `받아쓰기 일꾼이 받아쓰고 있습니다${w.engine ? ` (${w.engine})` : ''}.`;
       } else {
@@ -331,7 +333,7 @@ export default {
     function segRow(s, i, marks, flags) {
       const st = num(s?.start);
       const what = call.hasAudio ? '부터 듣기' : ' 대목 표시';
-      return html`<li class="cd-seg ${flags ? 'is-unsure' : ''}" data-i="${i}" id="cd-seg-${i}">
+      return html`<li class="cd-seg ${flags ? 'is-unsure' : ''}" data-i="${i}" id="cd-seg-${i}" tabindex="-1">
         <div class="cd-seg-timeline">
           ${st !== null ? html`<button type="button" class="cd-time" data-seek="${i}" aria-label="${fmtSec(st)}${what}">${fmtSec(st)}</button>` : ''}
         </div>
@@ -569,10 +571,12 @@ export default {
     function jumpToTranscript(r) {
       rememberCardReturn(slot('card').querySelector('.ev-active'));
       showMobilePane('trans');
-      if (!wideMq.matches) slot('trans').focus({ preventScroll: true });
       if (showSummary) { showSummary = false; renderTranscript(); }
-      if (r && r.segIndex >= 0) { markSeg(r.segIndex); scrollToSeg(r.segIndex, true); return; }
-      slot('trans').scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' });
+      activateQuote(r, {
+        lineFor:lineEl, transcript:slot('trans'), mark:markSeg, hasAudio:Boolean(audio),
+        scroll:index => index >= 0 ? scrollToSeg(index,true) : slot('trans').scrollIntoView({block:'start',behavior:reduceMotion?'auto':'smooth'}),
+        seek:at => seekTo(at,true),
+      });
     }
 
     // ── 떠 있는 재생 단추(녹음 막대가 화면 밖일 때) ─────────────────
@@ -702,7 +706,7 @@ export default {
         if (!call) {
           const gone = e?.status === 404;
           render(slot('head'), html`<div class="card cd-missing">
-            <p class="notice ${gone ? '' : 'notice-error'}" role="alert">${gone ? '이 통화를 찾지 못했습니다. 지워졌거나 데모를 초기화했을 수 있습니다.' : e?.message || '통화를 불러오지 못했습니다.'}</p>
+            <p class="notice ${gone ? '' : 'notice-error'}" role="alert">${gone ? '이 통화를 찾을 수 없습니다. 통화 목록에서 다시 확인해 주세요.' : e?.message || '통화를 불러오지 못했습니다.'}</p>
             <div class="row">${gone ? '' : html`<button type="button" class="btn btn-primary" data-act="retry">다시 불러오기</button>`}<a class="btn" href="${backHref()}">통화 목록으로</a></div>
           </div>`);
         } else if (!quiet) {
@@ -765,6 +769,21 @@ export default {
             return;
           case 'copy': copyText(transcriptText(call)); return;
           case 'float': if (audio) { if (audio.paused) audio.play().catch(() => {}); else audio.pause(); } return;
+          case 'retry-transcription':
+            if (retryPending) return;
+            retryPending = true;
+            renderProgress();
+            api.post(`/api/calls/${encodeURIComponent(id)}/retry-transcription`).then(() => {
+              if (!alive) return;
+              toast('저장된 녹음으로 받아쓰기를 다시 요청했습니다.', 'ok');
+              return load();
+            }).catch((e) => {
+              if (alive) toast(e?.message || '다시 요청하지 못했습니다.', 'error');
+            }).finally(() => {
+              retryPending = false;
+              if (alive && call) renderProgress();
+            });
+            return;
           case 'retry': render(slot('head'), html`<p class="loading">불러오는 중…</p>`); load(); return;
           default: return;
         }

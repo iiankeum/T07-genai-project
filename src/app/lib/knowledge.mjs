@@ -5,16 +5,25 @@ import { maskPhone } from './repo.mjs';
 export const GLOSSARY_KINDS = ['현장말', '오인식', '거래처', '차종'];
 export const KNOWLEDGE_KINDS = [...GLOSSARY_KINDS, '부품', '업무 절차'];
 export const MAX_KNOWLEDGE = 500;
-export const CONTENT_FIELDS = ['kind', 'term', 'standard', 'phone', 'note', 'evidenceNote', 'aliases', 'relations', 'sourceCallId', 'sourceSegIndex'];
+export const CONTENT_FIELDS = ['kind', 'term', 'standard', 'phone', 'contactName', 'note', 'evidenceNote', 'aliases', 'relations', 'sourceCallId', 'sourceSegIndex'];
 
 function displayPhone({ kind, phone }) {
   if (kind !== '거래처' || !phone) return null;
   return phone.replace(/[^0-9]/g, '').startsWith('0100000') ? phone : maskPhone(phone);
 }
 
+function displayContact({ kind, contactName }) {
+  return kind === '거래처' && contactName ? '***' : null;
+}
+
+function contactField(value) {
+  if (value != null && (typeof value !== 'string' || /[\u0000-\u001f\u007f*]/.test(value))) throw new HttpError(400, 'bad_contact_name', '담당자 이름은 줄바꿈 없는 글자로 입력해 주세요.');
+  return textField(value, '담당자 이름', 40);
+}
+
 function contentFromRow(row) {
   return {
-    kind: row.kind, term: row.term, standard: row.standard ?? null, phone: row.phone ?? null,
+    kind: row.kind, term: row.term, standard: row.standard ?? null, phone: row.phone ?? null, contactName: row.contact_name ?? null,
     note: row.note ?? null, evidenceNote: row.evidence_note ?? null,
     aliases: parseJson(row.aliases, []), relations: parseJson(row.relations, []),
     sourceCallId: row.source_call_id ?? null, sourceSegIndex: row.source_seg_index ?? null,
@@ -22,7 +31,7 @@ function contentFromRow(row) {
 }
 
 function contentView(content) {
-  return { ...content, phone: displayPhone(content) };
+  return { ...content, phone: displayPhone(content), contactName: displayContact(content) };
 }
 
 export function knowledgeView(row) {
@@ -93,6 +102,7 @@ export function knowledgeContent(d, body, previous = {}, { legacy = false, requi
   const next = { aliases: [], relations: [], ...previous, ...Object.fromEntries(CONTENT_FIELDS.filter((key) => key in body).map((key) => [key, body[key]])) };
   const kind = knowledgeKind(next.kind, legacy);
   const phone = kind !== '거래처' ? null : next.phone === displayPhone(previous) ? previous.phone ?? null : phoneField(next.phone);
+  const contactName = kind !== '거래처' ? null : next.contactName === displayContact(previous) ? previous.contactName ?? null : contactField(next.contactName);
   const sourceSegIndex = 'sourceCallId' in body && body.sourceCallId !== previous.sourceCallId && !('sourceSegIndex' in body) ? null : next.sourceSegIndex;
   const source = ('sourceCallId' in body || 'sourceSegIndex' in body)
     ? sourceFields(d, next.sourceCallId, sourceSegIndex)
@@ -101,7 +111,7 @@ export function knowledgeContent(d, body, previous = {}, { legacy = false, requi
     kind,
     term: textField(next.term, '대표 용어', legacy ? 40 : 80, true),
     standard: textField(next.standard, '표준 표현', 60),
-    phone,
+    phone, contactName,
     note: textField(next.note, '정의와 업무에서의 의미', legacy ? 200 : 2000, requireEvidence),
     evidenceNote: textField(next.evidenceNote, '출처와 근거', 300, requireEvidence && !source.sourceCallId),
     aliases: aliasesField(next.aliases),
@@ -126,12 +136,12 @@ function ensureUnique(d, content, exceptId) {
 }
 
 const contentValues = (content) => [
-  content.kind, content.term, content.standard, content.phone, content.note, content.evidenceNote,
+  content.kind, content.term, content.standard, content.phone, content.contactName ?? null, content.note, content.evidenceNote,
   JSON.stringify(content.aliases), JSON.stringify(content.relations), content.sourceCallId, content.sourceSegIndex,
 ];
 
 function updateContent(d, id, content, status, version, now) {
-  d.prepare(`UPDATE glossary SET kind = ?, term = ?, standard = ?, phone = ?, note = ?, evidence_note = ?,
+  d.prepare(`UPDATE glossary SET kind = ?, term = ?, standard = ?, phone = ?, contact_name = ?, note = ?, evidence_note = ?,
     aliases = ?, relations = ?, source_call_id = ?, source_seg_index = ?, status = ?, version = ?, updated_at = ? WHERE id = ?`)
     .run(...contentValues(content), status, version, now, id);
 }
@@ -160,9 +170,9 @@ function addProposal(d, next, actor, row) {
     }
   }
   if (!row) {
-    d.prepare(`INSERT INTO glossary(kind, term, standard, phone, note, evidence_note, aliases, relations, source_call_id,
+    d.prepare(`INSERT INTO glossary(kind, term, standard, phone, contact_name, note, evidence_note, aliases, relations, source_call_id,
       source_seg_index, id, status, source, submitted_by, version, created_at, updated_at)
-      VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', '사용자', ?, 0, ?, ?)`).run(...contentValues(next), id, actor, now, now);
+      VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', '사용자', ?, 0, ?, ?)`).run(...contentValues(next), id, actor, now, now);
   } else {
     const n = d.prepare("SELECT COUNT(*) AS n FROM knowledge_revisions WHERE knowledge_id = ? AND status = 'pending'").get(id).n;
     if (n >= 10) throw new HttpError(409, 'too_many_revisions', '검토 대기 중인 제안을 먼저 검토해 주세요.');

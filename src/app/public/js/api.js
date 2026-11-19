@@ -1,5 +1,25 @@
 // 서버 API 부르기. 실패하면 ApiError(한국어 message) 를 던진다.
 // 세션 쿠키는 탭 사이에 공유되지만 열린 화면의 작업공간은 페이지를 다시 열 때까지 고정한다.
+import { knowledgeRecovery } from './knowledge-recovery.js';
+
+let logoutChannel;
+function onLogout() {
+  knowledgeRecovery.clear();
+  window.dispatchEvent(new CustomEvent('ahmatda:explicit-logout'));
+}
+// 다른 탭에는 초안이나 인증 정보를 보내지 않고 로그아웃만 알린다.
+function watchLogout() {
+  if (logoutChannel !== undefined) return;
+  logoutChannel = null;
+  try {
+    if (typeof window.BroadcastChannel !== 'function') return;
+    logoutChannel = new window.BroadcastChannel('ahmatda:auth-lifecycle');
+    logoutChannel.onmessage = ({ data }) => {
+      if (data?.type === 'logout' && data.actor === viewActor && viewActor) onLogout();
+    };
+  } catch { /* 탭 간 알림을 사용할 수 없는 브라우저 */ }
+}
+
 let viewWorkspace = null;
 let viewActor = null;
 const workspaceChanged = (reason = 'workspace_changed') => window.dispatchEvent(new CustomEvent('ahmatda:workspace-changed', { detail: { reason } }));
@@ -18,6 +38,9 @@ export class ApiError extends Error {
 }
 
 async function request(method, path, { query, body, signal } = {}) {
+  if (method === 'POST' && path === '/api/auth/logout') {
+    onLogout();
+  }
   let url = path;
   if (query) {
     const qs = new URLSearchParams(Object.entries(query).filter(([, v]) => v !== undefined && v !== null && v !== '')).toString();
@@ -36,6 +59,9 @@ async function request(method, path, { query, body, signal } = {}) {
   } catch (e) {
     if (e?.name === 'AbortError') throw e;
     throw new ApiError(0, 'network', '인터넷 연결을 확인해 주세요.');
+  }
+  if (res.ok && method === 'POST' && path === '/api/auth/logout') {
+    try { if (viewActor) logoutChannel?.postMessage({ type:'logout', actor:viewActor }); } catch { /* 선택적 탭 간 알림 */ }
   }
   if (res.status === 204) return null;
   const type = res.headers.get('content-type') || '';
@@ -99,10 +125,13 @@ export async function getMeta(force = false) {
   if (!force && metaCache && Date.now() - metaAt < 15_000) return metaCache;
   try {
     const incoming = await api.get('/api/meta');
+    watchLogout();
+    // 로그인 화면(guest)은 만료된 초안만 정리한다. 실제 계정·작업공간이 확인되면 다른 범위는 지운다.
+    knowledgeRecovery.read(incoming.access);
     const incomingWorkspace = incoming.access?.workspace?.id;
     const incomingActor = incoming.access?.user?.id;
     if (viewActor && incomingActor !== viewActor) {
-      workspaceChanged('actor_changed');
+      workspaceChanged(incoming.access == null ? 'signed_out' : 'actor_changed');
       return metaCache;
     }
     if (viewWorkspace && incomingWorkspace && incomingWorkspace !== viewWorkspace) {

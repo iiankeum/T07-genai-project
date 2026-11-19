@@ -1,11 +1,13 @@
 // 통화 목록 · 찾기(F08) · 상세 · 오디오(Range) · 거래처별 모아 보기(F13) · 관리자 지우기. [C]
-import { statSync, createReadStream, rmSync, existsSync } from 'node:fs';
+import { statSync, realpathSync, createReadStream, rmSync, existsSync } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import path from 'node:path';
 import { dataDir, db, tx, parseJson } from '../lib/db.mjs';
 import { HttpError, cleanText } from '../lib/http.mjs';
 import { requireAdmin, kstDay } from '../lib/security.mjs';
 import { CALL_TYPES, callView, getCallRow, maskPhone, isShipTarget } from '../lib/repo.mjs';
+import { enqueue } from '../lib/jobs.mjs';
+import { registerDueSort } from '../lib/due-sort.mjs';
 import { purgeCallReferences } from '../lib/call-retention.mjs';
 import { recordAudit, requestAccess, requireRole } from '../lib/auth.mjs';
 
@@ -167,6 +169,7 @@ export function listCalls(query = {}) {
   const orders = {
     board: status === 'shipped' ? 'COALESCE(k.shipped_at, k.updated_at) DESC, ' : 'k.urgent DESC, ',
     due: "NULLIF(TRIM(k.due), '') IS NULL, k.due, ",
+    dueDate: "ahcha_due_sort_v1(k.due, c.recorded_at) IS NULL, ahcha_due_sort_v1(k.due, c.recorded_at) COLLATE BINARY, ",
     customer: EFF_CUSTOMER + ' IS NULL, ' + EFF_CUSTOMER + ', ',
   };
   const sort = cleanText(query.sort, 20);
@@ -178,6 +181,7 @@ export function listCalls(query = {}) {
   const from = 'FROM calls c LEFT JOIN cards k ON k.call_id = c.id';
 
   const d = db();
+  if (sort === 'dueDate') registerDueSort(d);
   const total = d.prepare(`SELECT COUNT(*) AS n ${from} ${whereSql}`).get(...args).n;
   const rows = d.prepare(`SELECT c.* ${from} ${whereSql} ORDER BY ${orderBy} LIMIT ? OFFSET ?`).all(...args, limit, offset);
   const calls = rows.map((row) => {
@@ -375,7 +379,38 @@ export function deleteCall(id) {
 
 // ── 주소 달기 ─────────────────────────────────────────────────────
 
+/** 저장된 녹음으로 실패한 받아쓰기만 재시도한다. 가짜/실제 녹음 모두 기존 일감 경로를 따른다. */
+export function retryTranscription(id) {
+  requireRole('admin', 'reception');
+  return tx((d) => {
+    const row = getCallRow(id);
+    if (!row) throw new HttpError(404, 'not_found', '통화를 찾지 못했습니다.');
+    if (row.transcript || !['failed', 'queued', 'transcribing'].includes(row.status)) {
+      throw new HttpError(409, 'not_retryable', '실패한 받아쓰기만 다시 시도할 수 있습니다.');
+    }
+    const failed = d.prepare("SELECT id FROM jobs WHERE call_id = ? AND state = 'failed' LIMIT 1").get(id);
+    if (!failed) throw new HttpError(409, 'not_retryable', '자동 재시도가 끝난 받아쓰기만 다시 시도할 수 있습니다.');
+    // 워크스페이스 밖 경로와 심볼릭 링크도 거절한다.
+    let file;
+    try {
+      if (!row.audio_file) throw new Error();
+      const root = realpathSync(audioDir());
+      file = realpathSync(path.resolve(dataDir(), row.audio_file));
+      if (!isInside(root, file) || !statSync(file).isFile() || statSync(file).size === 0) throw new Error();
+    } catch {
+      throw new HttpError(409, 'no_audio', '저장된 녹음이 없어 다시 시도할 수 없습니다.');
+    }
+    const active = d.prepare("SELECT id FROM jobs WHERE call_id = ? AND state IN ('queued', 'leased') LIMIT 1").get(id);
+    if (active) return { callId: id, jobId: active.id, requeued: false, alreadyPending: true };
+    if (row.status !== 'failed') throw new HttpError(409, 'not_retryable', '현재 상태에서는 다시 시도할 수 없습니다.');
+    const jobId = enqueue(id);
+    recordAudit({ entity: 'call', entityId: id, action: 'retry_transcription', before: { status: row.status }, after: { jobId, status: 'queued' } });
+    return { callId: id, jobId, requeued: true, alreadyPending: false };
+  });
+}
+
 export function register(router) {
+  router.post('/api/calls/:id/retry-transcription', ({ params }) => retryTranscription(params.id));
   router.get('/api/calls', ({ query }) => listCalls(query));
 
   router.get('/api/calls/:id', ({ params }) => {

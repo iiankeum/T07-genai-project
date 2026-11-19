@@ -11,7 +11,7 @@ const harness=`<!doctype html><meta charset="utf-8"><meta name="viewport" conten
 const fake=(id,status='ready')=>({id:'fake-'+id,customer:'가짜 거래처 '+id,title:'가짜 통화',recordedAt:'2026-11-18T09:00:00Z',status,hasAudio:false,card:null});
 let fixtures=[],hold=false,held=null,fail=false;
 const requests=[],errors=[],external=[],results=[];
-const server=http.createServer(async(req,res)=>{try{const p=new URL(req.url,'http://local').pathname;if(p==='/'){res.setHeader('content-type','text/html');return res.end(harness);}if(!/^\/(js|css|fonts|montage)\/[\w./-]+$/.test(p)||p.includes('..'))return res.writeHead(404).end();res.setHeader('content-type',p.endsWith('.js')?'text/javascript':p.endsWith('.css')?'text/css':'font/woff2');res.end(await readFile(path.join(root,p)));}catch{res.writeHead(404).end();}});
+const server=http.createServer(async(req,res)=>{try{const p=new URL(req.url,'http://local').pathname;if(p==='/'){res.setHeader('content-type','text/html');return res.end(harness);}if(!/^\/(js|css|fonts)\/[\w./-]+$/.test(p)||p.includes('..'))return res.writeHead(404).end();res.setHeader('content-type',p.endsWith('.js')?'text/javascript':p.endsWith('.css')?'text/css':'font/woff2');res.end(await readFile(path.join(root,p)));}catch{res.writeHead(404).end();}});
 let browser,page;
 try{
  await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin=`http://127.0.0.1:${server.address().port}`;

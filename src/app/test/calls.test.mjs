@@ -388,3 +388,27 @@ test('거래처 열린 카드: 처리 완료 문의는 제외하고 초안·출�
     for (const [key] of cases) db().prepare('DELETE FROM calls WHERE id=?').run('fake-count-'+key);
   }
 });
+
+test('희망 일정 날짜순: 전체 SQL 정렬 후 페이지, KST 기준과 불명확 문구 보존', async t => {
+  const customer='가짜 날짜순 정렬 검증';
+  const rows=[
+    ['due_unknown','2026-11-21T01:00:00Z','내일 오전'],
+    ['due_late','2026-11-19T01:00:00Z','2027-01-02 14:00'],
+    ['due_relative','2026-12-31T15:00:00Z','내일 09:00'],
+    ['due_date','2026-11-19T01:00:00Z','2027-01-02'],
+    ['due_early','2026-11-19T01:00:00Z','2027-01-01 23:00'],
+    ['due_tie_a','2026-11-19T01:00:00Z','2027-01-02 14:00'],
+    ['due_tie_z','2026-11-19T01:00:00Z','2027-01-02 14:00'],
+  ];
+  t.after(()=>{for(const [id] of rows){db().prepare('DELETE FROM cards WHERE call_id=?').run(id);db().prepare('DELETE FROM calls WHERE id=?').run(id);}});
+  for(const [id,recordedAt,due] of rows)addCall({id,recordedAt,customer,card:{status:'confirmed',customer,due}});
+  const query={customer,status:'confirmed',sort:'dueDate',limit:'2'};
+  const result=calls.listCalls(query);
+  assert.equal(result.total,7);
+  const ids=[0,2,4,6].flatMap(offset=>calls.listCalls({...query,offset}).calls.map(c=>c.id));
+  assert.deepEqual(ids,['due_early','due_date','due_relative','due_tie_z','due_tie_a','due_late','due_unknown']);
+  assert.equal(new Set(ids).size,7);
+  assert.deepEqual(calls.listCalls({...query,offset:2}).calls.map(c=>c.id),['due_relative','due_tie_z']);
+  for(const [id,,due] of rows)assert.equal(db().prepare('SELECT due FROM cards WHERE call_id=?').get(id).due,due);
+  assert.equal(calls.listCalls({...query,from:'2027-01-01',to:'2027-01-01'}).total,1);
+});

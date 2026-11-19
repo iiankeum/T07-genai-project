@@ -1,11 +1,12 @@
 import { api } from '../api.js';
+import { knowledgeRecovery, consumedProposalHash } from '../knowledge-recovery.js';
 import { html, render, toast, confirmBox, errorBox, fmtWhen, href } from '../ui.js';
 
 const KIND_LABEL = { 현장말: '현장 말', 오인식: '오인식', 거래처: '거래처', 차종: '차종', 부품: '부품', '업무 절차': '업무 절차' };
 const STATUS = { approved: '승인됨', pending: '검토 대기', rejected: '반려', archived: '보관', superseded: '다른 버전 적용' };
 const FILTERS = [['all', '전체'], ['approved', '승인됨'], ['pending', '검토 대기'], ['rejected', '반려'], ['archived', '보관']];
 const FIELDS = [
-  ['kind', '분류'], ['term', '대표 용어'], ['standard', '표준 표현'], ['phone', '거래처 전화번호'], ['note', '정의와 사용 맥락'],
+  ['kind', '분류'], ['term', '대표 용어'], ['standard', '표준 표현'], ['phone', '거래처 전화번호'], ['contactName', '거래처 담당자'], ['note', '정의와 사용 맥락'],
   ['evidenceNote', '출처와 근거'], ['aliases', '별칭'], ['relations', '연결된 지식'], ['sourceCallId', '출처 통화'], ['sourceSegIndex', '출처 문장'],
 ];
 const idPath = (id) => '/api/knowledge/' + encodeURIComponent(id);
@@ -39,6 +40,7 @@ export default {
   title: '공유 지식',
   mount(el, ctx) {
     let items = [];
+    let itemsLoaded = false;
     let kinds = Object.keys(KIND_LABEL);
     let canPropose = false;
     let canReview = false;
@@ -51,12 +53,17 @@ export default {
     let detailSeq = 0;
     let dialogState = null;
     let dialogReturnAction = null;
+    const access = ctx.meta?.access;
+    let recoverable = null;
+    let recoveryLocked = false;
+    let resumed = false;
 
     render(el, html`<div class="page kn-page">
       <div class="page-head">
         <div><h1 data-ref="page-title">공유 지식</h1><p class="sub" data-ref="page-description">현장 용어와 업무 규칙을 모아 팀과 함께 사용하세요.</p></div>
         <div class="ka-actions" data-ref="actions"></div>
       </div>
+      <div data-ref="recovery" hidden></div>
       <div class="ka-metrics" aria-label="지식 현황" data-ref="metrics"></div>
       <section class="card ka-split kn-layout" aria-label="공유 지식 목록과 상세">
         <div class="kn-sidebar">
@@ -76,6 +83,52 @@ export default {
     const root = el.firstElementChild;
     const ref = (name) => root.querySelector(`[data-ref="${name}"]`);
     const dialog = ref('dialog');
+
+    function recoveryNotice() {
+      const box = ref('recovery');
+      box.hidden = !recoverable;
+      render(box, recoverable ? html`<section class="notice notice-warn" aria-label="작성 중인 제안">
+        <p>로그인 전에 작성하던 지식 제안이 있습니다. 이 탭에서 15분 동안 이어 쓸 수 있습니다. 아직 제출되지 않았습니다.</p>
+        <button type="button" class="btn" data-act="resume-draft">이어서 작성</button>
+        <button type="button" class="btn btn-ghost" data-act="discard-draft">초안 삭제</button></section>` : '');
+    }
+    function consumeLaunch() {
+      const newHash = consumedProposalHash(location.hash);
+      if (newHash !== location.hash) history.replaceState(history.state, '', newHash);
+    }
+    function discardRecovery() {
+      knowledgeRecovery.discard(access);
+      recoverable = null;
+      resumed = false;
+      recoveryNotice();
+    }
+    // 요청 중에는 폼이 disabled 상태일 수 있어 FormData가 아니라 명시된 입력의 값을 읽는다.
+    function captureExpired() {
+      const form = dialog.querySelector('form[data-form="suggest"]');
+      if (disposed || recoveryLocked || !canPropose || !dialog.open || dialogState?.type !== 'suggest' ||
+          !form || !(resumed || dialogState.dirty)) return;
+      const field = key => form.elements.namedItem(key)?.value ?? '';
+      const {id,data} = dialogState;
+      knowledgeRecovery.save(access,{
+        id:id ?? null, kind:field('kind'), term:field('term'), aliases:field('aliases'),
+        standard:field('standard'), phone:field('phone'), contactName:field('contactName'), note:field('note'), evidenceNote:field('evidenceNote'),
+        sourceCallId:data.sourceCallId || null, sourceSegIndex:data.sourceSegIndex ?? null,
+        relations:[...form.querySelectorAll('[data-relation-row]')].map(row => ({
+          relation:row.querySelector('[name="relation-label"]').value, target:row.querySelector('[name="relation-target"]').value,
+        })),
+      });
+    }
+    function lockRecovery(e) {
+      if (e.detail?.reason === 'signed_out') return; // 실제 만료와 명시적 로그아웃을 혼동하지 않는다.
+      recoveryLocked = true;
+      discardRecovery();
+    }
+    window.addEventListener('ahmatda:session-expired', captureExpired);
+    window.addEventListener('ahmatda:workspace-changed', lockRecovery);
+    window.addEventListener('ahmatda:explicit-logout', lockRecovery);
+    dialog.addEventListener('input', event => {
+      if (event.target.form?.dataset.form === 'suggest' && dialogState?.type === 'suggest') dialogState.dirty = true;
+    });
 
     function visibleItems() {
       const needle = q.trim().toLowerCase();
@@ -148,6 +201,7 @@ export default {
         <section class="kn-section">
           <h3>어떤 뜻인가요?</h3>
           ${item.standard ? html`<p><strong>표준 표현</strong> ${item.standard}</p>` : ''}
+          ${item.contactName ? html`<p><strong>담당자</strong> ${item.contactName} <span class="muted">개인정보 보호</span></p>` : ''}
           ${item.phone ? html`<p><strong>전화번호</strong> ${item.phone}</p>` : ''}
           <p class="ka-prewrap">${item.note || '등록된 설명이 없어요.'}</p>
         </section>
@@ -211,6 +265,7 @@ export default {
         const data = await api.get('/api/knowledge');
         if (disposed) return;
         ({ items, kinds, canPropose, canReview } = data);
+        itemsLoaded = true;
         paintOverview();
         await select(id || visibleItems()[0]?.id);
       } catch (error) {
@@ -230,6 +285,7 @@ export default {
       if (busy) event.preventDefault();
     });
 
+    dialog.addEventListener('close', () => { if (!disposed && resumed) discardRecovery(); });
     let relationRowId = 0;
     function relationRow(entry = {}) {
       const n = ++relationRowId;
@@ -284,6 +340,7 @@ export default {
 
     function suggest(initial = {}, id = null, title) {
       if (!canPropose) return;
+      if (recoverable) { ref('recovery').querySelector('button')?.focus(); return; }
       const data = { kind: '현장말', ...initial };
       dialogState = { type: 'suggest', id, data };
       showDialog(title || (id ? '지식 수정 제안' : '새 지식 제안'), html`
@@ -294,6 +351,7 @@ export default {
           </div>
           <label class="field"><span>별칭</span><input class="input" name="aliases" maxlength="300" value="${(data.aliases || []).join(', ')}" placeholder="예: 앞범퍼, 전범퍼"></label>
           <label class="field" data-ref="standard"><span>표준 표현</span><input class="input" name="standard" maxlength="60" value="${data.standard || ''}"></label>
+          <label class="field" data-ref="contactName"><span>거래처 담당자</span><input class="input" name="contactName" type="text" maxlength="40" value="${data.contactName || ''}" autocomplete="off"><small class="help">저장된 이름은 가려 표시합니다. 그대로 두면 유지하고, 비우면 삭제합니다. CSV 내려받기에는 이름을 넣지 않습니다.</small></label>
           <label class="field" data-ref="phone"><span>거래처 전화번호</span><input class="input" name="phone" type="tel" maxlength="20" value="${data.phone || ''}" placeholder="010-0000-0199"></label>
           <label class="field"><span>정의와 업무에서의 의미</span><textarea class="textarea" name="note" rows="3" maxlength="2000" required>${data.note || ''}</textarea></label>
           <label class="field"><span>출처와 근거</span><input class="input" name="evidenceNote" maxlength="300" value="${data.evidenceNote || ''}" placeholder="예: 공급사 문서명과 확인 날짜" ${!data.sourceCallId ? 'required' : ''}></label>
@@ -317,6 +375,7 @@ export default {
       const kind = form.elements.kind.value;
       form.querySelector('[data-ref="standard"]').hidden = kind === '거래처';
       form.querySelector('[data-ref="phone"]').hidden = kind !== '거래처';
+      form.querySelector('[data-ref="contactName"]').hidden = kind !== '거래처';
     }
 
     function compare(revisionId) {
@@ -372,7 +431,9 @@ export default {
       }
       try {
         const result = await run();
+        if (modalMutation && dialogState?.type === 'suggest') knowledgeRecovery.discard(access);
         if (disposed) return;
+        if (modalMutation && dialogState?.type === 'suggest') { consumeLaunch(); recoverable = null; resumed = false; recoveryNotice(); }
         if (dialog.open) dialog.close();
         toast(success, 'ok');
         await load(result?.id || result?.item?.id || selected);
@@ -405,6 +466,7 @@ export default {
       if (busy) return;
       const fields = new FormData(form);
       const get = (key) => String(fields.get(key) || '').trim();
+      if (form.dataset.form === 'suggest' && dialogState?.type === 'suggest') dialogState.dirty = true;
       if (form.dataset.form === 'reject') {
         const { id, revision } = dialogState;
         mutate(() => api.post(revisionPath(id, revision) + '/review', { decision: 'reject', reason: get('reason') }), '제안을 반려했어요.', true);
@@ -430,7 +492,7 @@ export default {
         relations.push({ relation, target });
       }
       const body = {
-        kind: get('kind'), term: get('term'), standard: get('standard'), note: get('note'), phone: get('phone'),
+        kind: get('kind'), term: get('term'), standard: get('standard'), note: get('note'), phone: get('phone'), contactName: get('contactName'),
         evidenceNote: get('evidenceNote'), aliases: get('aliases').split(',').map((alias) => alias.trim()).filter(Boolean),
         relations,
       };
@@ -484,6 +546,18 @@ export default {
       }
       if (!btn || busy || disposed) return;
       const { act, id, value } = btn.dataset;
+      if (act === 'discard-draft') { consumeLaunch(); discardRecovery(); ref('actions').querySelector('[data-act="new"]')?.focus(); return; }
+      if (act === 'resume-draft') {
+        const cached = !recoveryLocked && canPropose && knowledgeRecovery.read(access);
+        if (!cached || (cached.id && !items.some(i => i.id === cached.id && i.status !== 'archived'))) {
+          discardRecovery(); toast('이 초안은 더 이상 이어 쓸 수 없습니다.', 'error'); return;
+        }
+        recoverable = null; recoveryNotice(); resumed = true;
+        const {id,aliases,...data} = cached;
+        suggest({...data, aliases:[]}, id, '작성하던 지식 제안');
+        dialog.querySelector('[name="aliases"]').value = aliases; // 입력하던 쉼표와 공백도 유지한다.
+        return;
+      }
       if (act === 'source-retry') { loadSourcePreview(); return; }
       if (act === 'relation-add') {
         const rows = ref('relation-rows');
@@ -491,13 +565,13 @@ export default {
         const holder = document.createElement('div');
         render(holder, relationRow());
         const row = holder.firstElementChild;
-        rows.append(row);
+        rows.append(row); if (dialogState?.type === 'suggest') dialogState.dirty = true;
         syncRelationAdd();
         row.querySelector('input').focus();
       } else if (act === 'relation-remove') {
         const row = btn.closest('[data-relation-row]');
         const next = row.nextElementSibling || row.previousElementSibling;
-        row.remove(); syncRelationAdd();
+        row.remove(); if (dialogState?.type === 'suggest') dialogState.dirty = true; syncRelationAdd();
         (next?.querySelector('input') || dialog.querySelector('[data-act="relation-add"]')).focus();
         ref('relation-error').textContent = '';
       } else if (act === 'filter') {
@@ -551,6 +625,11 @@ export default {
 
     async function initial() {
       await load();
+      if (disposed || recoveryLocked) return;
+      if (canPropose) {
+        recoverable = knowledgeRecovery.read(access);
+        if (recoverable) { recoveryNotice(); return; }
+      } else if (itemsLoaded) { discardRecovery(); }
       if (disposed || !canPropose || !ctx.query?.call) return;
       const callId = ctx.query.call;
       const sourceSegIndex = ctx.query.seg == null ? null : Number(ctx.query.seg);
@@ -565,6 +644,9 @@ export default {
 
     return () => {
       disposed = true;
+      window.removeEventListener('ahmatda:session-expired', captureExpired);
+      window.removeEventListener('ahmatda:workspace-changed', lockRecovery);
+      window.removeEventListener('ahmatda:explicit-logout', lockRecovery);
       if (dialog.open) dialog.close();
     };
   },

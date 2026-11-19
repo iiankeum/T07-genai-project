@@ -1226,3 +1226,47 @@
 
 /* Keep the hit target on the button, not on its decorative labels or icons. */
 .montage-order-card .montage-button > button * { pointer-events: none; }
+
+/* Plain blue desk: shell slots only. Native fallback and domain surfaces untouched. */
+.ahcha-plain-shell {
+ --semantic-foreground-brand-primary:#075bbf;
+ --semantic-foreground-brand-primary-rgb:7,91,191;
+ --semantic-surface-brand-primary:#1763cf;
+ --semantic-surface-brand-primary-rgb:23,99,207;
+ --semantic-surface-brand-strong:#075bbf;
+ --semantic-surface-brand-strong-rgb:7,91,191;
+ --semantic-surface-brand-subtle:#e6eefa;
+ --semantic-surface-brand-subtle-rgb:230,238,250;
+ --semantic-line-brand-focus:#2c6bd5;
+ --semantic-line-brand-focus-rgb:44,107,213;
+ font-family:'Pretendard JP Variable','Apple SD Gothic Neo',sans-serif;
+}
+.ahcha-plain-shell :focus-visible { outline:3px solid #2c6bd5; outline-offset:3px; }
+.ahcha-plain-shell.sidenav { background:#f6f7f9; border-right:1px solid #e8eaed; padding:20px 13px 16px; }
+.ahcha-plain-shell .lnb-workspace { padding:0 0 15px; margin-bottom:16px; border-bottom:1px solid #e1e5eb; }
+.ahcha-plain-shell .workspace-switch { display:flex; align-items:center; gap:8px; min-height:48px; border-radius:7px; padding:8px 6px; color:#262a2f; text-decoration:none; }
+.ahcha-plain-shell .workspace-switch:hover { background:#eaf0f8; }
+.ahcha-plain-shell .workspace-monogram { display:grid; place-items:center; width:30px; height:30px; flex:none; border:1px solid #dde1e8; border-radius:7px; background:#fff; color:#536171; font-size:14px; font-weight:680; }
+.ahcha-plain-shell .workspace-copy { min-width:0; }
+.ahcha-plain-shell .workspace-copy strong { display:block; font-size:.875rem; line-height:1.4; font-weight:690; overflow-wrap:anywhere; }
+.ahcha-plain-shell .workspace-copy > span { display:block; font-size:.75rem; color:#616772; line-height:1.5; }
+.ahcha-plain-shell .workspace-chevron { width:16px; height:16px; flex:none; margin-left:auto; color:#616772; }
+.ahcha-plain-shell .nav-group { margin:0 0 20px; }
+.ahcha-plain-shell .nav-group-label { margin:8px 10px 7px; color:#616772; font-size:.75rem; line-height:1.5; font-weight:640; }
+.ahcha-plain-shell .nav-group ul { display:grid; gap:3px; margin:0; padding:0; list-style:none; }
+.ahcha-plain-shell .nav-link { display:flex; align-items:center; gap:9px; min-height:44px; padding:8px 10px; border:0; border-radius:7px; background:transparent; color:#424954; text-decoration:none; font-size:1rem; line-height:1.4; font-weight:560; }
+.ahcha-plain-shell .nav-link > svg { width:20px; height:20px; flex:none; }
+.ahcha-plain-shell .nav-link:hover { background:#eaf0f8; color:#075bbf; }
+.ahcha-plain-shell .nav-link[aria-current="page"] { color:#075bbf; background:#e6eefa; font-weight:720; box-shadow:none; }
+.ahcha-plain-shell .nav-label { min-width:0; overflow-wrap:anywhere; }
+.ahcha-plain-shell .lnb-bottom { margin-top:auto; padding-top:18px; border-top:1px solid #e1e5eb; }
+.ahcha-plain-shell.header-command-slot { gap:8px; }
+.ahcha-plain-shell.tabbar { background:#fff; border-top:1px solid #e1e5eb; }
+.ahcha-plain-shell.tabbar a { min-height:48px; }
+.ahcha-plain-shell.tabbar a[aria-current="page"] { color:#075bbf; }
+@media(max-width:600px) {
+ .ahcha-plain-shell .workspace-switch { padding:4px 2px; gap:6px; }
+ .ahcha-plain-shell .workspace-copy strong { font-size:.8125rem; }
+ .ahcha-plain-shell .workspace-copy > span { font-size:.6875rem; }
+ .ahcha-plain-shell .workspace-monogram { width:26px; height:26px; }
+}

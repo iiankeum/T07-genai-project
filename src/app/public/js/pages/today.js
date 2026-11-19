@@ -86,7 +86,6 @@ export default {
         <div class="today-heading">
           <div>
             <p class="today-date">${icon('calendar')}<time datetime="${st.day}">${fmtDate(dayIso(st.day))}</time>
-              ${st.meta.demo === true ? html`<span class="today-demo">가짜 통화 데모</span>` : ''}
             </p>
             <h1>오늘 브리핑</h1>
           </div>

@@ -184,15 +184,9 @@
  .cl-source { flex-basis:auto; margin-left:auto; font-size:10px; line-height:18px; }
 }
 
-/* Use the official search field and a keyboard-reachable Korean reset action. */
-.cl-montage-search:not([hidden]) {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
-  align-items: center;
-  width: 100%;
-  min-width: 0;
-}
-.cl-montage-search [data-component="search-field"] { min-width: 0; }
-.cl-montage-search [data-role="search-field-reset"] { display: none; }
-.cl-montage-statuses > button { flex-shrink: 0; min-height: 44px; }
+/* 실패한 통화의 복구 작업만. 행의 상세 링크와 별개인 터치 타깃을 유지한다. */
+.cl-page .cl-retry-box { grid-column:2/-1; display:flex; flex-wrap:wrap; align-items:center; gap:4px 12px; margin-top:4px; }
+.cl-page .cl-retry-message { color:var(--ink-2); overflow-wrap:anywhere; }
+.cl-page .cl-retry-box button { min-height:44px; }
+.cl-page .cl-retry-box button[aria-disabled="true"] { color:var(--muted); cursor:default; }
+@media(max-width:899px) { .cl-page .cl-retry-box { grid-column:1/-1; } }

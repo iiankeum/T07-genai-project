@@ -5,7 +5,7 @@ import { cleanText } from './http.mjs';
 import { CALL_TYPES } from './repo.mjs'; // 통화 종류 목록(DB 를 열지는 않는다)
 import { takeDaily } from './security.mjs';
 import { FIXTURE_MODEL, fixtureJson } from './ai-fixture.mjs';
-import { AiError } from './ai-error.mjs';
+import { AiError, retryAfterSeconds } from './ai-error.mjs';
 import { ollamaJson } from './ai-ollama.mjs';
 import { aiModeForWorkspace } from './auth.mjs';
 
@@ -82,7 +82,7 @@ function mapError(e, label, Anthropic) {
   if (e instanceof AiError) return e;
   if (e instanceof Anthropic.RateLimitError) {
     console.error(`[ai] ${label}: 사용량 제한(429)`);
-    return new AiError('rate_limited');
+    return new AiError('rate_limited', undefined, { retryAfterSeconds: retryAfterSeconds(e.headers) });
   }
   if (e instanceof Anthropic.AuthenticationError) {
     console.error(`[ai] ${label}: 인증 실패`);

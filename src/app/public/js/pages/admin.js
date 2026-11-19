@@ -55,7 +55,7 @@ export default {
       <div class="page-head"><div>
         <p class="eyebrow">관리자</p>
         <h1>관리자</h1>
-        <p class="sub">데모를 지키는 사람만 씁니다.</p>
+        <p class="sub">서비스 운영자 전용 화면입니다.</p>
       </div><div data-ref="headAct"></div></div>
       <div data-ref="body"><p class="loading">확인 중…</p></div>
     </div>`);
@@ -116,12 +116,12 @@ export default {
           <p class="small muted">개인정보입니다. 화면을 다른 사람에게 보여 주거나 찍어 두지 마세요.</p>
           <div data-ref="trials"><p class="loading">불러오는 중…</p></div>
         </section>
-        <section class="card admin-danger" aria-labelledby="adResetTitle">
-          <h2 id="adResetTitle">데모 초기화</h2>
-          <p>올린 녹음 · 실시간 체험 통화 · 고친 카드 · 추가한 낱말을 지우고, 처음 가짜 데모 상태로 되돌립니다. <strong>되돌릴 수 없습니다.</strong></p>
+        ${ctx.meta?.demoAvailable === true ? html`<section class="card admin-danger" aria-labelledby="adResetTitle">
+          <h2 id="adResetTitle">공개 데모 초기화</h2>
+          <p>공개 데모의 녹음, 통화, 카드, 낱말을 지우고 처음 예시 데이터로 되돌립니다. 실제 작업공간의 데이터는 바뀌지 않습니다. <strong>되돌릴 수 없습니다.</strong></p>
           <label class="field"><span>계속하려면 「초기화」라고 써 주세요</span><input class="input" data-ref="resetWord" autocomplete="off" maxlength="10" placeholder="초기화"></label>
           <button type="button" class="btn btn-danger btn-lg btn-block" data-act="reset" disabled>데모 초기화</button>
-        </section>`);
+        </section>` : ''}`);
       await Promise.all([loadStats(), loadTrials()]);
     }
     function onUnauthorized(err) {
@@ -165,10 +165,11 @@ export default {
         render(box(), list.length
           ? html`<div class="admin-tallies">${tallyRow('들어온 길(src)', counts.bySource)}${tallyRow('업종', counts.byIndustry)}${tallyRow('날짜', counts.byDay)}
               ${Number.isFinite(counts.consentMarketing) ? html`<div class="admin-tally"><strong>홍보 연락 동의</strong> ${counts.consentMarketing}건</div>` : ''}</div>
-            <p class="small">모두 ${list.length}건 · 새것부터</p>
+            <p class="small">모두 ${list.length}건 · 새것부터</p><p class="help">처리 여부는 운영자의 수동 표시입니다. 연락을 보내거나 연락 완료를 증명하지 않습니다.</p>
             <ul class="list list-wrap admin-trials">${list.map((t) => html`<li class="list-item admin-trial">
               <div class="row-between"><strong class="admin-trial-name">${t.name || '(이름 없음)'}</strong><span class="small muted">${when(t.createdAt || t.created_at)}</span></div>
               <dl class="admin-dl">
+                <div><dt>처리 여부</dt><dd>${t.processed ? '처리됨' : '미처리'}${t.processedAt ? ` · ${when(t.processedAt)}` : ''}</dd></div>
                 <div><dt>소속</dt><dd>${t.org || '—'}</dd></div>
                 <div><dt>연락처</dt><dd>${t.contact || '—'}</dd></div>
                 <div><dt>역할</dt><dd>${t.role || '—'}</dd></div>
@@ -179,7 +180,7 @@ export default {
                 ${t.heardFrom || t.recordingSetup ? html`<div><dt>알게 된 곳 · 녹음</dt><dd>${[t.heardFrom, t.recordingSetup].filter(Boolean).join(' · ')}</dd></div>` : ''}
                 <div><dt>홍보 연락 · 인터뷰</dt><dd>${t.consentMarketing ? `동의(${when(t.consentMarketingAt)})` : '동의 안 함'} · ${t.interviewOk ? '인터뷰 가능' : '—'}</dd></div>
               </dl>
-              ${t.id ? html`<button type="button" class="btn btn-danger admin-trial-del" data-act="delTrial" data-id="${t.id}">이 신청 지우기(파기)</button>` : ''}</li>`)}</ul>`
+              ${t.id ? html`<button type="button" class="btn" data-act="processTrial" data-id="${t.id}" data-processed="${t.processed ? 'false' : 'true'}">${t.processed ? '미처리로 되돌리기' : '처리됨으로 표시'}</button> <button type="button" class="btn btn-danger admin-trial-del" data-act="delTrial" data-id="${t.id}">이 신청 지우기(파기)</button>` : ''}</li>`)}</ul>`
           : html`<p class="muted">아직 체험 신청이 없습니다.</p>`);
       } catch (err) {
         if (disposed || onUnauthorized(err) || !box()) return;
@@ -209,6 +210,19 @@ export default {
       } finally {
         busy = false;
       }
+    }
+    async function processTrial(btn) {
+      if (busy || !btn.dataset.id) return;
+      busy = true;
+      btn.disabled = true;
+      try {
+        await api.patch('/api/admin/trials/' + encodeURIComponent(btn.dataset.id), { processed: btn.dataset.processed === 'true' });
+        if (disposed) return;
+        toast('처리 표시를 저장했습니다.', 'ok');
+        await loadTrials();
+      } catch (err) {
+        if (!disposed && !onUnauthorized(err)) toast(err?.message || '처리 표시를 저장하지 못했습니다.', 'error');
+      } finally { busy = false; if (btn.isConnected) btn.disabled = false; }
     }
     // 파기 요청 · 보유 기간 끝에 신청 하나를 지운다
     async function deleteTrial(id) {
@@ -255,6 +269,7 @@ export default {
       else if (act === 'reload') { loadStats(); loadTrials(); }
       else if (act === 'reset') doReset();
       else if (act === 'delTrial') deleteTrial(b.dataset.id);
+      else if (act === 'processTrial') processTrial(b);
     };
     root.addEventListener('submit', onSubmit);
     root.addEventListener('input', onInput);

@@ -54,11 +54,6 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 /* ── 작업공간 프레임: 탐색 / 현재 업무 / 상태를 서로 다른 층으로 구분 ── */
 .ui-icon { flex: none; display: block; }
-.fake-banner { display: flex; align-items: center; gap: 10px; padding: 7px 24px; border-bottom: 1px solid var(--line); background: #fff; color: var(--muted); font-size: .73rem; line-height: 1.5; }
-.fake-banner strong { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); font-weight: 650; white-space: nowrap; }
-.fake-banner strong::before { content: ''; width: 5px; height: 5px; background: #878a93; border-radius: 50%; }
-.fake-banner a { margin-left: auto; white-space: nowrap; color: var(--muted); text-underline-offset: 3px; }
-.fake-banner[hidden] { display: none; }
 .topbar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 24px; min-height: var(--topbar-h); padding: 8px 24px; background: var(--paper); border-bottom: 1px solid var(--line); }
 .brand { display: inline-flex; align-items: center; gap: 9px; min-height: 44px; text-decoration: none; color: var(--ink); font-weight: 800; font-size: 1.27rem; letter-spacing: -.04em; }
 .brandmark { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; gap: 3px; border-radius: 9px; background: var(--brand); flex: none; }
@@ -271,7 +266,7 @@ code, pre { font-family: ui-monospace, Consolas, monospace; font-size: .88em; }
 pre { background: var(--bg); padding: 12px; border-radius: 10px; overflow-x: auto; }
 hr { border: 0; border-top: 1px solid var(--line); margin: 16px 0; }
 @media print {
-  .fake-banner, .topbar, .sidenav, .tabbar, .no-print, .toast { display: none !important; }
+  .topbar, .sidenav, .tabbar, .no-print, .toast { display: none !important; }
   .layout { display: block; }
   body { background: #fff; }
   .page { padding: 0; max-width: none; }
@@ -283,10 +278,7 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 16px 0; }
 .brand-name, #bigTextBtn, .worker-text { white-space: nowrap; }
 .worker-text { overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 520px) {
-  .fake-banner { font-size: .68rem; padding: 7px 16px; gap: 4px; flex-wrap: wrap; line-height: 1.45; }
-  .fake-banner a { display: none; }
   .page { padding: 22px 16px 28px; }
-  .fake-banner strong { padding: 0; }
   .topbar { padding: 6px 12px; gap: 6px; }
   .page-head h1 { font-size: 1.65rem; }
   .brand { font-size: 1.15rem; gap: 6px; }
@@ -360,7 +352,6 @@ h2, h3, .card-title { font-weight: 650; }
  .lnb-workspace .workspace-copy > span { display:none; }
  .lnb-bottom { margin-top:auto!important; padding-top:32px; }
  .page { max-width:1280px; margin-inline:auto; }
- .fake-banner { padding-inline:32px; }
  .is-guest .topbar .brand { width:auto; }
 }
 @media(max-width:899px) {

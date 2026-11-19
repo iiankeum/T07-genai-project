@@ -1,6 +1,7 @@
 // 통화 상세의 주문 카드(F04 · F05 · F06 · F07 다시 정리 · F11): 칸 고치기 · 근거 듣기 · 확정 · 출고 · 다시 전화 · 다시 정리.
 // call.js에서 사용한다. 입력을 모아 저장하고 실패한 변경은 현재 탭에서 복구한다.
 import { api } from '../api.js';
+import { evidenceQuote } from './call-quote.js';
 import { html, render as renderNative, toast, confirmBox, fmtSec, fmtWhen, cardChip } from '../ui.js';
 import {
   CALL_TYPES, confirmationIssues, domainFor, isShipTarget, itemId, normalizePartNo,
@@ -20,7 +21,7 @@ const TOP_FIELDS = [
   { key: 'plate', label: '차번호', ph: '예: 12가 3456' },
 ];
 const WHEN_FIELDS = [
-  { key: 'due', label: '원하는 때', ph: '예: 오늘 오전 중' },
+  { key: 'due', label: '출고 요청일', ph: '예: 오늘 오전 중' },
   { key: 'delivery', label: '받는 방법', ph: '예: 배송, 퀵, 직접 수령', list: 'cd-delivery-list' },
 ];
 const NOTE_FIELD = { key: 'note', label: '메모', ph: '예: 오후 3시 전에 전화 주기', textarea: true, wide: true };
@@ -140,17 +141,12 @@ export function mountCard(el, o) {
   function evButton(r, label) {
     if (!r || (r.at === null && r.segIndex < 0)) return '';
     const t = r.at !== null ? fmtSec(r.at) : '';
-    const what = o.hasAudio ? `${label} 근거 대목${t ? ` ${t}부터` : ''} 듣기` : `${label} 근거 문장 보기`;
-    return html`<button type="button" class="btn cd-evbtn ev-play" aria-label="${what}" title="${what}">${icon(o.hasAudio ? 'play' : 'evidence')}<span>근거</span>${t ? html`<span class="cd-evtime">${t}</span>` : ''}</button>`;
+    const what = o.hasAudio && r.at !== null ? `${label} 근거 대목${t ? ` ${t}부터` : ''} 듣기` : `${label} 근거 문장 보기`;
+    return html`<button type="button" class="btn cd-evbtn ev-play" aria-label="${what}" title="${what}">${icon(o.hasAudio && r.at !== null ? 'play' : 'evidence')}<span>근거</span>${t ? html`<span class="cd-evtime">${t}</span>` : ''}</button>`;
   }
 
   function quoteBox(r) {
-    if (!r || !r.quote) return '';
-    return html`<div class="cd-quote">
-      <span class="cd-quote-label">근거</span>
-      <q class="cd-quote-text">${r.quote}</q>${r.at !== null ? html` <span class="cd-quote-time">${fmtSec(r.at)}</span>` : ''}
-      <button type="button" class="btn btn-ghost cd-to-trans" data-act="to-trans">대화에서 보기</button>
-    </div>`;
+    return evidenceQuote(r, o.hasAudio);
   }
 
   function flagsView(list) {
@@ -223,14 +219,11 @@ export function mountCard(el, o) {
         <span class="cd-item-no" aria-hidden="true">${n}</span>
         <span class="cd-item-title">품목 ${n}</span>
         <span class="cd-chipslot" data-chip="item:${i}">${chipFor(`item:${i}`)}</span>
-        ${evButton(r, `${n}번째 부품`)}
-        ${ro ? '' : html`<button type="button" class="btn btn-ghost cd-item-del" data-del="${i}" aria-label="${n}번째 부품 줄 지우기">지우기</button>`}
+
       </div>
       <div class="cd-item-grid">
-        <label class="cd-sub cd-sub-part"><span>${profile().itemFields.part}</span>
-          <input class="input" data-item="part" data-i="${i}" maxlength="${profile().textLimits.part}" value="${it.part}" placeholder="예: 앞범퍼" autocomplete="off" ${ro ? html`readonly` : ''}></label>
-        <label class="cd-sub cd-sub-side"><span>위치</span>
-          <input class="input" data-item="side" data-i="${i}" maxlength="${profile().textLimits.side}" value="${it.side}" placeholder="예: 운전석, 좌, 우" autocomplete="off" ${ro ? html`readonly` : ''}></label>
+        <label class="cd-sub cd-sub-no"><span>${profile().itemFields.partNo}</span>
+          <input class="input" data-item="partNo" data-i="${i}" maxlength="${profile().textLimits.partNo}" value="${it.partNo}" placeholder="담당자 입력" autocomplete="off" spellcheck="false" ${ro ? html`readonly` : ''}></label>
         <div class="cd-sub cd-sub-qty"><span id="cd-qty-l-${i}">${profile().itemFields.qty}</span>
           <div class="cd-qty" role="group" aria-labelledby="cd-qty-l-${i}">
             <button type="button" class="btn cd-qty-btn" data-qty="-1" data-i="${i}" aria-label="${n}번째 부품 수량 하나 줄이기" ${ro ? html`disabled` : ''}>−</button>
@@ -238,8 +231,14 @@ export function mountCard(el, o) {
             <button type="button" class="btn cd-qty-btn" data-qty="1" data-i="${i}" aria-label="${n}번째 부품 수량 하나 늘리기" ${ro ? html`disabled` : ''}>+</button>
           </div>
         </div>
-        <label class="cd-sub cd-sub-no"><span>${profile().itemFields.partNo}</span>
-          <input class="input" data-item="partNo" data-i="${i}" maxlength="${profile().textLimits.partNo}" value="${it.partNo}" placeholder="담당자 입력" autocomplete="off" spellcheck="false" ${ro ? html`readonly` : ''}></label>
+        <label class="cd-sub cd-sub-part"><span>${profile().itemFields.part}</span>
+          <input class="input" data-item="part" data-i="${i}" maxlength="${profile().textLimits.part}" value="${it.part}" placeholder="예: 앞범퍼" autocomplete="off" ${ro ? html`readonly` : ''}></label>
+        <label class="cd-sub cd-sub-side"><span>위치</span>
+          <input class="input" data-item="side" data-i="${i}" maxlength="${profile().textLimits.side}" value="${it.side}" placeholder="예: 운전석, 좌, 우" autocomplete="off" ${ro ? html`readonly` : ''}></label>
+      </div>
+      <div class="cd-item-tools" aria-label="품목 근거와 편집">
+        ${evButton(r, `${n}번째 부품`)}
+        ${ro ? '' : html`<button type="button" class="btn btn-ghost cd-item-del" data-del="${i}" aria-label="${n}번째 부품 줄 지우기">지우기</button>`}
       </div>
       ${flagsView(flags)}
       ${quoteBox(r)}
@@ -381,7 +380,7 @@ export function mountCard(el, o) {
   function renderAll() {
     evMap = new Map();
     if (!card) {
-      render(el, html`<header class="cd-card-head cd-pane-title"><h2 id="cd-card-h">주문 카드</h2></header>
+      render(el, html`<header class="cd-card-head cd-pane-title"><h2 id="cd-card-h">주문서</h2></header>
         <div class="cd-card-scroll" tabindex="0" role="region" aria-label="주문 카드 내용">
           <p class="notice notice-warn">이 통화에는 아직 주문 카드가 없습니다.${call.error ? ` (${call.error})` : ''}</p>
           <div class="cd-sec cd-reex" data-slot="reex">${reexView()}</div>
@@ -395,7 +394,7 @@ export function mountCard(el, o) {
     const actions = actionsView();
     render(el, html`
       <header class="cd-card-head">
-        <div class="cd-pane-title"><h2 id="cd-card-h">주문 카드</h2><span data-slot="status">${cardChip(card.status)}</span></div>
+        <div class="cd-pane-title"><h2 id="cd-card-h">주문서</h2><span data-slot="status">${cardChip(card.status)}</span></div>
         <div class="cd-card-toolbar">
           <div class="cd-save-indicator" data-slot="save-indicator" aria-live="polite">${saveIndicator()}</div>
           ${actions ? html`<button type="button" class="cd-actions-jump" data-act="status-jump" aria-controls="cd-card-actions">처리 버튼 보기</button>` : ''}
@@ -404,8 +403,9 @@ export function mountCard(el, o) {
       <div class="cd-card-scroll" tabindex="0" role="region" aria-label="주문 카드 내용">
         <div data-slot="save-status" tabindex="-1" aria-live="polite">${saveStatus()}</div>
         ${card.aiError ? html`<p class="notice notice-warn" role="note">AI 초안을 만들지 못했습니다. 주문 정보를 직접 채워 주세요. ${card.aiError}</p>` : ''}
-        <div class="cd-order-context" data-slot="order-context">${contextView()}</div>
+        <section class="cd-order-primary" aria-label="거래처와 출고 요청일"><div class="cd-grid">${fieldBlock(TOP_FIELDS[0], groups)}${fieldBlock(WHEN_FIELDS[0], groups)}</div></section>
         ${itemsSection(groups)}
+        <div class="cd-order-context" data-slot="order-context">${contextView()}</div>
         <section class="cd-card-section" aria-labelledby="cd-fields-h">
           <div class="cd-sec-top cd-fields-head">
             <h3 id="cd-fields-h">기본 정보</h3>
@@ -416,11 +416,11 @@ export function mountCard(el, o) {
               ${card.aiModel ? html`<p>${card.aiModel}${card.updatedAt ? ` · 마지막 저장 ${fmtWhen(card.updatedAt)}` : ''}</p>` : ''}
             </details>
           </div>
-          <div class="cd-grid">${TOP_FIELDS.map((f) => fieldBlock(f, groups))}${typeBlock()}</div>
+          <div class="cd-grid">${TOP_FIELDS.slice(1).map((f) => fieldBlock(f, groups))}${typeBlock()}</div>
         </section>
         <section class="cd-sec" aria-labelledby="cd-delivery-h">
           <h3 id="cd-delivery-h">배송 및 요청사항</h3>
-          <div class="cd-grid">${WHEN_FIELDS.map((f) => fieldBlock(f, groups))}${urgentBlock(groups)}${fieldBlock(NOTE_FIELD, groups)}</div>
+          <div class="cd-grid">${WHEN_FIELDS.slice(1).map((f) => fieldBlock(f, groups))}${urgentBlock(groups)}${fieldBlock(NOTE_FIELD, groups)}</div>
           <datalist id="cd-delivery-list">${DELIVERY_OPTIONS.map((d) => html`<option value="${d}"></option>`)}</datalist>
         </section>
         ${other.length ? html`<section class="cd-sec cd-other-flags" aria-labelledby="cd-other-h"><h3 id="cd-other-h">추가 확인</h3>${flagsView(other.map((x) => ({ ...x, u: { ...x.u, reason: otherReason(x.u) } })))}</section>` : ''}
@@ -921,7 +921,11 @@ export function mountCard(el, o) {
   function handleAct(act, btn) {
     if (pendingStatus && !readActions.has(act)) return;
     switch (act) {
-      case 'to-trans': o.onJumpToTranscript(activeKey ? evMap.get(activeKey) : null); break;
+      case 'to-trans': {
+        const block = btn.closest('[data-ev]');
+        if (block) { setActive(block); o.onJumpToTranscript(evMap.get(block.dataset.ev) || null); }
+        break;
+      }
       case 'issue-jump': {
         const issue = confirmationIssues(localCard())[Number(btn.dataset.issue)];
         if (!issue) break;

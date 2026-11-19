@@ -11,6 +11,7 @@ import { rateLimit } from '../lib/security.mjs';
 import { callView } from '../lib/repo.mjs';
 import { removeAudio } from '../lib/audio.mjs';
 import { purgeCallReferences } from '../lib/call-retention.mjs';
+import { notificationFeed } from '../lib/notification-feed.mjs';
 
 const MIN = 60_000;
 const DAY = 86_400_000;
@@ -47,25 +48,7 @@ function purgeWorkspace() {
 
 function notifications() {
   const access = requestAccess();
-  const prefs = access.user.notifications;
-  const d = db();
-  const read = new Set(d.prepare('SELECT notification_id FROM notification_reads WHERE user_id = ?').all(access.user.id).map((r) => r.notification_id));
-  const rows = d.prepare(`SELECT c.id, c.title, c.source, c.status, c.created_at, k.urgent, k.status AS card_status
-    FROM calls c LEFT JOIN cards k ON k.call_id = c.id
-    WHERE c.created_at >= ? ORDER BY c.created_at DESC LIMIT 30`).all(new Date(Date.now() - 7 * DAY).toISOString());
-  const items = [];
-  const add = (row, kind, message) => {
-    if (!prefs[kind]) return;
-    const id = `${kind}:${row.id}:${kind === 'upload' ? row.status : row.card_status}`;
-    items.push({ id, callId: row.id, kind, title: row.title ?? '통화', message, createdAt: row.created_at, read: read.has(id) });
-  };
-  for (const row of rows) {
-    if (row.source === 'upload' && row.status === 'ready') add(row, 'upload', '올린 녹음 정리가 끝났어요.');
-    if (row.source === 'upload' && row.status === 'failed') add(row, 'upload', '올린 녹음을 정리하지 못했어요.');
-    if (row.urgent && ['draft', 'confirmed'].includes(row.card_status)) add(row, 'urgent', '급한 주문의 다음 단계를 확인해 주세요.');
-    else if (row.card_status === 'draft') add(row, 'review', '주문 카드 확인이 필요해요.');
-  }
-  return { items, unread: items.filter((item) => !item.read).length };
+  return notificationFeed(db(), { userId: access.user.id, prefs: access.user.notifications });
 }
 
 export function register(router) {

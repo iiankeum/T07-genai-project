@@ -22,6 +22,7 @@ function NavIcon({ page }) {
 function Workspace({ model }) {
   return (
     <a className="workspace-switch" href={model.workspace.href} title="워크스페이스 선택">
+      <span className="workspace-monogram" aria-hidden="true">{Array.from(model.workspace.name || '')[0] || '·'}</span>
       <span className="workspace-copy">
         <strong>{model.workspace.name}</strong>
         <span>{model.workspace.demo ? '예시 데이터로 체험 중' : '내 작업공간'}</span>
@@ -50,7 +51,7 @@ function Sidebar({ model }) {
 function Mobile({ model }) {
   return <BottomNavigation value={model.tabs.find((tab) => tab.active)?.href || ''}>
     {model.tabs.map((tab) => (
-      <BottomNavigationItem as="a" href={tab.href} value={tab.href} key={tab.href}
+      <BottomNavigationItem as="a" href={tab.href} value={tab.href} key={tab.href} aria-current={tab.active ? 'page' : undefined}
         icon={<NavIcon page={tab.page} />} label={tab.label} />
     ))}
   </BottomNavigation>;
@@ -63,7 +64,7 @@ export async function mountMontageShell(slots) {
   const root = createRoot(document.createElement('div'));
   for (const node of targets) {
     node.replaceChildren();
-    node.classList.add('montage-scope', 'ahcha-montage-shell');
+    node.classList.add('montage-scope', 'ahcha-montage-shell', 'ahcha-plain-shell');
   }
   return {
     update(model) {
@@ -81,7 +82,7 @@ export async function mountMontageShell(slots) {
     },
     destroy() {
       root.unmount();
-      for (const node of targets) node.classList.remove('montage-scope', 'ahcha-montage-shell');
+      for (const node of targets) node.classList.remove('montage-scope', 'ahcha-montage-shell', 'ahcha-plain-shell');
     },
   };
 }
