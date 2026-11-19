@@ -47,6 +47,8 @@ try {
   await p.locator('#workerPill').waitFor();
   await p.screenshot({ path: artifacts + '/desktop-fake.png' });
   const fallback = await ctx.newPage();
+  // A second page starts with the mobile context viewport, not the first page’s viewport.
+  await fallback.setViewportSize({ width: 1440, height: 900 });
   await fallback.route('**/montage/shell.js', (r) => r.abort());
   await fallback.goto(new URL('/#/calls?q=test', base).href);
   await fallback.locator('#sideNav .nav-link[aria-current=page]').waitFor();
