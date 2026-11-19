@@ -15,7 +15,11 @@ for(const width of [1440,390]){
 
  const fullSummary=await page.locator('.cl-summary').first().textContent();
  await page.locator('.cl-title').first().focus();await page.keyboard.press('Enter');await page.locator('.cd-card').waitFor();
- if(width===390)await page.locator('[data-jump="trans"]').click();await page.locator('[data-trans-view="summary"]').click();
+ const summary=page.getByRole('button',{name:'통화 요약',exact:true});
+ assert.equal(await summary.isVisible(),false,'order-first detail starts with transcript closed');
+ if(width===390)await page.locator('[data-jump="trans"]').click();
+ else await page.getByRole('button',{name:'선택 통화 확인',exact:true}).press('Enter');
+ await summary.click();
  if(!(await page.locator('.cd-summary-view').innerText()).includes(fullSummary))throw new Error('full summary unavailable');
  await page.goto(base+'/#/calls');await page.locator('.cl-item').first().waitFor();await page.locator('.cl-cust').first().focus();await page.keyboard.press('Enter');await page.locator('.customer-page').waitFor();
  await page.goto(base+'/#/calls');await page.locator('.cl-item').first().waitFor();
