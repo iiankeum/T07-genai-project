@@ -13,6 +13,7 @@ const THREADS = '/api/assistant/threads/';
 export default {
   title: '업무 도우미',
   mount(el, ctx) {
+    const embedded = ctx.embedded === true;
     let context = null;
     let threads = [];
     let thread = null;
@@ -27,7 +28,7 @@ export default {
     let failure = null;
     let disposed = false;
 
-    render(el, html`<div class="page as-page">
+    render(el, html`<div class="page as-page ${embedded ? 'as-embedded' : ''}">
       <div class="page-head">
         <div><h1>업무 도우미</h1><p class="sub">선택한 통화에서 할 일을 정리하고 재연락 문안을 준비하세요.</p></div>
         <a class="btn" href="#/ask">여러 통화에서 내용 찾기 →</a>
@@ -42,24 +43,27 @@ export default {
         </details>
         <section class="as-chat" aria-labelledby="as-chat-title">
           <header class="as-chat-head">
-            <div><h2 id="as-chat-title">아차 어시스턴트</h2><p class="help">통화와 승인된 지식을 근거로 답변해요.</p></div>
+            <div><h2 id="as-chat-title">${embedded ? '아차와 대화' : '아차 어시스턴트'}</h2><p class="help">통화와 승인된 지식을 근거로 답변해요.</p></div>
             <div class="ka-actions"><button type="button" class="btn" data-act="new">＋ 새 대화</button></div>
           </header>
+          ${embedded ? html`<details class="as-history-menu"><summary>대화 기록</summary>` : ''}
           <div class="as-history">
             <label class="field"><span>저장된 대화</span><select class="select" data-ref="threads"><option value="">새 대화</option></select></label>
             <button type="button" class="btn btn-ghost" data-act="delete" disabled>대화 삭제</button>
           </div>
+          ${embedded ? html`</details>` : ''}
           <div class="ask-thread as-thread" data-ref="thread" aria-label="대화 메시지"></div>
           <p class="sr-only" data-ref="announce" role="status"></p>
           <div data-ref="error"></div>
+          <div class="as-scoped-prompts" ${embedded ? '' : html`hidden`} aria-label="현재 통화 질문 예시">${['이 통화에서 다시 확인할 내용을 정리해 줘.','이 통화의 수량 변경 근거를 찾아 줘.'].map(q => html`<button type="button" class="btn" data-question="${q}">${q.includes('수량') ? '수량 바뀐 근거 찾아줘' : '이 주문에서 확인할 건?'}</button>`)}</div>
           <div class="ka-actions as-shortcuts">
             ${ctx.meta?.access?.demo === false ? '' : html`<button type="button" class="btn" data-act="example">예시 대화 보기</button>`}
             <button type="button" class="btn" data-act="current-draft" disabled>재연락 문안 열기</button>
           </div>
           <form class="as-compose" data-ref="form">
             <label class="sr-only" for="as-question">어시스턴트에게 질문</label>
-            <textarea class="textarea" id="as-question" rows="2" maxlength="${DEFAULT_QUESTION_LIMIT}" enterkeyhint="send" placeholder="주문에서 다시 확인할 게 있을까요?"></textarea>
-            <button type="submit" class="btn btn-primary" data-act="send" disabled>보내기</button>
+            <textarea class="textarea" id="as-question" rows="${embedded ? 1 : 2}" maxlength="${DEFAULT_QUESTION_LIMIT}" enterkeyhint="send" placeholder="주문에서 다시 확인할 게 있을까요?"></textarea>
+            <button type="submit" class="btn btn-primary" data-act="send" disabled>${embedded ? '전송' : '보내기'}</button>
             <button type="button" class="btn" data-act="stop" hidden>응답 중단</button>
           </form>
           <p class="help" id="as-thread-loading" data-ref="thread-loading" role="status" hidden></p>
@@ -114,7 +118,7 @@ export default {
       render(select, context.calls.length ? html`${context.calls.map((call) => html`<option value="${call.id}">${call.title || call.customer || '통화'}</option>`)}`
         : html`<option value="">선택할 통화 없음</option>`);
       select.value = context.selected?.id || '';
-      select.disabled = !context.calls.length;
+      select.disabled = embedded || !context.calls.length;
       input.maxLength = context.questionLimit || DEFAULT_QUESTION_LIMIT;
       ref('count').textContent = '승인된 지식 ' + context.approvedCount + '개';
       act('current-draft').disabled = !context.selected;
@@ -124,6 +128,7 @@ export default {
     }
 
     async function refreshContext(callId = '', recoverMissing = false) {
+      if(embedded) { callId=ctx.query.call; recoverMissing=false; }
       contextRequest?.abort();
       const controller = new AbortController();
       contextRequest = controller;
@@ -168,7 +173,7 @@ export default {
         parts.push(messageView({ role: 'user', text: request.question }));
         parts.push(html`<div class="ask-msg is-bot"><div class="ask-bubble is-wait" role="status"><span class="spinner" aria-hidden="true"></span> 통화와 공유 지식을 살펴보는 중…</div></div>`);
       }
-      render(log, parts.length ? html`${parts}` : html`<div class="as-welcome"><span class="as-icon" aria-hidden="true">✧</span><h3>어떤 일부터 함께할까요?</h3><p>주문 내용이나 팀에서 승인한 현장 표현을 물어보세요.</p></div>`);
+      render(log, parts.length ? html`${parts}` : embedded ? html`<p class="as-welcome-note">현재 통화와 팀에서 확인한 지식을 함께 살펴봅니다.</p>` : html`<div class="as-welcome"><span class="as-icon" aria-hidden="true">✧</span><h3>어떤 일부터 함께할까요?</h3><p>주문 내용이나 팀에서 승인한 현장 표현을 물어보세요.</p></div>`);
       log.scrollTop = log.scrollHeight;
       render(ref('error'), failure ? html`<div class="notice notice-error as-error" role="alert"><span>${failure.message}</span>
         ${failure.question ? html`<button type="button" class="btn" data-act="retry">다시 시도</button>` : ''}</div>` : '');
@@ -363,6 +368,8 @@ export default {
     ref('threads').addEventListener('change', (event) => openThread(event.target.value));
 
     root.addEventListener('click', (event) => {
+      const prompt=event.target.closest('[data-question]');
+      if(prompt && !request && !threadRequest){input.value=prompt.dataset.question.slice(0,input.maxLength);syncButtons();input.focus();return;}
       const button = event.target.closest('button[data-act]');
       if (!button || button.disabled || disposed) return;
       const { act: action, id } = button.dataset;

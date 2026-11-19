@@ -173,8 +173,8 @@ async function route() {
     return;
   }
   if (!['more', 'assistant'].includes(r.page)) ensureCss(r.page);
-  if (r.page === 'assistant') ensureCss('ask');
-  if (r.page === 'assistant' || r.page === 'glossary') ensureCss('knowledge-assistant');
+  if (r.page === 'assistant' || r.page === 'call') ensureCss('ask');
+  if (r.page === 'assistant' || r.page === 'call' || r.page === 'glossary') ensureCss('knowledge-assistant');
   render(mount, html`<div class="page"><p class="loading" role="status">불러오는 중…</p></div>`);
   // 키보드 탐색을 새 본문에서 시작한다. 비동기 렌더 뒤에는 포커스를 다시 빼앗지 않는다.
   view.focus({ preventScroll: true });

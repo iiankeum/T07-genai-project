@@ -6,6 +6,7 @@ import { html, render, toast, copyText, fmtWhen, fmtClock, fmtSec, callChip, SOU
 import { isShipTarget } from '../domain.js';
 import { WORKING, num, segAtTime, resolveEvidence, buildMarks, transcriptText, groupUnsure, cloneItems } from './call-util.js';
 import { mountCard } from './call-card.js';
+import assistantPage from './assistant.js';
 
 const RATES = [1, 1.25, 1.5];
 const POLL_MS = 5000;
@@ -47,6 +48,7 @@ export default {
     let call = null;
     let retryPending = false;
     let cardCtl = null;
+    let assistantCleanup = null;
     let alive = true;
     let ctrl = null;
     let pollTimer = null;
@@ -72,7 +74,7 @@ export default {
     const wideMq = window.matchMedia('(min-width: 1024px)');
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    render(el, html`<div class="page cd-page cd-desk-page montage-scope" data-mobile-pane="card">
+    render(el, html`<div class="page cd-page cd-desk-page cd-with-assistant montage-scope" data-mobile-pane="card">
       <div class="cd-overview">
         <nav class="cd-topnav no-print" aria-label="통화 탐색">
           <a class="cd-back" href="${backHref()}">${icon('arrow')} 통화 기록으로</a>
@@ -81,9 +83,10 @@ export default {
         <div data-slot="head"><p class="loading" role="status">불러오는 중…</p></div>
       </div>
       <div data-slot="progress"></div>
-      <nav class="cd-jump no-print hidden" data-slot="jump" aria-label="이 화면 안에서 이동">
-        <button type="button" data-jump="card" aria-controls="cd-card" aria-pressed="true">주문 카드</button>
-        <button type="button" data-jump="trans" aria-controls="cd-trans" aria-pressed="false">대화 기록</button>
+      <nav class="cd-jump no-print hidden" data-slot="jump" aria-label="이 화면 안에서 이동" role="tablist">
+        <button type="button" role="tab" data-jump="trans" aria-controls="cd-trans" aria-pressed="false" aria-selected="false" tabindex="-1">통화</button>
+        <button type="button" role="tab" data-jump="card" aria-controls="cd-card" aria-pressed="true" aria-selected="true">주문서</button>
+        <button type="button" role="tab" data-jump="assistant" aria-controls="cd-assistant" aria-pressed="false" aria-selected="false" tabindex="-1">대화</button>
       </nav>
       <div class="cd-body hidden" data-slot="body">
         <details class="cd-panel cd-history no-print" data-slot="history" ${wideMq.matches ? html`open` : ''}>
@@ -110,6 +113,7 @@ export default {
           <div class="cd-trans-scroll" data-slot="trans-scroll" tabindex="0" role="region" aria-label="대화 내용"></div>
         </section>
         <section class="cd-panel cd-card" id="cd-card" aria-labelledby="cd-card-h" data-slot="card" tabindex="-1"></section>
+        <aside class="cd-assistant no-print" id="cd-assistant" data-slot="assistant" aria-label="현재 통화에 대한 대화" tabindex="-1"></aside>
         <svg class="cd-connector" data-slot="connector" width="1" height="1" aria-hidden="true" focusable="false"><path/><circle r="3"/><circle r="3"/></svg>
       </div>
       <div class="cd-foot no-print" data-slot="foot"></div>
@@ -427,6 +431,11 @@ export default {
       updateTranscriptSearch();
     }
     function onTranscriptKey(e) {
+      if(e.target.matches('[data-jump]') && ['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){
+        e.preventDefault(); const tabs=[...slot('jump').querySelectorAll('[data-jump]')],i=tabs.indexOf(e.target);
+        const next=e.key==='Home'?0:e.key==='End'?tabs.length-1:(i+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;
+        tabs[next].click(); tabs[next].focus(); return;
+      }
       if (e.target.id !== 'cd-trans-query' || e.isComposing) return;
       if (e.key === 'Enter') { e.preventDefault(); updateTranscriptSearch(e.shiftKey ? -1 : 1, true); }
       if (e.key === 'Escape') { e.preventDefault(); transcriptQuery = ''; e.target.value = ''; transcriptMatch = 0; updateTranscriptSearch(); }
@@ -518,6 +527,8 @@ export default {
       root.dataset.mobilePane = name;
       slot('jump').querySelectorAll('[data-jump]').forEach((btn) => {
         btn.setAttribute('aria-pressed', String(btn.dataset.jump === name));
+        btn.setAttribute('aria-selected', String(btn.dataset.jump === name));
+        btn.tabIndex = btn.dataset.jump === name ? 0 : -1;
       });
     }
     /** 문장을 보이게 한다. force 가 아니면 이미 보일 때는 움직이지 않는다 */
@@ -740,7 +751,7 @@ export default {
     // ── 이벤트 ──────────────────────────────────────────────────────
     function onClick(e) {
       const t = e.target;
-      if (!(t instanceof Element)) return;
+      if (!(t instanceof Element) || t.closest('.cd-assistant')) return;
       const findButton = t.closest('[data-trans-find]');
       if (findButton) { updateTranscriptSearch(findButton.dataset.transFind === 'prev' ? -1 : 1, true); return; }
       const historyBtn = t.closest('[data-history]');
@@ -827,10 +838,12 @@ export default {
     root.addEventListener('keydown', onTranscriptKey);
 
     await load();
+    if(alive && call) assistantCleanup=assistantPage.mount(slot('assistant'),{...ctx,embedded:true,query:{call:id}});
     if (history.open && !historyLoaded && !historyRequest) void loadHistory();
 
     return () => {
       alive = false;
+      assistantCleanup?.();
       ctrl?.abort();
       historyRequest?.abort();
       cancelAnimationFrame(frame);

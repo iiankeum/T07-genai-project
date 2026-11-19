@@ -727,3 +727,77 @@ body[data-page="call"] { background:#fff; }
 @media(min-width:1440px) {
  .cd-desk-page .cd-body { grid-template-columns:180px minmax(240px,.95fr) minmax(400px,1.25fr); gap:20px; }
 }
+/* Isolated persistent conversation experiment. Existing page/controllers remain mounted. */
+.cd-with-assistant .cd-assistant { min-width:0; min-height:0; border-left:1px solid var(--line); background:#fff; overflow:auto; padding-left:14px; }
+.cd-assistant .as-embedded { padding:0; max-width:none; height:100%; display:flex; flex-direction:column; }
+.cd-assistant .as-embedded > .page-head,
+.cd-assistant .as-embedded .as-sidebar { display:none; }
+.cd-assistant .as-embedded .as-layout { display:flex; flex:1; min-height:0; border:0; border-radius:0; box-shadow:none; padding:0; background:transparent; }
+.cd-assistant .as-embedded .as-chat { width:100%; min-width:0; display:flex; flex-direction:column; min-height:0; padding:0; }
+.cd-assistant .as-chat-head { padding:8px 0 12px; gap:8px; flex-wrap:wrap; border-bottom:1px solid var(--line); }
+.cd-assistant .as-chat-head h2 { font-size:1rem; }
+.cd-assistant .as-chat-head .help { font-size:.73rem; }
+.cd-assistant .as-history { padding-block:10px; display:flex; flex-wrap:wrap; gap:8px; }
+.cd-assistant .as-history .field { min-width:0; flex:1; }
+.cd-assistant .as-thread { flex:1; min-height:140px; overflow:auto; padding:8px 0; }
+.cd-assistant .as-scoped-prompts { display:grid; gap:6px; margin:12px 0; }
+.cd-assistant .as-scoped-prompts button { white-space:normal; text-align:left; justify-content:flex-start; font-size:.75rem; }
+.cd-assistant .as-compose { display:grid; grid-template-columns:minmax(0,1fr) auto; padding:10px 0; }
+.cd-assistant .as-compose textarea { grid-column:1 / -1; min-width:0; width:100%; }
+.cd-assistant .as-foot { font-size:.73rem; }
+.cd-assistant .as-shortcuts { flex-wrap:wrap; }
+@media(min-width:1024px) {
+ .cd-with-assistant .cd-body { grid-template-columns:minmax(180px,.7fr) minmax(300px,1.3fr) 320px; grid-template-rows:180px minmax(0,1fr); gap:12px; }
+ .cd-with-assistant .cd-body > .cd-history { grid-column:1; grid-row:1; padding-right:8px; overflow:auto; }
+ .cd-with-assistant .cd-body > .cd-trans { grid-column:1; grid-row:2; padding:0 8px 0 0; border:0; min-height:0; }
+ .cd-with-assistant .cd-body > .cd-card { grid-column:2; grid-row:1 / 3; padding-left:12px; }
+ .cd-with-assistant .cd-body > .cd-assistant { grid-column:3; grid-row:1 / 3; }
+ .cd-with-assistant .cd-history .cd-rail-head { position:static; }
+ .cd-with-assistant .cd-trans .cd-pane-title { flex-wrap:wrap; }
+ .cd-with-assistant .cd-card .cd-item .cd-item-grid { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+ .cd-with-assistant .cd-card .cd-item .cd-sub-no { grid-column:1;grid-row:1; }
+ .cd-with-assistant .cd-card .cd-item .cd-sub-part { grid-column:2;grid-row:1; }
+ .cd-with-assistant .cd-card .cd-item .cd-sub-qty { grid-column:1;grid-row:2; }
+ .cd-with-assistant .cd-card .cd-item .cd-sub-side { grid-column:2;grid-row:2; }
+}
+@media(min-width:1400px) {
+ .cd-with-assistant .cd-body { grid-template-columns:224px minmax(0,1fr) 340px; }
+}
+@media(max-width:1023px) {
+ .cd-with-assistant .cd-jump { display:grid;grid-template-columns:repeat(3,minmax(0,1fr)); }
+ .cd-with-assistant[data-mobile-pane='card'] .cd-body > .cd-trans,
+ .cd-with-assistant[data-mobile-pane='card'] .cd-body > .cd-history,
+ .cd-with-assistant[data-mobile-pane='card'] .cd-body > .cd-assistant,
+ .cd-with-assistant[data-mobile-pane='trans'] .cd-body > .cd-card,
+ .cd-with-assistant[data-mobile-pane='trans'] .cd-body > .cd-assistant,
+ .cd-with-assistant[data-mobile-pane='assistant'] .cd-body > .cd-card,
+ .cd-with-assistant[data-mobile-pane='assistant'] .cd-body > .cd-trans,
+ .cd-with-assistant[data-mobile-pane='assistant'] .cd-body > .cd-history { display:none; }
+ .cd-with-assistant .cd-body > .cd-assistant { border-left:0;padding:0;min-height:60dvh; }
+ .cd-with-assistant .cd-assistant .as-thread { min-height:200px; max-height:45dvh; }
+}
+.cd-assistant .as-embedded .as-welcome { padding:12px 4px; min-height:0; }
+.cd-assistant .as-embedded .as-welcome h3 { font-size:.95rem; margin:6px 0; }
+.cd-assistant .as-embedded .as-welcome p { font-size:.8rem; margin:4px 0; }
+.cd-assistant .as-embedded .as-thread { min-height:60px; margin:4px 0; }
+.cd-assistant .as-embedded .as-history { margin:4px 0; padding:4px 0; }
+.cd-assistant .as-embedded .as-scoped-prompts { margin:6px 0; }
+.cd-assistant .as-embedded .as-compose { margin-top:8px;padding:8px; }
+.cd-assistant .as-embedded .as-compose textarea { min-height:48px;max-height:120px; }
+@media(min-width:1024px) and (max-width:1100px) {
+ .cd-with-assistant .cd-body { grid-template-columns:140px minmax(260px,1fr) 280px; }
+}
+.cd-assistant .as-embedded .as-welcome > .as-icon { display:none; }
+@media(min-width:1024px) { .cd-with-assistant .cd-body { grid-template-rows:230px minmax(0,1fr); } }
+/* Embedded conversation stays quiet; full assistant retains its workbench actions. */
+.cd-assistant .as-embedded .as-shortcuts { display:none; }
+.cd-assistant .as-embedded .as-chat-head .help { display:none; }
+.cd-assistant .as-history-menu { padding:8px 0; border-bottom:1px solid var(--line); }
+.cd-assistant .as-history-menu > summary { min-height:36px; cursor:pointer; color:var(--muted); font-size:.78rem; display:list-item; list-style-position:inside; }
+.cd-assistant .as-welcome-note { color:var(--muted); font-size:.8rem; line-height:1.7; margin:12px 0; }
+.cd-assistant .as-embedded .as-scoped-prompts { display:flex; flex-wrap:wrap; gap:6px; }
+.cd-assistant .as-embedded .as-scoped-prompts button { flex:0 1 auto; min-height:36px; padding:6px 10px; border-radius:18px; font-size:.72rem; }
+.cd-assistant .as-embedded .as-compose { display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:end; }
+.cd-assistant .as-embedded .as-compose textarea { grid-column:1; min-height:38px; max-height:120px; padding:8px 2px; resize:vertical; }
+.cd-assistant .as-embedded .as-compose button { grid-column:2; min-height:38px; padding:6px 12px; }
+.cd-assistant .as-embedded .as-thread { max-height:none; }
