@@ -547,7 +547,11 @@ export default {
         const lr = line.getBoundingClientRect();
         const visible = lr.top >= pr.top && lr.bottom <= pr.bottom;
         if (!force && visible) return;
-        p.scrollTo({ top: p.scrollTop + (lr.top - pr.top) - p.clientHeight / 3, behavior });
+        // Center a fitting segment in the actual scroll viewport. A fixed
+        // one-third offset can clip its last line; oversized segments start at
+        // the top so their remainder stays reachable by normal pane scrolling.
+        const inset = Math.max(0, (p.clientHeight - lr.height) / 2);
+        p.scrollTo({ top: p.scrollTop + (lr.top - pr.top) - p.clientTop - inset, behavior });
         return;
       }
       const lr = line.getBoundingClientRect();
