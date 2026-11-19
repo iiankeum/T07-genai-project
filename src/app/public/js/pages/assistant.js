@@ -1,5 +1,6 @@
 import { api } from '../api.js';
 import { html, render, href, fmtWhen, errorBox, copyText, confirmBox, toast } from '../ui.js';
+import { evidenceResult } from './assistant-evidence.js';
 import { citeView } from './ask-citation.js';
 
 const DEFAULT_QUESTION_LIMIT = 300;
@@ -27,6 +28,10 @@ export default {
     let draft = null;
     let failure = null;
     let disposed = false;
+    let evidenceInvalidated = false;
+    const invalidateEvidence = () => { evidenceInvalidated = true; };
+    const evidenceEvents = ['ahmatda:workspace-changed', 'ahmatda:session-expired', 'ahmatda:explicit-logout'];
+    for (const name of evidenceEvents) window.addEventListener(name, invalidateEvidence);
 
     render(el, html`<div class="page as-page ${embedded ? 'as-embedded' : ''}">
       <div class="page-head">
@@ -227,7 +232,8 @@ export default {
       const question = (text || '').trim().slice(0, input.maxLength);
       if (!question || !context || request || threadRequest) return;
       const controller = new AbortController();
-      const current = { controller, question };
+      const current = { controller, question, callId: context?.selected?.id,
+        workspaceId: ctx.meta?.access?.workspace?.id ?? null, route: location.hash };
       request = current;
       failure = null;
       example = false;
@@ -235,11 +241,20 @@ export default {
       announce('답변을 기다리는 중입니다.');
       paintChat();
       try {
-        const out = await api.post('/api/assistant', { message: question, threadId: thread?.id, callId: context?.selected?.id }, { signal: controller.signal });
+        const out = await api.post('/api/assistant', { message: question, threadId: thread?.id, callId: current.callId }, { signal: controller.signal });
         if (disposed || request !== current) return;
         thread = out.thread;
         rememberThread(thread);
         announce('답변이 도착했어요. ' + out.answer);
+        const evidence = evidenceResult({ question, response: out, embedded,
+          active: !disposed && !controller.signal.aborted && request === current && !evidenceInvalidated,
+          requestCallId: current.callId, selectedCallId: context?.selected?.id, viewCallId: ctx.query?.call,
+          workspaceUnchanged: current.workspaceId === (ctx.meta?.access?.workspace?.id ?? null),
+          routeUnchanged: current.route === location.hash });
+        if (evidence && typeof ctx.onEvidenceResult === 'function') {
+          // Receiver rechecks quote/time against its mounted call; this is a read-only UI hint.
+          try { ctx.onEvidenceResult(evidence); } catch { /* 답변은 유지하고 자동 이동만 생략한다. */ }
+        }
       } catch (error) {
         if (disposed || controller.signal.aborted || request !== current) return;
         failure = { message: friendlyError(error), question };
@@ -375,7 +390,7 @@ export default {
       const { act: action, id } = button.dataset;
       if (action === 'new') newChat();
       else if (action === 'delete') deleteChat();
-      else if (action === 'refresh') refreshContext(context?.selected?.id);
+      else if (action === 'refresh' && !contextRequest) refreshContext(context?.selected?.id);
       else if (action === 'draft') openDraft(id);
       else if (action === 'current-draft') openDraft(context?.selected?.id);
       else if (action === 'close-draft') dialog.close();
@@ -389,14 +404,27 @@ export default {
       }
     });
 
+    let embeddedStarted = false;
+    function startEmbeddedContext() {
+      if (!embedded || embeddedStarted || disposed || evidenceInvalidated) return;
+      embeddedStarted = true;
+      refreshContext(ctx.query?.call, false);
+    }
     paintChat();
-    refreshContext(ctx.query?.call, true);
+    if (embedded) {
+      render(ref('suggestions'), html`<p class="muted">대화를 시작하면 현재 통화의 제안을 불러옵니다.</p>`);
+      root.addEventListener('focusin', startEmbeddedContext);
+      root.addEventListener('click', startEmbeddedContext, true);
+    } else refreshContext(ctx.query?.call, true);
     if (ctx.query?.q) {
       input.value = String(ctx.query.q).slice(0, input.maxLength);
       syncButtons();
     }
     return () => {
       disposed = true;
+      root.removeEventListener('focusin', startEmbeddedContext);
+      root.removeEventListener('click', startEmbeddedContext, true);
+      for (const name of evidenceEvents) window.removeEventListener(name, invalidateEvidence);
       layoutMedia.removeEventListener('change', syncLayout);
       request?.controller.abort();
       draftRequest?.abort();

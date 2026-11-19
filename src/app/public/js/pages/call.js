@@ -93,7 +93,7 @@ export default {
           <summary>${icon('history')} 최근 통화</summary>
           <div class="cd-rail">
             <div class="cd-rail-head">
-              <h2 id="cd-history-title">${icon('history')} 최근 통화</h2>
+              <h2 id="cd-history-title">${icon('history')} 주문 작업</h2><button type="button" class="btn btn-sm cd-desktop-verify" data-act="open-transcript" aria-controls="cd-trans" aria-expanded="false">선택 통화 확인</button>
               <form class="cd-history-search" role="search" aria-label="최근 통화 검색">
                 <label class="sr-only" for="cd-history-q">거래처, 차량, 부품 검색</label>
                 <input class="input" id="cd-history-q" name="q" type="search" maxlength="100" placeholder="거래처 · 부품 검색">
@@ -108,7 +108,7 @@ export default {
           </div>
         </details>
         <section class="cd-panel cd-trans" id="cd-trans" aria-labelledby="cd-trans-h" data-slot="trans" tabindex="-1">
-          <div data-slot="trans-head"></div>
+          <div class="cd-drawer-head"><span>선택 통화 · 원문 확인</span><button type="button" class="btn btn-sm" data-act="close-transcript">최근 주문 목록</button></div><div data-slot="trans-head"></div>
           <div class="cd-player-slot" data-slot="player"></div>
           <div class="cd-trans-scroll" data-slot="trans-scroll" tabindex="0" role="region" aria-label="대화 내용"></div>
         </section>
@@ -571,7 +571,33 @@ export default {
     }
 
     // ── 카드에서 근거 고르기(F05) ──────────────────────────────────
+    function setDesktopTranscript(open) {
+      if (!wideMq.matches) return;
+      root.classList.toggle('cd-transcript-open', open);
+      root.querySelector('[data-act="open-transcript"]')?.setAttribute('aria-expanded', String(open));
+      requestAnimationFrame(() => { measure(); scheduleConnector(); });
+    }
+    function onAssistantEvidence(result) {
+      if (!alive || !wideMq.matches || !result || result.callId !== id || result.field !== 'qty') return;
+      const index = result.segIndex;
+      const segment = Number.isInteger(index) && index >= 0 ? segments()[index] : null;
+      const at = result.at;
+      const quote = typeof result.quote === 'string' ? result.quote.trim() : '';
+      const normalize = text => String(text || '').replace(/\s+/g, ' ').trim();
+      if (!segment || !quote || !normalize(segment.text).includes(normalize(quote)) || !Number.isFinite(at)
+        || at < Number(segment.start) || at > Number(segment.end)) return;
+      setDesktopTranscript(true);
+      if (showSummary) { showSummary = false; renderTranscript(); }
+      markSeg(index);
+      const card = slot('card');
+      card.querySelectorAll('.cd-assistant-evidence-target').forEach(field => field.classList.remove('cd-assistant-evidence-target'));
+      // A single item is unambiguous; never guess a field on a multi-item order.
+      const quantities = card.querySelectorAll('input[data-item="qty"]');
+      if (quantities.length === 1) quantities[0].closest('.cd-sub-qty')?.classList.add('cd-assistant-evidence-target');
+      requestAnimationFrame(() => scrollToSeg(index, true));
+    }
     function onEvidence(r, { play, scroll }) {
+      if (r && (scroll || play)) setDesktopTranscript(true);
       linkedIdx = r?.segIndex ?? -1;
       if (!r) { markSeg(-1); return; }
       if (r.segIndex >= 0) {
@@ -589,6 +615,7 @@ export default {
       }
     }
     function jumpToTranscript(r) {
+      setDesktopTranscript(true);
       rememberCardReturn(slot('card').querySelector('.ev-active'));
       showMobilePane('trans');
       if (showSummary) { showSummary = false; renderTranscript(); }
@@ -779,6 +806,8 @@ export default {
       const act = t.closest('[data-act]');
       if (act && !slot('card').contains(act)) {
         switch (act.dataset.act) {
+          case 'open-transcript': setDesktopTranscript(true); return;
+          case 'close-transcript': setDesktopTranscript(false); root.querySelector('[data-act="open-transcript"]')?.focus({preventScroll:true}); return;
           case 'back5': if (audio) { audio.currentTime = Math.max(0, audio.currentTime - 5); } return;
           case 'follow':
             follow = !follow;
@@ -843,7 +872,7 @@ export default {
     root.addEventListener('keydown', onTranscriptKey);
 
     await load();
-    if(alive && call) assistantCleanup=assistantPage.mount(slot('assistant'),{...ctx,embedded:true,query:{call:id}});
+    if(alive && call) assistantCleanup=assistantPage.mount(slot('assistant'),{...ctx,embedded:true,query:{call:id},onEvidenceResult:onAssistantEvidence});
     if (history.open && !historyLoaded && !historyRequest) void loadHistory();
 
     return () => {
