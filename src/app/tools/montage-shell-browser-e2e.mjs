@@ -33,12 +33,15 @@ try {
   assert.equal(await p.locator('#tabBar a[aria-current=page]').getAttribute('href'), '#/calls');
   await p.locator('#tabBar a[href="#/more"]').click();
   await p.getByRole('heading', { name: '모든 도구', exact: true }).waitFor();
+  await p.locator('#tabBar a[href="#/more"][aria-current="page"]').waitFor({ timeout: 8000 });
   assert.equal(await p.locator('#tabBar a[aria-current=page]').getAttribute('href'), '#/more');
   assert.ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
   await p.screenshot({ path: artifacts + '/mobile-fake.png' });
   await p.setViewportSize({ width: 1440, height: 900 });
   await p.locator('#sideNav a[href="#/knowledge?tab=customer"]').click();
   await p.waitForURL('**/#/knowledge?tab=customer');
+  // Updating the hash precedes the route's asynchronous navigation render.
+  await p.locator('#sideNav a[href="#/knowledge?tab=customer"][aria-current="page"]').waitFor({ timeout: 8000 });
   assert.equal(await p.locator('#sideNav a[aria-current=page]').getAttribute('href'), '#/knowledge?tab=customer');
   await p.locator('#headerCommands a[href="#/upload"]').waitFor();
   await p.locator('#workerPill').waitFor();
