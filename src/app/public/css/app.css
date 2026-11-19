@@ -390,3 +390,28 @@ h2, h3, .card-title { font-weight: 650; }
 
 /* 사용자가 지정한 원본 로고. 비율/색/여백을 임의로 변경하지 않는다. */
 .brand-logo { display:block; width:36px; height:36px; object-fit:contain; flex:none; border-radius:8px; }
+
+/* Montage shell. Keep legacy route layout and breakpoint / safe-area rules. */
+.header-command-slot { display: contents; }
+.tabbar.ahcha-montage-shell { grid-template-columns: minmax(0, 1fr); }
+.ahcha-montage-shell [data-component="bottom-navigation"] {
+  width: 100%;
+  position: static;
+  background: var(--semantic-background-neutral-primary, var(--paper));
+}
+.ahcha-montage-shell [data-component="bottom-navigation-item"] { min-width: 0; }
+.ahcha-montage-shell [data-component="bottom-navigation-item"]:focus-visible,
+.ahcha-montage-shell .nav-link:focus-visible {
+  outline: 2px solid var(--semantic-foreground-brand-primary, var(--brand));
+  outline-offset: -2px;
+}
+.sidenav.ahcha-montage-shell {
+  background: var(--semantic-background-neutral-primary, var(--paper));
+  border-color: var(--semantic-line-neutral-tertiary, var(--line));
+}
+.ahcha-montage-shell .nav-link[aria-current="page"] {
+  background: var(--semantic-surface-brand-subtle, var(--brand-soft));
+  color: var(--semantic-foreground-brand-primary, var(--brand));
+  font-weight: 600;
+}
+.ahcha-montage-shell .nav-link > svg { width: 20px; height: 20px; flex: 0 0 20px; }
