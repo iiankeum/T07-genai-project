@@ -400,6 +400,8 @@ h2, h3, .card-title { font-weight: 650; }
   background: var(--semantic-background-neutral-primary, var(--paper));
 }
 .ahcha-montage-shell [data-component="bottom-navigation-item"] { min-width: 0; }
+.tabbar.ahcha-montage-shell a[data-component="bottom-navigation-item"],
+.header-command-slot.ahcha-montage-shell a { text-decoration: none; }
 .ahcha-montage-shell [data-component="bottom-navigation-item"]:focus-visible,
 .ahcha-montage-shell .nav-link:focus-visible {
   outline: 2px solid var(--semantic-foreground-brand-primary, var(--brand));
