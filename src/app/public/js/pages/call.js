@@ -490,8 +490,12 @@ export default {
     }
     function rememberCardReturn(block = null) {
       if (wideMq.matches) return;
+      // An explicit item-evidence jump without an edited field returns to the item name,
+      // not whichever input happens to appear first in the responsive order-sheet layout.
       const target = lastCardInput?.isConnected && (!block || block.contains(lastCardInput))
-        ? lastCardInput : block?.querySelector('input[data-field],textarea[data-field],select[data-field],input[data-item]') || block?.querySelector('.cd-evbtn');
+        ? lastCardInput : block?.querySelector('input[data-item="part"]')
+          || block?.querySelector('input[data-field],textarea[data-field],select[data-field],input[data-item]')
+          || block?.querySelector('.cd-evbtn');
       if (!target) { cardReturn = null; return; }
       const index = Number(target.dataset.i);
       cardReturn = { target, field: target.dataset.field, itemField: target.dataset.item,
