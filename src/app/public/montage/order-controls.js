@@ -1,5 +1,5 @@
-import { A as e, C as t, D as n, E as r, O as i, S as a, T as o, _ as s, a as c, c as l, f as u, h as d, i as f, j as p, k as m, l as h, n as g, p as _, r as v, s as y, t as b, v as x, w as S, y as C } from "./chunks/runtime-BbGHn2yV.js";
-import { a as w, n as T, r as E, t as ee } from "./chunks/hooks-DCtrQPLa.js";
+import { A as e, C as t, D as n, E as r, O as i, S as a, T as o, _ as s, a as c, c as l, f as u, h as d, i as f, j as p, k as m, l as h, n as g, p as _, r as v, s as y, t as b, v as x, w as S, y as C } from "./chunks/runtime-BqiIdOSo.js";
+import { a as w, n as T, r as E, t as ee } from "./chunks/hooks--UtKr7Pm.js";
 // node_modules/@montage-ui/icon/dist/icon-minus.mjs
 var D = /* @__PURE__ */ p(e(), 1), O = /* @__PURE__ */ p(r(), 1), k = (0, D.forwardRef)((e, t) => /* @__PURE__ */ (0, O.jsx)(a, {
 	as: "svg",
@@ -985,17 +985,13 @@ var nt = (e, t = 166) => {
 }, rt = (e, t) => {
 	(0, D.useEffect)(() => {
 		if (!e) return;
-		let n, r = () => {
-			cancelAnimationFrame(n), n = requestAnimationFrame(() => {
-				t();
-			});
-		}, i = nt(t), a = e.ownerDocument.defaultView || window;
-		a.addEventListener("resize", i);
-		let o;
-		return typeof ResizeObserver < "u" && (o = new ResizeObserver(() => {
-			(process.env.NODE_ENV === "test" ? r : t)();
-		}), o.observe(e)), () => {
-			i.clear(), cancelAnimationFrame(n), a.removeEventListener("resize", i), o && (o.unobserve(e), o.disconnect());
+		let n, r = nt(t), i = e.ownerDocument.defaultView || window;
+		i.addEventListener("resize", r);
+		let a;
+		return typeof ResizeObserver < "u" && (a = new ResizeObserver(() => {
+			t();
+		}), a.observe(e)), () => {
+			r.clear(), cancelAnimationFrame(n), i.removeEventListener("resize", r), a && (a.unobserve(e), a.disconnect());
 		};
 	}, [e, t]);
 }, it = {

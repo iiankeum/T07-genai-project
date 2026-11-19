@@ -17,8 +17,19 @@ try {
   const ctx = await b.newContext({ viewport: { width: 390, height: 800 }, serviceWorkers: 'block' });
   await ctx.route('**/*', (r) => new URL(r.request().url()).origin === base.origin ? r.continue() : r.abort());
   const p = await ctx.newPage();
+  const diagnostics = [];
+  p.on('pageerror', (e) => diagnostics.push(e.message));
+  p.on('console', (entry) => { if (entry.type() === 'error') diagnostics.push(entry.text()); });
+  p.on('response', (response) => {
+    if (new URL(response.url()).pathname.startsWith('/montage/') && !response.ok()) diagnostics.push(`HTTP ${response.status()} ${response.url()}`);
+  });
   await p.goto(new URL('/#/calls?q=test', base).href);
-  await p.locator('#tabBar.ahcha-montage-shell [data-component="bottom-navigation"]').waitFor();
+  try {
+    await p.locator('#tabBar.ahcha-montage-shell [data-component="bottom-navigation"]').waitFor({ timeout: 8000 });
+  } catch (e) {
+    const moduleError = await p.evaluate(() => import('/montage/shell.js').then(() => null, (error) => String(error)));
+    throw new Error(`Montage shell did not appear: ${JSON.stringify({ moduleError, diagnostics, viewport: await p.viewportSize() })}`, { cause: e });
+  }
   assert.equal(await p.locator('#tabBar a[aria-current=page]').getAttribute('href'), '#/calls');
   await p.locator('#tabBar a[href="#/more"]').click();
   await p.getByRole('heading', { name: '모든 도구', exact: true }).waitFor();
