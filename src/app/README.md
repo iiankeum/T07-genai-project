@@ -2,7 +2,7 @@
 
 > AI 초안 · 돌린 사람: 신*림 · Codex · 2026-11-18
 
-Node.js 24 · ES 모듈 · SQLite로 실행한다. 화면은 빌드 없이 정적 파일로 제공한다. 운영 설치와 데이터 백업은 [자가 호스팅 안내](../../docs/self-hosting.md)를 따른다.
+Node.js 24 · ES 모듈 · SQLite로 실행한다. 운영 서버는 별도 빌드 없이 저장소에 포함된 정적 파일을 제공한다. 운영 설치와 데이터 백업은 [자가 호스팅 안내](../../docs/self-hosting.md)를 따른다.
 
 ## 개발 환경에서 실행
 
@@ -13,6 +13,10 @@ npm run start:offline
 ```
 
 [http://127.0.0.1:5600](http://127.0.0.1:5600)에서 가짜 샘플을 사용한다. `start:offline`은 fixture를 선택하고 유료 AI 호출을 끈다. 이름의 offline은 테스트 모드를 뜻하며 실제 로컬 모델 추론이 아니다. 실제 로컬 모델은 Ollama를 별도로 설치하고 `AI_PROVIDER=ollama`로 Node를 직접 실행한다. Docker는 필수가 아니다. [Mac 앱 안내](../../docs/mac-app.md)는 앱 빌드·음성 모델·언어 모델 준비와 검증 범위를 나눈다. 직접 설정해서 실행하려면 `.env.example`을 `.env`에 복사하고 `node --env-file=.env server.mjs`를 실행한다. `.env` 파일은 Git에서 제외한다.
+
+## Montage 화면 수정
+
+아차의 앱 메뉴·통화 기록 검색과 필터·주문 폼에 [Wanted Montage](https://montage.wanted.co.kr/docs/foundations)를 사용한다. UI 소스를 수정하면 `npm run build:montage`로 `public/montage/`를 재생성하고 소스와 함께 커밋한다. 운영 서버는 미리 생성된 파일을 사용한다.
 
 ## 테스트
 

@@ -183,3 +183,16 @@
  .cl-chips { margin-top:2px; gap:4px; }
  .cl-source { flex-basis:auto; margin-left:auto; font-size:10px; line-height:18px; }
 }
+
+/* Use the official search field and a keyboard-reachable Korean reset action. */
+.cl-montage-search:not([hidden]) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
+.cl-montage-search [data-component="search-field"] { min-width: 0; }
+.cl-montage-search [data-role="search-field-reset"] { display: none; }
+.cl-montage-statuses > button { flex-shrink: 0; min-height: 44px; }

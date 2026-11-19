@@ -27,8 +27,25 @@ jobs:
           cache: npm
           cache-dependency-path: src/app/package-lock.json
       - run: npm ci
+      - name: Verify committed Montage assets match source
+        run: |
+          npm run build:montage
+          git diff --exit-code -- public/montage
+          test -z "$(git status --porcelain --untracked-files=all -- public/montage)"
       - run: npm test
       - run: npx playwright install --with-deps chromium
+      - name: Montage shell mobile and desktop (temporary fake demo)
+        run: |
+          fixture_dir="$(mktemp -d)"
+          HOST=127.0.0.1 PORT=5627 DATA_DIR="$fixture_dir" DEMO_MODE=1 node --import ./tools/no-paid-ai.mjs server.mjs >"$fixture_dir/server.log" 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true; wait "$pid" 2>/dev/null || true; rm -rf "$fixture_dir"' EXIT
+          for _ in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:5627/healthz >/dev/null; then break; fi
+            sleep 0.25
+          done
+          if ! curl -fsS http://127.0.0.1:5627/healthz >/dev/null; then cat "$fixture_dir/server.log"; exit 1; fi
+          E2E_OUTPUT_DIR=artifacts/e2e/montage-shell node tools/montage-shell-browser-e2e.mjs
       - run: npm run test:e2e
       - run: npm run test:upload-e2e
       - run: npm run test:card-recovery-e2e

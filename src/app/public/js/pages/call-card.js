@@ -1,11 +1,16 @@
 // 통화 상세의 주문 카드(F04 · F05 · F06 · F07 다시 정리 · F11): 칸 고치기 · 근거 듣기 · 확정 · 출고 · 다시 전화 · 다시 정리.
 // call.js에서 사용한다. 입력을 모아 저장하고 실패한 변경은 현재 탭에서 복구한다.
 import { api } from '../api.js';
-import { html, render, toast, confirmBox, fmtSec, fmtWhen, cardChip } from '../ui.js';
+import { html, render as renderNative, toast, confirmBox, fmtSec, fmtWhen, cardChip } from '../ui.js';
 import {
   CALL_TYPES, confirmationIssues, domainFor, isShipTarget, itemId, normalizePartNo,
 } from '../domain.js';
 import { groupUnsure, cloneItems, itemsForSave, num, parseUnsureField, itemMark, FIELD_LABEL } from './call-util.js';
+
+// Keep the existing order flow available if optional presentation assets fail.
+const montageControls = await import('/montage/order-controls.js').catch(() => null);
+const enhanceControls = (target) => montageControls?.enhanceControls(target);
+const disposeControls = (target) => montageControls?.disposeControls(target);
 
 const TOP_FIELDS = [
   { key: 'customer', label: '거래처', ph: '통화에서 말한 거래처' },
@@ -51,6 +56,13 @@ const icon = (name) => html`<svg class="cd-icon" viewBox="0 0 24 24" fill="none"
  * @param {(r:object|null)=>void} o.onJumpToTranscript
  */
 export function mountCard(el, o) {
+  if (montageControls) el.classList.add('montage-order-card', 'montage-scope');
+  const render = (target, content) => {
+    disposeControls(target);
+    renderNative(target, content);
+    // Dialogs outside the card retain their existing lifecycle and focus behavior.
+    if (target === el || el.contains(target)) enhanceControls(target);
+  };
   let call = o.call;
   let card = call.card || null;
   let savedCard = card;
@@ -1013,6 +1025,7 @@ export function mountCard(el, o) {
     },
     flush,
     destroy() {
+      disposeControls(el);
       alive = false;
       if (pending.size) flush().catch(() => {});
       window.removeEventListener('online', handleOnline);
