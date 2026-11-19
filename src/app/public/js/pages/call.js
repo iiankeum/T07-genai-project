@@ -471,11 +471,16 @@ export default {
       const origin = slot('body').getBoundingClientRect();
       const from = source.getBoundingClientRect();
       const to = field.getBoundingClientRect();
-      const fromY = from.top + from.height / 2;
-      const toY = to.top + Math.min(to.height / 2, 22);
       const top = document.querySelector('.topbar')?.offsetHeight || 0;
-      if (fromY < Math.max(top, panelRect.top) || fromY > panelRect.bottom
-        || toY < Math.max(top, cardRect.top) || toY > cardRect.bottom || Math.max(fromY, toY) > window.innerHeight) return;
+      // A wrapped evidence segment can be taller than its scroll pane. Anchor
+      // within its visible portion, but never connect to fully clipped content.
+      const fromTop = Math.max(from.top, panelRect.top, top);
+      const fromBottom = Math.min(from.bottom, panelRect.bottom, window.innerHeight);
+      const toTop = Math.max(to.top, cardRect.top, top);
+      const toBottom = Math.min(to.bottom, cardRect.bottom, window.innerHeight);
+      if (fromBottom <= fromTop || toBottom <= toTop) return;
+      const fromY = (fromTop + fromBottom) / 2;
+      const toY = Math.min(Math.max(to.top + Math.min(to.height / 2, 22), toTop), toBottom);
       const x1 = from.right - origin.left;
       const x2 = to.left - origin.left;
       const y1 = fromY - origin.top;
