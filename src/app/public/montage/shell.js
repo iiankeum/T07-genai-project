@@ -1,6 +1,6 @@
-import { A as e, E as t, O as n, S as r, a as i, g as a, h as o, j as s, k as c, n as l, o as u, s as d, t as f, u as p, v as m, w as h } from "./chunks/runtime-hdV0LhUM.js";
-import { t as g } from "./chunks/icon-search-PcaNiANh.js";
-// ../../../../../../../tmp/ahcha-shell-combined/app/node_modules/@montage-ui/icon/dist/icon-apps.mjs
+import { A as e, E as t, O as n, S as r, a as i, g as a, h as o, j as s, k as c, n as l, o as u, s as d, t as f, u as p, v as m, w as h } from "./chunks/runtime-BqiIdOSo.js";
+import { t as g } from "./chunks/icon-search-OzUzHR4Q.js";
+// node_modules/@montage-ui/icon/dist/icon-apps.mjs
 var _ = /* @__PURE__ */ s(e(), 1), v = /* @__PURE__ */ s(t(), 1), y = (0, _.forwardRef)((e, t) => /* @__PURE__ */ (0, v.jsxs)(r, {
 	as: "svg",
 	viewBox: "0 0 24 24",
