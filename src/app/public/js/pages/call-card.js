@@ -265,6 +265,7 @@ export function mountCard(el, o) {
         ${editable() ? html`<button type="button" class="btn btn-sm cd-add" data-act="item-add">부품 추가</button>` : ''}
       </div>
       ${flagsView(groups.get('items'))}
+      <div class="cd-slip-column-head" aria-hidden="true"><span>No.</span><span>품명 / 위치</span><span>품번</span><span>수량</span></div>
       <ol class="cd-item-list" data-slot="items">${itemsList(groups)}</ol>
     </section>`;
   }
@@ -396,13 +397,14 @@ export function mountCard(el, o) {
       <header class="cd-card-head">
         <div class="cd-pane-title"><div class="cd-slip-title"><small>Order sheet</small><h2 id="cd-card-h">주문서</h2></div><span data-slot="status">${cardChip(card.status)}</span></div>
         <div class="cd-card-toolbar">
-          <div class="cd-save-indicator" data-slot="save-indicator" aria-live="polite">${saveIndicator()}</div>
+          <dl class="cd-slip-metadata"><div><dt>문서 번호</dt><dd>${call.id}</dd></div>${call.recordedAt ? html`<div><dt>작성일</dt><dd>${fmtWhen(call.recordedAt)}</dd></div>` : ''}</dl><div class="cd-save-indicator" data-slot="save-indicator" aria-live="polite">${saveIndicator()}</div>
           ${actions ? html`<button type="button" class="cd-actions-jump" data-act="status-jump" aria-controls="cd-card-actions">처리 버튼 보기</button>` : ''}
         </div>
       </header>
       <div class="cd-card-scroll" tabindex="0" role="region" aria-label="주문 카드 내용">
         <div data-slot="save-status" tabindex="-1" aria-live="polite">${saveStatus()}</div>
         ${card.aiError ? html`<p class="notice notice-warn" role="note">AI 초안을 만들지 못했습니다. 주문 정보를 직접 채워 주세요. ${card.aiError}</p>` : ''}
+        <div class="cd-slip-recipient"><strong>${card.customer || '거래처 미확인'}</strong><span>귀중</span><p>아래와 같이 주문 내용을 확인합니다.</p></div>
         <section class="cd-order-primary" aria-label="거래처, 차량과 출고 요청일"><div class="cd-grid">${[TOP_FIELDS[0], WHEN_FIELDS[0], TOP_FIELDS[2], TOP_FIELDS[3]].map(f => fieldBlock(f, groups))}</div></section>
         ${itemsSection(groups)}
         <div class="cd-order-context" data-slot="order-context">${contextView()}</div>

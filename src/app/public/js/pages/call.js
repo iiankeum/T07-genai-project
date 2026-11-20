@@ -79,16 +79,23 @@ export default {
       <div class="cd-overview">
         <nav class="cd-topnav no-print" aria-label="통화 탐색">
           <a class="cd-back" href="${backHref()}">${icon('arrow')} 통화 기록으로</a>
+          <button type="button" class="cd-mobile-controls" data-act="mobile-controls" aria-label="통화 상세 도구" aria-expanded="false">⋯</button>
           <button type="button" class="btn btn-sm cd-evidence-toggle" data-act="open-transcript" aria-controls="cd-trans" aria-expanded="false">통화 원문 보기</button>
           <a class="btn btn-sm" href="#/upload">${icon('upload')} 녹음 올리기</a>
         </nav>
         <div data-slot="head"><p class="loading" role="status">불러오는 중…</p></div>
       </div>
       <div data-slot="progress"></div>
+      <nav class="cd-document-tabs no-print" aria-label="주문 노트 보기">
+        <button type="button" data-document="card" aria-pressed="true">주문서</button>
+        <button type="button" data-document="summary" aria-pressed="false">대화 기록</button>
+        <button type="button" data-document="script" aria-pressed="false">스크립트</button>
+      </nav>
       <nav class="cd-jump no-print hidden" data-slot="jump" aria-label="이 화면 안에서 이동" role="tablist">
-        <button type="button" role="tab" data-jump="trans" aria-controls="cd-trans" aria-pressed="false" aria-selected="false" tabindex="-1">통화</button>
         <button type="button" role="tab" data-jump="card" aria-controls="cd-card" aria-pressed="true" aria-selected="true">주문서</button>
-        <button type="button" role="tab" data-jump="assistant" aria-controls="cd-assistant" aria-pressed="false" aria-selected="false" tabindex="-1">대화</button>
+        <button type="button" role="tab" data-jump="summary" aria-controls="cd-trans" aria-pressed="false" aria-selected="false" tabindex="-1">대화 기록</button>
+        <button type="button" role="tab" data-jump="trans" aria-controls="cd-trans" aria-pressed="false" aria-selected="false" tabindex="-1">스크립트</button>
+        <button type="button" role="tab" data-jump="assistant" aria-controls="cd-assistant" aria-pressed="false" aria-selected="false" tabindex="-1">Ask 아차</button>
       </nav>
       <div class="cd-body hidden" data-slot="body">
         <details class="cd-panel cd-history no-print" data-slot="history" ${wideMq.matches ? html`open` : ''}>
@@ -200,7 +207,7 @@ export default {
         <div class="cd-identity">
           <span class="cd-avatar" aria-hidden="true">${icon('phone')}</span>
           <div class="cd-identity-text">
-            <h1 class="cd-title">${name}</h1>
+            <h1 class="cd-title">${name}${subject ? html`<span class="cd-document-subject"> · ${subject}</span>` : ''}</h1>
             <ul class="cd-title-meta" aria-label="통화 정보">
               ${subject ? html`<li class="cd-subject">${subject}</li>` : ''}
               ${call.recordedAt ? html`<li><time datetime="${call.recordedAt}">${fmtWhen(call.recordedAt)}</time></li>` : ''}
@@ -533,7 +540,7 @@ export default {
       return true;
     }
     function showMobilePane(name) {
-      root.dataset.mobilePane = name;
+      root.dataset.mobilePane = name === 'summary' ? 'trans' : name;
       slot('jump').querySelectorAll('[data-jump]').forEach((btn) => {
         btn.setAttribute('aria-pressed', String(btn.dataset.jump === name));
         btn.setAttribute('aria-selected', String(btn.dataset.jump === name));
@@ -579,6 +586,17 @@ export default {
     }
 
     // ── 카드에서 근거 고르기(F05) ──────────────────────────────────
+    function showDocument(view) {
+      root.dataset.document = view;
+      root.querySelectorAll('[data-document]').forEach(button => {
+        if (button instanceof HTMLButtonElement) button.setAttribute('aria-pressed', String(button.dataset.document === view));
+      });
+      setDesktopTranscript(view !== 'card');
+      if (view !== 'card') {
+        showSummary = view === 'summary';
+        renderTranscript();
+      }
+    }
     function setDesktopTranscript(open) {
       if (!wideMq.matches) return;
       root.classList.toggle('cd-transcript-open', open);
@@ -793,6 +811,8 @@ export default {
     function onClick(e) {
       const t = e.target;
       if (!(t instanceof Element) || t.closest('.cd-assistant')) return;
+      const documentButton = t.closest('button[data-document]');
+      if (documentButton) { showDocument(documentButton.dataset.document); return; }
       const findButton = t.closest('[data-trans-find]');
       if (findButton) { updateTranscriptSearch(findButton.dataset.transFind === 'prev' ? -1 : 1, true); return; }
       const historyBtn = t.closest('[data-history]');
@@ -808,6 +828,7 @@ export default {
       if (transTab) {
         const mode = transTab.dataset.transView;
         showSummary = mode === 'summary';
+        if (!wideMq.matches && root.dataset.mobilePane === 'trans') showMobilePane(showSummary ? 'summary' : 'trans');
         renderTranscript();
         slot('trans').querySelector(`[data-trans-view="${mode}"]`)?.focus({ preventScroll: true });
         return;
@@ -815,8 +836,13 @@ export default {
       const act = t.closest('[data-act]');
       if (act && !slot('card').contains(act)) {
         switch (act.dataset.act) {
+          case 'mobile-controls': {
+            const open = root.classList.toggle('cd-mobile-controls-open');
+            act.setAttribute('aria-expanded', String(open));
+            return;
+          }
           case 'open-transcript': setDesktopTranscript(!act.matches('.cd-evidence-toggle') || !root.classList.contains('cd-transcript-open')); return;
-          case 'close-transcript': setDesktopTranscript(false); root.querySelector('[data-act="open-transcript"]')?.focus({preventScroll:true}); return;
+          case 'close-transcript': showDocument('card'); (root.querySelector('.cd-document-tabs button')?.getClientRects().length ? root.querySelector('.cd-document-tabs button') : root.querySelector('[data-act="open-transcript"]'))?.focus({preventScroll:true}); return;
           case 'back5': if (audio) { audio.currentTime = Math.max(0, audio.currentTime - 5); } return;
           case 'follow':
             follow = !follow;
@@ -851,10 +877,15 @@ export default {
       const jump = t.closest('[data-jump]');
       if (jump) {
         const name = jump.dataset.jump;
-        if (name === 'trans' && root.dataset.mobilePane === 'card') rememberCardReturn();
+        const transcript = name === 'summary' || name === 'trans';
+        if (transcript && root.dataset.mobilePane === 'card') rememberCardReturn();
         showMobilePane(name);
+        if (transcript && showSummary !== (name === 'summary')) {
+          showSummary = name === 'summary';
+          renderTranscript();
+        }
         if (name === 'card' && restoreCardReturn()) return;
-        const sec = slot(name);
+        const sec = slot(transcript ? 'trans' : name);
         if (sec.getBoundingClientRect().top < (topbar?.offsetHeight || 60)) {
           sec.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' });
         }

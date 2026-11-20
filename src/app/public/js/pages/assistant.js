@@ -48,8 +48,8 @@ export default {
         </details>
         <section class="as-chat" aria-labelledby="as-chat-title">
           <header class="as-chat-head">
-            <div><h2 id="as-chat-title">${embedded ? '아차와 대화' : '아차 어시스턴트'}</h2><p class="help">통화와 승인된 지식을 근거로 답변해요.</p></div>
-            <div class="ka-actions"><button type="button" class="btn" data-act="new">＋ 새 대화</button></div>
+            <div><h2 id="as-chat-title">${embedded ? 'Ask 아차' : '아차 어시스턴트'}</h2><p class="help">통화와 승인된 지식을 근거로 답변해요.</p></div>
+            <div class="ka-actions"><button type="button" class="btn" data-act="new" aria-label="새 대화"><span class="as-new-icon" aria-hidden="true">↗</span><span class="as-new-label">＋ 새 대화</span></button></div>
           </header>
           ${embedded ? html`<details class="as-history-menu"><summary>대화 기록</summary>` : ''}
           <div class="as-history">
@@ -73,7 +73,7 @@ export default {
           <form class="as-compose" data-ref="form">
             <label class="sr-only" for="as-question">어시스턴트에게 질문</label>
             <textarea class="textarea" id="as-question" rows="${embedded ? 1 : 2}" maxlength="${DEFAULT_QUESTION_LIMIT}" enterkeyhint="send" placeholder="주문에서 다시 확인할 게 있을까요?"></textarea>
-            <button type="submit" class="btn btn-primary" data-act="send" disabled>${embedded ? '전송' : '보내기'}</button>
+            <button type="submit" class="btn btn-primary" data-act="send" aria-label="보내기" disabled>${embedded ? html`<span aria-hidden="true" class="as-arrow">↑</span><span class="as-send-label">전송</span>` : '보내기'}</button>
             <button type="button" class="btn" data-act="stop" hidden>응답 중단</button>
           </form>
           <p class="help" id="as-thread-loading" data-ref="thread-loading" role="status" hidden></p>
@@ -183,7 +183,7 @@ export default {
         parts.push(messageView({ role: 'user', text: request.question }));
         parts.push(html`<div class="ask-msg is-bot"><div class="ask-bubble is-wait" role="status"><span class="spinner" aria-hidden="true"></span> 통화 기록 확인 중…</div></div>`);
       }
-      render(log, parts.length ? html`${parts}` : embedded ? html`<p class="as-welcome-note">현재 통화와 팀에서 확인한 지식을 함께 살펴봅니다.</p>` : html`<div class="as-welcome"><span class="as-icon" aria-hidden="true">✧</span><h3>어떤 일부터 함께할까요?</h3><p>주문 내용이나 팀에서 승인한 현장 표현을 물어보세요.</p></div>`);
+      render(log, parts.length ? html`${parts}` : embedded ? html`<p class="as-welcome-note">이 통화의 주문 내용과<br>다시 확인할 부분을 물어보세요.</p>` : html`<div class="as-welcome"><span class="as-icon" aria-hidden="true">✧</span><h3>어떤 일부터 함께할까요?</h3><p>주문 내용이나 팀에서 승인한 현장 표현을 물어보세요.</p></div>`);
       log.scrollTop = log.scrollHeight;
       render(ref('error'), failure ? html`<div class="notice notice-error as-error" role="alert"><span>${failure.message}</span>
         ${failure.question ? html`<button type="button" class="btn" data-act="retry">다시 시도</button>` : ''}</div>` : '');

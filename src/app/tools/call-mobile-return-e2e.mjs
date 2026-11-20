@@ -20,7 +20,7 @@ try{
  const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
  for(const count of [5,10])for(const width of [360,390])for(const big of [false,true]){
  await page.goto('about:blank');await page.setViewportSize({width,height:844});await page.goto(base+'/#/calls/fx-c51');await page.locator('.cd-actions').waitFor();
- await page.evaluate(async n=>{const{api}=await import('/js/api.js');const c=await api.get('/api/calls/fx-c51');const items=Array.from({length:n},(_,i)=>({id:'return-fake-'+i,part:'가짜 시험 부품 '+(i+1),qty:1,partNo:'FAKE-'+i,quote:c.segments?.[2]?.text||'가짜 근거',at:13,seg:3}));await api.patch('/api/cards/fx-c51',{expectedRevision:c.card.revision,items});},count);await page.reload();await page.locator('.cd-actions').waitFor();assert.equal(await page.locator('.cd-item').count(),count,'fixture prepared item count');if(big)await page.locator('#bigTextBtn').click();
+ await page.evaluate(async n=>{const{api}=await import('/js/api.js');const c=await api.get('/api/calls/fx-c51');const items=Array.from({length:n},(_,i)=>({id:'return-fake-'+i,part:'가짜 시험 부품 '+(i+1),qty:1,partNo:'FAKE-'+i,quote:c.segments?.[2]?.text||'가짜 근거',at:13,seg:3}));await api.patch('/api/cards/fx-c51',{expectedRevision:c.card.revision,items});},count);await page.reload();await page.locator('.cd-actions').waitFor();assert.equal(await page.locator('.cd-item').count(),count,'fixture prepared item count');if(big){await page.getByRole('button',{name:'통화 상세 도구'}).click();await page.locator('#bigTextBtn').click();await page.getByRole('button',{name:'통화 상세 도구'}).click();}
  const input=page.locator(`[data-item="partNo"][data-i="${count-1}"]`);const saved=page.waitForResponse(r=>r.url().endsWith('/api/cards/fx-c51')&&r.request().method()==='PATCH'&&r.ok());await input.fill('FAKE-RETURN-2');await input.press('Tab');await saved;
  await page.locator(`[data-ev="item:${count-1}"] .cd-evbtn`).click();
  await page.locator(`[data-ev="item:${count-1}"] [data-act="to-trans"]`).click();
@@ -39,7 +39,7 @@ try{
  // Choosing another item's explicit evidence returns to that item rather than the previous basic field.
  await page.locator('[data-ev="item:0"] .cd-evbtn').click();await page.locator('[data-ev="item:0"] [data-act="to-trans"]').click();await page.locator('[data-jump="card"]').click();assert.equal(await page.evaluate(()=>document.activeElement.dataset.item),'part');assert.equal(await page.evaluate(()=>document.activeElement.dataset.i),'0');
  results.push({count,width,big,returnsEditedInput:true,visibleAboveActions:true,normalTabRetainsField:true,otherEvidenceUsesOwnItem:true});
- if(big)await page.locator('#bigTextBtn').click();
+ if(big){await page.getByRole('button',{name:'통화 상세 도구'}).click();await page.locator('#bigTextBtn').click();await page.getByRole('button',{name:'통화 상세 도구'}).click();}
  }
  // Real UI re-render: removing an earlier row changes indexes while the remembered item ID survives.
  await page.locator('[data-item="partNo"][data-i="9"]').focus();
