@@ -1,5 +1,5 @@
 // 받아쓴 글 → 카드 추출 → 저장. 일꾼 결과(onTranscript) · 다시 정리(reextract) · 실시간 저장(processLive) 공통.
-import { db, newId, nowIso, parseJson, tx } from './db.mjs';
+import { db, newId, nowIso, parseJson, tx, workspaceContext, defaultWorkspaceId } from './db.mjs';
 import { HttpError, cleanText } from './http.mjs';
 import { ipHash } from './security.mjs';
 import { getCallRow, getCardRow, cardView, makeTitle, dictionaryForAi } from './repo.mjs';
@@ -99,11 +99,21 @@ export async function onTranscript(callId, { text, segments, engine, durationSec
  * @param {{beforeAi?: () => void}} [opts] AI 를 부르기 직전에 할 일(하루 상한 세기 등)
  * @returns {Promise<object>} cardView
  */
-export async function reextract(callId, { beforeAi } = {}) {
+const runningReextract = new Set();
+
+export async function reextract(callId, opts = {}) {
+  const key = JSON.stringify([workspaceContext()?.workspace.id ?? defaultWorkspaceId(), callId]);
+  if (runningReextract.has(key)) throw new HttpError(409, 'not_ready', '이미 AI가 초안을 정리하고 있습니다.');
+  runningReextract.add(key);
+  try { return await runReextract(callId, opts); }
+  finally { runningReextract.delete(key); }
+}
+
+async function runReextract(callId, { beforeAi } = {}) {
   const call = getCallRow(callId);
   if (!call) throw new HttpError(404, 'not_found', '통화를 찾지 못했습니다.');
-  if (call.status === 'queued' || call.status === 'transcribing') {
-    throw new HttpError(409, 'not_ready', '아직 받아쓰는 중입니다. 다 된 뒤에 다시 정리해 주세요.');
+  if (['queued', 'transcribing', 'extracting'].includes(call.status)) {
+    throw new HttpError(409, 'not_ready', '아직 통화를 처리하고 있습니다. 완료된 뒤 다시 정리해 주세요.');
   }
   if (!String(call.transcript || '').trim()) throw new HttpError(409, 'no_transcript', '받아쓴 글이 없어 정리할 수 없습니다.');
   const card = getCardRow(callId);

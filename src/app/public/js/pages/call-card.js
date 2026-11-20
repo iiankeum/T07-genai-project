@@ -348,11 +348,11 @@ export function mountCard(el, o) {
   }
 
   function reexView() {
-    if (!canEdit) return '';
+    if (!canEdit || (card && !card.aiError)) return '';
     const locked = card && card.status !== 'draft';
     const ai = o.meta?.aiEnabled !== false;
     const hasText = Boolean(call.transcript || (call.segments || []).length);
-    return html`<button type="button" class="btn btn-sm" data-act="reextract" ${locked || !ai || !hasText || reexBusy ? html`disabled` : ''}>${reexBusy ? html`<span class="spinner" aria-hidden="true"></span> 다시 정리하는 중…` : 'AI로 다시 정리'}</button>
+    return html`<button type="button" class="btn btn-sm" data-act="reextract" ${locked || !ai || !hasText || reexBusy ? html`disabled` : ''}>${reexBusy ? html`<span class="spinner" aria-hidden="true"></span> 다시 정리하는 중…` : 'AI 초안 다시 시도'}</button>
       ${locked ? html`<p class="help">확인 필요 상태로 되돌리면 다시 정리할 수 있습니다.</p>` : ''}
       ${!ai ? html`<p class="help">지금은 AI로 다시 정리할 수 없습니다.</p>` : ''}
       ${!hasText ? html`<p class="help">받아쓴 글이 없어 다시 정리할 수 없습니다.</p>` : ''}
@@ -376,6 +376,15 @@ export function mountCard(el, o) {
 
   function contextView() {
     return html`<button class="cd-context-jump" type="button" data-act="basic-jump" aria-label="${card.customer || '거래처 미입력'}, ${card.carModel || '차종 미입력'}, ${card.plate || '차번호 미입력'} · 차량·거래처 정보 확인"><span class="cd-context-values"><strong>${card.customer || '거래처 미입력'}</strong><span>${card.carModel || '차종 미입력'} · ${card.plate || '차번호 미입력'}</span></span><span class="cd-context-action">정보 확인 <span aria-hidden="true">›</span></span></button>`;
+  }
+
+  function autoDraftView() {
+    const hasAutoDraft = card.status === 'draft' && !card.aiError && Boolean(card.aiDraft && card.aiModel);
+    const nextSteps = Array.isArray(card.askBack) ? card.askBack : [];
+    return hasAutoDraft ? html`<section class="cd-auto-draft" aria-label="초안 검토">
+          <p><strong>${card.callType === '주문' ? '주문 초안' : '통화 초안'}을 만들었어요</strong><span> · 확인 전</span></p>
+          ${nextSteps.length ? html`<p class="cd-auto-next">확인할 내용: ${nextSteps.slice(0, 2).join(' · ')}</p><a href="${o.todoHref}">브리핑 할 일 보기</a>` : ''}
+        </section>` : '';
   }
 
   function renderAll() {
@@ -404,6 +413,7 @@ export function mountCard(el, o) {
       <div class="cd-card-scroll" tabindex="0" role="region" aria-label="주문 카드 내용">
         <div data-slot="save-status" tabindex="-1" aria-live="polite">${saveStatus()}</div>
         ${card.aiError ? html`<p class="notice notice-warn" role="note">AI 초안을 만들지 못했습니다. 주문 정보를 직접 채워 주세요. ${card.aiError}</p>` : ''}
+        <div data-slot="auto-draft">${autoDraftView()}</div>
         <div class="cd-slip-recipient"><strong>${card.customer || '거래처 미확인'}</strong><span>귀중</span><p>아래와 같이 주문 내용을 확인합니다.</p></div>
         <section class="cd-order-primary" aria-label="거래처, 차량과 출고 요청일"><div class="cd-grid">${[TOP_FIELDS[0], WHEN_FIELDS[0], TOP_FIELDS[2], TOP_FIELDS[3]].map(f => fieldBlock(f, groups))}</div></section>
         ${itemsSection(groups)}
@@ -428,7 +438,7 @@ export function mountCard(el, o) {
         ${other.length ? html`<section class="cd-sec cd-other-flags" aria-labelledby="cd-other-h"><h3 id="cd-other-h">추가 확인</h3>${flagsView(other.map((x) => ({ ...x, u: { ...x.u, reason: otherReason(x.u) } })))}</section>` : ''}
         <section class="cd-sec cd-ask" aria-labelledby="cd-ask-h" data-slot="ask">${askView()}</section>
         <section class="cd-sec cd-callback" aria-label="다시 전화할 곳" data-slot="callback">${callbackView()}</section>
-        <section class="cd-sec cd-reex" aria-label="AI로 다시 정리" data-slot="reex">${reexView()}</section>
+        ${card.aiError ? html`<section class="cd-sec cd-reex" aria-label="AI 초안 다시 시도" data-slot="reex">${reexView()}</section>` : ''}
       </div>
       ${actions ? html`<section class="cd-actions" id="cd-card-actions" aria-label="카드 상태 바꾸기" data-slot="actions" tabindex="-1">${actions}</section>` : ''}
     `);
@@ -469,6 +479,7 @@ export function mountCard(el, o) {
     if (slot('order-context')) render(slot('order-context'), contextView());
     el.querySelectorAll('[data-chip]').forEach((s) => render(s, html`${chipFor(s.dataset.chip)}`));
     const st = slot('status'); if (st) render(st, cardChip(card.status));
+    if (card.status !== 'draft' && slot('auto-draft')) render(slot('auto-draft'), html``);
     const ac = slot('actions');
     if (ac) {
       const previous = ac.querySelector('.cd-confirm-issues');
@@ -485,7 +496,10 @@ export function mountCard(el, o) {
     const s = slot('items');
     if (s) render(s, html`${itemsList(groupUnsure(localCard(), items))}`);
   }
-  function renderAsk() { const s = slot('ask'); if (s) render(s, askView()); }
+  function renderAsk() {
+    const s = slot('ask'); if (s) render(s, askView());
+    const a = slot('auto-draft'); if (a && card) render(a, autoDraftView());
+  }
   function renderCallback() { const s = slot('callback'); if (s) render(s, callbackView()); }
   function renderReex() { const s = slot('reex'); if (s) render(s, reexView()); }
   function renderUrgent() {
@@ -843,14 +857,18 @@ export function mountCard(el, o) {
       if (alive) refreshDecor();
     }
   }
-  async function reextract() {
-    if (reexBusy || busy) return;
-    const ok = await confirmBox('AI 로 이 통화의 카드를 다시 정리할까요? 낱말 사전에 고친 낱말이 반영됩니다. 손으로 고친(「사람이 고침」) 칸은 그대로 두고, 빈칸과 AI 초안 칸만 새로 채웁니다.');
+  async function reextract({ inline = false } = {}) {
+    if (!canEdit || o.meta?.aiEnabled === false || !String(call.transcript || '').trim() ||
+        (card && (card.status !== 'draft' || !card.aiError)) || reexBusy || busy) return;
+    const ok = await confirmBox(card ? 'AI 로 이 통화의 카드를 다시 정리할까요? 낱말 사전에 고친 낱말이 반영됩니다. 손으로 고친(「사람이 고침」) 칸은 그대로 두고, 빈칸과 AI 초안 칸만 새로 채웁니다.' : 'AI로 이 대화에서 초안을 만들까요? 주문은 자동으로 확정되지 않습니다.');
     if (!ok || !alive || busy || reexBusy) return;
     reexBusy = true;
     renderReex();
+    o.onReextractState?.('preparing');
     try {
       await flush();
+      if (!alive) return;
+      o.onReextractState?.('requesting');
       const r = await api.post(`/api/calls/${encodeURIComponent(o.callId)}/reextract`);
       if (!alive) return;
       warn(r);
@@ -862,9 +880,13 @@ export function mountCard(el, o) {
         o.onCardChange(card, { fields: ['all'] });
       }
       const err = r?.call?.card?.aiError || r?.card?.aiError;
-      toast(err ? `다시 정리하지 못했습니다: ${err}` : '카드를 다시 정리했습니다. 새 초안을 확인해 주세요.', err ? 'error' : 'ok');
+      o.onReextractState?.(err ? 'error' : 'complete', err || '');
+      if (!inline) toast(err ? `다시 정리하지 못했습니다: ${err}` : '카드를 다시 정리했습니다. 새 초안을 확인해 주세요.', err ? 'error' : 'ok');
     } catch (e) {
-      if (alive) toast(e?.message || '다시 정리하지 못했습니다.', 'error');
+      if (alive) {
+        o.onReextractState?.('error', e?.message || '');
+        if (!inline) toast(e?.message || '다시 정리하지 못했습니다.', 'error');
+      }
     } finally {
       reexBusy = false;
       if (alive) renderReex();
@@ -1030,6 +1052,7 @@ export function mountCard(el, o) {
       renderAll();
     },
     flush,
+    reextract,
     destroy() {
       disposeControls(el);
       alive = false;

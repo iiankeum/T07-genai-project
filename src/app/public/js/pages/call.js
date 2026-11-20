@@ -2,7 +2,7 @@
 // 카드 칸을 누르면 그 말을 한 문장을 칠하고 그 시각부터 재생한다. 처리 중인 통화는 5초마다 다시 읽는다.
 import { activateQuote } from './call-quote.js';
 import { api } from '../api.js';
-import { html, render, toast, copyText, fmtWhen, fmtClock, fmtSec, callChip, SOURCE_LABEL, highlight, href } from '../ui.js';
+import { html, render, toast, copyText, fmtWhen, fmtClock, fmtSec, callChip, SOURCE_LABEL, highlight, href, kstDay } from '../ui.js';
 import { isShipTarget } from '../domain.js';
 import { WORKING, num, segAtTime, resolveEvidence, buildMarks, transcriptText, groupUnsure, cloneItems } from './call-util.js';
 import { mountCard } from './call-card.js';
@@ -47,6 +47,9 @@ export default {
     let meta = ctx.meta || {};
     let call = null;
     let retryPending = false;
+    let orderDraftPhase = 'idle';
+    let orderDraftError = '';
+    let restoreDraftFocus = false;
     let cardCtl = null;
     let assistantCleanup = null;
     let alive = true;
@@ -259,7 +262,7 @@ export default {
       } else if (call.status === 'transcribing') {
         line = `받아쓰기 일꾼이 받아쓰고 있습니다${w.engine ? ` (${w.engine})` : ''}.`;
       } else {
-        line = 'AI 가 받아쓴 글에서 주문 카드를 만들고 있습니다.';
+        line = 'AI가 이 대화에서 초안을 만들고 있습니다. 추가로 누를 버튼은 없어요.';
       }
       render(s, html`<section class="card cd-progress" aria-live="polite">
         <h2>통화를 정리하고 있습니다</h2>
@@ -367,6 +370,32 @@ export default {
         ${checks.length ? html`<h3>담당자 확인 항목</h3><ul>${checks.map((reason) => html`<li>${reason}</li>`)}</ul>` : ''}
       </div>`;
     }
+    function renderOrderDraftAction() {
+      const target = root.querySelector('[data-slot="trans-order-draft"]');
+      if (!target) return;
+      const card = curCard();
+      const role = meta?.access?.role || 'admin';
+      const canRequest = Boolean(cardCtl && ['admin', 'reception'].includes(role) &&
+        meta?.aiEnabled !== false && String(call.transcript || '').trim() &&
+        !WORKING.includes(call.status) && (!card || (card.status === 'draft' && card.aiError)));
+      const waiting = ['preparing', 'requesting'].includes(orderDraftPhase);
+      const recordedDay = call.recordedAt ? kstDay(new Date(call.recordedAt)) : null;
+      const todo = Array.isArray(card?.askBack) ? card.askBack.filter((line) => typeof line === 'string' && line.trim()) : [];
+      render(target, html`
+        ${canRequest ? html`<button type="button" class="btn btn-sm btn-primary" data-act="trans-order-draft" ${waiting ? html`disabled` : ''}>${card ? 'AI 초안 다시 시도' : 'AI로 초안 만들기'}</button>` : ''}
+        ${waiting ? html`<p class="cd-draft-progress" role="status"><span class="spinner" aria-hidden="true"></span>${orderDraftPhase === 'preparing' ? '변경 사항을 먼저 저장하는 중…' : 'AI가 이 대화로 초안을 정리하는 중…'}</p>` : ''}
+        ${orderDraftPhase === 'error' ? html`<div class="cd-draft-result is-error" role="status"><strong>초안을 정리하지 못했습니다. 기존 카드 내용은 그대로입니다.</strong>${orderDraftError ? html`<p>${orderDraftError}</p>` : ''}</div>` : ''}
+        ${orderDraftPhase === 'complete' && card ? html`<div class="cd-draft-result">
+          <div class="cd-draft-result-heading" tabindex="-1" data-draft-result role="status">
+            <svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m4 8 2.5 2.5L12 5"/></svg>
+            <div><strong>새 ${card.callType === '주문' ? '주문' : (card.callType || '통화')} 초안을 저장했어요.</strong><p>주문은 아직 확정되지 않았어요.</p></div>
+          </div>
+          ${todo.length ? html`<p>다시 확인할 내용</p><ul>${todo.map(line => html`<li>${line}</li>`)}</ul>` : ''}
+          <div class="cd-draft-actions">
+            <button type="button" class="btn btn-sm" data-act="open-generated-draft">${card.callType === '주문' ? '주문' : '통화'} 초안 열기</button>
+            <a href="${href('/', { day: recordedDay })}">${recordedDay && recordedDay !== kstDay() ? '통화일 할 일 보기' : '오늘 할 일 보기'}</a>
+          </div></div>` : ''}`);
+    }
     function renderTranscript() {
       const segs = segments();
       const card = curCard();
@@ -379,6 +408,7 @@ export default {
           <h2 id="cd-trans-h">대화 기록</h2>
           <button type="button" class="btn btn-ghost btn-sm cd-copy" data-act="copy" ${hasText ? '' : html`disabled`}>${icon('copy')} 복사</button>
         </div>
+        <div class="cd-trans-order-draft" data-slot="trans-order-draft"></div>
         <div class="cd-trans-tools">
           <div class="cd-trans-views" role="group" aria-label="대화 보기">
             <button type="button" class="cd-view-tab" data-trans-view="text" aria-pressed="${!showSummary}">전체 대화</button>
@@ -394,6 +424,7 @@ export default {
           <button type="button" class="btn btn-sm" data-trans-find="next" aria-label="다음 일치 문장">↓</button>
         </div>` : ''}
       </header>`);
+      renderOrderDraftAction();
       const scroll = slot('trans-scroll');
       const scrollTop = scroll.scrollTop;
       const legendOpen = Boolean(scroll.querySelector('.cd-legend-details[open]'));
@@ -712,6 +743,7 @@ export default {
         call,
         meta,
         hasAudio: Boolean(call.hasAudio),
+        todoHref: href('/', { day: call.recordedAt ? kstDay(new Date(call.recordedAt)) : null }),
         resolve,
         onEvidence,
         onCardChange: (card, { fields }) => {
@@ -727,6 +759,17 @@ export default {
           renderHead();
           renderFoot();
           renderTranscript();
+        },
+        onReextractState: (phase, message = '') => {
+          orderDraftPhase = phase;
+          orderDraftError = message;
+          renderOrderDraftAction();
+          if (['complete', 'error'].includes(phase)) {
+            if (restoreDraftFocus && document.activeElement === document.body) {
+              root.querySelector(phase === 'complete' ? '[data-draft-result]' : '[data-act="trans-order-draft"]')?.focus({ preventScroll: true });
+            }
+            restoreDraftFocus = false;
+          }
         },
         onJumpToTranscript: jumpToTranscript,
       });
@@ -749,7 +792,7 @@ export default {
           <p class="cd-empty">받아쓰기와 정리가 끝나면 카드가 여기에 나옵니다.</p>`);
       } else if (!cardCtl) {
         mountCardCtl();
-        if (prev && WORKING.includes(prev.status)) toast(c.status === 'failed' ? '이 통화는 처리하지 못했습니다.' : '받아쓰기와 카드 정리가 끝났습니다.', c.status === 'failed' ? 'error' : 'ok');
+        if (prev && WORKING.includes(prev.status) && c.status === 'failed') toast('이 통화는 처리하지 못했습니다.', 'error');
       }
       slot('jump').classList.remove('hidden');
       renderTranscript();
@@ -850,6 +893,14 @@ export default {
             act.setAttribute('aria-pressed', String(follow));
             act.textContent = follow ? '따라가기 켬' : '따라가기 끔';
             if (follow && audio && !audio.paused && playingIdx >= 0) scrollToSeg(playingIdx);
+            return;
+          case 'open-generated-draft':
+            showDocument('card');
+            slot('card').focus({ preventScroll: true });
+            return;
+          case 'trans-order-draft':
+            restoreDraftFocus = document.activeElement === act;
+            void cardCtl?.reextract({ inline: true });
             return;
           case 'copy': copyText(transcriptText(call)); return;
           case 'float': if (audio) { if (audio.paused) audio.play().catch(() => {}); else audio.pause(); } return;

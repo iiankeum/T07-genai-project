@@ -1123,3 +1123,21 @@ body[data-page="call"] { background:#fff; }
  .cd-with-assistant .cd-card .cd-order-primary .cd-evbtn:has(.cd-evtime) span:not(.cd-evtime):not(:has(.cd-evtime)) {display:none}
  .cd-with-assistant .cd-card .cd-order-primary .cd-evbtn:has(.cd-evtime)::after {content:'↗';font-size:.68rem}
 }
+
+/* The transcript and card share one extraction request. */
+.cd-trans-order-draft:not(:empty) { padding:0 0 10px; }
+.cd-trans-order-draft p { margin:5px 0; font-size:var(--text-sm, 13px); }
+.cd-trans-order-draft ul { margin:4px 0 6px; padding-inline-start:18px; font-size:var(--text-sm, 13px); }
+.cd-trans-order-draft a { display:inline-block; margin-top:4px; font-size:var(--text-sm, 13px); }
+.cd-draft-actions { display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; }
+.cd-draft-progress { display:flex; align-items:center; gap:8px; color:var(--muted); }
+.cd-draft-result { margin-top:9px; padding:12px; border:1px solid var(--brand-line); border-radius:8px; background:var(--brand-wash); }
+.cd-draft-result.is-error { background:var(--paper); border-color:var(--line); }
+.cd-draft-result-heading { display:flex; gap:8px; align-items:flex-start; color:var(--brand-ink); }
+.cd-draft-result-heading svg { flex:none; margin-top:3px; }
+.cd-draft-result-heading p { color:var(--muted); margin:2px 0 6px; }
+.cd-auto-draft { margin:0 0 14px; padding:9px 11px; border-left:2px solid var(--brand-line); background:var(--brand-wash); color:var(--brand-ink); }
+.cd-auto-draft p { margin:0; font-size:13px; overflow-wrap:anywhere; }
+.cd-auto-draft p + p { margin-top:3px; }
+.cd-auto-draft span, .cd-auto-draft a { font-size:12px; }
+.cd-auto-draft a { display:inline-block; margin-top:3px; }

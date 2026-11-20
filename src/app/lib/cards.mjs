@@ -295,6 +295,21 @@ export function buildCardFromAi(callRow, aiOut) {
   // 번호 매칭은 별도 검증 경로로 유지하고, 나머지는 원문/승인 별칭/실제 정정 대목을 확인한다.
   const source = squash(transcript);
   let rejectedGrounding = false;
+  // An item-name match proves what was ordered, not which vehicle it fits.
+  // Apply only to exact same-field collisions; do not infer a vehicle or alter human edits.
+  const modelWord = squash(values0.carModel);
+  const modelEv = evidence.carModel;
+  const explicitlyVehicle = Boolean(modelWord && modelEv && ['차종은', '차종이', '차종:', '차량모델은']
+    .some(cue => squash(modelEv.quote).includes(squash(cue) + modelWord)));
+  const partAsVehicle = Boolean(modelWord && items.some(item => squash(item.part) === modelWord) && !explicitlyVehicle);
+  if (partAsVehicle) {
+    rejectedGrounding = true;
+    unsure.push({ id: newId('warn'), field: 'carModel', item: null, blocking: true,
+      reason: '부품명이 차종으로 들어가 차종을 비웠습니다 — 차량 정보를 확인해 주세요',
+      value: values0.carModel, at: modelEv?.at ?? null, seg: modelEv?.seg ?? null });
+    values0.carModel = null;
+    delete evidence.carModel;
+  }
   for (const [, key] of EVIDENCE_KEYS) {
     const value = key === 'customer' ? customer : key === 'plate' ? plate : values0[key];
     if (value == null || value === false || (key === 'customer' && byPhone)) continue;
@@ -351,6 +366,9 @@ export function buildCardFromAi(callRow, aiOut) {
 
   const askBack = (Array.isArray(ai.ask_back) ? ai.ask_back : [])
     .map((a) => cleanText(a, 200)).filter(Boolean).slice(0, MAX_ASK_BACK);
+  if (partAsVehicle && !askBack.some(line => /차종|차량 모델/.test(line))) {
+    if (askBack.length < MAX_ASK_BACK) askBack.push('차종 확인');
+  }
 
   // 글에 실제로 있는 칠하기 대목만
   const highlights = [];

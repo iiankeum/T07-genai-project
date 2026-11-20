@@ -19,6 +19,7 @@ const cards = await import('../lib/cards.mjs');
 const pipeline = await import('../lib/pipeline.mjs');
 const { confirmationIssues } = await import('../public/js/domain.js');
 const cardRoutes = await import('../routes/cards.mjs');
+const insightsRoutes = await import('../routes/insights.mjs');
 const liveRoutes = await import('../routes/live.mjs');
 const { createApp } = await import('../server.mjs');
 
@@ -101,6 +102,7 @@ const smartFake = () => fakeClient((params) => {
 const router = new Router();
 cardRoutes.register(router);
 liveRoutes.register(router);
+insightsRoutes.register(router);
 const server = http.createServer(createApp(router));
 await new Promise((r) => server.listen(0, '127.0.0.1', r));
 const base = `http://127.0.0.1:${server.address().port}`;
@@ -783,4 +785,87 @@ test('수량과 이전 인용이 모순되면 원값·시각 보존하고 확인
  const confirmed=await req('POST','/api/cards/'+id+'/confirm');
  assert.equal(confirmed.status,200,JSON.stringify(confirmed.data));assert.equal(confirmed.data.card.status,'confirmed');
  assert.equal(confirmed.data.card.items[0].qty,3);assert.equal(confirmed.data.card.items[0].quote,quote);assert.equal(confirmed.data.card.items[0].at,10.9);
+});
+
+test('대화 기록 초안: 모델 한 번만 호출하고 실제 브리핑에 같은 통화의 되물을 일을 표시', async () => {
+  insertCall('order-from-transcript', { segs: SEGS2 });
+  insertCall('auto-extract-in-flight', { segs: SEGS2, status: 'extracting' });
+  let release;
+  let started;
+  const entered = new Promise(resolve => { started = resolve; });
+  const deferred = new Promise(resolve => { release = resolve; });
+  const client = fakeClient(async () => {
+    started();
+    await deferred;
+    return textResp(AI2);
+  });
+  ai.setClientForTest(client);
+  try {
+    const active = await req('POST', '/api/calls/auto-extract-in-flight/reextract');
+    assert.equal(active.status, 409);
+    assert.equal(client.calls.length, 0);
+    const first = req('POST', '/api/calls/order-from-transcript/reextract');
+    try {
+      await entered;
+      const duplicate = await req('POST', '/api/calls/order-from-transcript/reextract');
+      assert.equal(duplicate.status, 409);
+      assert.equal(client.calls.length, 1);
+      assert.equal(getCardRow('order-from-transcript'), null);
+    } finally { release(); }
+    const saved = await first;
+    assert.equal(saved.status, 200);
+    assert.equal(saved.data.call.card.callType, '주문');
+    assert.equal(saved.data.call.card.status, 'draft');
+    const { status, data } = await req('GET', '/api/dashboard?day=2026-11-11');
+    assert.equal(status, 200);
+    const todo = data.todos.find(row => row.callId === 'order-from-transcript');
+    assert.equal(todo?.kind, 'callback');
+    assert.match(todo.why, /LED/);
+    assert.ok(data.callbacks.find(row => row.callId === 'order-from-transcript').askBack.length);
+  } finally { release(); ai.setClientForTest(null); }
+});
+
+test('대화 기록 초안: 배송 문의를 주문으로 강제하지 않음', async () => {
+  insertCall('non-order-from-transcript', { transcript: '한성정비입니다. 앞서 주문한 물건이 어디쯤 왔는지 알려주세요.' });
+  ai.setClientForTest(fakeClient(() => textResp({ ...AI4, call_type: '배송 문의', items: [], urgent: false,
+    summary: '앞서 주문한 물건의 배송 문의', ask_back: [], highlights: [] })));
+  try {
+    const saved = await req('POST', '/api/calls/non-order-from-transcript/reextract');
+    assert.equal(saved.status, 200);
+    assert.equal(saved.data.call.card.callType, '배송 문의');
+    assert.equal(saved.data.call.card.status, 'draft');
+    assert.deepEqual(saved.data.call.card.items, []);
+  } finally { ai.setClientForTest(null); }
+});
+
+test('자동 AI 차종: 정확히 같은 부품명은 차종 인용 없으면 비우고 차량 확인 할 일을 냄', async () => {
+  const transcript = '예시 정비소인데요. 앞범퍼 두 개 주세요.';
+  insertCall('auto-part-as-car', { transcript, segs: [{ start:0, end:4, text:transcript }], status:'queued' });
+  const result = { ...AI4, urgent:false, car_model:'앞 범퍼', customer:'예시 정비소',
+    items:[{part:'앞범퍼',side:null,qty:2,part_no:null,quote:'앞범퍼 두 개 주세요'}],
+    evidence:{...AI4.evidence,customer:'예시 정비소',car_model:'앞범퍼 두 개 주세요',urgent:''},
+  };
+  ai.setClientForTest(fakeClient(() => textResp(result)));
+  try {
+    const card = await pipeline.onTranscript('auto-part-as-car',{text:transcript,segments:[{start:0,end:4,text:transcript}]});
+    assert.equal(card.carModel,null);
+    assert.equal(card.items[0].part,'앞범퍼');
+    assert.equal(card.items[0].qty,2);
+    assert.equal(card.evidence.carModel,undefined);
+    assert.ok(card.unsure.find(u => u.field==='carModel' && u.blocking));
+    assert.ok(card.askBack.includes('차종 확인'));
+    const task=(await req('GET','/api/dashboard?day=2026-11-11')).data.todos.find(t=>t.callId==='auto-part-as-car');
+    assert.equal(task?.kind,'callback');
+    assert.match(task.why,/차종 확인/);
+    // Re-extraction still preserves a manually edited vehicle and the full draft.
+    await req('PATCH','/api/cards/auto-part-as-car',{carModel:'아반떼 AD'});
+    const repeat=(await req('POST','/api/calls/auto-part-as-car/reextract')).data.call.card;
+    assert.equal(repeat.carModel,'아반떼 AD');
+
+    const valid = '차종은 아반떼 AD입니다. 앞범퍼 두 개 주세요.';
+    const good = cards.buildCardFromAi({transcript:valid,segments:[{start:0,end:5,text:valid}]},
+      {...result,car_model:'아반떼 AD',evidence:{...result.evidence,car_model:'차종은 아반떼 AD입니다'}});
+    assert.equal(good.car_model,'아반떼 AD');
+    assert.ok(!good.unsure.some(u=>u.field==='carModel'));
+  } finally { ai.setClientForTest(null); }
 });
