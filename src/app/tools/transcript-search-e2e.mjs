@@ -23,11 +23,11 @@ try{
   const q=page.locator('#cd-trans-query');
   if(size==='mobile')await page.locator('[data-jump="trans"]').click();
   else {
-   const open=page.getByRole('button',{name:'선택 통화 확인',exact:true});
+   const open=page.getByRole('button',{name:'스크립트',exact:true});
    assert.equal(await q.isVisible(),false,'order workspace initially hides the transcript');
-   assert.equal(await open.getAttribute('aria-expanded'),'false');
+   assert.equal(await open.getAttribute('aria-pressed'),'false');
    await open.press('Enter');
-   assert.equal(await open.getAttribute('aria-expanded'),'true');
+   assert.equal(await open.getAttribute('aria-pressed'),'true');
   }
   await q.waitFor();await q.fill('');
   assert.equal(await page.locator('[data-trans-find="next"]').isDisabled(),true);
@@ -45,12 +45,14 @@ try{
   await q.press('Escape');assert.equal(await q.inputValue(),'');assert.equal(await page.locator('.is-search-match').count(),0);
   await q.fill('패드');assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
   await page.screenshot({path:path.join(dir,`${size}.png`)});
-  await page.locator('#bigTextBtn').click();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);await page.locator('#bigTextBtn').click();
+  if(size==='mobile')await page.getByRole('button',{name:'통화 상세 도구'}).click();await page.locator('#bigTextBtn').click();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);await page.locator('#bigTextBtn').click();if(size==='mobile')await page.getByRole('button',{name:'통화 상세 도구'}).click();
   if(size==='desktop'){
-   await page.getByRole('button',{name:'최근 주문 목록',exact:true}).click();
-   await q.waitFor({state:'hidden'});
-   const open=page.getByRole('button',{name:'선택 통화 확인',exact:true});
-   assert.equal(await open.evaluate(el=>document.activeElement===el),true,'closing evidence restores focus');
+   const order=page.getByRole('button',{name:'주문서',exact:true});
+   const open=page.getByRole('button',{name:'스크립트',exact:true});
+   await order.press('Enter');await q.waitFor({state:'hidden'});
+   assert.equal(await order.getAttribute('aria-pressed'),'true');
+   assert.equal(await open.getAttribute('aria-pressed'),'false');
+   assert.equal(await order.evaluate(el=>document.activeElement===el),true,'keyboard focus stays on the order tab');
    await open.press('Enter');await q.waitFor();assert.equal(await q.inputValue(),'패드');
   }
   assert.equal(writes.length,0,'search never writes or calls AI');page.off('request',track);
