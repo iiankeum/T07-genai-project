@@ -48,7 +48,6 @@ const FIELD_LABEL = {
 };
 
 const MIC_SVG = html`<svg viewBox="0 0 24 24" width="40" height="40" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg>`;
-const STOP_SVG = html`<svg viewBox="0 0 24 24" width="36" height="36" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>`;
 
 const str = (v) => (v == null ? '' : String(v).trim());
 const items = (card) => (Array.isArray(card?.items) ? card.items.filter((i) => i && (i.part || i.qty != null)) : []);
@@ -97,7 +96,7 @@ export default {
     const aiOff = meta.aiEnabled === false;
     const isFixture = meta.aiProvider === 'fixture';
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const readyText = supported ? '샘플 대화를 재생하거나 마이크로 주문을 받아쓰세요.' : '샘플 대화를 재생해 주문 접수를 체험하세요.';
+    const readyText = supported ? '마이크로 받아쓰거나 예시 대화로 체험하세요.' : '샘플 대화를 재생해 주문 접수를 체험하세요.';
 
     const st = {
       mode: 'idle',          // idle | listening | sample
@@ -131,19 +130,22 @@ export default {
         </div>
         <a class="btn" href="#/upload">녹음 올리기</a>
       </div>
-      <section class="card live-session" aria-label="기록 설정">
+      <section class="card live-session" aria-label="받아쓰기 제어">
         <div class="live-controls">
           <div class="live-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
           <div class="live-control-text">
+            <div class="live-readout"><span class="live-stage" data-ref="stage">시작 전</span><output class="live-clock" data-ref="elapsed" aria-label="받아쓰기 시간" aria-live="off">00:00</output></div>
             <p class="live-state" data-ref="state" role="status">${readyText}</p>
-            <p class="help live-mode-note">${supported ? '음성 인식은 브라우저 제공자의 서버를 이용합니다. 고객 정보가 담긴 대화는 사용하지 마세요.' : '이 환경에서는 샘플 대화와 예시 문장을 사용할 수 있습니다.'}</p>
+            <p class="help live-mode-note">${supported ? '받아쓴 글만 저장합니다. 음성은 브라우저 제공자가 처리하므로 고객 정보가 담긴 대화는 사용하지 마세요.' : '이 환경에서는 샘플 대화와 예시 문장을 사용할 수 있습니다.'}</p>
           </div>
           <div class="live-session-actions">
-            <button type="button" class="btn btn-primary" data-act="sample">샘플 대화 재생</button>
+            <button type="button" class="btn ${supported ? '' : 'btn-primary'}" data-act="sample">샘플 대화 재생</button>
             <button type="button" class="btn hidden" data-act="pause" aria-pressed="false">일시 정지</button>
-            ${supported ? html`<button type="button" class="btn live-mic" data-act="mic" aria-pressed="false"><span class="live-mic-icon">${MIC_SVG}</span><span class="live-mic-label">마이크 켜기</span></button>` : ''}
+            ${supported ? html`<button type="button" class="btn btn-primary live-mic" data-act="mic" aria-pressed="false"><span class="live-mic-icon">${MIC_SVG}</span><span class="live-mic-label">마이크로 받아쓰기</span></button>` : ''}
+            <button type="button" class="btn btn-primary hidden" data-act="save">끝내고 저장</button>
           </div>
         </div>
+        <div data-ref="saved" aria-live="polite"></div>
       </section>
       <div class="live-grid">
         <section class="card live-talk" aria-labelledby="liveTalkTitle">
@@ -161,9 +163,7 @@ export default {
           </div>
           <div class="live-actions">
             <button type="button" class="btn" data-act="reset">기록 지우기</button>
-            <button type="button" class="btn btn-primary" data-act="save">끝내고 저장</button>
           </div>
-          <div data-ref="saved" aria-live="polite"></div>
           <details class="live-examples">
             <summary>예시 문장으로 체험</summary>
             <div class="live-chips">${EXAMPLES.map((t) => html`<button type="button" class="live-chip" data-act="example" data-text="${t}">${t}</button>`)}</div>
@@ -193,6 +193,7 @@ export default {
       const s = ref('state');
       s.textContent = msg;
       s.className = `live-state${kind ? ' is-' + kind : ''}`;
+      renderSession();
     }
     function setCardState(content, kind = '') {
       const s = ref('cardState');
@@ -258,27 +259,52 @@ export default {
       render(box, html`<div class="notice notice-ok live-saved"><p><strong>저장했습니다.</strong> 통화 기록에 「실시간 체험」으로 들어갔습니다.</p><a class="btn btn-primary btn-block" data-ref="goCall" href="${link}">통화 화면으로 바로 가기</a></div>`);
       box.querySelector('[data-ref="goCall"]')?.focus();
     }
+    function renderSession() {
+      const state = ref('state');
+      const isError = state.classList.contains('is-error');
+      const mode = st.mode;
+      const status = st.saving ? '저장 중' : st.saved ? '저장 완료' : isError ? '받아쓰기 오류'
+        : st.paused ? '일시 정지' : mode === 'sample' ? '예시 대화'
+        : mode === 'listening' ? (state.classList.contains('is-live') ? '받아쓰는 중' : '마이크 확인 중')
+        : st.lines.length ? '저장 전' : '시작 전';
+      ref('stage').textContent = status;
+      root.classList.toggle('has-session-error', isError && !st.saving);
+      const seconds = Math.floor(Math.max(clock(), lastEnd()));
+      const elapsed = `${String(Math.floor(seconds / 60)).padStart(2,'0')}:${String(seconds % 60).padStart(2,'0')}`;
+      const output = ref('elapsed');
+      if (output.textContent !== elapsed) output.textContent = elapsed;
+      output.setAttribute('aria-label', st.sampleStarted ? '예시 대화 시간' : '받아쓰기 시간');
+    }
     function updateButtons() {
       const listening = st.mode === 'listening';
       const sample = st.mode === 'sample';
-      root.classList.toggle('is-listening', listening && !st.paused);
+      root.classList.toggle('is-listening', listening && !st.paused && ref('state').classList.contains('is-live'));
       root.classList.toggle('is-playing', sample && !st.paused);
       if (micBtn) {
-        micBtn.setAttribute('aria-pressed', String(listening));
+        micBtn.classList.toggle('hidden', listening || sample || st.saving);
         micBtn.disabled = sample || st.saving;
-        render(micBtn, html`<span class="live-mic-icon">${listening ? STOP_SVG : MIC_SVG}</span><span class="live-mic-label">${listening ? '마이크 끄기' : '마이크 켜기'}</span>`);
+        micBtn.setAttribute('aria-pressed', String(listening));
       }
+      sampleBtn.classList.toggle('hidden', listening || st.saving);
       sampleBtn.disabled = listening || st.saving;
       sampleBtn.textContent = sample ? '기록 종료' : '샘플 대화 재생';
       pauseBtn.classList.toggle('hidden', !sample && !listening);
       pauseBtn.disabled = st.saving || (listening && st.paused && Boolean(rec));
       pauseBtn.setAttribute('aria-pressed', String(st.paused));
       pauseBtn.textContent = st.paused ? '재개' : '일시 정지';
-      saveBtn.disabled = st.saving || Boolean(st.typing) || sample || Boolean(st.saved) || !st.lines.length;
+      saveBtn.classList.toggle('hidden', !listening && (sample || !st.lines.length || Boolean(st.saved)));
+      saveBtn.textContent = st.saving ? '저장 중…' : st.lines.length ? '끝내고 저장' : '기록 끝내기';
+      saveBtn.disabled = st.saving || Boolean(st.typing) || sample || Boolean(st.saved) || (!listening && !st.lines.length);
       resetBtn.disabled = st.saving;
       root.querySelectorAll('[data-act="example"]').forEach((b) => { b.disabled = sample || Boolean(st.typing) || st.saving; });
+      renderSession();
     }
-    function setMode(mode) { st.mode = mode; updateButtons(); }
+    let elapsedTimer;
+    function scheduleClock() {
+      cancel(elapsedTimer);
+      elapsedTimer = later(() => { if (!disposed) { renderSession(); scheduleClock(); } }, 250);
+    }
+    function setMode(mode) { st.mode = mode; updateButtons(); scheduleClock(); }
 
     // ── 카드 정리(말이 멈추면) ──
     let idleTimer = null;
@@ -384,6 +410,7 @@ export default {
         if (!want) { try { r.stop(); } catch { /* 종료 대기 */ } return; }
         if (listenFrom == null) listenFrom = performance.now();
         setState('듣는 중… 말을 멈추면 카드가 채워집니다.', 'live');
+        updateButtons();
       };
       r.onresult = (e) => {
         if (disposed || rec !== r) return;
@@ -442,7 +469,7 @@ export default {
           want = false;
           setState('받아쓰기가 자꾸 끊깁니다. 잠시 뒤 다시 눌러 주세요.', 'error');
         } else if (!ref('state').classList.contains('is-error')) {
-          setState(st.lines.length ? '멈췄습니다. 카드를 확인하고 「끝내고 저장」을 눌러 보세요.' : '마이크 단추를 누르고 주문을 말해 보세요.');
+          setState(st.lines.length ? '받아쓰기를 끝냈습니다. 글을 확인한 뒤 저장하세요.' : '받아쓴 글이 없습니다. 다시 시작할 수 있습니다.');
         }
         setMode('idle');
         renderLines();
@@ -466,9 +493,10 @@ export default {
       st.paused = false;
       want = true;
       restarts = [];
+      setState('마이크를 확인하는 중입니다. 브라우저의 마이크 요청을 확인해 주세요.');
       setMode('listening');
-      setState('마이크를 켜는 중… 허용을 묻는 창이 뜨면 「허용」을 눌러 주세요.');
       openRec();
+      if (st.mode === 'listening') pauseBtn.focus({ preventScroll:true });
     }
     function stopListening() {
       st.paused = false;
@@ -601,11 +629,12 @@ export default {
     let saveCtrl = null;
     async function save() {
       if (st.saving || st.saved || st.typing || st.mode === 'sample') return;
+      if (st.mode === 'listening' && !st.lines.length) { stopListening(); return; }
       st.saving = true; // 저장하는 동안에는 미리보기 정리를 부르지 않는다(서버가 카드를 만든다)
       cancel(idleTimer);
       cancel(gapTimer);
       updateButtons();
-      if (st.mode === 'listening') { stopListening(); await waitEnd(2000); if (disposed) return; }
+      if (st.mode === 'listening') { const ended = waitEnd(2000); stopListening(); await ended; if (disposed) return; }
       const text = fullText();
       if (!text.trim()) {
         st.saving = false;
@@ -627,7 +656,7 @@ export default {
         if (disposed) return;
         st.saved = { callId: out?.callId || out?.call?.id || null };
         renderSaved();
-        setState('저장했습니다. 새로 하려면 「지우고 다시」를 누르세요.');
+        setState('글을 저장했습니다. 통화 화면에서 주문 내용을 확인할 수 있습니다.');
         ctx.refreshMeta?.();
       } catch (err) {
         if (disposed || err?.name === 'AbortError') return;
@@ -699,6 +728,7 @@ export default {
     renderLines();
     renderCard();
     updateButtons();
+    scheduleClock();
 
     return () => {
       disposed = true;

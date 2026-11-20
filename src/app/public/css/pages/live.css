@@ -129,3 +129,39 @@ body .view .page.live-page { max-width:900px; padding:44px clamp(20px,5vw,70px) 
   body .view .page.live-page { padding:24px 20px 38px; }
   .live-page .live-session-actions .btn { font-size:.9rem; }
 }
+
+/* Live intake saves speech-to-text only. Keep state, time and its next action together. */
+.live-page .live-session {
+  --live-primary:var(--semantic-foreground-neutral-primary,var(--ink));
+  --live-secondary:var(--semantic-foreground-neutral-secondary,var(--muted));
+  --live-accent:var(--semantic-foreground-brand-primary,var(--brand-ink));
+  --live-divider:var(--semantic-line-neutral-secondary,var(--line));
+  border-color:var(--live-divider);
+  padding-block:17px;
+}
+.live-page .live-controls {align-items:center;gap:13px 16px}
+.live-page .live-wave {width:44px;height:44px;border-radius:50%;background:var(--bg)}
+.live-page .live-wave i {background:var(--live-secondary)}
+.live-page:is(.is-listening,.is-playing) .live-wave i {background:var(--live-accent)}
+.live-page .live-control-text {flex:1 1 250px}
+.live-readout {display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap}
+.live-clock {order:-1;color:var(--live-primary);font-size:clamp(1.8rem,5vw,2.3rem);line-height:1;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:-.04em}
+.live-stage {color:var(--live-secondary);font-size:.76rem;font-weight:600}
+.live-stage::before {content:'';display:inline-block;width:6px;height:6px;border-radius:50%;margin-inline-end:6px;background:currentColor;vertical-align:.09em}
+.live-page:is(.is-listening,.is-playing) .live-stage {color:var(--live-accent)}
+.live-page.has-session-error .live-stage {color:var(--danger)}
+.live-page .live-state {margin-top:6px;font-size:.84rem;font-weight:550}
+.live-page .live-mode-note {font-size:.71rem;line-height:1.65}
+.live-page .live-session-actions {justify-content:flex-end}
+.live-page .live-session-actions .btn {min-height:44px}
+.live-page .live-session-actions [data-act="save"] {min-width:118px}
+.live-page .live-actions {margin-top:8px}
+.live-page .live-actions [data-act="reset"] {border-color:transparent;background:none;color:var(--muted);font-size:.78rem}
+@media(max-width:600px) {
+  .live-page .live-control-text {flex:1 1 200px}
+  .live-page .live-session-actions {width:100%;justify-content:flex-start}
+  .live-page .live-session-actions .btn {flex:1 1 40%;font-size:.82rem}
+}
+@media(prefers-reduced-motion:reduce) {
+  .live-page .live-wave i,.live-page .live-caret {animation:none!important}
+}
