@@ -1,0 +1,29 @@
+/* Shared document treatment; only Today and Call History load this stylesheet. */
+:is(.today-page,.cl-page) {--wl-blue:#2866df;--wl-muted:#606671;--wl-rule:#ededee;--wl-rail:320px}
+:is(.today-page,.cl-page) .wl-sub {color:var(--wl-muted);font-size:.83rem;margin:8px 0 0}
+.wl-ask {display:none}
+.wl-mobile-ask {display:inline-flex}
+@media(min-width:1120px) {
+ body .view :is(.today-page,.cl-page) {max-width:none;margin:0;padding:42px calc(var(--wl-rail) + 46px) 60px 46px}
+ .wl-mobile-ask {display:none!important}
+ .wl-ask {position:fixed;z-index:10;right:0;top:var(--topbar-h);bottom:0;width:var(--wl-rail);padding:22px;border-left:1px solid var(--wl-rule);background:#fafafa;display:flex;flex-direction:column;color:#292b30}
+ .wl-ask-head {display:flex;justify-content:space-between;align-items:center;font-size:.84rem}
+ .wl-ask-head a {min-width:40px;text-align:center;text-decoration:none;color:#686e79;font-size:1.22rem}
+ .wl-ask-body {flex:1;min-height:0;overflow:auto;padding-top:49px}
+ .wl-ask-body > p {margin:0 0 24px;line-height:1.85}
+ .wl-prompt {display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;border-bottom:1px solid var(--wl-rule);text-decoration:none;color:inherit;font-size:.76rem}
+ .wl-prompt span {color:#747984}
+ .wl-ask-form {display:flex;flex-shrink:0;align-items:flex-end;gap:6px;min-height:92px;border:1px solid #e1e2e5;border-radius:12px;padding:11px;background:white}
+ .wl-ask-form label {flex:1;align-self:flex-start;min-width:0}
+ .wl-ask-form input {width:100%;min-height:44px;border:0;padding:4px;font-size:.77rem;background:none}
+ .wl-ask-form button {width:35px;height:35px;border:0;border-radius:50%;background:#2a2e33;color:white;cursor:pointer}
+ .wl-ask > small {font-size:.61rem;text-align:center;color:#656973;margin-top:7px}
+}
+@media(min-width:1120px) and (max-width:1279px) {
+ :is(.today-page,.cl-page) {--wl-rail:290px}
+ body .view :is(.today-page,.cl-page) {padding-inline:32px calc(var(--wl-rail) + 32px)}
+}
+@media(min-width:1120px) {
+ body:has(#headerCommands.ahcha-montage-shell a.header-upload):has(#headerCommands.ahcha-montage-shell a.header-live) .today-page .today-actions,
+ body:has(#headerCommands.ahcha-montage-shell a.header-upload):has(#headerCommands.ahcha-montage-shell a.header-live) .cl-page .page-head > .row {display:none}
+}
