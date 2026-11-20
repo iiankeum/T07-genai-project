@@ -1,4 +1,5 @@
 // 통화 목록 · 찾기(F08): 글 · 카드 검색, 상태 · 날짜 · 거래처 거르기, 맞은 문장 굵게 → 누르면 그 대목으로.
+import { worklistAsk, bindWorklistAsk } from './worklist-ask.js';
 import { api } from '../api.js';
 import { CALL_TYPES } from '../domain.js';
 import { icon } from '../icons.js';
@@ -173,9 +174,9 @@ export default {
     render(el, html`<div class="page cl-page">
       <div class="page-head">
         <div>
-          <h1>통화 기록</h1>
+          <h1>통화 기록</h1><p class="wl-sub">주문으로 이어진 통화와 확인한 내용을 모아 봅니다.</p>
         </div>
-        <div class="row"><a class="btn" href="#/live">${icon('live')} 실시간 받아쓰기</a><a class="btn btn-primary cl-upload" href="#/upload">${icon('upload')} 녹음 올리기</a></div>
+        <div class="row"><a class="btn" href="#/live">${icon('live')} 실시간 받아쓰기</a><a class="btn btn-primary cl-upload" href="#/upload">${icon('upload')} 녹음 올리기</a><a class="wl-mobile-ask btn btn-ghost" href="#/ask">Ask 아차</a></div>
       </div>
       <section class="cl-control" aria-label="통화 검색과 필터"><div class="cl-group cl-status" data-slot="statuses"></div><form class="cl-search" role="search" data-slot="form">
         <label class="sr-only" for="cl-q">통화 찾기</label>
@@ -186,8 +187,10 @@ export default {
       <div class="cl-filters" data-slot="filters"></div></section>
       <div class="cl-refresh-note" data-slot="refresh-note" role="status" hidden></div>
       <div class="cl-results" data-slot="results" aria-live="polite"><p class="loading">불러오는 중…</p></div>
+      ${worklistAsk('calls')}
     </div>`);
     const root = el.querySelector('.cl-page');
+    bindWorklistAsk(root);
     const slot = (n) => root.querySelector(`[data-slot="${n}"]`);
     const form = slot('form');
     let montageSearch;

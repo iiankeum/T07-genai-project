@@ -101,3 +101,31 @@
  .live-session-actions .btn { flex:1; }
  .live-lines { min-height:200px; }
 }
+
+/* 받아쓰기 페이지의 기존 상태와 버튼을 문서형 표면 위에 놓는다. */
+body .view .page.live-page { max-width:900px; padding:44px clamp(20px,5vw,70px) 56px; --intake-rule:#e5e7eb; --intake-muted:#606670; }
+.live-page .page-head { margin-bottom:24px; }
+.live-page .page-head h1 { margin:0; font-size:clamp(26px,3vw,32px); letter-spacing:-.045em; }
+.live-page .page-head .sub { margin-top:8px; color:var(--intake-muted); }
+.live-page .live-session,.live-page .live-grid > .card { background:transparent; border:0; border-radius:0; box-shadow:none; padding:0; }
+.live-page .live-session { border-block:1px solid var(--intake-rule); padding-block:12px; margin:0 0 25px; }
+.live-page .live-controls { gap:12px; }
+.live-page .live-wave { border-radius:6px; background:#f5f7f9; }
+.live-page .live-session-actions .btn { border-radius:6px; }
+.live-page .live-grid { grid-template-columns:minmax(0,1fr); gap:20px; }
+.live-page .live-grid > .live-card { position:static; border-top:1px solid var(--intake-rule); padding-top:16px; }
+.live-page .live-panel-head { margin:0 0 8px; }
+.live-page .live-panel-head h2 { font-weight:650; }
+.live-page .live-lines { border:0; border-block:1px solid var(--intake-rule); border-radius:0; background:transparent; padding:7px 0; min-height:190px; }
+.live-page .live-line { margin:0; padding:12px 8px; border-radius:0; border-bottom:1px solid var(--intake-rule); }
+.live-page .live-line:is(.is-source,.is-interim,.is-typing) { background:#f3f7fb; }
+.live-page .live-line.is-shop { margin-inline-start:0; }
+.live-page .live-empty { min-height:173px; }
+.live-page .live-fields { border:0; border-block:1px solid var(--intake-rule); border-radius:0; }
+.live-page .live-field { border-radius:0; }
+.live-page .live-actions .btn { border-radius:6px; }
+.live-page .live-mode-note { color:var(--intake-muted); }
+@media(max-width:639px) {
+  body .view .page.live-page { padding:24px 20px 38px; }
+  .live-page .live-session-actions .btn { font-size:.9rem; }
+}

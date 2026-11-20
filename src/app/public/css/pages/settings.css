@@ -50,3 +50,14 @@
 .integration-advanced { margin:16px 0; color:var(--muted); }
 .integration-advanced summary { cursor:pointer; padding:8px 0; }
 @media(max-width:719px) { .integration-overview ol { grid-template-columns:1fr; } }
+
+/* Flat settings directory and thin subnavigation; form semantics remain unchanged. */
+.settings-page .settings-directory { display:grid; grid-template-columns:minmax(0,1fr); gap:0; }
+.settings-page .settings-destination { border:0; border-bottom:1px solid #e8ebef; border-radius:0; min-height:60px; padding:12px 0; }
+.settings-page .settings-destination:hover { background:#f8fafc; }
+.settings-page .settings-destination > span { font-size:14px; }
+.settings-page .settings-nav { background:#fff; padding:0; border-radius:0; border-bottom:1px solid #e8ebef; }
+.settings-page .settings-nav a { border-radius:0; border-bottom:2px solid transparent; }
+.settings-page .settings-nav a[aria-current="page"] { border-bottom-color:#285b92; }
+.settings-page .account-panel { border:0; border-radius:0; box-shadow:none; padding-inline:0; }
+.settings-page .account-form { max-width:670px; }

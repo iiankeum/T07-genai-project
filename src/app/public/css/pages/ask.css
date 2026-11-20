@@ -36,3 +36,14 @@
 .ask-send { flex: none; min-width: 84px; }
 .ask-help { margin: 6px 2px 0; }
 @media (min-width: 900px) { .ask-compose { bottom: 14px; } }
+
+/* Document search: retain the thread, composer and evidence interactions. */
+.ask-page .ask-rule { background:#f7f8fa; border:0; border-radius:6px; color:#4b5563; }
+.ask-page .ask-chips { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr)); gap:0 14px; }
+.ask-page .ask-chip { text-align:start; background:#fff; color:#374151; border:0; border-bottom:1px solid #e8ebef; border-radius:0; padding-inline:0; }
+.ask-page .ask-chip:hover { color:#285b92; background:#f8fafc; }
+.ask-page .ask-empty { text-align:start; }
+.ask-page .ask-compose { box-shadow:none; border-radius:9px; border-color:#d9dde3; }
+.ask-page .is-user .ask-bubble { color:#303640; background:#f1f3f6; }
+.ask-page .is-bot .ask-bubble:not(.is-error) { border:0; padding-inline:0; box-shadow:none; }
+.ask-page .ask-cite { border:0; border-bottom:1px solid #e8ebef; border-radius:0; padding-inline:0; }

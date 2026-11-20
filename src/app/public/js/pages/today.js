@@ -1,6 +1,7 @@
 // 오늘 브리핑(F10) · 처리 대기열, AI 브리핑, 마감 요약과 통화 기록.
 import { api } from '../api.js';
 import { html, render, kstDay, fmtDate, fmtWhen, fmtClock, callChip, cardChip, toast, copyText, errorBox, aiOffNotice, href } from '../ui.js';
+import { worklistAsk, bindWorklistAsk } from './worklist-ask.js';
 import { partsText, callHref } from './board.js';
 
 const REFRESH_MS = 30_000;
@@ -63,6 +64,7 @@ export default {
     };
     render(el, html`<div class="page today-page"></div>`);
     const root = el.firstElementChild;
+    bindWorklistAsk(root);
     const alive = () => !ac.signal.aborted && root.isConnected;
 
     // 날짜가 A→B→A로 돌아와도 첫 A의 응답은 현재 화면의 응답이 아니다.
@@ -88,10 +90,12 @@ export default {
             <p class="today-date">${icon('calendar')}<time datetime="${st.day}">${fmtDate(dayIso(st.day))}</time>
             </p>
             <h1>오늘 브리핑</h1>
+            <p class="wl-sub">확인이 필요한 주문부터 살펴보세요.</p>
           </div>
           <div class="today-actions">
             <a class="btn" href="#/live" data-focus="live">${icon('waveform')}실시간 받아쓰기</a>
             <a class="btn btn-primary" href="#/upload" data-focus="upload">${icon('upload')}녹음 올리기</a>
+            <a class="wl-mobile-ask btn btn-ghost" href="#/ask">Ask 아차</a>
           </div>
         </div>
         <div class="today-toolbar">
@@ -311,12 +315,16 @@ export default {
       if (!alive()) return;
       const active = document.activeElement;
       const focus = root.contains(active) ? active.dataset.focus : null;
+      const askInput = root.querySelector('[data-worklist-ask] input');
+      const askDraft = askInput?.value || '';
+      const askSelection = askInput === active ? [askInput.selectionStart, askInput.selectionEnd] : null;
       const d = st.data;
       const range = { from: st.day, to: st.day };
       render(root, html`${headPart()}
         ${d ? html`<div class="today-workspace">
+            <p class="wl-lead">지금 처리할 일은 <strong>${Array.isArray(d.todos) ? d.todos.length : 0}건</strong>입니다.</p>
             ${queuePart(d, range)}
-            <aside class="today-rail" aria-label="브리핑과 마감">${briefPart(d)}${closePart()}</aside>
+            <div class="today-rail" aria-label="브리핑과 마감">${briefPart(d)}${closePart()}</div>
           </div>
           ${metricsPart(d, range)}
           ${recentPart(d, range)}
@@ -324,7 +332,13 @@ export default {
           : html`<div class="today-panel today-load">${st.error
             ? html`${errorBox(st.error)}<button type="button" class="btn btn-primary" data-act="reload" data-focus="reload">다시 불러오기</button>`
             : html`<p class="loading" role="status"><span class="spinner" aria-hidden="true"></span>통화와 주문 현황을 불러오는 중…</p>`}</div>`}
+        ${worklistAsk('today', askDraft)}
       `);
+      if (askSelection) {
+        const next = root.querySelector('[data-worklist-ask] input');
+        next.focus({ preventScroll: true });
+        next.setSelectionRange(...askSelection);
+      }
       if (focus) {
         [...root.querySelectorAll('[data-focus]')].find((node) => node.dataset.focus === focus)?.focus({ preventScroll: true });
       }
