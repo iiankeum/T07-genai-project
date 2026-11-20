@@ -437,3 +437,50 @@ html:not(.big-text) body:not(.is-guest):not([data-page="call"]) .view :is(.page-
 @media (min-width: 900px) and (pointer: fine) {
   html:not(.big-text) #sideNav .nav-link { min-height: 36px; }
 }
+
+/* One real Ask rail in the signed-in workspace shell. The call page keeps its own scoped chat. */
+.workspace-ask-rail {min-width:0;min-height:0;background:#fafafa;color:var(--ink);padding:18px;overflow:hidden}
+.workspace-ask-rail .as-embedded {height:100%;max-width:none;padding:0;display:flex;flex-direction:column}
+.workspace-ask-rail .as-embedded > .page-head,.workspace-ask-rail .as-sidebar,.workspace-ask-rail .as-shortcuts {display:none}
+.workspace-ask-rail .as-layout {display:flex;flex:1;min-height:0;padding:0;border:0;border-radius:0;box-shadow:none;background:none}
+.workspace-ask-rail .as-chat {display:flex;flex-direction:column;width:100%;min-width:0;min-height:0;padding:0}
+.workspace-ask-rail .as-chat-head {margin:0;padding:0 0 6px;border-bottom:1px solid var(--line);gap:4px}
+.workspace-ask-rail .as-chat-head h2 {font-size:1rem}
+.workspace-ask-rail .as-chat-head .help,.workspace-ask-rail .as-foot {font-size:.73rem}
+.workspace-ask-rail .as-thread {margin:6px 0;flex:1;min-height:0;max-height:none;overflow:auto}
+.workspace-ask-rail .as-history-menu {padding:4px 0;border-bottom:1px solid var(--line);font-size:.78rem}
+.workspace-ask-rail .as-history-menu summary {cursor:pointer;padding:6px 0}
+.workspace-ask-rail .as-history {display:flex;flex-wrap:wrap}
+.workspace-ask-rail .as-history .field {flex:1;min-width:100px}
+.workspace-ask-rail .as-welcome-note {color:var(--muted);margin:16px 0}
+.workspace-ask-rail .as-scoped-prompts {display:flex;gap:5px;flex-wrap:wrap;margin:6px 0}
+.workspace-ask-rail .as-scoped-prompts button {font-size:.75rem;min-height:34px;text-align:left;white-space:normal}
+.workspace-ask-rail .as-compose {display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px}
+.workspace-ask-rail .as-compose textarea {min-height:44px;min-width:0;max-height:100px;resize:vertical}
+.workspace-ask-launch {position:fixed;right:14px;bottom:calc(62px + env(safe-area-inset-bottom));z-index:29;background:var(--paper);color:var(--brand-ink);box-shadow:var(--shadow);min-height:44px}
+.workspace-ask-dialog {position:fixed;inset:auto 0 0;margin:0 auto;width:min(100%,540px);max-width:none;height:min(90dvh,670px);max-height:none;padding:0 0 env(safe-area-inset-bottom);border:0;border-radius:14px 14px 0 0;background:#fafafa}
+.workspace-ask-dialog[open] {display:flex;flex-direction:column}
+.workspace-ask-dialog::backdrop {background:#17171955}
+.workspace-ask-close {align-self:flex-end;margin:6px 14px 0}
+.workspace-ask-dialog .workspace-ask-rail {flex:1;padding-top:4px}
+@media(min-width:1120px) {
+ .has-workspace-ask {--workspace-ask-width:clamp(282px,23vw,336px)}
+ .has-workspace-ask .main-column {margin-right:var(--workspace-ask-width)}
+ .has-workspace-ask .workspace-ask-rail {position:fixed;right:0;top:var(--topbar-h);bottom:0;width:var(--workspace-ask-width);z-index:18;border-left:1px solid var(--line)}
+ body.has-workspace-ask .view :is(.today-page,.cl-page) {padding-right:clamp(22px,3vw,46px)}
+}
+@media print { .workspace-ask-rail,.workspace-ask-launch,.workspace-ask-dialog {display:none!important} .has-workspace-ask .main-column {margin-right:0} }
+.workspace-ask-rail .as-chat {background:transparent}
+.workspace-ask-rail .as-chat-head {align-items:center;flex-wrap:nowrap}
+.workspace-ask-rail .as-chat-head .help {display:none}
+.workspace-ask-rail .as-chat-head button {border:0;background:none;color:var(--muted);padding:0 8px}
+.workspace-ask-rail .as-new-icon,.workspace-ask-rail .as-arrow {display:inline;font-size:18px}
+.workspace-ask-rail .as-new-label,.workspace-ask-rail .as-send-label {display:none}
+.workspace-ask-rail .as-thread .ask-bubble {border:0;box-shadow:none}
+.workspace-ask-rail .as-thread .is-user .ask-bubble {background:#f0f0f1;color:var(--ink)}
+.workspace-ask-rail .as-thread .is-bot .ask-bubble {background:transparent}
+.workspace-ask-rail .as-scoped-prompts {display:grid;gap:0}
+.workspace-ask-rail .as-scoped-prompts button {border:0;border-bottom:1px solid var(--line);border-radius:0;background:none;justify-content:flex-start;padding:6px 0}
+.workspace-ask-rail .as-scoped-prompts button::after {content:'↗';margin-left:auto;color:var(--muted)}
+.workspace-ask-rail .as-compose button[data-act="send"] {border-radius:50%;padding:0;width:35px;height:35px;min-height:35px;background:#25272b;color:#fff;align-self:end;border-color:transparent}
+.workspace-ask-rail .as-compose button[hidden] {display:none}

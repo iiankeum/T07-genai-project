@@ -95,7 +95,7 @@ export default {
           <div class="today-actions">
             <a class="btn" href="#/live" data-focus="live">${icon('waveform')}실시간 받아쓰기</a>
             <a class="btn btn-primary" href="#/upload" data-focus="upload">${icon('upload')}녹음 올리기</a>
-            <a class="wl-mobile-ask btn btn-ghost" href="#/ask">Ask 아차</a>
+            ${ctx.shellAsk ? '' : html`<a class="wl-mobile-ask btn btn-ghost" href="#/ask">Ask 아차</a>`}
           </div>
         </div>
         <div class="today-toolbar">
@@ -332,7 +332,7 @@ export default {
           : html`<div class="today-panel today-load">${st.error
             ? html`${errorBox(st.error)}<button type="button" class="btn btn-primary" data-act="reload" data-focus="reload">다시 불러오기</button>`
             : html`<p class="loading" role="status"><span class="spinner" aria-hidden="true"></span>통화와 주문 현황을 불러오는 중…</p>`}</div>`}
-        ${worklistAsk('today', askDraft)}
+        ${ctx.shellAsk ? '' : worklistAsk('today', askDraft)}
       `);
       if (askSelection) {
         const next = root.querySelector('[data-worklist-ask] input');

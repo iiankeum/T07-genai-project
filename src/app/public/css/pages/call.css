@@ -1141,3 +1141,60 @@ body[data-page="call"] { background:#fff; }
 .cd-auto-draft p + p { margin-top:3px; }
 .cd-auto-draft span, .cd-auto-draft a { font-size:12px; }
 .cd-auto-draft a { display:inline-block; margin-top:3px; }
+
+/* Transcript: paper-like speech rows. Semantic tokens keep playback, review and
+   evidence distinct, without coloring an entire uncertain segment. */
+.cd-desk-page .cd-trans {
+  --transcript-text: var(--semantic-foreground-neutral-primary, var(--ink));
+  --transcript-meta: var(--semantic-foreground-neutral-secondary, var(--muted));
+  --transcript-rule: var(--semantic-line-neutral-secondary, var(--line));
+  --transcript-control: var(--semantic-surface-neutral-secondary, var(--bg));
+  --transcript-accent: var(--semantic-foreground-brand-primary, var(--brand-ink));
+  --transcript-selected: var(--semantic-surface-brand-subtle, var(--brand-wash));
+  --transcript-warning: var(--warn);
+  --transcript-warning: color-mix(in srgb, var(--warn) 75%, var(--semantic-foreground-cautionary-primary, var(--warn)));
+}
+.cd-desk-page .cd-trans .cd-seg {
+  grid-template-columns: 3rem minmax(0,1fr);
+  gap: .65rem;
+  padding: .65rem .5rem .65rem 0;
+  border-radius: 0;
+  border-bottom-color: var(--transcript-rule);
+}
+.cd-desk-page .cd-trans .cd-seg:last-child {border-bottom-color:transparent}
+.cd-desk-page .cd-trans .cd-seg:is(:hover,.is-playing) {background:var(--transcript-control)}
+.cd-desk-page .cd-trans .cd-seg.is-unsure:not(.is-mark):not(.is-playing):not(:hover) {background:transparent}
+.cd-desk-page .cd-trans .cd-seg.is-mark {
+  background:var(--transcript-selected);
+  box-shadow:inset 2px 0 var(--transcript-accent);
+  border-radius:.3rem;
+}
+.cd-desk-page .cd-trans .cd-time {
+  color:var(--transcript-meta);
+  font-size:.73rem;
+  font-weight:500;
+}
+.cd-desk-page .cd-trans .cd-seg:is(.is-mark,.is-playing) .cd-time,
+.cd-desk-page .cd-trans .cd-time:is(:hover,:focus-visible) {color:var(--transcript-accent)}
+.cd-desk-page .cd-trans .cd-seg-body {color:var(--transcript-text);font-size:.92rem;line-height:1.75}
+.cd-desk-page .cd-trans .cd-spk {
+  margin:0 0 .2rem;
+  color:var(--transcript-meta);
+  font-size:.73rem;
+  line-height:1.45;
+  font-weight:650;
+}
+.cd-desk-page .cd-trans .cd-seg-flag {color:var(--transcript-warning);font-size:.72rem}
+.cd-desk-page .cd-trans .cd-seg-flag .listen-flag {color:inherit;background:none;border-color:transparent;border-radius:.25rem;font-size:inherit}
+.cd-desk-page .cd-trans .cd-seg-flag .listen-flag:is(:hover,:focus-visible) {border-color:currentColor}
+.cd-desk-page .cd-trans :is(.cd-player,.cd-noaudio) {
+  margin:0 0 .35rem;
+  border-radius:0;
+  border-bottom:1px solid var(--transcript-rule);
+  background:transparent;
+}
+.cd-desk-page .cd-trans :is(.cd-player-note,.cd-noaudio) {color:var(--transcript-meta);font-size:.75rem}
+@media(max-width:600px) {
+ .cd-desk-page .cd-trans .cd-seg {gap:.45rem;padding-block:.55rem}
+ .cd-desk-page .cd-trans .cd-trans-scroll {padding-inline:.25rem}
+}

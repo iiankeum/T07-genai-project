@@ -164,8 +164,8 @@ try {
   });
   await step('knowledge proposal requires separate approval', async () => {
     await page.goto(demo.baseURL + '/#/knowledge');
-    await page.locator('[data-act="new"]').click();
-    const dialog = page.getByRole('dialog');
+    await page.locator('#view [data-act="new"]').click();
+    const dialog = page.locator('#view').getByRole('dialog');
     await dialog.locator('[name="term"]').fill('가짜 검증 부품');
     await dialog.locator('[name="aliases"]').fill('가짜 별칭');
     await dialog.locator('[name="note"]').fill('E2E에서 만든 가짜 지식입니다.');

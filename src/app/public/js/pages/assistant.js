@@ -15,6 +15,7 @@ export default {
   title: '업무 도우미',
   mount(el, ctx) {
     const embedded = ctx.embedded === true;
+    const workspaceRail = ctx.workspaceRail === true;
     let context = null;
     let threads = [];
     let thread = null;
@@ -60,12 +61,12 @@ export default {
           <div class="ask-thread as-thread" data-ref="thread" aria-label="대화 메시지"></div>
           <p class="sr-only" data-ref="announce" role="status"></p>
           <div data-ref="error"></div>
-          <div class="as-scoped-prompts" ${embedded ? '' : html`hidden`} aria-label="현재 통화 질문 예시">${[
+          <div class="as-scoped-prompts" ${embedded ? '' : html`hidden`} aria-label="질문 예시">${(workspaceRail ? ['먼저 확인할 주문은 뭐야?', '다시 연락할 통화를 찾아줘'] : [
             '수량을 마지막에 몇 개로 바꿨어?',
             '이 부품 좌우가 확정됐어?',
             '차종·연식·품번 중 뭐가 비었어?',
             '출고 전에 다시 전화할 내용이 있어?'
-          ].map(q => html`<button type="button" class="btn" data-question="${q}">${q}</button>`)}</div>
+          ]).map(q => html`<button type="button" class="btn" data-question="${q}">${q}</button>`)}</div>
           <div class="ka-actions as-shortcuts">
             ${ctx.meta?.access?.demo === false ? '' : html`<button type="button" class="btn" data-act="example">예시 대화 보기</button>`}
             <button type="button" class="btn" data-act="current-draft" disabled>재연락 문안 열기</button>
@@ -138,7 +139,7 @@ export default {
     }
 
     async function refreshContext(callId = '', recoverMissing = false) {
-      if(embedded) { callId=ctx.query.call; recoverMissing=false; }
+      if(embedded) { callId=workspaceRail ? undefined : ctx.query.call; recoverMissing=false; }
       contextRequest?.abort();
       const controller = new AbortController();
       contextRequest = controller;
@@ -155,7 +156,8 @@ export default {
         if (recoverMissing && error.status === 404) {
           toast('이전 통화를 찾지 못해 최근 통화를 열었어요.', 'info');
           refreshContext();
-        } else render(ref('suggestions'), errorBox(error));
+        } else if (workspaceRail) { embeddedStarted = false; failure = { message: friendlyError(error) }; paintChat(); }
+        else render(ref('suggestions'), errorBox(error));
       } finally {
         if (contextRequest === controller) {
           contextRequest = null;
@@ -183,7 +185,7 @@ export default {
         parts.push(messageView({ role: 'user', text: request.question }));
         parts.push(html`<div class="ask-msg is-bot"><div class="ask-bubble is-wait" role="status"><span class="spinner" aria-hidden="true"></span> 통화 기록 확인 중…</div></div>`);
       }
-      render(log, parts.length ? html`${parts}` : embedded ? html`<p class="as-welcome-note">이 통화의 주문 내용과<br>다시 확인할 부분을 물어보세요.</p>` : html`<div class="as-welcome"><span class="as-icon" aria-hidden="true">✧</span><h3>어떤 일부터 함께할까요?</h3><p>주문 내용이나 팀에서 승인한 현장 표현을 물어보세요.</p></div>`);
+      render(log, parts.length ? html`${parts}` : embedded ? html`<p class="as-welcome-note">${workspaceRail ? '작업공간의 통화와 주문에서 찾아보세요.' : html`이 통화의 주문 내용과<br>다시 확인할 부분을 물어보세요.`}</p>` : html`<div class="as-welcome"><span class="as-icon" aria-hidden="true">✧</span><h3>어떤 일부터 함께할까요?</h3><p>주문 내용이나 팀에서 승인한 현장 표현을 물어보세요.</p></div>`);
       log.scrollTop = log.scrollHeight;
       render(ref('error'), failure ? html`<div class="notice notice-error as-error" role="alert"><span>${failure.message}</span>
         ${failure.question ? html`<button type="button" class="btn" data-act="retry">다시 시도</button>` : ''}</div>` : '');
@@ -237,7 +239,7 @@ export default {
       const question = (text || '').trim().slice(0, input.maxLength);
       if (!question || !context || request || threadRequest) return;
       const controller = new AbortController();
-      const current = { controller, question, callId: context?.selected?.id,
+      const current = { controller, question, callId: workspaceRail ? undefined : context?.selected?.id,
         workspaceId: ctx.meta?.access?.workspace?.id ?? null, route: location.hash };
       request = current;
       failure = null;

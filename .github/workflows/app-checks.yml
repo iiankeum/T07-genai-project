@@ -113,6 +113,10 @@ jobs:
         run: npm run test:today-order-e2e
         env:
           TODAY_ORDER_OUTPUT: artifacts/e2e/today-order
+      - name: Persistent workspace Ask on desktop and mobile (fake API only)
+        run: node tools/workspace-ask-e2e.mjs
+        env:
+          WORKSPACE_ASK_OUTPUT: artifacts/e2e/workspace-ask
       - name: Live example save snapshot and safe DOM (fake API only)
         run: npm run test:live-example-e2e
         env:

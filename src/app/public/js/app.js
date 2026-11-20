@@ -6,9 +6,11 @@
 import { getMeta } from './api.js';
 import { html, render, esc, routeOf } from './ui.js';
 import { icon } from './icons.js';
+import { createWorkspaceAsk } from './workspace-ask.js';
 import { mountConnectivity } from './connectivity.js';
 
 mountConnectivity();
+const workspaceAsk = createWorkspaceAsk();
 
 const ROUTES = [
   { re: /^\/?$/, page: 'today' },
@@ -161,6 +163,8 @@ function goToLogin(returnTo) {
 async function route() {
   const my = ++seq;
   const r = parseHash();
+  if (['account', 'legal', 'trial', 'notfound'].includes(r.page)) workspaceAsk.reset();
+  else if (['call', 'ask', 'assistant', 'admin', 'help'].includes(r.page)) workspaceAsk.hide();
   document.body.dataset.page = r.page;
   const path = document.getElementById('topbarPath');
   renderNav(r.page, shellMeta);
@@ -195,6 +199,8 @@ async function route() {
       goToLogin(location.hash);
       return;
     }
+    const shellAsk = !workspaceLabelInvalidated && workspaceAsk.sync(r.page, meta);
+    if (shellAsk) { ensureCss('ask'); ensureCss('knowledge-assistant'); }
     if (r.page === 'more') { renderMore(mount, meta); document.title = '더보기 · 아차'; return; }
     const mod = await import(`./pages/${r.page}.js`);
     if (my !== seq) return;
@@ -206,6 +212,7 @@ async function route() {
       params: r.params,
       query: r.query,
       meta,
+      shellAsk,
       navigate: (p) => { location.hash = p.startsWith('#') ? p : '#' + p; },
       refreshMeta: () => getMeta(true),
     };
