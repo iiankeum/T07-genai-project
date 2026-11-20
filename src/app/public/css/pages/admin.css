@@ -16,7 +16,7 @@
 .admin-dl dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 .admin-msg { white-space: pre-wrap; }
 
-.admin-danger { border-color: #f2c2bd; }
+.admin-danger { border-color: var(--danger-line); }
 .admin-danger h2 { color: var(--danger); }
 .admin-danger p { margin: 0 0 12px; }
 .admin-stat-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 0 0 8px; }

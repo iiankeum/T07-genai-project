@@ -1,0 +1,24 @@
+{
+  "scope": "temporary actual fixture server and two independent demo browser contexts; missing-revision response fault injection; no actual users or AI",
+  "status": "passed",
+  "results": [
+    "stale displayed revision rejects shipping with 409 and preserves latest order",
+    "conflict refreshes latest quantity and asks explicit re-review without automatic retry",
+    "explicit retry submits refreshed revision and ships normally",
+    "failed conflict reload blocks shipping until a successful manual reload without automatic mutation",
+    "missing revision sends no mutation and shows focused refresh guidance"
+  ],
+  "displayedQuantity": 1,
+  "displayedRevision": 3,
+  "changedRevision": 6,
+  "staleRequestBody": {
+    "expectedRevision": 3
+  },
+  "staleResponseStatus": 409,
+  "normalRequestBody": {
+    "expectedRevision": 6
+  },
+  "missingRevisionMutationCount": 0,
+  "errors": [],
+  "blocked": []
+}

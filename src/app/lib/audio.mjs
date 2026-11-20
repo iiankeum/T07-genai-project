@@ -5,10 +5,11 @@ import { createHash, randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { config } from './config.mjs';
+import { dataDir } from './db.mjs';
 import { HttpError } from './http.mjs';
 
-const AUDIO_DIR = () => path.join(config.dataDir, 'audio');
-const TMP_DIR = () => path.join(config.dataDir, 'tmp');
+const AUDIO_DIR = () => path.join(dataDir(), 'audio');
+const TMP_DIR = () => path.join(dataDir(), 'tmp');
 const CONVERT_TIMEOUT_MS = 60_000;
 const MAX_PENDING = 6; // 변환을 기다리는 것이 이보다 많으면 잠시 뒤 다시(메모리 보호)
 const BYTES_PER_SEC = 16000 * 2; // 16kHz · mono · 16bit
@@ -109,7 +110,7 @@ export function sha256(buf) {
 /** 'audio/<id>.wav' → 절대 경로. DATA_DIR/audio 밖이면 404 오류. */
 export function audioPath(relFile) {
   const base = AUDIO_DIR();
-  const abs = relFile ? path.resolve(config.dataDir, String(relFile)) : '';
+  const abs = relFile ? path.resolve(dataDir(), String(relFile)) : '';
   if (!abs || !abs.startsWith(base + path.sep)) throw new HttpError(404, 'no_audio', '녹음 파일이 없습니다.');
   return abs;
 }

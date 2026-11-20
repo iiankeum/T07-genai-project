@@ -1,11 +1,11 @@
 // 실시간 받아쓰기 체험(F03): 말하는 중 카드 미리 보기(저장 안 함) · 끝난 통화 저장.
-import { config } from '../lib/config.mjs';
 import { HttpError, readJson, cleanText } from '../lib/http.mjs';
-import { limit, takeDaily } from '../lib/security.mjs';
+import { limit } from '../lib/security.mjs';
 import { dictionaryForAi, getCallRow, callView } from '../lib/repo.mjs';
-import { aiEnabled, extractCard, AiError } from '../lib/ai.mjs';
+import { aiEnabled, extractCard, AiError, takeAiDaily } from '../lib/ai.mjs';
 import { buildCardFromAi, previewCard, normalizeSegments } from '../lib/cards.mjs';
 import { processLive } from '../lib/pipeline.mjs';
+import { domainFor, extractionDomain } from '../public/js/domain.js';
 
 const MIN_EXTRACT_CHARS = 10;     // 이보다 짧으면 AI 를 부르지 않는다
 const MAX_EXTRACT_CHARS = 4000;   // AI 에 보내는 길이
@@ -37,8 +37,9 @@ export function register(router) {
     if (text.replace(/\s/g, '').length < MIN_EXTRACT_CHARS) return { card: null, aiError: '말이 너무 짧아요' };
     if (!aiEnabled()) return { card: null, aiError: 'AI 키 없음' };
     limit('ai', ip);
-    takeDaily('ai', config.dailyAiLimit);
-    const dict = dictionaryForAi();
+    takeAiDaily();
+    const { id } = domainFor(process.env.AHMATDA_DOMAIN);
+    const dict = dictionaryForAi(id);
     try {
       const out = await extractCard({
         transcript: text,
@@ -46,9 +47,10 @@ export function register(router) {
         glossary: dict.glossary,
         customers: dict.customers.map((c) => c.name),
         carModels: dict.carModels,
+        domain: extractionDomain(id),
       }, { timeoutMs: 45_000, maxRetries: 1 });
       const values = buildCardFromAi({ transcript: text, segments: '[]', caller_number: null }, out);
-      return { card: previewCard(values) };
+      return { card: previewCard(values), model: out._model };
     } catch (e) {
       if (e instanceof AiError) return { card: null, aiError: e.message };
       throw e;

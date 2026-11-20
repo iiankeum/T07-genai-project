@@ -1,7 +1,7 @@
 /* 주문 카드 보드(F06): 좁은 화면은 위 탭으로 칸 하나, 넓은 화면(1100px~)은 세 칸 나란히 */
 .board-tabs .tab { min-height: 48px; padding: 8px 16px; font-size: 1rem; }
 .board-grid { display: grid; gap: 14px; }
-.board-col { display: none; min-width: 0; background: #f6f4fc; border: 1px solid #ebe6f8; border-radius: var(--radius); padding: 12px; }
+.board-col { display: none; min-width: 0; background: var(--brand-wash); border: 1px solid var(--brand-soft); border-radius: var(--radius); padding: 12px; }
 .board-col.is-active { display: block; }
 .board-col-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 2px 4px 2px; font-size: 1.15rem; }
 .board-count { display: inline-flex; align-items: center; justify-content: center; min-width: 34px; height: 34px; padding: 0 10px; border-radius: 999px; background: #fff; border: 1px solid var(--line); font-size: .95rem; }
@@ -16,9 +16,9 @@
 
 /* 카드 조각 */
 .bcard { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
-.bcard-urgent { border-left: 5px solid #d9480f; }
+.bcard-urgent { border-left: 5px solid #9c5800; }
 .bcard-main { display: block; padding: 14px 14px 10px; color: inherit; text-decoration: none; }
-.bcard-main:hover { background: #faf9fe; }
+.bcard-main:hover { background: var(--brand-wash); }
 .bcard-main > span { display: block; }
 .bcard-top { display: flex !important; align-items: flex-start; justify-content: space-between; gap: 8px; }
 .bcard-customer { font-size: 1.12rem; line-height: 1.35; }
@@ -27,10 +27,86 @@
 .bcard-flags { display: flex !important; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .bcard-when { margin-top: 8px; color: var(--muted); font-size: 1rem; }
 .bcard-actions { padding: 0 14px 14px; }
-.chip-ask { color: #7a5200; background: #fff1c7; border-color: #f0d9a8; }
+.chip-ask { color: #7a5200; background: #fff1c7; border-color: var(--warn-line); }
 
 @media (min-width: 1100px) {
   .board-tabs { display: none; }
   .board-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; }
   .board-col { display: block; }
+}
+
+/* 단계별 작업판: 버튼보다 주문 내용이 먼저 읽힌다. */
+.board-filters { padding: 16px 20px; background: #fff; border: 1px solid var(--line); border-radius: 12px; margin-bottom: 24px; gap: 20px; }
+.board-filters .field { display: flex; gap: 10px; align-items: center; margin: 0; }
+.board-filters .select { min-width: 150px; }
+.board-col { padding: 0 12px 12px; border: 0; border-radius: 12px; background: #eef0f3; }
+.board-col-head { padding: 16px 4px; margin: 0; font-size: .88rem; color: var(--ink) !important; }
+.board-col-head > span:first-child::before { content:''; display:inline-block; width:7px; height:7px; background: #ba7b1a; border-radius: 50%; margin-right:8px; }
+.board-col-confirmed .board-col-head > span:first-child::before { background: var(--brand); }
+.board-col-shipped .board-col-head > span:first-child::before { background: #00a544; }
+.board-count { min-width: 25px; height: 25px; font-size: .73rem; border:0; background: #e0e3e8; }
+.bcard { border:1px solid #e3e6eb; border-radius:12px; box-shadow: 0 1px 2px #17171905; }
+.bcard-urgent { border-left: 3px solid #b77714; }
+.bcard-main { padding:18px 16px 12px; }
+.bcard-customer { font-size:1rem; font-weight:650; }
+.bcard-car { font-size:.8rem; color:var(--muted); font-weight:400; margin-top:6px; }
+.bcard-parts { font-size:.88rem; line-height:1.6; margin-top:12px; }
+.bcard-when { font-size:.74rem; line-height:1.6; margin-top:12px; }
+.bcard-actions { padding:0 16px 16px; }
+.bcard-actions .btn { font-size:.8rem; min-height:44px; }
+.bcard-actions .btn-primary { background:var(--brand-soft); border-color:transparent; color:var(--brand-ink); }
+.bcard-actions .btn-primary:hover { background:#dceafe; }
+.bcard-actions .btn-ok { background:var(--ok-soft); border-color:var(--ok-line); color:var(--ok); }
+@media(max-width:719px) {
+ .board-filters { padding:12px; gap:8px; margin-bottom:16px; }
+ .board-filters .field { flex:1; min-width:0; display:grid; gap:4px; }
+ .board-filters .select { min-width:0; width:100%; }
+ .board-tabs { gap:0; }
+ .board-tabs .tab { flex:1; padding:8px 5px; font-size:.8rem; }
+ .board-col-head { padding-block:14px; }
+}
+.board-filters .field > span { flex:none; white-space:nowrap; }
+
+/* Document workspace: use the existing phase controls at every viewport. */
+.board-page { --task-line:#e9ebef; --task-ink:#262a31; --task-secondary:#626976; --task-link:#285b92; --task-paper:#fff; color:var(--task-ink); }
+.board-page .page-head { align-items:flex-end; gap:12px; margin-bottom:24px; }
+.board-page .page-head h1 { font-size:clamp(29px,3vw,34px); letter-spacing:-.045em; }
+.board-page .page-head .sub { color:var(--task-secondary); margin-top:8px; }
+.board-page .eyebrow { font-size:13px; color:var(--task-secondary); font-weight:600; letter-spacing:0; }
+.board-page .btn { box-shadow:none; }
+.board-page .board-filters { background:transparent; border:0; border-radius:0; padding:0; gap:10px 16px; margin:0 0 14px; }
+.board-page .board-filters .select { background:var(--task-paper); border-color:var(--task-line); font-size:15px; }
+.board-page .board-filters .help { flex-basis:100%; color:var(--task-secondary); margin:0; font-size:13px; }
+.board-page .board-tabs { display:flex; gap:14px; margin:0; border-bottom:1px solid var(--task-line); }
+.board-page .board-tabs .tab { flex:0 0 auto; padding:10px 6px; border:0; border-radius:0; border-bottom:2px solid transparent; color:var(--task-secondary); background:transparent; box-shadow:none; white-space:nowrap; }
+.board-page .board-tabs .tab[aria-pressed=true] { color:var(--task-ink); font-weight:650; border-bottom-color:var(--task-link); }
+.board-page .board-tabs .count { color:var(--task-secondary); background:transparent; border:0; }
+.board-page .board-grid { display:block; }
+.board-page .board-col { display:none; background:var(--task-paper); border:0; border-radius:0; padding:0; }
+.board-page .board-col.is-active { display:block; }
+.board-page .board-col-head { position:absolute; width:1px; height:1px; padding:0; overflow:hidden; clip-path:inset(50%); }
+.board-page .board-list { display:block; }
+.board-page .bcard { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:start; border:0; border-bottom:1px solid var(--task-line); border-radius:0; box-shadow:none; overflow:visible; }
+.board-page .bcard-urgent .bcard-main { box-shadow:inset 2px 0 #a97539; padding-inline-start:10px; }
+.board-page .bcard-main { display:grid; grid-template-columns:minmax(125px,.85fr) minmax(140px,1.15fr); column-gap:14px; min-width:0; padding:16px 10px 16px 0; }
+.board-page .bcard-main:hover { background:#f7fafd; }
+.board-page .bcard-main > span { min-width:0; overflow-wrap:anywhere; }
+.board-page .bcard-top { grid-column:1; grid-row:1; justify-content:flex-start; align-items:center; flex-wrap:wrap; }
+.board-page .bcard-parts { grid-column:2; grid-row:1 / span 2; font-size:15px; font-weight:550; margin:0; }
+.board-page .bcard-car { grid-column:1; color:var(--task-secondary); font-size:14px; }
+.board-page .bcard-when,.board-page .bcard-flags { grid-column:1 / -1; }
+.board-page .bcard-when { color:var(--task-secondary); margin-top:6px; }
+.board-page .bcard-actions { padding:11px 0 11px 4px; }
+.board-page .bcard-actions .btn { color:var(--task-link); background:#fff; text-decoration:underline; text-underline-offset:3px; border:0; padding-inline:8px; }
+.board-page .board-empty { background:none; border:0; margin:0; padding:44px 8px; color:var(--task-secondary); }
+@media (max-width:719px) {
+ .board-page .page-head { align-items:flex-start; margin-bottom:16px; }
+ .board-page .board-filters { gap:8px; }
+ .board-page .board-tabs { justify-content:space-between; gap:4px; }
+ .board-page .board-tabs .tab { padding-inline:4px; font-size:14px; }
+ .board-page .bcard-main { grid-template-columns:minmax(0,1fr); padding:12px 6px 12px 0; }
+ .board-page .bcard-parts,.board-page .bcard-top { grid-column:1; grid-row:auto; }
+ .board-page .bcard-parts { margin-top:5px; }
+ .board-page .bcard-actions { padding-top:7px; }
+ .board-page .bcard-actions .btn { white-space:normal; font-size:13px; }
 }

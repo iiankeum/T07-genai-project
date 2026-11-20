@@ -1,0 +1,20 @@
+{
+  "syntheticTestOnly": true,
+  "codeRevision": "8e5d4543bf8b790b9daa9cae5ff9acd582685eed",
+  "observed": [
+    "native 개발 테스트 별도 자료 창",
+    "실행기 미준비 시 AI꺼짐/수동업무 계속 안내",
+    "로그인에서 회원가입 이동",
+    "빈 가입제출 시 필수 이름 입력 안내",
+    "로그인 복귀",
+    "종료 후5601/11435 listener 없음"
+  ],
+  "accountsCreated": 0,
+  "devUsersCount": 0,
+  "devWorkspacesCount": 0,
+  "termsAccepted": false,
+  "passwordEntered": false,
+  "nativeTranscriptionCompleted": false,
+  "blocker": "새 비밀번호 입력과 이용약관/개인정보 동의 단계는 완료하지 않음. 계정 생성 및 native 전사 전체는 미검증.",
+  "defaultInstallationChanged": false
+}

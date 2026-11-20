@@ -1,0 +1,30 @@
+{
+  "at": "2026-11-18T15:44:38.625227+00:00",
+  "sourceRevision": "ed224ba",
+  "scope": "AppKit source unchanged except temporary HOME/storage paths and unique test bundle ID; no real user accounts/settings",
+  "guiChecks": {
+    "menuOpened": true,
+    "cancelKeptOriginalOff": true,
+    "restoreRequiredSecondConfirmation": true,
+    "explicitSaveCreatedPrivateBackup": true,
+    "didNotAutoRestart": true,
+    "restartAppliedQwen3": true,
+    "installedModelListedAndSelected": true,
+    "apiShowVerifiedThenSaved": true,
+    "closedAfterTest": true
+  },
+  "finalConfiguration": {
+    "model": "qwen3:4b",
+    "provider": "ollama"
+  },
+  "backupCount": 2,
+  "allConfigAndBackupsMode": "0600",
+  "testHarnessCorrection": "/tmp alias rejected by runtime safety checks; used canonical /private/tmp, production source unchanged",
+  "originalAppHashPreserved": true,
+  "limits": [
+    "isolated HOME and bundle ID, not real user install",
+    "one installed model only",
+    "model GUI/restart test; inference evidence separate",
+    "no new account/terms consent, downloads, paid API or deployment"
+  ]
+}

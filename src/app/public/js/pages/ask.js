@@ -1,6 +1,7 @@
 // F09 지난 통화에 묻기 — 채팅. 저장된 통화 글 · 카드만 근거로 답하고, 근거 문장을 누르면 그 대목으로 간다.
 import { api } from '../api.js';
-import { html, render, fmtWhen, fmtSec, href, confirmBox, aiOffNotice } from '../ui.js';
+import { html, render, confirmBox, aiOffNotice } from '../ui.js';
+import { citeView } from './ask-citation.js';
 
 const STORE_KEY = 'cn.ask.v1';
 const HISTORY_SEND = 6;
@@ -13,24 +14,23 @@ const EXAMPLES = [
   '우리공업사 헤드라이트 어떻게 됐어?',
 ];
 
-/** 시각이 깨져 있어도 화면이 멈추지 않게 */
-const when = (iso) => { try { return fmtWhen(iso); } catch { return ''; } };
-
-function loadSaved() {
+function loadSaved(key) {
   try {
-    const v = JSON.parse(sessionStorage.getItem(STORE_KEY) || '[]');
+    const v = JSON.parse(sessionStorage.getItem(key) || '[]');
     return Array.isArray(v) ? v.filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.text === 'string').slice(-MAX_SAVED) : [];
   } catch { return []; }
 }
-function save(msgs) {
-  try { sessionStorage.setItem(STORE_KEY, JSON.stringify(msgs.slice(-MAX_SAVED))); } catch { /* 저장 못 해도 화면은 돈다 */ }
+function save(key, msgs) {
+  try { sessionStorage.setItem(key, JSON.stringify(msgs.slice(-MAX_SAVED))); } catch { /* 저장 못 해도 화면은 돈다 */ }
 }
 
 export default {
-  title: '지난 통화에 묻기',
+  title: '통화 내용 찾기',
   async mount(el, ctx) {
     const meta = ctx.meta || {};
-    let msgs = loadSaved(); // [{role:'user'|'assistant', text, found?, citations?, error?}]
+    const access = meta.access;
+    const key = access?.demo === false ? STORE_KEY + ':' + access.workspace?.id + ':' + access.user?.id : STORE_KEY;
+    let msgs = loadSaved(key); // [{role:'user'|'assistant', text, found?, citations?, error?}]
     let pending = false;
     let aiOff = meta.aiEnabled === false;
     let disposed = false;
@@ -38,9 +38,9 @@ export default {
 
     render(el, html`<div class="page page-narrow ask-page">
       <div class="page-head"><div>
-        <p class="eyebrow">F09 · 묻기</p>
-        <h1>지난 통화에 묻기</h1>
-        <p class="sub">사람에게 묻듯 물어보세요.</p>
+        <p class="eyebrow">지난 통화 검색</p>
+        <h1>통화 내용 찾기</h1>
+        <p class="sub">여러 통화에 흩어진 주문·차량·부품 내용을 질문으로 찾아보세요.</p>
       </div><button type="button" class="btn btn-ghost" data-act="clear">대화 지우기</button></div>
       <div class="notice ask-rule" role="note">저장된 통화 글 · 카드만 보고 답합니다. 없으면 지어내지 않고 「찾지 못했어요」라고 합니다.</div>
       <div data-ref="aioff"></div>
@@ -66,31 +66,12 @@ export default {
     function renderAiOff() {
       render(root.querySelector('[data-ref="aioff"]'), aiOff ? aiOffNotice({ aiEnabled: false }) : html``);
     }
-    function citeView(c) {
-      if (!c || !c.callId) return '';
-      // at 이 없으면(null · '') 0:00 으로 만들지 않는다 — Number(null) 은 0 이라 처음부터 재생되던 문제
-      const at = c.at == null || c.at === '' ? NaN : Number(c.at);
-      const hasAt = Number.isFinite(at);
-      const seg = c.segIndex == null || c.segIndex === '' ? NaN : Number(c.segIndex);
-      const hasSeg = Number.isInteger(seg) && seg >= 0;
-      // 시각도 문장 번호도 없으면 통화에서 한 말이 아니라 주문 카드에 적힌 내용이다
-      const fromCard = !hasAt && !hasSeg && c.kind !== 'segment';
-      const query = {};
-      if (hasAt) query.t = Math.max(0, Math.round(at * 10) / 10);
-      if (hasSeg) query.seg = seg;
-      return html`<a class="ask-cite" href="${href('/calls/' + encodeURIComponent(c.callId), query)}">
-        <span class="ask-cite-title">${c.title || '통화'}</span>
-        <span class="ask-cite-when">${when(c.recordedAt)}${hasAt ? html` · <span class="ask-cite-at">${fmtSec(at)} 대목</span>` : fromCard ? html` · <span class="ask-cite-at">주문 카드 내용</span>` : ''}</span>
-        ${c.quote ? html`<span class="ask-cite-quote">「${c.quote}」</span>` : ''}
-        <span class="ask-cite-go">${hasAt ? '그 대목 듣기 ›' : hasSeg ? '그 대목 보기 ›' : '통화 열기 ›'}</span>
-      </a>`;
-    }
     function msgView(m) {
       if (m.role === 'user') return html`<div class="ask-msg is-user"><div class="ask-bubble">${m.text}</div></div>`;
       if (m.error) return html`<div class="ask-msg is-bot"><div class="ask-bubble is-error" role="alert">${m.text}</div></div>`;
       const cites = Array.isArray(m.citations) ? m.citations.filter((c) => c && c.callId) : [];
       return html`<div class="ask-msg is-bot">
-        <div class="ask-bubble ${m.found === false ? 'is-notfound' : ''}">${m.text}</div>
+        <div class="ask-bubble ${m.found === false ? 'is-notfound' : ''}">${m.mode === 'fixture' ? html`<span class="chip chip-ai">가짜 테스트 응답</span> ` : ''}${m.text}</div>
         ${cites.length ? html`<div class="ask-cites"><p class="ask-cites-head">근거 통화 ${cites.length}건</p>${cites.map(citeView)}</div>` : ''}
       </div>`;
     }
@@ -137,6 +118,7 @@ export default {
           role: 'assistant',
           text: answerText,
           found,
+          mode: out?.mode,
           citations: Array.isArray(out?.citations) ? out.citations.slice(0, 8) : [],
         });
       } catch (err) {
@@ -152,7 +134,7 @@ export default {
         ctrl = null;
         if (!disposed) {
           pending = false;
-          save(msgs);
+          save(key, msgs);
           renderThread();
           updateSend();
         }
@@ -164,7 +146,7 @@ export default {
       if (!(await confirmBox('지금까지 묻고 답한 내용을 지울까요?'))) return;
       if (disposed) return;
       msgs = [];
-      save(msgs);
+      save(key, msgs);
       renderThread(false);
       input.focus();
     }

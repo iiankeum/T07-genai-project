@@ -2,25 +2,25 @@
 .upload-page .card + .card, .upload-page .card + .grid-2, .upload-page .grid-2 + .card { margin-top: 14px; }
 .upload-side > .card + .card { margin-top: 0; }
 
-.upload-drop { border: 2px dashed var(--brand-line); border-radius: var(--radius); background: #fbfaff; padding: 26px 16px; text-align: center; transition: background .15s, border-color .15s; }
+.upload-drop { border: 2px dashed var(--brand-line); border-radius: var(--radius); background: var(--brand-wash); padding: 26px 16px; text-align: center; transition: background .15s, border-color .15s; }
 .upload-drop.is-drag { background: var(--brand-soft); border-color: var(--brand); }
 .upload-drop-icon { color: var(--brand); }
 .upload-drop-title { margin: 6px 0 2px; font-size: 1.15rem; font-weight: 800; }
 .upload-drop-or { margin: 0 0 10px; color: var(--muted); font-size: .9rem; }
 .upload-pick { cursor: pointer; }
-.upload-pick:focus-within { outline: 3px solid #a993f2; outline-offset: 2px; }
+.upload-pick:focus-within { outline: 3px solid var(--brand-ink); outline-offset: 2px; }
 .upload-drop .help { margin: 12px 0 0; }
 
 .upload-rows { list-style: none; margin: 14px 0 0; padding: 0; }
 .upload-rows:empty { display: none; }
 .upload-row { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px 12px; background: #fff; }
 .upload-row + .upload-row { margin-top: 8px; }
-.upload-row.is-blocked, .upload-row.is-error { border-color: #f4c7c1; background: #fffafa; }
+.upload-row.is-blocked, .upload-row.is-error { border-color: var(--danger-line); background: #fffafa; }
 .upload-row-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .upload-name { font-weight: 700; min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .upload-size { flex: none; }
 .upload-remove { flex: none; }
-.upload-bar { height: 10px; border-radius: 999px; background: #eeedf5; overflow: hidden; margin: 8px 0 4px; }
+.upload-bar { height: 10px; border-radius: 999px; background: var(--bg); overflow: hidden; margin: 8px 0 4px; }
 .upload-bar i { display: block; height: 100%; background: var(--brand); border-radius: 999px; transition: width .2s; }
 .upload-row.is-done .upload-bar i, .upload-row.is-duplicate .upload-bar i { background: var(--ok); }
 .upload-row-msg { font-size: .92rem; margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; }
@@ -69,3 +69,92 @@
 /* 단추는 모두 48px 이상(손가락으로 누르기 쉽게) */
 .upload-page .btn-sm { min-height: var(--tap); }
 .upload-page .card-title h2 { margin: 0; }
+
+/* 입력은 왼쪽, 준비 상태와 도움말은 오른쪽. 설명보다 첫 행동을 먼저 둔다. */
+.upload-page { max-width:1280px; }
+.upload-drop { padding:28px 20px; border-width:1px; background:#fbfcfe; }
+.upload-drop-icon { width:32px; height:32px; margin-bottom:8px; }
+.upload-drop-title { font-size:1rem; font-weight:600; }
+.upload-drop-or { font-size:.78rem; margin-block:8px; }
+.upload-drop .help { max-width:44ch; margin:16px auto 0; font-size:.75rem; }
+.upload-confirm { background:#fffbf4; font-size:.8rem; padding:12px; }
+.upload-confirm strong { font-weight:500; }
+.upload-explainer > summary { cursor:pointer; font-size:.88rem; font-weight:600; min-height:44px; display:flex; align-items:center; justify-content:space-between; }
+.upload-explainer > summary::after { content:'+'; font-size:1.2rem; color:var(--muted); }
+.upload-explainer[open] > summary::after { content:'−'; }
+.upload-explainer > summary::-webkit-details-marker { display:none; }
+.upload-explainer { margin-top:16px; padding:12px 20px; }
+.upload-explainer .upload-flow { grid-template-columns:1fr; gap:12px; margin-top:16px; }
+.upload-explainer .upload-flow li { padding:8px 8px 8px 40px; border:0; background:transparent; text-align:left; }
+.upload-explainer .upload-flow li::before { left:0; top:12px; transform:none; background:var(--brand-soft); color:var(--brand-ink); font-weight:600; }
+.upload-explainer .upload-flow li::after { display:none; }
+.upload-explainer .upload-flow strong { font-size:.82rem; font-weight:600; }
+.upload-explainer .upload-flow span { font-size:.75rem; }
+.upload-side { grid-template-columns:1fr; }
+.upload-side h2, .upload-f12 h2 { font-size:1rem; }
+.upload-side p, .upload-f12 p { font-size:.82rem; line-height:1.6; }
+.upload-side .card { padding:20px; }
+.upload-worker-state { font-size:.88rem; font-weight:600; }
+.upload-dl dt,.upload-dl dd { font-size:.78rem; }
+.upload-f12 { background:#fff; border-color:var(--line); }
+@media(min-width:1100px) {
+ .upload-page { display:grid; grid-template-columns:minmax(0,1.65fr) minmax(280px,1fr); gap:16px 24px; align-items:start; }
+ .upload-page > .page-head,.upload-page > .notice,.upload-page > .upload-f12 { grid-column:1/-1; margin:0; }
+ .upload-page > .page-head { margin-bottom:8px; }
+ .upload-page > .upload-box { grid-column:1; grid-row:3/5; margin:0; }
+ .upload-page > .upload-explainer { grid-column:2; grid-row:4; margin:0; }
+ .upload-page > .upload-side { grid-column:2; grid-row:3; margin:0; }
+ .upload-page > .upload-f12 { margin-top:8px; }
+}
+
+/* 파일 → 정보 → 권한: 전송 전 확인할 내용을 시각·읽기 순서 모두 일치시킨다. */
+.upload-step-title { display:flex; align-items:center; gap:8px; font-size:1rem; font-weight:600; margin:0 0 14px; padding:0; }
+.upload-step-title > span { display:inline-grid; place-items:center; flex:0 0 24px; height:24px; border-radius:50%; background:var(--brand-soft); color:var(--brand-ink); font-size:.8rem; }
+.upload-form-group { min-width:0; border:0; padding:0; margin:24px 0 0; }
+.upload-form-group .upload-options { margin-top:12px; }
+.upload-form-group > .help { margin-top:0; }
+.upload-pick:focus-within { outline:3px solid var(--brand); outline-offset:4px; }
+.upload-form-group .upload-confirm { margin-top:0; font-size:.875rem; line-height:1.6; }
+
+/* 주문 노트와 같은 단일 문서 흐름. 앱 메뉴와 업로드 동작은 그대로 둔다. */
+body .view .page.upload-page {
+  --intake-rule:#e5e7eb; --intake-muted:#606670; --intake-ink:#24272c;
+  display:block; max-width:900px; padding:44px clamp(20px,5vw,70px) 56px;
+  color:var(--intake-ink);
+}
+.upload-page > .page-head { margin:0 0 18px; }
+.upload-page .page-head h1 { margin:0; font-size:clamp(26px,3vw,32px); letter-spacing:-.045em; }
+.upload-page .page-head .eyebrow { margin:0 0 7px; color:var(--intake-muted); font-size:.75rem; font-weight:500; }
+.upload-page .page-head .sub { margin-top:8px; color:var(--intake-muted); }
+.upload-page > .notice { margin:0 0 26px; padding:10px 12px; border:0; border-left:2px solid var(--warn-line); border-radius:0; background:#fcfaf6; font-size:.83rem; }
+.upload-page :is(.upload-box,.upload-f12,.upload-explainer),.upload-page .upload-side > .card { margin:0; padding:0; border:0; border-radius:0; box-shadow:none; background:transparent; }
+.upload-page .upload-step-title { gap:8px; margin:0 0 12px; font-weight:650; color:var(--intake-ink); }
+.upload-page .upload-step-title > span { width:auto; height:auto; flex:0 0 1.2em; color:var(--intake-muted); background:none; font-size:.77rem; }
+.upload-page .upload-drop { padding:18px 14px; border:1px dashed #cad1d8; border-radius:6px; background:#fcfdff; }
+.upload-page .upload-drop:is(:focus-within,.is-drag) { border-color:var(--brand); background:#f3f7fb; }
+.upload-page .upload-drop-icon { width:25px; height:25px; margin:0; }
+.upload-page .upload-drop-title { margin:4px 0 5px; color:var(--intake-ink); font-size:.91rem; }
+.upload-page .upload-drop-or { margin:4px 0 5px; }
+.upload-page .upload-pick { padding-inline:14px; border-radius:6px; }
+.upload-page .upload-drop .help { max-width:68ch; margin-top:10px; color:var(--intake-muted); }
+.upload-page .upload-row { border:0; border-bottom:1px solid var(--intake-rule); border-radius:0; padding:9px 3px; }
+.upload-page .upload-row.is-blocked,.upload-page .upload-row.is-error { border-bottom-color:var(--danger-line); background:#fffafa; }
+.upload-page .upload-form-group { border-top:1px solid var(--intake-rule); padding-top:14px; margin-top:22px; }
+.upload-page .upload-options { gap:10px 16px; }
+.upload-page .upload-options .field { min-width:0; }
+.upload-page .upload-options .input { min-width:0; width:100%; border:0; border-bottom:1px solid #c8ced5; border-radius:0; background:transparent; }
+.upload-page .upload-options .input:focus-visible { background:#f4f8fc; }
+.upload-page .upload-confirm { padding:8px 0; border:0; background:transparent; }
+.upload-page .upload-confirm input { accent-color:var(--brand); }
+.upload-page [data-act="upload"] { width:auto; min-width:158px; border-radius:6px; }
+.upload-page > :is(.upload-side,.upload-explainer,.upload-f12) { margin-top:24px; padding:14px 0 0; border-top:1px solid var(--intake-rule); }
+.upload-page .upload-side { gap:18px; }
+.upload-page .upload-queue { gap:14px; }
+.upload-page .upload-queue > div { border:0; border-top:1px solid var(--intake-rule); border-radius:0; padding:9px 0 2px; }
+.upload-page .upload-explainer > summary { padding:0; min-height:44px; }
+.upload-page .upload-f12 .row { gap:6px 12px; }
+@media (max-width:639px) {
+  body .view .page.upload-page { padding:24px 20px 38px; }
+  .upload-page .upload-drop { padding:14px 10px; }
+  .upload-page [data-act="upload"] { width:100%; }
+}

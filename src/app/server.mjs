@@ -6,10 +6,12 @@ import { readdirSync, statSync, createReadStream, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { config, APP_DIR } from './lib/config.mjs';
-import { db } from './lib/db.mjs';
+import { db, globalDb, withWorkspace } from './lib/db.mjs';
 import { Router, HttpError, sendJson, clientIp } from './lib/http.mjs';
 import { securityHeaders, checkOrigin } from './lib/security.mjs';
 import { countVisit, cleanSrc } from './lib/visits.mjs';
+import { accountDb, me, browserAccess, productAccess, demoAccess, requireRole, workerAccess, ingestAccess } from './lib/auth.mjs';
+import { domainFor } from './public/js/domain.js';
 
 const PUBLIC_DIR = path.join(APP_DIR, 'public');
 const ROUTES_DIR = path.join(APP_DIR, 'routes');
@@ -43,6 +45,64 @@ export async function buildRouter() {
     if (typeof mod.start === 'function') starters.push({ name: f, start: mod.start });
   }
   return { router, starters };
+}
+
+const ACTOR_BOUND_AUTH_MUTATIONS = new Set([
+  '/api/auth/profile', '/api/auth/preferences', '/api/auth/password/change',
+  '/api/auth/workspaces', '/api/auth/workspaces/switch', '/api/auth/invite/accept', '/api/auth/logout',
+]);
+
+function handleApi(route, ctx) {
+  const { pattern, handler } = route;
+  const { req } = ctx;
+  if (req.method !== 'GET' && req.method !== 'HEAD' && ACTOR_BOUND_AUTH_MUTATIONS.has(pattern)) {
+    const expectations = [req.headers['x-ahmatda-actor'], ctx.query?.actor].filter(value => value !== undefined);
+    if (expectations.length && expectations.some(value => value !== me(req).user?.id)) {
+      throw new HttpError(409, 'actor_changed', '다른 화면에서 로그인 계정이 바뀌었습니다. 입력 내용을 확인하고 새로고침한 뒤 다시 시도해 주세요.');
+    }
+  }
+  if (pattern === '/healthz' || pattern.startsWith('/api/auth/') ||
+      ['/api/trial', '/api/trial/policy', '/api/trial-signup'].includes(pattern)) return handler(ctx);
+  if (pattern === '/api/meta') {
+    const access = browserAccess(req);
+    return access ? withWorkspace(access, () => handler({ ...ctx, access })) : handler({ ...ctx, access: null });
+  }
+  if (pattern === '/api/ingest') {
+    const access = ingestAccess(req);
+    return withWorkspace(access, () => handler({ ...ctx, access }));
+  }
+  if (pattern.startsWith('/api/worker/') && (pattern !== '/api/worker/status' || req.headers.authorization !== undefined)) {
+    const access = workerAccess(req);
+    return withWorkspace(access, () => handler({ ...ctx, access }));
+  }
+  if (pattern.startsWith('/api/admin/')) {
+    if (!config.demoMode && ['/api/admin/reset', '/api/admin/seed-audio'].includes(pattern)) {
+      throw new HttpError(403, 'demo_required', '데모 모드에서 할 수 있습니다.');
+    }
+    return config.demoMode ? withWorkspace(demoAccess(), () => handler(ctx)) : handler(ctx);
+  }
+  const access = productAccess(req);
+  // Expectations bind an already-rendered browser view, not authentication itself.
+  // Check both carriers so a fresh header cannot override an old media/export URL.
+  const expectedActors = [req.headers['x-ahmatda-actor'], ctx.query?.actor].filter(value => value !== undefined);
+  if (expectedActors.some(value => value !== access.user?.id)) {
+    throw new HttpError(409, 'actor_changed', '다른 화면에서 로그인 계정이 바뀌었습니다. 입력 내용을 확인하고 새로고침한 뒤 다시 시도해 주세요.');
+  }
+  const expectedWorkspaces = [req.headers['x-ahmatda-workspace'], ctx.query?.workspace].filter(value => value !== undefined);
+  if (expectedWorkspaces.some(value => value !== access.workspace.id)) {
+    throw new HttpError(409, 'workspace_changed', '다른 화면에서 워크스페이스가 바뀌었습니다. 새로고침한 뒤 다시 시도해 주세요.');
+  }
+  return withWorkspace(access, () => {
+    const readOnly = req.method === 'GET' || req.method === 'HEAD';
+    if (!readOnly) {
+      if (pattern.startsWith('/api/settings/') || req.method === 'DELETE' && pattern === '/api/calls/:id') requireRole('admin');
+      else if (/^\/api\/cards\/:callId\/(ship|unship)$/.test(pattern)) requireRole('admin', 'shipping');
+      else if (pattern.startsWith('/api/cards/') || pattern.startsWith('/api/live/') || pattern.startsWith('/api/calls/')) {
+        requireRole('admin', 'reception');
+      } else if (pattern === '/api/briefing') requireRole('admin', 'reception', 'shipping');
+    }
+    return handler({ ...ctx, access });
+  });
 }
 
 function serveStatic(req, res, pathname, search = '') {
@@ -115,7 +175,7 @@ export function createApp(router) {
           query: Object.fromEntries(url.searchParams),
           ip: clientIp(req),
         };
-        const out = await m.route.handler(ctx);
+        const out = await handleApi(m.route, ctx);
         if (out !== undefined && !res.headersSent) sendJson(res, 200, out);
         return;
       }
@@ -154,11 +214,18 @@ export function createApp(router) {
 }
 
 async function main() {
-  mkdirSync(config.dataDir, { recursive: true });
-  db(); // 표 만들기
+  domainFor(process.env.AHMATDA_DOMAIN);
+  mkdirSync(config.dataDir, { recursive: true, mode: 0o700 });
+  globalDb(); // 이전 업무 자료와 운영 통계
+  accountDb(); // 계정과 워크스페이스 연결
+  if (config.demoMode) db(); // 가짜 데이터 전용 저장소
   const { router, starters } = await buildRouter();
   for (const s of starters) {
-    try { await s.start(); } catch (e) { console.error(`[start] ${s.name} 실패:`, e?.message || e); }
+    try {
+      if (s.name === 'admin.mjs') {
+        if (config.demoMode) await withWorkspace(demoAccess(), s.start);
+      } else await s.start();
+    } catch (e) { console.error(`[start] ${s.name} 실패:`, e?.message || e); }
   }
   const server = http.createServer(createApp(router));
   server.requestTimeout = 120_000;

@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'cn-'));
 process.env.ADMIN_PASSCODE = 'fake-test-passcode';
 
-const { db } = await import('../lib/db.mjs');
+const { dataDir, db } = await import('../lib/db.mjs');
 const { Router } = await import('../lib/http.mjs');
 const { kstDay, adminLogin } = await import('../lib/security.mjs');
 const { createApp } = await import('../server.mjs');
@@ -70,7 +70,7 @@ before(async () => {
   addCall({ id: 'call_gone', recordedAt: at(dayBefore(2), '08:30'), title: '파일 없음', audio: 'audio/nope.wav' });
 
   // 가짜 WAV: 44바이트 머리 + 1000바이트
-  const dir = path.join(process.env.DATA_DIR, 'audio');
+  const dir = path.join(dataDir(), 'audio');
   fs.mkdirSync(dir, { recursive: true });
   const buf = Buffer.alloc(1044);
   buf.write('RIFF', 0); buf.write('WAVE', 8);
@@ -96,7 +96,7 @@ test('목록: 최신순 · total · 카드 포함 · 글은 빼고', async () =>
   const { res, body } = await get('/api/calls');
   assert.equal(res.status, 200);
   assert.equal(body.total, 7);
-  assert.equal(body.limit, 50);
+  assert.equal(body.limit, 30);
   const ids = body.calls.map((c) => c.id);
   assert.deepEqual(ids.slice(0, 3), ['call_d', 'call_b', 'call_a']);
   const a = body.calls.find((c) => c.id === 'call_a');
@@ -186,10 +186,12 @@ test('오디오: 전체 · Range · 끝에서 · 범위 밖 · 내려받기 · �
   assert.equal(r.res.status, 200);
   assert.equal(r.res.headers.get('content-type'), 'audio/wav');
   assert.equal(r.res.headers.get('accept-ranges'), 'bytes');
+  assert.equal(r.res.headers.get('cache-control'), 'no-store');
   assert.equal(r.body.length, 1044);
 
   r = await get('/api/calls/call_a/audio', { Range: 'bytes=44-99' });
   assert.equal(r.res.status, 206);
+  assert.equal(r.res.headers.get('cache-control'), 'no-store');
   assert.equal(r.res.headers.get('content-range'), 'bytes 44-99/1044');
   assert.equal(r.body.length, 56);
   assert.equal(r.body[0], 44);
@@ -207,7 +209,7 @@ test('오디오: 전체 · Range · 끝에서 · 범위 밖 · 내려받기 · �
   assert.equal(r.res.headers.get('content-range'), 'bytes */1044');
 
   r = await get('/api/calls/call_a/audio?download=1');
-  assert.equal(r.res.headers.get('content-disposition'), 'attachment; filename="callnote-fake-call_a.wav"');
+  assert.equal(r.res.headers.get('content-disposition'), 'attachment; filename="ahmatda-fake-call_a.wav"');
 
   r = await get('/api/calls/call_b/audio');
   assert.equal(r.res.status, 404);
@@ -267,7 +269,7 @@ test('지우기: 관리자만, 카드 · 일감 · 오디오까지', async () =>
   assert.equal(db().prepare("SELECT COUNT(*) AS n FROM calls WHERE id = 'call_a'").get().n, 0);
   assert.equal(db().prepare("SELECT COUNT(*) AS n FROM cards WHERE call_id = 'call_a'").get().n, 0);
   assert.equal(db().prepare("SELECT COUNT(*) AS n FROM jobs WHERE call_id = 'call_a'").get().n, 0);
-  assert.equal(fs.existsSync(path.join(process.env.DATA_DIR, 'audio', 'call_a.wav')), false);
+  assert.equal(fs.existsSync(path.join(dataDir(), 'audio', 'call_a.wav')), false);
 
   res = await fetch(base + '/api/calls/call_a', { method: 'DELETE', headers: { Cookie: `cn_admin=${token}` } });
   assert.equal(res.status, 404);
@@ -275,7 +277,7 @@ test('지우기: 관리자만, 카드 · 일감 · 오디오까지', async () =>
   res = await fetch(base + '/api/calls/call_bad', { method: 'DELETE', headers: { Cookie: `cn_admin=${token}` } });
   assert.equal(res.status, 200);
   assert.equal((await res.json()).audioDeleted, false);
-  assert.ok(fs.existsSync(path.join(process.env.DATA_DIR, 'callnote.sqlite')));
+  assert.ok(fs.existsSync(path.join(dataDir(), 'callnote.sqlite')));
 });
 
 test('찾기: 통화 종류(call_type)로도 찾는다', async () => {
@@ -283,4 +285,130 @@ test('찾기: 통화 종류(call_type)로도 찾는다', async () => {
   const { body } = await get('/api/calls?q=' + encodeURIComponent('반품'));
   assert.deepEqual(body.calls.map((c) => c.id), ['call_e']);
   assert.equal(body.calls[0].card.callType, '반품·교환');
+});
+
+
+test('보드 열 집계는 200건을 넘겨도 정확하고 이력 필터와 페이지를 함께 쓸 수 있다', async () => {
+  for (let i = 0; i < 205; i++) {
+    const id = 'page_' + String(i).padStart(3, '0');
+    addCall({
+      id, recordedAt: at(today, '12:00'), customer: '가짜거래처',
+      card: { status: 'confirmed', customer: '가짜거래처', callback: i % 2 === 0, urgent: i === 0 },
+    });
+    db().prepare("UPDATE cards SET call_type = '배송 문의' WHERE call_id = ?").run(id);
+  }
+  const params = new URLSearchParams({ status: 'confirmed', customer: '가짜거래처', callType: '배송 문의', sort: 'board' });
+  let { body } = await get('/api/calls?' + params);
+  assert.equal(body.total, 205);
+  assert.equal(body.calls.length, 30);
+  assert.equal(body.calls[0].id, 'page_000');
+  params.set('offset', '200');
+  ({ body } = await get('/api/calls?' + params));
+  assert.equal(body.total, 205);
+  assert.equal(body.calls.length, 5);
+  params.delete('offset');
+  params.set('callback', 'true');
+  ({ body } = await get('/api/calls?' + params));
+  assert.equal(body.total, 103);
+  assert.ok(body.calls.every((call) => call.card.callback && call.card.callType === '배송 문의'));
+  params.set('callback', 'false');
+  ({ body } = await get('/api/calls?' + params));
+  assert.equal(body.total, 102);
+});
+
+test('가짜 날짜 경계: KST 통화일 복합필터와 희망 일정 문구순은 시간순과 구분', async t => {
+  const day = '2030-01-02', customer = '가짜 날짜 경계 거래처';
+  const start = at(day, '00:00'), end = at(calls.addDays(day, 1), '00:00');
+  const cases = [
+    ['date_before', new Date(Date.parse(start) - 1).toISOString(), '오후 2시', false],
+    ['date_start', start, '오전 10시', true],
+    ['date_last', new Date(Date.parse(end) - 1).toISOString(), '오전 9시', false],
+    ['date_end', end, '   ', false],
+  ];
+  t.after(() => { for (const [id] of cases) { db().prepare('DELETE FROM cards WHERE call_id=?').run(id); db().prepare('DELETE FROM calls WHERE id=?').run(id); } });
+  for (const [id, recordedAt, due, urgent] of cases) {
+    addCall({ id, recordedAt, customer, card: { status: 'confirmed', customer, due, urgent } });
+    db().prepare("UPDATE cards SET call_type = '주문' WHERE call_id = ?").run(id);
+  }
+  const query = new URLSearchParams({customer, status:'confirmed', callType:'주문', from:day, to:day, sort:'board'});
+  let {body} = await get('/api/calls?' + query);
+  assert.deepEqual(body.calls.map(c => c.id), ['date_start', 'date_last']);
+  query.delete('from'); query.delete('to'); query.set('sort', 'due');
+  ({body} = await get('/api/calls?' + query));
+  // 문구순 정책: 오전 10시는 오전 9시보다 앞. 날짜·시간을 임의로 해석하지 않는다.
+  assert.deepEqual(body.calls.map(c => c.id), ['date_start', 'date_last', 'date_before', 'date_end']);
+  query.set('callType', '배송 문의');
+  ({body} = await get('/api/calls?' + query));
+  assert.equal(body.total, 0);
+});
+
+test('거래처 열린 카드: 처리 완료 문의는 제외하고 초안·출고 대상·콜백은 독립 유지한다 (가짜)', async () => {
+  const cases = [
+    ['draft-inquiry','draft','배송 문의',[],true,1],
+    ['done-inquiry','confirmed','배송 문의',[],true,0],
+    ['inquiry-with-part','confirmed','배송 문의',[{part:'가짜 부품'}],false,0],
+    ['order','confirmed','주문',[{part:'가짜 부품'}],false,1],
+    ['return','confirmed','반품·교환',[{part:'가짜 부품'}],false,1],
+    ['empty-order','confirmed','주문',[],false,0],
+    ['blank-part','confirmed','주문',[{part:''}],false,0],
+    ['empty-return','confirmed','반품·교환',[],false,0],
+    ['stock-inquiry','confirmed','재고·단가 문의',[{part:'가짜 부품'}],false,0],
+    ['other','confirmed','기타',[{part:'가짜 부품'}],false,0],
+    ['default-type','confirmed','',[{part:'가짜 부품'}],false,1],
+    // 이전 저장자료의 JSON truthiness도 공통 isShipTarget과 일치해야 한다.
+    ['string-zero','confirmed','주문',[{part:'0'}],false,1],
+    ['number-zero','confirmed','주문',[{part:0}],false,0],
+    ['number-one','confirmed','주문',[{part:1}],false,1],
+    ['false-part','confirmed','주문',[{part:false}],false,0],
+    ['true-part','confirmed','주문',[{part:true}],false,1],
+    ['null-part','confirmed','주문',[{part:null}],false,0],
+    ['object-part','confirmed','주문',[{part:{}}],false,1],
+    ['array-part','confirmed','주문',[{part:[]}],false,1],
+    ['cancelled','cancelled','주문',[{part:'가짜 부품'}],true,0],
+    ['shipped','shipped','주문',[{part:'가짜 부품'}],true,0],
+  ];
+  try {
+    for (const [key,status,callType,items,callback] of cases) {
+      const name='가짜 집계 '+key,id='fake-count-'+key;
+      addCall({id,recordedAt:at(today,'12:30'),customer:name,card:{status,customer:name,items,callback}});
+      db().prepare('UPDATE cards SET call_type=? WHERE call_id=?').run(callType,id);
+    }
+    const list=(await get('/api/customers')).body.customers;
+    for(const [key,status,callType,items,callback,expected] of cases){
+      const name='가짜 집계 '+key;
+      assert.equal(list.find(c=>c.name===name).openCards,expected,key+' list');
+      const {body}=await get('/api/customers/'+encodeURIComponent(name));
+      assert.equal(body.customer.openCards,expected,key+' detail');
+      const {isShipTarget}=await import('../public/js/domain.js');
+      assert.equal(expected,status==='draft'||(status==='confirmed'&&isShipTarget(body.calls[0].card))?1:0,key+' domain parity');
+      assert.equal(body.calls[0].card.callback,callback,key+' callback unchanged');
+      assert.equal(body.calls[0].card.status,status,key+' status unchanged');
+    }
+  } finally {
+    for (const [key] of cases) db().prepare('DELETE FROM calls WHERE id=?').run('fake-count-'+key);
+  }
+});
+
+test('희망 일정 날짜순: 전체 SQL 정렬 후 페이지, KST 기준과 불명확 문구 보존', async t => {
+  const customer='가짜 날짜순 정렬 검증';
+  const rows=[
+    ['due_unknown','2026-11-21T01:00:00Z','내일 오전'],
+    ['due_late','2026-11-19T01:00:00Z','2027-01-02 14:00'],
+    ['due_relative','2026-12-31T15:00:00Z','내일 09:00'],
+    ['due_date','2026-11-19T01:00:00Z','2027-01-02'],
+    ['due_early','2026-11-19T01:00:00Z','2027-01-01 23:00'],
+    ['due_tie_a','2026-11-19T01:00:00Z','2027-01-02 14:00'],
+    ['due_tie_z','2026-11-19T01:00:00Z','2027-01-02 14:00'],
+  ];
+  t.after(()=>{for(const [id] of rows){db().prepare('DELETE FROM cards WHERE call_id=?').run(id);db().prepare('DELETE FROM calls WHERE id=?').run(id);}});
+  for(const [id,recordedAt,due] of rows)addCall({id,recordedAt,customer,card:{status:'confirmed',customer,due}});
+  const query={customer,status:'confirmed',sort:'dueDate',limit:'2'};
+  const result=calls.listCalls(query);
+  assert.equal(result.total,7);
+  const ids=[0,2,4,6].flatMap(offset=>calls.listCalls({...query,offset}).calls.map(c=>c.id));
+  assert.deepEqual(ids,['due_early','due_date','due_relative','due_tie_z','due_tie_a','due_late','due_unknown']);
+  assert.equal(new Set(ids).size,7);
+  assert.deepEqual(calls.listCalls({...query,offset:2}).calls.map(c=>c.id),['due_relative','due_tie_z']);
+  for(const [id,,due] of rows)assert.equal(db().prepare('SELECT due FROM cards WHERE call_id=?').get(id).due,due);
+  assert.equal(calls.listCalls({...query,from:'2027-01-01',to:'2027-01-01'}).total,1);
 });

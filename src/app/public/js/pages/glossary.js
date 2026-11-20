@@ -1,305 +1,653 @@
-// F07 낱말 사전 — 현장 말(틀리기 쉬운 말 포함) · 거래처(가짜 번호) · 차종. 넣기 · 지우기 · 찾기.
 import { api } from '../api.js';
-import { html, render, toast, confirmBox, errorBox } from '../ui.js';
+import { knowledgeRecovery, consumedProposalHash } from '../knowledge-recovery.js';
+import { html, render, toast, confirmBox, errorBox, fmtWhen, href } from '../ui.js';
 
-const TABS = [
-  { id: 'field', label: '현장 말', kinds: ['현장말', '오인식'] },
-  { id: 'customer', label: '거래처', kinds: ['거래처'] },
-  { id: 'car', label: '차종', kinds: ['차종'] },
+const KIND_LABEL = { 현장말: '현장 말', 오인식: '오인식', 거래처: '거래처', 차종: '차종', 부품: '부품', '업무 절차': '업무 절차' };
+const STATUS = { approved: '승인됨', pending: '검토 대기', rejected: '반려', archived: '보관', superseded: '다른 버전 적용' };
+const FILTERS = [['all', '전체'], ['approved', '승인됨'], ['pending', '검토 대기'], ['rejected', '반려'], ['archived', '보관']];
+const FIELDS = [
+  ['kind', '분류'], ['term', '대표 용어'], ['standard', '표준 표현'], ['phone', '거래처 전화번호'], ['contactName', '거래처 담당자'], ['note', '정의와 사용 맥락'],
+  ['evidenceNote', '출처와 근거'], ['aliases', '별칭'], ['relations', '연결된 지식'], ['sourceCallId', '출처 통화'], ['sourceSegIndex', '출처 문장'],
 ];
-// 서버가 영어 이름이나 띄어 쓴 이름으로 줘도 DB 값(현장말 · 오인식 · 거래처 · 차종)으로 맞춘다
-const KIND_MAP = {
-  현장말: '현장말', '현장 말': '현장말', slang: '현장말', term: '현장말', terms: '현장말', field: '현장말', jargon: '현장말',
-  오인식: '오인식', misheard: '오인식', mishear: '오인식', asr: '오인식', mistake: '오인식',
-  거래처: '거래처', customer: '거래처', customers: '거래처', shop: '거래처',
-  차종: '차종', car: '차종', cars: '차종', carModel: '차종', carModels: '차종', car_model: '차종', vehicle: '차종',
-};
-const FIELD_LABELS = {
-  현장말: { term: '현장 말', termPh: '예: 휀다', std: '표준 말', stdPh: '예: 펜더' },
-  오인식: { term: '틀리게 들린 말', termPh: '예: 헨더', std: '바른 말', stdPh: '예: 휀다' },
-};
+const idPath = (id) => '/api/knowledge/' + encodeURIComponent(id);
+const revisionPath = (id, revision) => idPath(id) + '/revisions/' + encodeURIComponent(revision);
 
-function normalize(data) {
-  let list = [];
-  if (Array.isArray(data)) list = data;
-  else if (data && typeof data === 'object') {
-    const arr = data.items || data.entries || data.glossary || data.rows || data.list;
-    if (Array.isArray(arr)) list = arr;
-    else {
-      // 종류별로 묶어 온 경우: {현장말:[...], 거래처:[...]} 또는 {terms, customers, carModels}
-      for (const [k, v] of Object.entries(data)) {
-        if (!Array.isArray(v)) continue;
-        for (const x of v) list.push(typeof x === 'string' ? { kind: KIND_MAP[k] || k, term: x } : { ...x, kind: x?.kind || KIND_MAP[k] || k });
-      }
-    }
-  }
-  return list.filter((x) => x && typeof x === 'object').map((x) => ({
-    id: x.id ?? null,
-    kind: KIND_MAP[x.kind] || x.kind || '현장말',
-    term: String(x.term ?? x.name ?? '').trim(),
-    standard: String(x.standard ?? x.fixed ?? '').trim(),
-    phone: x.phone ? String(x.phone) : '',
-    note: String(x.note ?? '').trim(),
-    status: x.status || 'approved',
-    builtin: x.source === '기본' || ['default', 'seed', 'builtin', 'system'].includes(x.source) || x.builtin === true || x.isDefault === true,
-    // 서버는 source 가 '기본' 인 항목을 관리자만 지우게 한다(routes/glossary.mjs)
-    adminOnly: x.source === '기본',
-  })).filter((x) => x.term);
+function statusChip(status) {
+  const color = { approved: 'confirmed', pending: 'working', rejected: 'draft', archived: 'cancelled', superseded: 'cancelled' };
+  return html`<span class="chip chip-${color[status] || 'cancelled'}">${STATUS[status] || status}</span>`;
+}
+
+function valueOf(content, key) {
+  const value = content?.[key];
+  if (key === 'kind') return KIND_LABEL[value] || value || '';
+  if (key === 'relations') return (value || []).map(({ relation, target }) => relation + ' → ' + target).join('\n');
+  if (key === 'aliases') return (value || []).join(', ');
+  if (key === 'sourceSegIndex') return value == null ? '' : String(value + 1);
+  return value ?? '';
+}
+
+function callSource(data) {
+  const call = data.sourceCall;
+  if (!data.sourceCallId) return '';
+  if (!call) return html`<a href="${href('/calls/' + encodeURIComponent(data.sourceCallId), { seg: data.sourceSegIndex })}">출처 통화 열기 →</a>`;
+  return html`<a class="kn-source" href="${href('/calls/' + encodeURIComponent(call.id), { seg: data.sourceSegIndex, t: call.segment?.start })}">
+    <strong>${call.title || '출처 통화'}</strong>
+    <span>${fmtWhen(call.recordedAt)}${call.segment?.text ? html` · ${call.segment.text}` : ''}</span>
+  </a>`;
 }
 
 export default {
-  title: '낱말 사전',
-  async mount(el, ctx) {
-    let tab = TABS.some((t) => t.id === ctx.query?.tab) ? ctx.query.tab : 'field';
+  title: '공유 지식',
+  mount(el, ctx) {
     let items = [];
+    let itemsLoaded = false;
+    let kinds = Object.keys(KIND_LABEL);
+    let canPropose = false;
+    let canReview = false;
+    let selected = ctx.query?.id || '';
+    let filter = 'all';
+    let category = ({ field: '현장말', customer: '거래처', car: '차종' })[ctx.query?.tab] || '';
     let q = '';
-    let loading = true;
-    let loadError = null;
     let busy = false;
     let disposed = false;
-    let isAdmin = false; // 모르면 관리자가 아닌 것으로 본다(기본 항목 지우기 단추를 숨김)
+    let detailSeq = 0;
+    let dialogState = null;
+    let dialogReturnAction = null;
+    const access = ctx.meta?.access;
+    let recoverable = null;
+    let recoveryLocked = false;
+    let resumed = false;
 
-    render(el, html`<div class="page page-narrow gl-page">
-      <div class="page-head"><div>
-        <p class="eyebrow">F07 · 낱말 사전</p>
-        <h1>낱말 사전</h1>
-        <p class="sub">현장 말 · 거래처 · 차종을 넣어 두면 AI 가 더 잘 알아듣습니다.</p>
-      </div></div>
-      <div class="notice" role="note">여기 넣은 말은 받아쓰기 힌트와 AI 카드 정리에 같이 쓰입니다. 넣은 뒤 통화 화면의 「AI 로 다시 정리」를 누르면 반영됩니다. 처음부터 들어 있는 「기본」 항목은 관리자만 지울 수 있습니다 — 지우기는 직접 넣은 말로 해 보세요.</div>
-      <div class="tabs gl-tabs" role="tablist" aria-label="사전 종류" data-ref="tabs"></div>
-      <section class="card gl-form-card" aria-labelledby="glFormTitle">
-        <h2 id="glFormTitle" class="gl-form-title" data-ref="formTitle"></h2>
-        <form class="gl-form" data-ref="form" novalidate></form>
-      </section>
-      <div class="gl-search">
-        <label class="sr-only" for="glSearch">목록에서 찾기</label>
-        <input id="glSearch" class="input input-search" type="search" placeholder="목록에서 찾기 (예: 쇼바)" autocomplete="off" data-ref="search">
+    render(el, html`<div class="page kn-page">
+      <div class="page-head">
+        <div><h1 data-ref="page-title">공유 지식</h1><p class="sub" data-ref="page-description">현장 용어와 업무 규칙을 모아 팀과 함께 사용하세요.</p></div>
+        <div class="ka-actions" data-ref="actions"></div>
       </div>
-      <div role="tabpanel" data-ref="panel" aria-live="off"></div>
+      <div data-ref="recovery" hidden></div>
+      <div class="ka-metrics" aria-label="지식 현황" data-ref="metrics"></div>
+      <section class="card ka-split kn-layout" aria-label="공유 지식 목록과 상세">
+        <div class="kn-sidebar">
+          <label class="sr-only" for="kn-search">지식 검색</label>
+          <input class="input" id="kn-search" type="search" placeholder="용어, 별칭, 설명 검색">
+          <label class="sr-only" for="kn-kind">지식 분류</label>
+          <select class="select" id="kn-kind" data-ref="kinds"></select>
+          <div class="ka-actions kn-filters" aria-label="상태 필터" data-ref="filters"></div>
+          <div class="kn-list" data-ref="list"><p class="loading" role="status">지식을 불러오는 중…</p></div>
+        </div>
+        <div class="kn-detail" data-ref="detail"></div>
+      </section>
+      <dialog class="ka-dialog" aria-labelledby="kn-dialog-title" data-ref="dialog"></dialog>
+      <input type="file" accept=".csv,text/csv" data-ref="file" hidden>
     </div>`);
 
-    const root = el.querySelector('.gl-page');
-    const ref = (n) => root.querySelector(`[data-ref="${n}"]`);
+    const root = el.firstElementChild;
+    const ref = (name) => root.querySelector(`[data-ref="${name}"]`);
+    const dialog = ref('dialog');
 
-    const tabItems = (id) => { const t = TABS.find((x) => x.id === id); return items.filter((i) => t.kinds.includes(i.kind)); };
+    function recoveryNotice() {
+      const box = ref('recovery');
+      box.hidden = !recoverable;
+      render(box, recoverable ? html`<section class="notice notice-warn" aria-label="작성 중인 제안">
+        <p>로그인 전에 작성하던 지식 제안이 있습니다. 이 탭에서 15분 동안 이어 쓸 수 있습니다. 아직 제출되지 않았습니다.</p>
+        <button type="button" class="btn" data-act="resume-draft">이어서 작성</button>
+        <button type="button" class="btn btn-ghost" data-act="discard-draft">초안 삭제</button></section>` : '');
+    }
+    function consumeLaunch() {
+      const newHash = consumedProposalHash(location.hash);
+      if (newHash !== location.hash) history.replaceState(history.state, '', newHash);
+    }
+    function discardRecovery() {
+      knowledgeRecovery.discard(access);
+      recoverable = null;
+      resumed = false;
+      recoveryNotice();
+    }
+    // 요청 중에는 폼이 disabled 상태일 수 있어 FormData가 아니라 명시된 입력의 값을 읽는다.
+    function captureExpired() {
+      const form = dialog.querySelector('form[data-form="suggest"]');
+      if (disposed || recoveryLocked || !canPropose || !dialog.open || dialogState?.type !== 'suggest' ||
+          !form || !(resumed || dialogState.dirty)) return;
+      const field = key => form.elements.namedItem(key)?.value ?? '';
+      const {id,data} = dialogState;
+      knowledgeRecovery.save(access,{
+        id:id ?? null, kind:field('kind'), term:field('term'), aliases:field('aliases'),
+        standard:field('standard'), phone:field('phone'), contactName:field('contactName'), note:field('note'), evidenceNote:field('evidenceNote'),
+        sourceCallId:data.sourceCallId || null, sourceSegIndex:data.sourceSegIndex ?? null,
+        relations:[...form.querySelectorAll('[data-relation-row]')].map(row => ({
+          relation:row.querySelector('[name="relation-label"]').value, target:row.querySelector('[name="relation-target"]').value,
+        })),
+      });
+    }
+    function lockRecovery(e) {
+      if (e.detail?.reason === 'signed_out') return; // 실제 만료와 명시적 로그아웃을 혼동하지 않는다.
+      recoveryLocked = true;
+      discardRecovery();
+    }
+    window.addEventListener('ahmatda:session-expired', captureExpired);
+    window.addEventListener('ahmatda:workspace-changed', lockRecovery);
+    window.addEventListener('ahmatda:explicit-logout', lockRecovery);
+    dialog.addEventListener('input', event => {
+      if (event.target.form?.dataset.form === 'suggest' && dialogState?.type === 'suggest') dialogState.dirty = true;
+    });
 
-    function renderTabs() {
-      render(ref('tabs'), html`${TABS.map((t) => html`<button type="button" class="tab" role="tab" id="glTab-${t.id}" aria-selected="${String(t.id === tab)}" data-act="tab" data-tab="${t.id}">${t.label}${loading ? '' : html` <span class="count">${tabItems(t.id).length}</span>`}</button>`)}`);
-      ref('panel').setAttribute('aria-labelledby', `glTab-${tab}`);
+    function visibleItems() {
+      const needle = q.trim().toLowerCase();
+      return items.filter((item) => {
+        const statusMatches = filter === 'all' ? item.status !== 'archived' : filter === 'pending' ? item.status === 'pending' || item.pendingCount > 0 : item.status === filter;
+        return statusMatches && (!category || item.kind === category) &&
+          [item.term, item.standard, item.note, ...item.aliases].some((part) => String(part || '').toLowerCase().includes(needle));
+      });
     }
 
-    function renderForm() {
-      const form = ref('form');
-      if (tab === 'field') {
-        ref('formTitle').textContent = '현장 말 넣기';
-        render(form, html`
-          <label class="field"><span>종류</span>
-            <select class="select" name="kind">
-              <option value="현장말">현장 말 (예: 휀다 → 펜더)</option>
-              <option value="오인식">틀리기 쉬운 말 — 받아쓰기가 자주 틀리는 말 (예: 헨더 → 휀다)</option>
-            </select></label>
-          <div class="gl-pair">
-            <label class="field"><span data-ref="termLabel">현장 말</span><input class="input" name="term" maxlength="40" placeholder="예: 휀다" required autocomplete="off"></label>
-            <span class="gl-pair-arrow" aria-hidden="true">→</span>
-            <label class="field"><span data-ref="stdLabel">표준 말</span><input class="input" name="standard" maxlength="60" placeholder="예: 펜더" required autocomplete="off"></label>
-          </div>
-          <label class="field"><span>메모 (선택)</span><input class="input" name="note" maxlength="200" placeholder="예: 앞 휀다 · 뒤 휀다로도 말함" autocomplete="off"></label>
-          <div data-ref="formMsg"></div>
-          <button type="submit" class="btn btn-primary btn-block">사전에 넣기</button>`);
-      } else if (tab === 'customer') {
-        ref('formTitle').textContent = '거래처 넣기';
-        render(form, html`
-          <label class="field"><span>거래처 이름</span><input class="input" name="term" maxlength="40" placeholder="예: 새한카센터 (지어낸 이름)" required autocomplete="off"></label>
-          <label class="field"><span>전화번호 (가짜 번호만 · 선택)</span><input class="input" name="phone" type="tel" inputmode="tel" maxlength="20" placeholder="예: 010-0000-0199" autocomplete="off">
-            <span class="help">걸려 온 번호가 이 번호와 같으면 카드의 거래처를 이 이름으로 채웁니다.</span></label>
-          <label class="field"><span>메모 (선택)</span><input class="input" name="note" maxlength="200" placeholder="예: 김 실장 · 오전 배송" autocomplete="off"></label>
-          <div data-ref="formMsg"></div>
-          <button type="submit" class="btn btn-primary btn-block">거래처 넣기</button>`);
-      } else {
-        ref('formTitle').textContent = '차종 넣기';
-        render(form, html`
-          <label class="field"><span>차종 (세대까지)</span><input class="input" name="term" maxlength="40" placeholder="예: 쏘렌토 MQ4" required autocomplete="off"></label>
-          <label class="field"><span>메모 (선택)</span><input class="input" name="note" maxlength="200" placeholder="예: 엠큐포라고도 부름" autocomplete="off"></label>
-          <div data-ref="formMsg"></div>
-          <button type="submit" class="btn btn-primary btn-block">차종 넣기</button>`);
-      }
+    function paintList() {
+      if (disposed) return;
+      ref('page-title').textContent = category === '거래처' ? '거래처' : '공유 지식';
+      ref('page-description').textContent = category === '거래처' ? '거래처 이름과 전화번호를 확인하고 수정안을 제안하세요. 분류를 바꾸면 다른 공유 지식도 볼 수 있어요.' : '현장 용어와 업무 규칙을 모아 팀과 함께 사용하세요.';
+      render(ref('filters'), html`${FILTERS.map(([key, label]) => html`<button type="button" class="btn kn-filter" aria-pressed="${filter === key}" data-act="filter" data-value="${key}">${label}</button>`)}`);
+      const shown = visibleItems();
+      render(ref('list'), shown.length ? html`<ul class="kn-items">${shown.map((item) => html`<li>
+        <button type="button" class="kn-item" data-act="select" data-id="${item.id}" aria-pressed="${selected === item.id}">
+          <span class="kn-item-meta"><span>${KIND_LABEL[item.kind]}</span>${statusChip(item.status)}</span>
+          <strong>${item.term}</strong>
+          ${item.aliases.length ? html`<span class="kn-alias-line">${item.aliases.join(' · ')}</span>` : ''}
+          <span class="kn-item-meta">${item.status === 'approved' ? `버전 ${item.version}` : ''}${item.pendingCount ? ` · 검토 대기 ${item.pendingCount}건` : ''}</span>
+        </button></li>`)}</ul>` : html`<p class="muted">조건에 맞는 지식이 없어요.</p>`);
     }
 
-    function itemView(it) {
-      const showStd = it.kind === '현장말' || it.kind === '오인식' || (it.kind === '차종' && it.standard);
-      return html`<li class="list-item gl-item">
-        <div class="gl-body">
-          <div class="gl-main">
-            <span class="gl-term">${it.term}</span>
-            ${showStd && it.standard ? html`<span class="gl-arrow" aria-label="표준 말">→</span><span class="gl-std">${it.standard}</span>` : ''}
+    function paintOverview() {
+      const active = items.filter((item) => item.status !== 'archived');
+      const stats = [
+        ['승인된 지식', active.filter((item) => item.status === 'approved').length],
+        ['검토 대기', active.reduce((n, item) => n + (item.pendingCount || Number(item.status === 'pending')), 0)],
+        ['연결된 관계', active.reduce((n, item) => n + item.relations.length, 0)],
+      ];
+      render(ref('metrics'), html`${stats.map(([label, n]) => html`<div class="card ka-metric"><span>${label}</span><strong>${n}</strong></div>`)}`);
+      render(ref('actions'), canPropose ? html`
+        <a class="btn" href="${api.url('/api/knowledge.csv')}" download>CSV 내려받기</a>
+        <button class="btn" type="button" data-act="import">CSV 가져오기</button>
+        <button class="btn btn-primary" type="button" data-act="new">＋ 지식 제안</button>` : '');
+      render(ref('kinds'), html`<option value="">모든 분류</option>${kinds.map((kind) => html`<option value="${kind}">${KIND_LABEL[kind]}</option>`)}`);
+      ref('kinds').value = category;
+    }
+
+    function paintDetail(item) {
+      const pending = item.revisions.filter((revision) => revision.status === 'pending');
+      const history = item.revisions.filter((revision) => revision.status !== 'pending');
+      render(ref('detail'), html`
+        <button class="btn btn-ghost kn-back-list" type="button" data-act="back-list">← 목록으로</button>
+        <div class="kn-detail-header">
+          <div>
+            <p class="kn-item-meta">${KIND_LABEL[item.kind]}${item.version ? ` · 버전 ${item.version}` : ''}</p>
+            <h2 id="kn-detail-title" tabindex="-1">${item.term}</h2>
+            <div class="ka-actions">${statusChip(item.status)}${item.status === 'approved' ? html`<span class="help">현재 사용하는 승인본</span>` : html`<span class="help">아직 AI가 참고하지 않는 내용</span>`}</div>
           </div>
-          ${it.kind === '거래처' && it.phone ? html`<div class="gl-phone"><span class="chip chip-phone">가짜 번호</span> ${it.phone}</div>` : ''}
-          ${it.note ? html`<p class="gl-note">${it.note}</p>` : ''}
-          <div class="gl-chips">
-            ${it.kind === '오인식' ? html`<span class="chip chip-draft">틀리기 쉬운 말</span>` : ''}
-            ${it.builtin ? html`<span class="chip chip-cancelled">기본</span>` : html`<span class="chip chip-ai">사용자</span>`}
-            ${it.status === 'pending' ? html`<span class="chip chip-working">검토 대기</span>` : ''}
+          <div class="ka-actions">
+            ${canPropose && item.status !== 'archived' ? html`<button type="button" class="btn" data-act="edit">수정 제안</button>` : ''}
+            ${canReview && item.status !== 'archived' ? html`<button type="button" class="btn btn-ghost" data-act="archive">보관</button>` : ''}
           </div>
         </div>
-        ${it.id == null ? ''
-    : it.adminOnly && !isAdmin ? html`<span class="gl-locked" title="기본 항목은 관리자만 지울 수 있습니다">기본 항목</span>`
-      : html`<button type="button" class="btn btn-danger gl-del" data-act="del" data-id="${it.id}" aria-label="${it.term} 지우기">지우기</button>`}
-      </li>`;
+        ${pending.length ? html`<section class="kn-section kn-review">
+          <h3>검토할 제안 ${pending.length}건</h3>
+          <p class="help">${item.status === 'approved' ? '아래 수정안은 아직 적용되지 않았습니다. 승인하면 현재 승인본을 대신합니다.' : '아래 제안은 아직 적용되지 않았습니다. 내용을 확인하고 승인해야 AI가 참고합니다.'}</p>
+          ${pending.map((rev) => html`<div class="kn-history-row">
+            <div><strong>${rev.content.term} ${item.version ? '수정안' : '제안'}</strong><span class="help">${fmtWhen(rev.createdAt)}</span></div>
+            <div class="ka-actions">
+              <button class="btn" type="button" data-act="compare" data-id="${rev.id}">내용 검토</button>
+              ${canReview ? html`<button class="btn" type="button" data-act="reject" data-id="${rev.id}">반려</button><button class="btn btn-primary" type="button" data-act="approve" data-id="${rev.id}">승인</button>` : ''}
+            </div>
+          </div>`)}
+        </section>` : ''}
+        ${item.aliases.length ? html`<div class="ka-actions kn-aliases">${item.aliases.map((alias) => html`<span class="chip chip-ai">${alias}</span>`)}</div>` : ''}
+        <section class="kn-section">
+          <h3>어떤 뜻인가요?</h3>
+          ${item.standard ? html`<p><strong>표준 표현</strong> ${item.standard}</p>` : ''}
+          ${item.contactName ? html`<p><strong>담당자</strong> ${item.contactName} <span class="muted">개인정보 보호</span></p>` : ''}
+          ${item.phone ? html`<p><strong>전화번호</strong> ${item.phone}</p>` : ''}
+          <p class="ka-prewrap">${item.note || '등록된 설명이 없어요.'}</p>
+        </section>
+        ${item.relations.length ? html`<section class="kn-section"><h3>함께 알아둘 정보</h3>
+          <ul class="kn-relations">${item.relations.map(({ relation, target }) => html`<li>
+            <span>${relation}</span>
+            <button class="btn btn-ghost" type="button" data-act="relation" data-value="${target}">${target} →</button>
+          </li>`)}</ul></section>` : ''}
+        <section class="kn-section">
+          <h3>출처와 근거</h3>
+          <p>${item.evidenceNote || item.source || '등록된 출처가 없어요.'}</p>
+          ${callSource(item)}
+          <p class="help">마지막 변경 ${fmtWhen(item.updatedAt)}</p>
+        </section>
+
+        <details class="kn-section kn-history">
+          <summary>변경 이력 <span>${history.length}건</span></summary>
+          ${history.length ? history.map((rev) => html`<div class="kn-history-row">
+            <div><strong>${rev.version ? `버전 ${rev.version} · ` : ''}${STATUS[rev.status]}</strong>
+              <span class="help">${fmtWhen(rev.reviewedAt || rev.createdAt)}</span>
+              ${rev.reason ? html`<p>${rev.reason}</p>` : ''}
+            </div>
+            <div class="ka-actions">
+              <button class="btn btn-ghost" type="button" data-act="compare" data-id="${rev.id}">비교</button>
+              ${canReview && (rev.status === 'archived' || (rev.status === 'approved' && (item.status !== 'approved' || item.version !== rev.version)))
+                ? html`<button class="btn" type="button" data-act="restore" data-id="${rev.id}">복원 제안</button>` : ''}
+            </div>
+          </div>`) : html`<p class="help">승인, 반려, 복원 이력이 여기에 표시됩니다.</p>`}
+        </details>`);
     }
 
-    function renderPanel() {
+    let detail = null;
+    async function select(id, focusDetail = false) {
       if (disposed) return;
-      const panel = ref('panel');
-      if (loading) { render(panel, html`<p class="loading">불러오는 중…</p>`); return; }
-      if (loadError) {
-        render(panel, html`${errorBox(loadError)}<button type="button" class="btn" data-act="reload">다시 불러오기</button>`);
+      const seq = ++detailSeq;
+      selected = id || '';
+      detail = null;
+      paintList();
+      if (!selected) {
+        render(ref('detail'), html`<div class="empty"><p>목록에서 지식을 선택해 주세요.</p></div>`);
         return;
       }
-      const all = tabItems(tab);
-      const needle = q.trim().toLowerCase();
-      const shown = needle ? all.filter((i) => [i.term, i.standard, i.note, i.phone].some((v) => String(v || '').toLowerCase().includes(needle))) : all;
-      const label = TABS.find((t) => t.id === tab).label;
-      render(panel, html`
-        <p class="gl-count muted small">${needle ? `「${q.trim()}」 찾은 결과 ${shown.length}개 / ${label} ${all.length}개` : `${label} ${all.length}개`}</p>
-        ${shown.length
-          ? html`<ul class="list list-wrap gl-list">${shown.map(itemView)}</ul>`
-          : html`<div class="empty"><p>${needle ? '찾는 말이 없습니다.' : '아직 넣은 말이 없습니다. 위에서 한 줄 넣어 보세요.'}</p></div>`}`);
-    }
-
-    async function load() {
-      loading = true;
-      loadError = null;
-      renderTabs();
-      renderPanel();
+      render(ref('detail'), html`<p class="loading" role="status">지식 상세를 불러오는 중…</p>`);
       try {
-        const data = await api.get('/api/glossary');
-        if (disposed) return;
-        items = normalize(data);
-      } catch (err) {
-        if (disposed) return;
-        loadError = err;
+        const { item } = await api.get(idPath(selected));
+        if (disposed || seq !== detailSeq) return;
+        detail = item;
+        paintDetail(item);
+        if (focusDetail) {
+          ref('detail').querySelector('#kn-detail-title').focus({ preventScroll: true });
+          ref('detail').scrollIntoView({ block: 'start', behavior: 'instant' });
+        }
+      } catch (error) {
+        if (disposed || seq !== detailSeq) return;
+        render(ref('detail'), html`${errorBox(error)}<button type="button" class="btn" data-act="reload">다시 불러오기</button>`);
       }
-      loading = false;
-      renderTabs();
-      renderPanel();
     }
 
-    function formMsg(content) {
-      const box = ref('form').querySelector('[data-ref="formMsg"]');
-      if (box) render(box, content || html``);
+    async function load(id = selected) {
+      try {
+        const data = await api.get('/api/knowledge');
+        if (disposed) return;
+        ({ items, kinds, canPropose, canReview } = data);
+        itemsLoaded = true;
+        paintOverview();
+        await select(id || visibleItems()[0]?.id);
+      } catch (error) {
+        if (disposed) return;
+        render(ref('list'), html`${errorBox(error)}<button type="button" class="btn" data-act="reload">다시 불러오기</button>`);
+      }
     }
 
-    async function submit(form) {
+    function showDialog(title, contents) {
+      if (!dialog.open) dialogReturnAction = document.activeElement?.closest('[data-act]')?.dataset.act || null;
+      render(dialog, html`<div class="ka-dialog-head"><h2 id="kn-dialog-title">${title}</h2>
+        <button class="btn btn-ghost ka-close" type="button" aria-label="닫기" data-act="close">×</button></div><p data-ref="mutation-status" role="status" aria-live="polite" hidden></p>${contents}`);
+      if (!dialog.open) dialog.showModal();
+    }
+
+    dialog.addEventListener('cancel', (event) => {
+      if (busy) event.preventDefault();
+    });
+
+    dialog.addEventListener('close', () => { if (!disposed && resumed) discardRecovery(); });
+    let relationRowId = 0;
+    function relationRow(entry = {}) {
+      const n = ++relationRowId;
+      return html`<div class="kn-relation-row" data-relation-row>
+        <label class="field"><span>어떤 관계인가요?</span><input class="input" name="relation-label" maxlength="60" value="${entry.relation || ''}" placeholder="예: 함께 쓰는 부품" aria-describedby="kn-relations-help"></label>
+        <label class="field"><span>무엇과 연결되나요?</span><input class="input" name="relation-target" maxlength="80" value="${entry.target || ''}" list="kn-relation-targets" placeholder="이름을 고르거나 직접 입력" aria-describedby="kn-relations-help"></label>
+        <button type="button" class="btn btn-ghost kn-relation-remove" data-act="relation-remove" aria-label="연결 정보 ${n} 삭제">삭제</button>
+      </div>`;
+    }
+    function syncRelationAdd() {
+      const button = dialog.querySelector('[data-act="relation-add"]');
+      if (button) button.disabled = dialog.querySelectorAll('[data-relation-row]').length >= 10;
+    }
+
+    function sourcePreview(data) {
+      const to = href('/calls/' + encodeURIComponent(data.sourceCallId), { seg: data.sourceSegIndex, t: data.sourceCall?.segment?.start });
+      return html`<details class="kn-source-preview" data-source-preview>
+        <summary>출처 대화 확인</summary>
+        <p class="help">작성 중인 내용을 유지하며 대화를 확인합니다. 녹음은 통화 화면에서 들을 수 있어요.</p>
+        <p class="help" data-source-meta></p>
+        <div class="kn-source-preview-body" data-source-body tabindex="0" role="region" aria-label="출처 대화 원문"></div>
+        <a href="${to}" data-act="source-leave">통화 화면으로 이동 (작성 내용은 저장되지 않음)</a>
+      </details>`;
+    }
+
+    async function loadSourcePreview() {
+      const state = dialogState;
+      const panel = dialog.querySelector('[data-source-preview]');
+      const body = panel?.querySelector('[data-source-body]');
+      if (!body || state?.type !== 'suggest' || !state.data.sourceCallId || state.sourceLoading || state.sourceLoaded) return;
+      const current = () => !disposed && root.isConnected && dialog.open && dialogState === state && body.isConnected;
+      state.sourceLoading = true;
+      render(body, html`<p role="status">출처 대화를 불러오는 중…</p>`);
+      try {
+        const call = await api.get('/api/calls/' + encodeURIComponent(state.data.sourceCallId));
+        if (!current()) return;
+        const segments = Array.isArray(call?.segments) ? call.segments : [];
+        const selected = state.data.sourceSegIndex;
+        render(panel.querySelector('[data-source-meta]'), html`<strong>${call?.title || '출처 통화'}</strong>${call?.recordedAt ? html` · ${fmtWhen(call.recordedAt)}` : ''}`);
+        render(body, html`${segments.length ? html`<ol>${segments.map((segment, index) => html`<li class="${selected != null && Number(selected) === index ? 'is-source' : ''}">${selected != null && Number(selected) === index ? html`<strong>선택한 문장</strong> ` : ''}${segment?.text || ''}</li>`)}</ol>`
+          : html`<p class="ka-prewrap">${call?.transcript || '등록된 대화 원문이 없습니다.'}</p>`}`);
+        const selectedLine = body.querySelector('.is-source');
+        if (panel.open && selectedLine) body.scrollTop += selectedLine.getBoundingClientRect().top - body.getBoundingClientRect().top - 8;
+        state.sourceLoaded = true;
+      } catch (error) {
+        if (current()) render(body, html`${errorBox(error)}<button type="button" class="btn" data-act="source-retry">출처 다시 불러오기</button>`);
+      } finally { state.sourceLoading = false; }
+    }
+    root.addEventListener('toggle', event => {
+      if (event.target.matches?.('[data-source-preview]') && event.target.open && !busy) loadSourcePreview();
+    }, true);
+
+    function suggest(initial = {}, id = null, title) {
+      if (!canPropose) return;
+      if (recoverable) { ref('recovery').querySelector('button')?.focus(); return; }
+      const data = { kind: '현장말', ...initial };
+      dialogState = { type: 'suggest', id, data };
+      showDialog(title || (id ? '지식 수정 제안' : '새 지식 제안'), html`
+        <form class="ka-form" data-form="suggest">
+          <div class="ka-two">
+            <label class="field"><span>대표 용어</span><input class="input" name="term" maxlength="80" value="${data.term || ''}" required></label>
+            <label class="field"><span>분류</span><select class="select" name="kind">${kinds.map((kind) => html`<option value="${kind}" ${kind === data.kind ? 'selected' : ''}>${KIND_LABEL[kind]}</option>`)}</select></label>
+          </div>
+          <label class="field"><span>별칭</span><input class="input" name="aliases" maxlength="300" value="${(data.aliases || []).join(', ')}" placeholder="예: 앞범퍼, 전범퍼"></label>
+          <label class="field" data-ref="standard"><span>표준 표현</span><input class="input" name="standard" maxlength="60" value="${data.standard || ''}"></label>
+          <label class="field" data-ref="contactName"><span>거래처 담당자</span><input class="input" name="contactName" type="text" maxlength="40" value="${data.contactName || ''}" autocomplete="off"><small class="help">저장된 이름은 가려 표시합니다. 그대로 두면 유지하고, 비우면 삭제합니다. CSV 내려받기에는 이름을 넣지 않습니다.</small></label>
+          <label class="field" data-ref="phone"><span>거래처 전화번호</span><input class="input" name="phone" type="tel" maxlength="20" value="${data.phone || ''}" placeholder="010-0000-0199"></label>
+          <label class="field"><span>정의와 업무에서의 의미</span><textarea class="textarea" name="note" rows="3" maxlength="2000" required>${data.note || ''}</textarea></label>
+          <label class="field"><span>출처와 근거</span><input class="input" name="evidenceNote" maxlength="300" value="${data.evidenceNote || ''}" placeholder="예: 공급사 문서명과 확인 날짜" ${!data.sourceCallId ? 'required' : ''}></label>
+          ${data.sourceCallId ? sourcePreview(data) : ''}
+          <fieldset class="kn-relation-editor"><legend>함께 알아둘 정보 <span>(선택)</span></legend>
+            <p class="help" id="kn-relations-help">다른 용어나 부품과의 관계를 적어 두세요. 예: 앞 브레이크 패드 → 함께 쓰는 부품 → 앞 디스크. 최대 10개.</p>
+            <div data-ref="relation-rows">${(data.relations || []).map(relationRow)}</div>
+            <datalist id="kn-relation-targets">${items.filter(item => item.status !== 'archived').map(item => html`<option value="${item.term}"></option>`)}</datalist>
+            <p class="help kn-relation-error" id="kn-relation-error" data-ref="relation-error" role="alert"></p>
+            <button type="button" class="btn btn-sm" data-act="relation-add">+ 연결 정보 추가</button>
+          </fieldset>
+          <p class="help">담당자가 승인한 버전이 다음 AI 요청에 참조됩니다.</p>
+          <div data-ref="form-error"></div>
+          <button class="btn btn-primary" type="submit">검토 대기로 저장</button>
+        </form>`);
+      syncFields(dialog.querySelector('form'));
+      syncRelationAdd();
+    }
+
+    function syncFields(form) {
+      const kind = form.elements.kind.value;
+      form.querySelector('[data-ref="standard"]').hidden = kind === '거래처';
+      form.querySelector('[data-ref="phone"]').hidden = kind !== '거래처';
+      form.querySelector('[data-ref="contactName"]').hidden = kind !== '거래처';
+    }
+
+    function compare(revisionId) {
+      const rev = detail?.revisions.find((item) => item.id === revisionId);
+      if (!rev) return;
+      const others = detail.revisions.filter((item) => item.id !== rev.id && item.status === 'approved');
+      const baseline = rev.version === detail.version ? others[0]?.id || '' : '';
+      dialogState = { type: 'compare', rev, others };
+      showDialog('지식 버전 비교', html`
+        <label class="field"><span>비교 기준</span><select class="select" data-ref="compare-base">
+          <option value="">현재 항목</option>${others.map((item) => html`<option value="${item.id}">버전 ${item.version}</option>`)}
+        </select></label>
+        <div data-ref="comparison"></div>`);
+      ref('compare-base').value = baseline;
+      paintComparison(baseline);
+    }
+
+    function paintComparison(baseId) {
+      const { rev, others } = dialogState;
+      const previous = others.find((item) => item.id === baseId)?.content || detail;
+      const changes = FIELDS.map(([key, label]) => ({ label, before: valueOf(previous, key), after: valueOf(rev.content, key) }))
+        .filter(({ before, after }) => before !== after);
+      render(ref('comparison'), html`
+        <p class="help">${rev.version ? `버전 ${rev.version} · ` : ''}${STATUS[rev.status]} · ${fmtWhen(rev.createdAt)}</p>
+        ${changes.length ? html`<table class="kn-compare">
+          <thead><tr><th scope="col">항목</th><th scope="col">비교 기준</th><th scope="col">선택한 버전</th></tr></thead>
+          <tbody>${changes.map(({ label, before, after }) => html`<tr><th scope="row">${label}</th><td>${before || '—'}</td><td>${after || '—'}</td></tr>`)}</tbody>
+        </table>` : html`<p>바뀐 내용이 없어요.</p>`}
+        ${rev.content.sourceCallId ? html`<p>${callSource(rev.content)}</p>` : ''}`);
+    }
+
+    async function mutate(run, success, inlineError) {
       if (busy) return;
-      const fd = new FormData(form);
-      const get = (k) => String(fd.get(k) || '').trim();
-      const kind = tab === 'field' ? (get('kind') === '오인식' ? '오인식' : '현장말') : tab === 'customer' ? '거래처' : '차종';
-      const body = { kind, term: get('term') };
-      if (tab === 'field') body.standard = get('standard');
-      if (tab === 'customer' && get('phone')) body.phone = get('phone');
-      if (get('note')) body.note = get('note');
-      if (!body.term) { formMsg(html`<div class="notice notice-error" role="alert">${tab === 'customer' ? '거래처 이름' : tab === 'car' ? '차종' : FIELD_LABELS[kind].term}을 써 주세요.</div>`); form.elements.term?.focus(); return; }
-      if (tab === 'field' && !body.standard) { formMsg(html`<div class="notice notice-error" role="alert">${FIELD_LABELS[kind].std}을 써 주세요.</div>`); form.elements.standard?.focus(); return; }
-      if (body.phone && (!/^[0-9-]+$/.test(body.phone) || body.phone.replace(/-/g, '').length < 7 || body.phone.replace(/-/g, '').length > 13)) { formMsg(html`<div class="notice notice-error" role="alert">전화번호는 숫자와 - 만 써 주세요(가짜 번호만, 예: 010-0000-0199).</div>`); form.elements.phone?.focus(); return; }
       busy = true;
-      const btn = form.querySelector('button[type="submit"]');
-      if (btn) btn.disabled = true;
-      formMsg('');
+      const modalMutation = dialog.open;
+      const submit = dialog.querySelector('button[type="submit"]');
+      const progress = ref('mutation-status');
+      const lockedControls = modalMutation
+        ? [...dialog.querySelectorAll('input, select, textarea, button')].map(control => ({control, disabled:control.disabled}))
+        : [];
+      if (submit) submit.disabled = true;
+      if (modalMutation) {
+        submit?.form?.setAttribute('aria-busy', 'true');
+        lockedControls.forEach(({control}) => { control.disabled = true; });
+        if (progress) {
+          progress.textContent = '저장 중에는 내용을 수정할 수 없어요. 완료될 때까지 잠시 기다려 주세요.';
+          progress.hidden = false;
+          progress.tabIndex = -1;
+          progress.focus();
+          progress.scrollIntoView({block:'center', behavior:'instant'});
+        }
+        if (ref('form-error')) ref('form-error').textContent = '';
+      }
       try {
-        await api.post('/api/glossary', body);
+        const result = await run();
+        if (modalMutation && dialogState?.type === 'suggest') knowledgeRecovery.discard(access);
         if (disposed) return;
-        toast('넣었습니다. 통화 화면에서 「AI 로 다시 정리」를 누르면 반영됩니다.', 'ok');
-        form.reset();
-        if (tab === 'field') syncFieldLabels(form);
-        await load();
-      } catch (err) {
+        if (modalMutation && dialogState?.type === 'suggest') { consumeLaunch(); recoverable = null; resumed = false; recoveryNotice(); }
+        if (dialog.open) dialog.close();
+        toast(success, 'ok');
+        await load(result?.id || result?.item?.id || selected);
+        if (modalMutation && !disposed) {
+          const returnButton = [...root.querySelectorAll('[data-act]')].find(button => button.dataset.act === dialogReturnAction && !dialog.contains(button));
+          (returnButton || ref('detail').querySelector('#kn-detail-title') || root.querySelector('#kn-search'))?.focus({ preventScroll: true });
+        }
+      } catch (error) {
         if (disposed) return;
-        formMsg(html`<div class="notice notice-error" role="alert">${err?.message || '넣지 못했습니다.'}</div>`);
+        if (inlineError && ref('form-error')) {
+          const feedback = ref('form-error');
+          render(feedback, errorBox(error));
+          feedback.tabIndex = -1;
+          feedback.focus();
+        }
+        else toast(error.message || '요청을 처리하지 못했어요.', 'error');
       } finally {
         busy = false;
-        if (btn && !disposed) btn.disabled = false;
+        submit?.form?.removeAttribute('aria-busy');
+        if (progress) progress.hidden = true;
+        if (lockedControls.length) lockedControls.forEach(({control, disabled}) => { control.disabled = disabled; });
+        else if (submit) submit.disabled = false;
       }
     }
 
-    async function remove(id) {
-      const it = items.find((i) => String(i.id) === String(id));
-      if (!it || busy) return;
-      const ok = await confirmBox(`「${it.term}」을(를) 사전에서 지울까요?`);
-      if (!ok || disposed) return;
-      busy = true;
-      try {
-        await api.del('/api/glossary/' + encodeURIComponent(it.id));
-        if (disposed) return;
-        toast('지웠습니다.', 'ok');
-        await load();
-      } catch (err) {
-        if (disposed) return;
-        toast(err?.message || '지우지 못했습니다.', 'error');
-      } finally {
-        busy = false;
+    function submit(event) {
+      const form = event.target;
+      if (!form.dataset.form) return;
+      event.preventDefault();
+      if (busy) return;
+      const fields = new FormData(form);
+      const get = (key) => String(fields.get(key) || '').trim();
+      if (form.dataset.form === 'suggest' && dialogState?.type === 'suggest') dialogState.dirty = true;
+      if (form.dataset.form === 'reject') {
+        const { id, revision } = dialogState;
+        mutate(() => api.post(revisionPath(id, revision) + '/review', { decision: 'reject', reason: get('reason') }), '제안을 반려했어요.', true);
+        return;
       }
+      const { data, id } = dialogState;
+      const relations = [];
+      ref('relation-error').textContent = '';
+      for (const [index, row] of [...form.querySelectorAll('[data-relation-row]')].entries()) {
+        const relationInput = row.querySelector('[name="relation-label"]');
+        const targetInput = row.querySelector('[name="relation-target"]');
+        relationInput.removeAttribute('aria-invalid'); targetInput.removeAttribute('aria-invalid');
+        const relation = relationInput.value.trim(), target = targetInput.value.trim();
+        if (!relation && !target) continue;
+        if (!relation || !target) {
+          ref('relation-error').textContent = `${index + 1}번째 연결 정보의 ${!relation ? '관계 설명' : '연결할 이름'}을 입력하거나 이 줄을 삭제해 주세요.`;
+          const invalid = !relation ? relationInput : targetInput;
+          invalid.setAttribute('aria-invalid', 'true');
+          invalid.setAttribute('aria-describedby', 'kn-relations-help kn-relation-error');
+          invalid.focus();
+          return;
+        }
+        relations.push({ relation, target });
+      }
+      const body = {
+        kind: get('kind'), term: get('term'), standard: get('standard'), note: get('note'), phone: get('phone'), contactName: get('contactName'),
+        evidenceNote: get('evidenceNote'), aliases: get('aliases').split(',').map((alias) => alias.trim()).filter(Boolean),
+        relations,
+      };
+      if (!id && data.sourceCallId) {
+        body.sourceCallId = data.sourceCallId;
+        body.sourceSegIndex = data.sourceSegIndex;
+      }
+      mutate(() => id ? api.patch(idPath(id), body) : api.post('/api/knowledge', body), '검토 대기로 저장했어요.', true);
     }
 
-    function syncFieldLabels(form) {
-      const kind = form.elements.kind?.value === '오인식' ? '오인식' : '현장말';
-      const L = FIELD_LABELS[kind];
-      const tl = form.querySelector('[data-ref="termLabel"]');
-      const sl = form.querySelector('[data-ref="stdLabel"]');
-      if (tl) tl.textContent = L.term;
-      if (sl) sl.textContent = L.std;
-      if (form.elements.term) form.elements.term.placeholder = L.termPh;
-      if (form.elements.standard) form.elements.standard.placeholder = L.stdPh;
+    root.addEventListener('submit', submit);
+    root.querySelector('#kn-search').addEventListener('input', (event) => {
+      q = event.target.value;
+      paintList();
+    });
+    root.addEventListener('change', async (event) => {
+      if (event.target === ref('kinds')) {
+        category = event.target.value;
+        paintList();
+      } else if (event.target === ref('compare-base')) {
+        paintComparison(event.target.value);
+      } else if (event.target.name === 'kind' && event.target.form?.dataset.form === 'suggest') {
+        syncFields(event.target.form);
+      } else if (event.target === ref('file')) {
+        const file = event.target.files[0];
+        event.target.value = '';
+        if (!file) return;
+        if (file.size > 380_000) {
+          toast('380KB 이하의 CSV 파일로 나누어 올려 주세요.', 'error');
+          return;
+        }
+        try {
+          const csv = await file.text();
+          if (!disposed) mutate(() => api.post('/api/knowledge/import', { csv }), '파일의 항목을 검토 대기로 가져왔어요.');
+        } catch {
+          toast('CSV 파일을 읽지 못했어요.', 'error');
+        }
+      }
+    });
+
+    root.addEventListener('click', async (event) => {
+      const btn = event.target.closest('[data-act]');
+      if (btn?.dataset.act === 'source-leave') {
+        event.preventDefault();
+        if (busy || disposed) return;
+        const state = dialogState;
+        if (await confirmBox('작성 내용은 저장되지 않습니다. 통화 화면으로 이동할까요?')) {
+          if (!busy && !disposed && dialog.open && dialogState === state && btn.isConnected) location.hash = btn.getAttribute('href');
+        }
+        return;
+      }
+      if (!btn || busy || disposed) return;
+      const { act, id, value } = btn.dataset;
+      if (act === 'discard-draft') { consumeLaunch(); discardRecovery(); ref('actions').querySelector('[data-act="new"]')?.focus(); return; }
+      if (act === 'resume-draft') {
+        const cached = !recoveryLocked && canPropose && knowledgeRecovery.read(access);
+        if (!cached || (cached.id && !items.some(i => i.id === cached.id && i.status !== 'archived'))) {
+          discardRecovery(); toast('이 초안은 더 이상 이어 쓸 수 없습니다.', 'error'); return;
+        }
+        recoverable = null; recoveryNotice(); resumed = true;
+        const {id,aliases,...data} = cached;
+        suggest({...data, aliases:[]}, id, '작성하던 지식 제안');
+        dialog.querySelector('[name="aliases"]').value = aliases; // 입력하던 쉼표와 공백도 유지한다.
+        return;
+      }
+      if (act === 'source-retry') { loadSourcePreview(); return; }
+      if (act === 'relation-add') {
+        const rows = ref('relation-rows');
+        if (!rows || rows.children.length >= 10) return;
+        const holder = document.createElement('div');
+        render(holder, relationRow());
+        const row = holder.firstElementChild;
+        rows.append(row); if (dialogState?.type === 'suggest') dialogState.dirty = true;
+        syncRelationAdd();
+        row.querySelector('input').focus();
+      } else if (act === 'relation-remove') {
+        const row = btn.closest('[data-relation-row]');
+        const next = row.nextElementSibling || row.previousElementSibling;
+        row.remove(); if (dialogState?.type === 'suggest') dialogState.dirty = true; syncRelationAdd();
+        (next?.querySelector('input') || dialog.querySelector('[data-act="relation-add"]')).focus();
+        ref('relation-error').textContent = '';
+      } else if (act === 'filter') {
+        filter = value;
+        await select(visibleItems()[0]?.id);
+        ref('filters').querySelector(`[data-value="${filter}"]`)?.focus();
+      } else if (act === 'select') {
+        await select(id, true);
+      } else if (act === 'back-list') {
+        const button = ref('list').querySelector('[aria-pressed="true"]');
+        (button || root.querySelector('#kn-search')).focus({ preventScroll: true });
+        (button || ref('list')).scrollIntoView({ block: 'center', behavior: 'instant' });
+      } else if (act === 'reload') load();
+      else if (act === 'new') suggest(category ? {kind: category} : {});
+      else if (act === 'edit' && detail) suggest(detail, detail.id);
+      else if (act === 'close') dialog.close();
+      else if (act === 'import') ref('file').click();
+      else if (act === 'compare') compare(id);
+      else if (act === 'relation') {
+        const exact = items.find((item) => item.term === value && item.status !== 'archived');
+        if (exact) {
+          filter = 'all'; category = ''; q = '';
+          ref('kinds').value = '';
+          root.querySelector('#kn-search').value = '';
+          select(exact.id, true);
+        } else suggest({ term: value, kind: '업무 절차' }, null, '연결할 지식 제안');
+      } else if (detail && act === 'reject') {
+        dialogState = { type: 'reject', id: detail.id, revision: id };
+        showDialog('지식 제안 반려', html`
+          <form class="ka-form" data-form="reject"><label class="field"><span>반려 사유</span><textarea class="textarea" name="reason" required maxlength="500" rows="3"></textarea></label>
+          <div data-ref="form-error"></div><button class="btn btn-primary" type="submit">반려하기</button></form>`);
+      } else if (detail && act === 'approve') {
+        const path = revisionPath(detail.id, id) + '/review';
+        if (await confirmBox('이 제안을 승인할까요? 다음 AI 요청부터 참조합니다.') && !disposed) {
+          mutate(() => api.post(path, { decision: 'approve' }), '제안을 승인했어요.');
+        }
+      } else if (detail && act === 'restore') {
+        const path = revisionPath(detail.id, id) + '/restore';
+        if (await confirmBox('이 버전을 검토 대기로 복원할까요?') && !disposed) {
+          if (filter === 'archived') filter = 'pending';
+          mutate(() => api.post(path, {}), '이전 버전을 검토 대기로 복원했어요.');
+        }
+      } else if (detail && act === 'archive') {
+        const itemId = detail.id;
+        if (await confirmBox('이 지식을 보관할까요? 다음 AI 요청의 참조 목록에서 빠집니다.') && !disposed) {
+          filter = 'archived';
+          mutate(() => api.del(idPath(itemId)), '지식을 보관했어요.');
+        }
+      }
+    });
+
+    async function initial() {
+      await load();
+      if (disposed || recoveryLocked) return;
+      if (canPropose) {
+        recoverable = knowledgeRecovery.read(access);
+        if (recoverable) { recoveryNotice(); return; }
+      } else if (itemsLoaded) { discardRecovery(); }
+      if (disposed || !canPropose || !ctx.query?.call) return;
+      const callId = ctx.query.call;
+      const sourceSegIndex = ctx.query.seg == null ? null : Number(ctx.query.seg);
+      let draft = null;
+      if (ctx.query.draft) {
+        try { draft = (await api.get('/api/assistant', { callId })).knowledgeDraft; }
+        catch (error) { if (!disposed) toast(error.message, 'error'); }
+      }
+      if (!disposed) suggest({ sourceCallId: callId, sourceSegIndex, ...draft }, null, draft ? '지식 초안 검토' : '통화에서 지식 제안');
     }
-
-    const onClick = (e) => {
-      const b = e.target.closest('[data-act]');
-      if (!b || b.disabled || !root.contains(b)) return;
-      const act = b.dataset.act;
-      if (act === 'tab' && b.dataset.tab !== tab) {
-        tab = b.dataset.tab;
-        renderTabs();
-        renderForm();
-        renderPanel();
-      } else if (act === 'del') remove(b.dataset.id);
-      else if (act === 'reload') load();
-    };
-    const onSubmit = (e) => { if (e.target === ref('form')) { e.preventDefault(); submit(e.target); } };
-    const onChange = (e) => { if (e.target.name === 'kind' && e.target.form === ref('form')) syncFieldLabels(e.target.form); };
-    const onSearch = (e) => { if (e.target === ref('search')) { q = e.target.value; renderPanel(); } };
-    // 탭 사이를 화살표 키로 옮기기
-    const onKey = (e) => {
-      if (!e.target.matches('[role="tab"]') || !['ArrowLeft', 'ArrowRight'].includes(e.key)) return;
-      const i = TABS.findIndex((t) => t.id === tab);
-      const next = TABS[(i + (e.key === 'ArrowRight' ? 1 : TABS.length - 1)) % TABS.length];
-      tab = next.id;
-      renderTabs();
-      renderForm();
-      renderPanel();
-      root.querySelector(`#glTab-${next.id}`)?.focus();
-    };
-
-    root.addEventListener('click', onClick);
-    root.addEventListener('submit', onSubmit);
-    root.addEventListener('change', onChange);
-    root.addEventListener('input', onSearch);
-    root.addEventListener('keydown', onKey);
-
-    renderTabs();
-    renderForm();
-    // 관리자로 들어와 있으면 기본 항목에도 「지우기」를 보인다(목록과 따로 읽는다)
-    api.get('/api/admin/me').then((r) => {
-      isAdmin = Boolean(r?.admin);
-      if (isAdmin && !disposed && !loading) renderPanel();
-    }).catch(() => { /* 모르면 관리자가 아닌 것으로 둔다 */ });
-    await load();
+    initial();
 
     return () => {
       disposed = true;
-      root.removeEventListener('click', onClick);
-      root.removeEventListener('submit', onSubmit);
-      root.removeEventListener('change', onChange);
-      root.removeEventListener('input', onSearch);
-      root.removeEventListener('keydown', onKey);
+      window.removeEventListener('ahmatda:session-expired', captureExpired);
+      window.removeEventListener('ahmatda:workspace-changed', lockRecovery);
+      window.removeEventListener('ahmatda:explicit-logout', lockRecovery);
+      if (dialog.open) dialog.close();
     };
   },
 };

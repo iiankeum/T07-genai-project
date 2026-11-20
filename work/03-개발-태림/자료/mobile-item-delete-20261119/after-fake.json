@@ -1,0 +1,327 @@
+{
+  "scope": "real card module/CSS/dialog in isolated mobile shell; mock persistence, not full app/native keyboard",
+  "results": [
+    {
+      "width": 360,
+      "count": 5,
+      "big": false,
+      "mode": "middle",
+      "pass": true,
+      "patches": 1
+    },
+    {
+      "width": 360,
+      "count": 5,
+      "big": false,
+      "mode": "last",
+      "pass": true,
+      "patches": 1
+    },
+    {
+      "width": 360,
+      "count": 5,
+      "big": false,
+      "mode": "all",
+      "pass": true,
+      "patches": 1
+    },
+    {
+      "width": 360,
+      "count": 5,
+      "big": false,
+      "mode": "cancel",
+      "pass": true,
+      "patches": 0
+    },
+    {
+      "width": 360,
+      "count": 5,
+      "big": false,
+      "mode": "blank",
+      "pass": true,
+      "patches": 1
+    },
+    {
+      "width": 360,
+      "count": 5,
+      "big": true,
+      "mode": "middle",
+      "pass": true,
+      "patches": 1
+    },
+    {
+      "width": 360,
+      "count": 5,
+      "big": true,
+      "mode": "last",
+      "pass": true,
+      "patches": 1
+    },
+    {
+      "width": 360,
+      "count": 5,
+      "big": true,
+      "mode": "all",
+      "pass": true,
+      "patches": 1
+    },
+    {
+      "width": 360,
+      "count": 5,
+      "big": true,
+      "mode": "cancel",
+      "pass": true,
+      "patches": 0
+    },
+    {
+      "width": 360,
+      "count": 5,
+      "big": true,
+      "mode": "blank",
+      "pass": true,
+      "patches": 1
+    },
+    {
+      "width": 360,
+      "count": 10,
+      "big": false,
+      "mode": "middle",
+      "pass": true,
+      "patches": 1
+    },
+    {
+      "width": 360,
+      "count": 10,
+      "big": false,
+      "mode": "last",
+      "pass": true,
+      "patches": 1
+    },
+    {
+      "width": 360,
+      "count": 10,
+      "big": false,
+      "mode": "all",
+      "pass": true,
+      "patches": 1
+    },
+    {
+      "width": 360,
+      "count": 10,
+      "big": false,
+      "mode": "cancel",
+      "pass": true,
+      "patches": 0
+    },
+    {
+      "width": 360,
+      "count": 10,
+      "big": false,
+      "mode": "blank",
+      "pass": true,
+      "patches": 1
+    },
+    {
+      "width": 360,
+      "count": 10,
+      "big": true,
+      "mode": "middle",
+      "pass": true,
+      "patches": 1
+    },
+    {
+      "width": 360,
+      "count": 10,
+      "big": true,
+      "mode": "last",
+      "pass": true,
+      "patches": 1
+    },
+    {
+      "width": 360,
+      "count": 10,
+      "big": true,
+      "mode": "all",
+      "pass": true,
+      "patches": 1
+    },
+    {
+      "width": 360,
+      "count": 10,
+      "big": true,
+      "mode": "cancel",
+      "pass": true,
+      "patches": 0
+    },
+    {
+      "width": 360,
+      "count": 10,
+      "big": true,
+      "mode": "blank",
+      "pass": true,
+      "patches": 1
+    },
+    {
+      "width": 390,
+      "count": 5,
+      "big": false,
+      "mode": "middle",
+      "pass": true,
+      "patches": 1
+    },
+    {
+      "width": 390,
+      "count": 5,
+      "big": false,
+      "mode": "last",
+      "pass": true,
+      "patches": 1
+    },
+    {
+      "width": 390,
+      "count": 5,
+      "big": false,
+      "mode": "all",
+      "pass": true,
+      "patches": 1
+    },
+    {
+      "width": 390,
+      "count": 5,
+      "big": false,
+      "mode": "cancel",
+      "pass": true,
+      "patches": 0
+    },
+    {
+      "width": 390,
+      "count": 5,
+      "big": false,
+      "mode": "blank",
+      "pass": true,
+      "patches": 1
+    },
+    {
+      "width": 390,
+      "count": 5,
+      "big": true,
+      "mode": "middle",
+      "pass": true,
+      "patches": 1
+    },
+    {
+      "width": 390,
+      "count": 5,
+      "big": true,
+      "mode": "last",
+      "pass": true,
+      "patches": 1
+    },
+    {
+      "width": 390,
+      "count": 5,
+      "big": true,
+      "mode": "all",
+      "pass": true,
+      "patches": 1
+    },
+    {
+      "width": 390,
+      "count": 5,
+      "big": true,
+      "mode": "cancel",
+      "pass": true,
+      "patches": 0
+    },
+    {
+      "width": 390,
+      "count": 5,
+      "big": true,
+      "mode": "blank",
+      "pass": true,
+      "patches": 1
+    },
+    {
+      "width": 390,
+      "count": 10,
+      "big": false,
+      "mode": "middle",
+      "pass": true,
+      "patches": 1
+    },
+    {
+      "width": 390,
+      "count": 10,
+      "big": false,
+      "mode": "last",
+      "pass": true,
+      "patches": 1
+    },
+    {
+      "width": 390,
+      "count": 10,
+      "big": false,
+      "mode": "all",
+      "pass": true,
+      "patches": 1
+    },
+    {
+      "width": 390,
+      "count": 10,
+      "big": false,
+      "mode": "cancel",
+      "pass": true,
+      "patches": 0
+    },
+    {
+      "width": 390,
+      "count": 10,
+      "big": false,
+      "mode": "blank",
+      "pass": true,
+      "patches": 1
+    },
+    {
+      "width": 390,
+      "count": 10,
+      "big": true,
+      "mode": "middle",
+      "pass": true,
+      "patches": 1
+    },
+    {
+      "width": 390,
+      "count": 10,
+      "big": true,
+      "mode": "last",
+      "pass": true,
+      "patches": 1
+    },
+    {
+      "width": 390,
+      "count": 10,
+      "big": true,
+      "mode": "all",
+      "pass": true,
+      "patches": 1
+    },
+    {
+      "width": 390,
+      "count": 10,
+      "big": true,
+      "mode": "cancel",
+      "pass": true,
+      "patches": 0
+    },
+    {
+      "width": 390,
+      "count": 10,
+      "big": true,
+      "mode": "blank",
+      "pass": true,
+      "patches": 1
+    }
+  ],
+  "errors": [],
+  "blocked": []
+}

@@ -1,0 +1,79 @@
+{
+  "scope": "actual glossary/CSS with fake GET/POST/PATCH and minimal router; not native app, real call/audio/auth verification",
+  "results": [
+    {
+      "width": 1440,
+      "edit": false,
+      "inlineNoNavigation": true,
+      "escapedSelectedSegment": true,
+      "formFocusAndSubmitPreserved": true,
+      "leaveDeclinePreserves": true,
+      "ordinaryDetailSameTab": true
+    },
+    {
+      "width": 1440,
+      "edit": true,
+      "inlineNoNavigation": true,
+      "escapedSelectedSegment": true,
+      "formFocusAndSubmitPreserved": true,
+      "leaveDeclinePreserves": true,
+      "ordinaryDetailSameTab": true
+    },
+    {
+      "width": 390,
+      "edit": false,
+      "inlineNoNavigation": true,
+      "escapedSelectedSegment": true,
+      "formFocusAndSubmitPreserved": true,
+      "leaveDeclinePreserves": true,
+      "ordinaryDetailSameTab": true
+    },
+    {
+      "width": 390,
+      "edit": true,
+      "inlineNoNavigation": true,
+      "escapedSelectedSegment": true,
+      "formFocusAndSubmitPreserved": true,
+      "leaveDeclinePreserves": true,
+      "ordinaryDetailSameTab": true
+    },
+    {
+      "width": 1440,
+      "farSegmentScrolledInsidePreview": true,
+      "titleDateContext": true
+    },
+    {
+      "width": 1440,
+      "retryPreservesDraft": true,
+      "explicitLeaveOnly": true
+    },
+    {
+      "width": 1440,
+      "lateClosedDialogCannotOverwriteNewForm": true
+    },
+    {
+      "width": 1440,
+      "pendingSaveCannotLeaveThroughSource": true
+    },
+    {
+      "width": 390,
+      "farSegmentScrolledInsidePreview": true,
+      "titleDateContext": true
+    },
+    {
+      "width": 390,
+      "retryPreservesDraft": true,
+      "explicitLeaveOnly": true
+    },
+    {
+      "width": 390,
+      "lateClosedDialogCannotOverwriteNewForm": true
+    },
+    {
+      "width": 390,
+      "pendingSaveCannotLeaveThroughSource": true
+    }
+  ],
+  "errors": [],
+  "external": []
+}

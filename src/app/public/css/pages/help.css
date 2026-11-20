@@ -37,7 +37,7 @@
 
 .help-list { margin: 0; padding-left: 1.2em; }
 .help-list li { margin: 0 0 10px; line-height: 1.7; }
-.help-now { display: inline-block; padding: 4px 12px; border-radius: 999px; background: #f3f2f9; color: var(--ink-2); font-size: .88rem; font-weight: 600; }
+.help-now { display: inline-block; padding: 4px 12px; border-radius: 999px; background: var(--bg); color: var(--ink-2); font-size: .88rem; font-weight: 600; }
 
 /* 홈 화면에 추가 */
 .help-two { display: grid; gap: 12px; }
@@ -50,3 +50,10 @@
 .help-big .btn { margin: 4px 0 12px; }
 .help-links { display: flex; flex-wrap: wrap; gap: 8px; }
 @media (max-width: 599px) { .help-links .btn { flex: 1 1 100%; } .help-big .btn { width: 100%; } }
+
+/* Help reads as a guide, not a dashboard. */
+.help-page .card { border:0; border-bottom:1px solid #e8ebef; border-radius:0; box-shadow:none; padding-inline:0; background:#fff; }
+.help-page .help-flow { gap:0; }
+.help-page .help-flow li { background:#fff; border-bottom:1px solid #e8ebef; border-radius:0; padding-inline:0; }
+.help-page .hf-n { background:#edf3f8; color:#285b92; }
+.help-page .help-table-wrap { border:0; border-radius:0; }

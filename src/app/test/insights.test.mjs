@@ -13,7 +13,7 @@ const { db } = await import('../lib/db.mjs');
 const { Router } = await import('../lib/http.mjs');
 const { kstDay } = await import('../lib/security.mjs');
 const { createApp } = await import('../server.mjs');
-const { addDays } = await import('../routes/calls.mjs');
+const { addDays, deleteCall } = await import('../routes/calls.mjs');
 const { kstTime } = await import('../lib/repo.mjs');
 const insights = await import('../routes/insights.mjs');
 
@@ -121,7 +121,7 @@ test('마감 요약 글(AI 없이)', async () => {
   const [, m, d] = today.split('-').map(Number);
   const dow = '일월화수목금토'[new Date(`${today}T00:00:00Z`).getUTCDay()];
   const lines = body.text.split('\n');
-  assert.equal(lines[0], `[콜노트 마감 요약 · ${m}월 ${d}일(${dow})] 가짜 통화 데모`);
+  assert.equal(lines[0], `[아맞다 마감 요약 · ${m}월 ${d}일(${dow})] 가짜 통화 데모`);
   assert.ok(body.text.includes('통화 9건 · 주문 카드 7건'));
   assert.ok(body.text.includes('확정 2건 · 확인 필요 3건 · 출고 완료 1건'));
   assert.ok(body.text.includes('■ 급한데 아직 출고 안 된 것 2건'));
@@ -203,6 +203,42 @@ test('브리핑: AI 꺼짐 503 · 10분 캐시 · 없는 callId 는 null', async
   insights.setAiForTest(null);
 });
 
+test('브리핑 생성 중 통화를 지우면 답과 캐시를 폐기한다', async () => {
+  const day = addDays(today, -10);
+  const callId = 'deleted-briefing-call';
+  const customer = '가짜삭제정비소';
+  addCall({ id: callId, recordedAt: at(day, '10:00'), customer, card: { items: [{ part: '활대링크', qty: 1 }] } });
+  const entered = Promise.withResolvers();
+  const provider = Promise.withResolvers();
+  insights.setAiForTest({
+    aiEnabled: () => true,
+    writeBriefing: async ({ cards }) => {
+      entered.resolve(cards);
+      return provider.promise;
+    },
+  });
+  const creating = post('/api/briefing', { day });
+  try {
+    const cards = await Promise.race([
+      entered.promise,
+      creating.then(({ res }) => { throw new Error(`브리핑이 제공자 호출 전에 응답함: ${res.status}`); }),
+    ]);
+    assert.deepEqual(cards.map((card) => card.callId), [callId]);
+    deleteCall(callId);
+    provider.resolve({ paragraph: `${customer} 카드를 확인해 주세요.`, todos: [{ title: customer, callId }] });
+    const { res, body } = await creating;
+    assert.equal(res.status, 409);
+    assert.equal(body.error, 'deleted_context');
+    assert.doesNotMatch(JSON.stringify(body), new RegExp(customer));
+    const saved = await get(`/api/briefing?day=${day}`);
+    assert.equal(saved.body.briefing, null);
+  } finally {
+    provider.resolve();
+    await creating.catch(() => {});
+    insights.setAiForTest(null);
+  }
+});
+
 test('묻기: 거래처 · 날짜로 좁히고 ref 를 통화 · 문장으로 바꾼다', async () => {
   let seen;
   insights.setAiForTest({
@@ -270,6 +306,7 @@ test('출고 목록: 기본은 확정 · 출고 전 전부, today 는 그날 확
   let { body } = await get('/api/shipping');
   assert.equal(body.scope, 'all');
   assert.equal(body.total, 3);
+  assert.ok(body.groups.flatMap(g => g.cards).every(card => Number.isSafeInteger(card.revision) && card.revision >= 0));
   const han = body.groups.find((g) => g.customer === '한빛카');
   assert.deepEqual(han.cards.map((c) => c.callId), ['c2', 'o1']);
   assert.equal(han.cards[0].plate, '12가3456');
@@ -288,7 +325,7 @@ test('출고 CSV: BOM · 칸 · 수식 주입 막기', async () => {
   const res = await fetch(base + '/api/shipping.csv');
   assert.equal(res.status, 200);
   assert.equal(res.headers.get('content-type'), 'text/csv; charset=utf-8');
-  assert.match(res.headers.get('content-disposition'), /^attachment; filename="callnote-fake-shipping-\d{4}-\d{2}-\d{2}\.csv"$/);
+  assert.match(res.headers.get('content-disposition'), /^attachment; filename="ahcha-demo-shipping-\d{4}-\d{2}-\d{2}\.csv"$/);
   const buf = Buffer.from(await res.arrayBuffer());
   assert.deepEqual([...buf.subarray(0, 3)], [0xef, 0xbb, 0xbf]);
   const text = buf.toString('utf8').slice(1);
@@ -372,4 +409,47 @@ test('이어진 질문은 앞 질문의 거래처 · 낱말을 쓴다 · AI 가 
     card: { status: 'draft', aiError: 'no_key', items: [], askBack: [], unsure: [], urgent: false, callback: false },
   }]);
   assert.deepEqual(todos.map((t) => [t.kind, t.priority]), [['retry', 2]]);
+});
+
+test('오늘 할 일은 긴급 문의를 주문으로 안내하지 않고 재연락 우선순위를 유지한다', () => {
+  const make = (id, callType, overrides = {}) => ({
+    row: { id, status: 'ready', recorded_at: at(today, '09:00') }, customer: '가짜 거래처',
+    card: { callType, status: 'draft', urgent: true, callback: false, items: [], askBack: [], unsure: [], ...overrides },
+  });
+  const todos = insights.buildTodos([
+    make('delivery', '배송 문의'),
+    make('stock', '재고·단가 문의'),
+    make('callback', '배송 문의', { askBack: ['배송 도착일'] }),
+    make('order', '주문'),
+    make('return', '반품·교환', { status: 'confirmed', items: [{ part: '가짜 부품', qty: 1 }] }),
+  ]);
+  assert.deepEqual(todos.map(({ callId, kind, title, why, priority }) => [callId, kind, title, why, priority]), [
+    ['delivery', 'confirm', '가짜 거래처 배송 문의 내용 확인', '급하다고 한 통화예요', 1],
+    ['stock', 'confirm', '가짜 거래처 재고·단가 문의 내용 확인', '급하다고 한 통화예요', 1],
+    ['callback', 'callback', '가짜 거래처에 다시 전화', '물어볼 것: 배송 도착일', 1],
+    ['order', 'confirm', '가짜 거래처 주문 확인하고 확정', '급하다고 한 주문이에요', 1],
+    ['return', 'ship', '가짜 거래처 반품·교환 처리', '급한 반품·교환 · 처리 대기', 1],
+  ]);
+});
+
+test('가짜 출고 날짜 경계: today는 희망일·통화일 아닌 KST 확정일, all은 미출고만', async t => {
+  const day = '2030-01-02', customer = '가짜 출고 경계 거래처';
+  const start = at(day, '00:00'), end = at(addDays(day, 1), '00:00');
+  const cases = [
+    ['ship_before', new Date(Date.parse(start)-1).toISOString(), 'confirmed', false],
+    ['ship_start', start, 'confirmed', true],
+    ['ship_last', new Date(Date.parse(end)-1).toISOString(), 'shipped', false],
+    ['ship_end', end, 'confirmed', false],
+  ];
+  t.after(() => { for (const [id] of cases) { db().prepare('DELETE FROM cards WHERE call_id=?').run(id); db().prepare('DELETE FROM calls WHERE id=?').run(id); } });
+  for (const [id, confirmedAt, status, urgent] of cases) addCall({
+    id, customer, recordedAt: at(addDays(day,-10),'09:00'),
+    card: {status, confirmedAt, urgent, due:'다음 달 아무 때나', items:[{part:'가짜 부품',qty:1,partNo:'FAKE-1'}]},
+  });
+  let {body} = await get(`/api/shipping?scope=today&day=${day}`);
+  assert.deepEqual(body.groups.find(g=>g.customer===customer).cards.map(c=>c.callId), ['ship_start','ship_last']);
+  ({body} = await get('/api/shipping?scope=all'));
+  const cards = body.groups.find(g=>g.customer===customer).cards;
+  assert.equal(cards[0].callId,'ship_start');
+  assert.deepEqual(cards.map(c=>c.callId).sort(),['ship_before','ship_end','ship_start']);
 });

@@ -81,8 +81,9 @@ export default {
         <h1>무료 체험 신청</h1>
       </div></div>
       <section class="card trial-intro">
-        <p>콜노트(가칭)는 부품 대리점에 걸려 오는 주문 전화를 받아쓰고, 거래처 · 차종 · 부품 · 수량 · 급함을 주문 카드로 정리해 주는 서비스 아이디어입니다. 신청하시면 팀이 데모 쓰는 법을 안내드리고, 써 보신 의견을 여쭙겠습니다.</p>
-        <p class="trial-class-note">수업 프로젝트의 데모라 실제 서비스 계약이 아닙니다.</p>
+        <p>아차는 주문 전화를 글로 옮기고, 확인할 수 있는 주문 카드로 정리하는 도구입니다. 이름과 연락처를 남기면 팀이 신청을 확인하고 체험 안내를 드립니다.</p>
+        <p class="trial-class-note">무료 체험 안내 신청이며 결제나 서비스 계약이 아닙니다. 계정은 자동으로 만들어지지 않습니다.</p>
+        <p class="small muted">확인 메일은 자동 발송되지 않습니다. 실제 고객 녹음이나 민감한 정보는 남기지 마세요.</p>
       </section>
       <div data-ref="body"></div>
     </div>`);
@@ -146,7 +147,11 @@ export default {
       if (!data.name) { showMsg(html`<div class="notice notice-error" role="alert">이름을 써 주세요.</div>`); form.elements.name.focus(); return; }
       if (!data.contact || !contactOk(data.contact)) { showMsg(html`<div class="notice notice-error" role="alert">연락처를 전화번호(숫자) 또는 이메일로 써 주세요.</div>`); form.elements.contact.focus(); return; }
       if (!data.consent) { showMsg(html`<div class="notice notice-error" role="alert">개인정보 수집 · 이용에 동의해야 신청할 수 있습니다.</div>`); form.elements.consent.focus(); return; }
+      // 확정한 제출값과 화면값이 달라지지 않도록 요청 동안 입력·동의를 잠근다.
+      const controls = [...form.querySelectorAll('input, select, textarea')].map(field => [field, field.disabled]);
       busy = true;
+      for (const [field] of controls) field.disabled = true;
+      form.setAttribute('aria-busy', 'true');
       updateSubmit();
       showMsg(html`<div class="notice"><span class="spinner" aria-hidden="true"></span> 보내는 중…</div>`);
       try {
@@ -155,9 +160,10 @@ export default {
         form.reset();
         // 입력값은 다시 그리지 않는다
         render(body, html`<section class="card trial-done" role="status" tabindex="-1">
-          <h2>신청을 받았습니다. 고맙습니다.</h2>
-          <p>적어 주신 연락처로 팀이 데모 안내를 드리겠습니다.</p>
-          <p class="trial-class-note">수업 프로젝트의 데모라 실제 서비스 계약이 아닙니다.</p>
+          <h2>무료 체험 신청이 접수됐어요.</h2>
+          <p>신청 내용을 저장했습니다. 팀이 확인한 뒤 적어 주신 연락처로 체험 안내를 드릴 예정입니다.</p>
+          <p class="trial-class-note">무료 체험 안내 신청이며 결제나 서비스 계약이 아닙니다. 계정은 자동으로 만들어지지 않습니다.</p>
+        <p class="small muted">확인 메일은 자동 발송되지 않습니다. 실제 고객 녹음이나 민감한 정보는 남기지 마세요.</p>
           <div class="row"><a class="btn btn-primary" href="#/">첫 화면으로</a><a class="btn" href="#/live">실시간 받아쓰기 해 보기</a></div>
         </section>`);
         body.querySelector('.trial-done')?.focus();
@@ -166,7 +172,11 @@ export default {
         showMsg(html`<div class="notice notice-error" role="alert">${err?.message || '신청을 보내지 못했습니다. 잠시 뒤 다시 해 주세요.'}</div>`);
       } finally {
         busy = false;
-        if (!disposed) updateSubmit();
+        if (!disposed && form.isConnected) {
+          for (const [field, disabled] of controls) field.disabled = disabled;
+          form.removeAttribute('aria-busy');
+          updateSubmit();
+        }
       }
     }
 

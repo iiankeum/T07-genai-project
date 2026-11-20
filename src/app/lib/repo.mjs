@@ -1,5 +1,6 @@
 // 통화 · 카드 행을 API 모양으로 바꾸는 곳(docs/설계.md 5.1 · 5.2). 여러 routes 가 같이 쓴다.
 import { db, parseJson } from './db.mjs';
+import { DEFAULT_DOMAIN, domainFor, itemId, warningId } from '../public/js/domain.js';
 
 export const CALL_STATUS_LABEL = {
   queued: '받아쓰기 기다리는 중',
@@ -47,21 +48,8 @@ export function makeTitle({ customer, items, recordedAt, durationSec, source }) 
   return bits.join(' · ');
 }
 
-export const CALL_TYPES = ['주문', '배송 문의', '반품·교환', '재고·단가 문의', '기타'];
+export { CALL_TYPES, isShipTarget } from '../public/js/domain.js';
 
-/** 출고(기사가 들고 나가거나 회수할 물건)가 있는 통화 종류 */
-export const SHIP_CALL_TYPES = ['주문', '반품·교환'];
-/**
- * 출고 대상 카드인가: 통화 종류가 주문 · 반품·교환이고 부품 줄이 하나라도 있을 것.
- * 출고 목록 · CSV · 대시보드 「급한데 출고 전」 · 할 일 「출고」가 모두 이것을 쓴다.
- * 배송 문의 · 잘못 건 전화처럼 부품 없이 「처리 끝」으로 확정한 카드는 빠진다.
- * @param {{callType?:string, items?:any[]}|null} card cardView 모양
- */
-export function isShipTarget(card) {
-  if (!card) return false;
-  const items = Array.isArray(card.items) ? card.items.filter((i) => i && typeof i === 'object') : [];
-  return SHIP_CALL_TYPES.includes(card.callType || '주문') && items.length > 0;
-}
 const CARD_FIELDS = ['callType', 'customer', 'contact', 'carModel', 'modelYear', 'plate', 'items', 'urgent', 'due', 'delivery', 'askBack', 'note'];
 
 /** 카드 행 → API 모양 */
@@ -77,12 +65,14 @@ export function cardView(row) {
     carModel: row.car_model ?? null,
     modelYear: row.model_year ?? null,
     plate: row.plate ?? null,
-    items: parseJson(row.items, []),
+    items: parseJson(row.items, []).map((item, index) => ({ ...item, id: itemId(item, index) })),
+    domainVersion: row.domain_version || DEFAULT_DOMAIN,
+    fieldReviews: parseJson(row.field_reviews, {}),
     urgent: Boolean(row.urgent),
     due: row.due ?? null,
     delivery: row.delivery ?? null,
     askBack: parseJson(row.ask_back, []),
-    unsure: parseJson(row.unsure, []),
+    unsure: parseJson(row.unsure, []).map((warning, index) => warning && ({ ...warning, id: warningId(warning, index) })).filter((warning) => warning && !warning.reviewedAt),
     fixes: parseJson(row.fixes, []),
     evidence: parseJson(row.evidence, {}),
     highlights: parseJson(row.highlights, []),
@@ -93,6 +83,7 @@ export function cardView(row) {
     aiModel: row.ai_model ?? null,
     aiError: row.ai_error ?? null,
     edits: row.edits ?? 0,
+    revision: row.revision ?? 0,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     confirmedAt: row.confirmed_at ?? null,
@@ -166,13 +157,13 @@ export function getCardRow(callId) {
  * 받아쓰기 · AI 에 넘길 사전(F07). 승인된 것만.
  * @returns {{glossary:{term:string,standard:string,kind:string}[], customers:{name:string,phone:string|null}[], carModels:string[], initialPrompt:string}}
  */
-export function dictionaryForAi() {
+export function dictionaryForAi(domainVersion) {
   const rows = db().prepare("SELECT kind, term, standard, phone FROM glossary WHERE status = 'approved' ORDER BY kind, term").all();
   const glossary = rows.filter((r) => r.kind === '현장말' || r.kind === '오인식').map((r) => ({ term: r.term, standard: r.standard || '', kind: r.kind }));
   const customers = rows.filter((r) => r.kind === '거래처').map((r) => ({ name: r.term, phone: r.phone || null }));
   const carModels = rows.filter((r) => r.kind === '차종').map((r) => r.term);
   const words = glossary.filter((g) => g.kind === '현장말').map((g) => g.term);
-  const initialPrompt = `자동차 부품 대리점 주문 전화입니다. ${words.join(', ')}.`.slice(0, 600);
+  const initialPrompt = `${domainFor(domainVersion || process.env.AHMATDA_DOMAIN).sttContext} ${words.join(', ')}.`.slice(0, 600);
   return { glossary, customers, carModels, initialPrompt };
 }
 

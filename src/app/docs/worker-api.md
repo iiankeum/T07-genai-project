@@ -119,9 +119,11 @@
 - `retryable: true` 면 줄 맨 뒤로 돌아간다(최대 3번). `false` 면 바로 실패로 끝나고 화면에 이유가 보인다.
 - `error` 는 500자 이하. 파일 경로 · 토큰을 넣지 않는다.
 
-### 6. `GET /api/worker/status` — 일꾼 상태(공개, 토큰 없음)
+### 6. `GET /api/worker/status` — 작업공간의 일꾼 상태
 
-화면이 쓰는 공개 정보다. 비밀값은 없다.
+공개 데모에서는 토큰 없이 조회한다. 비공개 설치에서 PC 프로그램은 다른 일꾼 API와 같은 `Authorization: Bearer <WORKER_TOKEN>`을 보낸다. 서버는 `WORKER_WORKSPACE_ID`에 지정된 작업공간의 상태만 반환한다. 로그인한 브라우저는 선택한 작업공간의 상태를 세션으로 조회한다. 잘못된 Bearer 토큰은 브라우저 세션으로 대체하지 않는다.
+
+작업공간에 연결된 처리 상태 정보다. 토큰 등 비밀값은 포함하지 않는다.
 ```json
 {"online": true, "lastSeen": "2026-11-11T14:00:00.000Z", "worker": "gpu-pc-1", "engine": "faster-whisper large-v3", "gpu": "RTX 5060 Ti 16GB", "queue": {"waiting": 0, "working": 1}}
 ```

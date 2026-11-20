@@ -1,0 +1,44 @@
+{
+  "syntheticInput": true,
+  "realInference": true,
+  "sourceText": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다.",
+  "voice": "macOS Yuna",
+  "audioSha256": "6b3874d8baf5111c6ec1257359276f2b33668af0e339b51e0d760b0cc6c4e625",
+  "model": "Systran/faster-whisper-small",
+  "device": "cpu",
+  "compute": "int8",
+  "loadSec": 9.75,
+  "vadFallback": false,
+  "versions": {
+    "faster-whisper": "1.2.1",
+    "ctranslate2": "4.9.0",
+    "numpy": "2.5.5"
+  },
+  "result": {
+    "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다.",
+    "segments": [
+      {
+        "start": 0.0,
+        "end": 3.7,
+        "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다."
+      }
+    ],
+    "durationSec": 3.7,
+    "language": "ko",
+    "elapsedSec": 1.7
+  },
+  "preparedBy": "src/mac-app/prepare-whisper-runtime.mjs --prepare-development-runtime",
+  "pythonVersion": "3.12.16",
+  "pythonRelease": "20261110",
+  "runtimeDownloadBytes": 84241226,
+  "relocationTest": true,
+  "isolatedMode": true,
+  "systemPythonUsedForInference": false,
+  "hfHubOffline": true,
+  "limits": [
+    "개발용 준비 및 경로이동 시험; 앱 배포/서명/공증 미완료",
+    "개별 wheel의 라이선스 파일 보존; 전체 재배포 의무 최종 검토 필요",
+    "생성된 pip/console script의 절대 shebang은 미지원; Python -I -B 진입점만 지원",
+    "합성음성 한 건이며 실제 전화 품질·새 Mac 전체 설치·자동 일꾼 검증이 아님"
+  ]
+}

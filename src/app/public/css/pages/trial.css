@@ -6,7 +6,7 @@
 .trial-form-title { font-size: 1.15rem; margin: 0 0 12px; }
 .trial-req { font-style: normal; font-size: .75rem; font-weight: 800; color: #fff; background: var(--brand); border-radius: 999px; padding: 1px 8px; margin-left: 4px; vertical-align: 1px; }
 
-.trial-policy { border: 1px solid var(--line); background: #fafafd; border-radius: var(--radius-sm); padding: 12px 14px; margin: 6px 0 12px; max-height: 340px; overflow-y: auto; font-size: .92rem; }
+.trial-policy { border: 1px solid var(--line); background: var(--bg); border-radius: var(--radius-sm); padding: 12px 14px; margin: 6px 0 12px; max-height: 340px; overflow-y: auto; font-size: .92rem; }
 .trial-policy-title { font-size: 1rem; margin: 0 0 8px; }
 .trial-policy p { margin: 0 0 6px; }
 .trial-policy-list { margin: 0; }

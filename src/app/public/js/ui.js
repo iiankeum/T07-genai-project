@@ -144,12 +144,25 @@ export async function copyText(text) {
     toast('복사했습니다. 카톡·문자에 붙여 넣으세요.', 'ok');
     return true;
   } catch {
+    // 권한 확인을 기다리는 동안 사용자가 이동했을 수 있으므로 현재 초점을 보존한다.
+    const previous = document.activeElement;
+    const selection = previous && typeof previous.selectionStart === 'number'
+      ? [previous.selectionStart, previous.selectionEnd, previous.selectionDirection] : null;
     const ta = document.createElement('textarea');
     ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
     document.body.appendChild(ta); ta.select();
     let ok = false;
     try { ok = document.execCommand('copy'); } catch { ok = false; }
-    ta.remove();
+    finally {
+      const restoreFocus = document.activeElement === ta;
+      ta.remove();
+      if (restoreFocus && previous?.isConnected) {
+        try {
+          previous.focus({ preventScroll: true });
+          if (selection) previous.setSelectionRange(...selection);
+        } catch { /* 복사 도중 없어진 요소나 지원하지 않는 선택 영역은 건드리지 않는다. */ }
+      }
+    }
     toast(ok ? '복사했습니다.' : '복사하지 못했습니다. 글을 길게 눌러 복사해 주세요.', ok ? 'ok' : 'error');
     return ok;
   }
@@ -171,7 +184,7 @@ export function errorBox(err) {
 }
 export function aiOffNotice(meta) {
   if (meta && meta.aiEnabled === false) {
-    return html`<div class="notice notice-warn">AI 키 없음 — 지금은 AI 기능(카드 정리 · 브리핑 · 묻기)이 꺼져 있습니다. 나머지 화면은 그대로 쓸 수 있습니다.</div>`;
+    return html`<div class="notice notice-warn">AI 처리가 꺼져 있습니다. 카드 자동 정리·브리핑·질문을 사용하려면 처리 방식을 설정해 주세요. 나머지 화면은 그대로 쓸 수 있습니다.</div>`;
   }
   return html``;
 }

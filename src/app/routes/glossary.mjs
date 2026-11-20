@@ -1,138 +1,206 @@
-// F07 낱말 사전 API: 현장말 · 오인식 · 거래처(가짜 번호) · 차종 보기 · 넣기 · 고치기 · 지우기
-import { db, newId, nowIso } from '../lib/db.mjs';
-import { HttpError, readJson, cleanText } from '../lib/http.mjs';
-import { limit, requireAdmin } from '../lib/security.mjs';
-import { maskPhone } from '../lib/repo.mjs';
+// 공유 지식과 기존 낱말 사전은 같은 승인된 항목을 참조한다.
+import { db, tx } from '../lib/db.mjs';
+import { recordAudit, requestAccess, requireRole } from '../lib/auth.mjs';
+import { HttpError, readJson } from '../lib/http.mjs';
+import { limit } from '../lib/security.mjs';
+import {
+  GLOSSARY_KINDS, KNOWLEDGE_KINDS, MAX_KNOWLEDGE, CONTENT_FIELDS, approvedKnowledge,
+  archiveKnowledge, duplicateKnowledge, knowledgeDetail, knowledgeKind, knowledgeRow, knowledgeView,
+  proposeKnowledge, restoreKnowledge, reviewKnowledge,
+} from '../lib/knowledge.mjs';
 
-export const KINDS = ['현장말', '오인식', '거래처', '차종'];
-export const MAX_GLOSSARY = 500;
+export const KINDS = GLOSSARY_KINDS;
+export const MAX_GLOSSARY = MAX_KNOWLEDGE;
+export const glossaryView = knowledgeView;
+const KIND_ORDER = "CASE g.kind WHEN '현장말' THEN 0 WHEN '오인식' THEN 1 WHEN '거래처' THEN 2 WHEN '차종' THEN 3 ELSE 4 END";
+const CSV_FIELDS = CONTENT_FIELDS.filter((field) => field !== 'sourceSegIndex' && field !== 'sourceCallId');
 
-const KIND_ORDER = `CASE kind WHEN '현장말' THEN 0 WHEN '오인식' THEN 1 WHEN '거래처' THEN 2 WHEN '차종' THEN 3 ELSE 4 END`;
-
-/**
- * 거래처 번호 보이기. 시드(기본)와 누가 봐도 가짜인 010-0000-xxxx 는 그대로,
- * 사용자가 넣은 그 밖의 번호는 진짜일 수 있어 가운데를 가린다(누구나 보는 데모라서).
- */
-function displayPhone(row) {
-  if (row.kind !== '거래처' || !row.phone) return null;
-  const digits = String(row.phone).replace(/[^0-9]/g, '');
-  if (row.source === '기본' || digits.startsWith('0100000')) return row.phone;
-  return maskPhone(row.phone);
+function collection(query, legacy) {
+  const kinds = legacy ? GLOSSARY_KINDS : KNOWLEDGE_KINDS;
+  const kind = query.kind ? knowledgeKind(query.kind, legacy) : null;
+  const rows = db().prepare(`SELECT g.*,
+    (SELECT count(*) FROM knowledge_revisions r WHERE r.knowledge_id = g.id AND r.status = 'pending') AS pending_count
+    FROM glossary g WHERE g.kind IN (${kinds.map(() => '?').join(', ')})
+    ORDER BY ${KIND_ORDER}, CASE WHEN g.source = '사용자' THEN 0 ELSE 1 END,
+      CASE WHEN g.source = '사용자' THEN g.created_at END DESC, g.term`).all(...kinds);
+  const total = rows.filter((row) => row.status !== 'archived').length;
+  const items = rows.filter((row) => (!kind || row.kind === kind) && (!legacy || row.status !== 'archived')).map(knowledgeView);
+  const { role } = requestAccess();
+  return { items, kinds, total, max: MAX_KNOWLEDGE, canPropose: ['admin', 'reception'].includes(role), canReview: role === 'admin' };
 }
 
-export function glossaryView(row) {
-  return {
-    id: row.id,
-    kind: row.kind,
-    term: row.term,
-    standard: row.standard ?? null,
-    phone: displayPhone(row),
-    note: row.note ?? null,
-    status: row.status,
-    source: row.source ?? null,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
+function csvCell(value) {
+  const data = Array.isArray(value) ? JSON.stringify(value) : String(value ?? '');
+  const safe = /^['=+\-@\t\r]/.test(data) ? "'" + data : data;
+  return '"' + safe.replaceAll('"', '""') + '"';
 }
 
-// ── 입력 검사 ─────────────────────────────────────────────────────
-function textField(v, { max, required = false, missing, tooLong }) {
-  if (v != null && typeof v !== 'string' && typeof v !== 'number') throw new HttpError(400, 'bad_input', '글자로 적어 주세요.');
-  const s = cleanText(v, 100_000);
-  if (!s) {
-    if (required) throw new HttpError(400, 'required', missing);
-    return null;
+function exportCsv({ req, res }) {
+  requireRole('admin', 'reception');
+  const rows = approvedKnowledge().map((item) => CSV_FIELDS.map((field) => {
+    if (field === 'contactName') return null; // 담당자 원문/마스킹 문자를 CSV에 노출하지 않는다.
+    if (field === 'phone' && item.phone?.includes('*')) return null;
+    return item[field];
+  }));
+  const csv = '\uFEFF' + [CSV_FIELDS, ...rows].map((line) => line.map(csvCell).join(',')).join('\r\n') + '\r\n';
+  res.writeHead(200, {
+    'Content-Type': 'text/csv; charset=utf-8',
+    'Content-Disposition': 'attachment; filename="knowledge.csv"',
+    'Cache-Control': 'no-store',
+    'Content-Length': Buffer.byteLength(csv),
+  });
+  res.end(req.method === 'HEAD' ? undefined : csv);
+}
+
+function invalidCsv(message = '따옴표와 열 구분을 확인해 주세요.') {
+  return new HttpError(400, 'bad_csv', message);
+}
+
+// 큰따옴표로 감싼 칸은 쉼표, 줄바꿈, 큰따옴표 두 개로 표현한 따옴표를 담을 수 있다.
+function csvRows(value) {
+  if (typeof value !== 'string') throw invalidCsv('CSV 파일을 선택해 주세요.');
+  const input = value.replace(/^\uFEFF/, '');
+  const rows = [];
+  let row = [];
+  let field = '';
+  let quote = false;
+  let closed = false;
+  function finishField() {
+    row.push(field);
+    field = '';
+    closed = false;
   }
-  if ([...s].length > max) throw new HttpError(400, 'too_long', tooLong);
-  return s;
-}
-function kindField(v) {
-  if (!KINDS.includes(v)) throw new HttpError(400, 'bad_kind', '종류는 현장말 · 오인식 · 거래처 · 차종 중 하나로 골라 주세요.');
-  return v;
-}
-function phoneField(v) {
-  if (v == null || String(v).trim() === '') return null;
-  const s = String(v).trim();
-  const digits = s.replace(/-/g, '');
-  if (!/^[0-9-]+$/.test(s) || digits.length < 7 || digits.length > 13 || s.length > 20) {
-    throw new HttpError(400, 'bad_phone', '전화번호는 숫자와 - 만 써 주세요(예: 010-0000-0199).');
+  function finishLine() {
+    finishField();
+    if (row.some(Boolean)) rows.push(row);
+    row = [];
+    if (rows.length > MAX_KNOWLEDGE + 1) throw invalidCsv(`한 번에 ${MAX_KNOWLEDGE}줄까지 가져올 수 있어요.`);
   }
-  return s;
+  for (let i = 0; i < input.length; i++) {
+    const ch = input[i];
+    if (quote) {
+      if (ch !== '"') field += ch;
+      else if (input[i + 1] === '"') {
+        field += '"';
+        i++;
+      } else {
+        quote = false;
+        closed = true;
+      }
+    } else if (ch === ',') finishField();
+    else if (ch === '\n' || ch === '\r') {
+      finishLine();
+      if (ch === '\r' && input[i + 1] === '\n') i++;
+    } else if (closed) throw invalidCsv();
+    else if (ch === '"' && !field) quote = true;
+    else if (ch === '"') throw invalidCsv();
+    else field += ch;
+  }
+  if (quote) throw invalidCsv();
+  if (field || closed || row.length) finishLine();
+  return rows;
 }
-const termOf = (v) => textField(v, { max: 40, required: true, missing: '낱말을 적어 주세요.', tooLong: '낱말은 40자까지 쓸 수 있어요.' });
-const standardOf = (v) => textField(v, { max: 60, tooLong: '바른 말은 60자까지 쓸 수 있어요.' });
-const noteOf = (v) => textField(v, { max: 200, tooLong: '메모는 200자까지 쓸 수 있어요.' });
 
-function getRow(id) {
-  return db().prepare('SELECT * FROM glossary WHERE id = ?').get(id) ?? null;
+function importCsv(d, value, actor) {
+  const [head, ...rows] = csvRows(value);
+  if (!head?.includes('kind') || !head.includes('term') || new Set(head).size !== head.length || head.some((field) => !CSV_FIELDS.includes(field))) {
+    throw invalidCsv('CSV 첫 줄에 kind와 term을 넣어 주세요. 내려받은 파일의 열 이름을 사용할 수 있어요.');
+  }
+  const seen = new Set();
+  const results = [];
+  for (let i = 0; i < rows.length; i++) {
+    try {
+      if (rows[i].length !== head.length) throw invalidCsv('첫 줄과 열 개수가 같아야 합니다.');
+      const body = Object.fromEntries(head.map((field, col) => [field, rows[i][col].replace(/^'(?=['=+\-@\t\r])/, '')]));
+      for (const key of ['aliases', 'relations']) {
+        if (!(key in body)) continue;
+        try { body[key] = body[key] ? JSON.parse(body[key]) : []; } catch { throw invalidCsv(`${key} 열을 JSON 배열로 입력해 주세요.`); }
+      }
+      const key = JSON.stringify([body.kind, body.term.trim().toLowerCase()]);
+      if (seen.has(key)) throw invalidCsv('파일에 같은 분류의 용어가 반복돼요.');
+      seen.add(key);
+      const row = duplicateKnowledge(d, { ...body, term: body.term.trim() });
+      // 내보낸 파일의 빈 번호가 가린 번호를 덮어쓰지 않게 한다.
+      if (row?.phone && body.phone === '') delete body.phone;
+      if (row?.contact_name && body.contactName === '') delete body.contactName;
+      results.push(proposeKnowledge(d, body, actor, { row }));
+    } catch (err) {
+      if (!(err instanceof HttpError)) throw err;
+      throw new HttpError(err.status, err.code, `${i + 2}번째 줄 — ${err.publicMessage}`);
+    }
+  }
+  return { imported: results.length, results };
 }
-function findDuplicate(kind, term, exceptId = '') {
-  return db().prepare('SELECT id FROM glossary WHERE kind = ? AND lower(term) = lower(?) AND id <> ?').get(kind, term, exceptId) ?? null;
+
+function registerCollection(router, base, legacy) {
+  router.get(base, ({ query }) => collection(query, legacy));
+  router.get(base + '/:id', ({ params }) => ({ item: knowledgeDetail(db(), params.id) }));
+  router.post(base, async ({ req, ip }) => {
+    const { user } = requireRole('admin', 'reception');
+    limit('write', ip);
+    const body = await readJson(req, 16 * 1024);
+    return tx((d) => {
+      const { id, revisionId } = proposeKnowledge(d, body, user.id, { legacy, requireEvidence: !legacy });
+      const item = knowledgeDetail(d, id);
+      recordAudit({ entity: 'knowledge', entityId: id, action: 'proposed', after: { revisionId } });
+      return { ...item, item, revisionId };
+    });
+  });
+  router.patch(base + '/:id', async ({ req, params, ip }) => {
+    const { user } = requireRole('admin', 'reception');
+    limit('write', ip);
+    const body = await readJson(req, 16 * 1024);
+    return tx((d) => {
+      const row = knowledgeRow(d, params.id);
+      const { id, revisionId } = proposeKnowledge(d, body, user.id, { row, legacy, requireEvidence: !legacy });
+      const item = knowledgeDetail(d, id);
+      recordAudit({ entity: 'knowledge', entityId: id, action: 'proposed', after: { revisionId } });
+      return { ...item, item, revisionId };
+    });
+  });
+  router.delete(base + '/:id', ({ params, ip }) => {
+    const { user } = requireRole('admin');
+    limit('write', ip);
+    return tx((d) => {
+      const result = archiveKnowledge(d, params.id, user.id);
+      recordAudit({ entity: 'knowledge', entityId: params.id, action: 'archived' });
+      return result;
+    });
+  });
 }
-/** 화면이 {item} 으로 읽든 항목 그대로 읽든 되게 둘 다 담는다 */
-const itemResponse = (row) => {
-  const item = glossaryView(row);
-  return { ...item, item };
-};
 
 export function register(router) {
-  router.get('/api/glossary', ({ query }) => {
-    const kind = query.kind ? kindField(query.kind) : null;
-    const rows = kind
-      ? db().prepare(`SELECT * FROM glossary WHERE kind = ? ORDER BY CASE WHEN source = '사용자' THEN 0 ELSE 1 END, CASE WHEN source = '사용자' THEN created_at END DESC, term`).all(kind)
-      : db().prepare(`SELECT * FROM glossary ORDER BY ${KIND_ORDER}, CASE WHEN source = '사용자' THEN 0 ELSE 1 END, CASE WHEN source = '사용자' THEN created_at END DESC, term`).all();
-    const total = db().prepare('SELECT COUNT(*) AS n FROM glossary').get().n;
-    return { items: rows.map(glossaryView), kinds: KINDS, total, max: MAX_GLOSSARY };
-  });
+  registerCollection(router, '/api/glossary', true);
+  registerCollection(router, '/api/knowledge', false);
 
-  router.post('/api/glossary', async ({ req, ip }) => {
+  router.get('/api/knowledge.csv', exportCsv);
+  router.post('/api/knowledge/import', async ({ req, ip }) => {
+    const { user } = requireRole('admin', 'reception');
     limit('write', ip);
-    const body = await readJson(req, 8 * 1024);
-    const kind = kindField(body.kind);
-    const term = termOf(body.term);
-    const standard = standardOf(body.standard);
-    const note = noteOf(body.note);
-    const phone = kind === '거래처' ? phoneField(body.phone) : null;
-    if (db().prepare('SELECT COUNT(*) AS n FROM glossary').get().n >= MAX_GLOSSARY) {
-      throw new HttpError(409, 'too_many', `사전은 ${MAX_GLOSSARY}개까지 넣을 수 있어요. 안 쓰는 것을 지운 뒤 넣어 주세요.`);
-    }
-    if (findDuplicate(kind, term)) throw new HttpError(409, 'duplicate', `「${term}」 은(는) 이미 사전에 있어요.`);
-    const id = newId('g');
-    const now = nowIso();
-    db().prepare('INSERT INTO glossary(id, kind, term, standard, phone, note, status, source, created_at, updated_at) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-      .run(id, kind, term, standard, phone, note, 'approved', '사용자', now, now);
-    return itemResponse(getRow(id));
+    const body = await readJson(req, 1024 * 1024);
+    return tx((d) => {
+      const result = importCsv(d, body.csv, user.id);
+      for (const { id, revisionId } of result.results) recordAudit({ entity: 'knowledge', entityId: id, action: 'imported', after: { revisionId } });
+      return result;
+    });
   });
-
-  router.patch('/api/glossary/:id', async ({ req, params, ip }) => {
+  router.post('/api/knowledge/:id/revisions/:revision/review', async ({ req, params, ip }) => {
+    const { user } = requireRole('admin');
     limit('write', ip);
-    const row = getRow(params.id);
-    if (!row) throw new HttpError(404, 'not_found', '사전에 없는 항목입니다.');
-    if (row.source === '기본') requireAdmin(req);
-    const body = await readJson(req, 8 * 1024);
-    const next = { term: row.term, standard: row.standard, phone: row.phone, note: row.note };
-    if ('term' in body) next.term = termOf(body.term);
-    if ('standard' in body) next.standard = standardOf(body.standard);
-    if ('note' in body) next.note = noteOf(body.note);
-    if ('phone' in body && row.kind === '거래처') {
-      // 화면이 가린 번호(010-****-1234)를 그대로 돌려보내면 바꾸지 않은 것으로 본다
-      const shown = displayPhone(row);
-      next.phone = shown && body.phone === shown ? row.phone : phoneField(body.phone);
-    }
-    if (next.term !== row.term && findDuplicate(row.kind, next.term, row.id)) {
-      throw new HttpError(409, 'duplicate', `「${next.term}」 은(는) 이미 사전에 있어요.`);
-    }
-    db().prepare('UPDATE glossary SET term = ?, standard = ?, phone = ?, note = ?, updated_at = ? WHERE id = ?')
-      .run(next.term, next.standard, next.phone, next.note, nowIso(), row.id);
-    return itemResponse(getRow(row.id));
+    const body = await readJson(req, 4096);
+    return tx((d) => {
+      const item = reviewKnowledge(d, params.id, params.revision, user.id, body);
+      recordAudit({ entity: 'knowledge', entityId: params.id, action: body.decision === 'approve' ? 'approved' : 'rejected', after: { revisionId: params.revision, version: item.version } });
+      return { item };
+    });
   });
-
-  router.delete('/api/glossary/:id', ({ req, params, ip }) => {
+  router.post('/api/knowledge/:id/revisions/:revision/restore', ({ params, ip }) => {
+    const { user } = requireRole('admin');
     limit('write', ip);
-    const row = getRow(params.id);
-    if (!row) throw new HttpError(404, 'not_found', '사전에 없는 항목입니다.');
-    if (row.source === '기본') requireAdmin(req);
-    db().prepare('DELETE FROM glossary WHERE id = ?').run(row.id);
-    return { ok: true, id: row.id };
+    return tx((d) => {
+      const result = restoreKnowledge(d, params.id, params.revision, user.id);
+      recordAudit({ entity: 'knowledge', entityId: params.id, action: 'restore_proposed', after: { revisionId: result.revisionId, restoredRevisionId: params.revision } });
+      return result;
+    });
   });
 }

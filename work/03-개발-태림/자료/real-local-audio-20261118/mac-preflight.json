@@ -1,0 +1,31 @@
+{
+  "at": "2026-11-18 19:50",
+  "buildRevision": "6a0772009f62-dirty",
+  "sourceSha256": {
+    "src/mac-app/Ahmatda.swift": "39693be52686f90474866791af4fc3399bee7b8cbba586ab94dea9d057508a9a",
+    "src/mac-app/LocalModelStatus.swift": "a5288a830f6cc8cc37bc95995bd4c41a87a37830d65e0b691ed8838b8bb36cd4",
+    "src/mac-app/tests/main.swift": "0b1cce532d9389b1a07aef02d8989c2df79df6d3ef92a952bbabdfe929cff2a1"
+  },
+  "swiftChecks": 66,
+  "helperTests": 148,
+  "nodeTests": 175,
+  "nativeObserved": [
+    "initial-guide-entry",
+    "first-step-preflight",
+    "OS-architecture-memory-free-space-rendered",
+    "close",
+    "quit"
+  ],
+  "reportedOS": "26.6.1",
+  "reportedArchitecture": "arm64",
+  "reportedMemoryGiB": 36,
+  "reportedFreeGB": 1043.9,
+  "downloadStarted": false,
+  "settingsChanged": false,
+  "hardwareCompatibilityGuaranteed": false,
+  "limits": [
+    "Snapshot only; free space changes",
+    "No inference or clean-machine test",
+    "Dirty development build with exact hashes"
+  ]
+}

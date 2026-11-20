@@ -1,24 +1,9 @@
 // F03 실시간 받아쓰기 체험 — 브라우저 음성 인식(Web Speech) → 통화 글 → 말이 멈추면 AI 주문 카드 미리보기 → 저장.
 import { api } from '../api.js';
-import { html, render, fmtSec, toast, confirmBox, href } from '../ui.js';
+import { html, render, fmtSec, toast, confirmBox, href, highlight } from '../ui.js';
 
-const EXAMPLES = [
-  '아반떼 앞범퍼 두 개 급해요',
-  '쏘렌토 엠큐포 뒷쇼바 좌우로 하나씩, 내일 오전까지',
-];
-
-// 샘플 대화 — 거래처 · 차번호 · 수량 모두 지어낸 가짜. 정비소 · 대리점이 번갈아 말한다.
-// check: 이 줄 뒤에 카드를 한 번 정리해 「두 개 → 세 개」로 바뀌는 모습을 보여 준다.
-const SAMPLE = [
-  { who: '정비소', text: '여보세요, 새한카센터인데요. 아반떼 CN7 앞범퍼 있어요?' },
-  { who: '대리점', text: '네, 있습니다. 몇 개 드릴까요?' },
-  { who: '정비소', text: '두 개요. 22년식이에요.', check: true },
-  { who: '대리점', text: '아반떼 CN7 앞범퍼 두 개, 22년식 맞으시죠?' },
-  { who: '정비소', text: '아, 아니다. 세 개로 해 주세요. 차번호는 12가 3456이요.' },
-  { who: '대리점', text: '네, 세 개요. 언제까지 필요하세요?' },
-  { who: '정비소', text: '차가 리프트에 올라가 있어서 급해요. 오늘 오후 세 시까지 보내 주세요.' },
-  { who: '대리점', text: '네, 오늘 오후 세 시까지 앞범퍼 세 개 배송해 드릴게요.' },
-];
+import { LIVE_SAMPLE as SAMPLE, LIVE_EXAMPLES as EXAMPLES } from '../live-samples.js';
+import { buildMarks, resolveEvidence } from './call-util.js';
 
 const IDLE_MS = 2500;     // 말이 멈추고 이만큼 새 확정 글이 없으면 카드 정리
 const MIN_GAP_MS = 4000;  // 카드 정리는 4초에 한 번까지
@@ -36,23 +21,23 @@ const SR_ERRORS = {
   'no-speech': '말소리가 들리지 않았습니다. 마이크 가까이에서 또박또박 말해 주세요.',
 };
 const AI_ERRORS = {
-  no_key: 'AI 키 없음',
-  ai_off: 'AI 키 없음',
+  no_key: '자동 정리를 사용할 수 없습니다',
+  ai_off: '자동 정리를 사용할 수 없습니다',
   refused: 'AI 가 답하지 않았습니다',
   bad_output: 'AI 답을 읽지 못했습니다',
   api_error: 'AI 서버에 문제가 생겼습니다',
   rate_limited: '잠시 뒤에 다시 정리합니다',
 };
-const AI_OFF_TEXT = 'AI 키 없음 — 지금은 글만 받아씁니다. 카드 칸은 AI 키가 있을 때 채워집니다.';
+const AI_OFF_TEXT = '지금은 자동 정리를 사용할 수 없습니다. 통화를 저장한 뒤 주문 카드를 직접 작성할 수 있습니다.';
 
 const FIELDS = [
   { key: 'customer', label: '거래처' },
   { key: 'carModel', label: '차종' },
   { key: 'modelYear', label: '연식' },
-  { key: 'plate', label: '차번호' },
+  { key: 'plate', label: '차량 번호' },
   { key: 'items', label: '부품 × 수량' },
   { key: 'urgent', label: '급함' },
-  { key: 'due', label: '원하는 때' },
+  { key: 'due', label: '요청 일정' },
   { key: 'askBack', label: '다시 물어볼 것' },
 ];
 // 「확인 필요」 칸 이름(서버가 camelCase · snake_case 둘 다 쓴다)
@@ -63,7 +48,6 @@ const FIELD_LABEL = {
 };
 
 const MIC_SVG = html`<svg viewBox="0 0 24 24" width="40" height="40" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg>`;
-const STOP_SVG = html`<svg viewBox="0 0 24 24" width="36" height="36" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>`;
 
 const str = (v) => (v == null ? '' : String(v).trim());
 const items = (card) => (Array.isArray(card?.items) ? card.items.filter((i) => i && (i.part || i.qty != null)) : []);
@@ -110,9 +94,15 @@ export default {
     const secure = window.isSecureContext !== false;
     const supported = Boolean(SR) && secure;
     const aiOff = meta.aiEnabled === false;
+    const isFixture = meta.aiProvider === 'fixture';
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const readyText = supported ? '마이크로 받아쓰거나 예시 대화로 체험하세요.' : '샘플 대화를 재생해 주문 접수를 체험하세요.';
 
     const st = {
       mode: 'idle',          // idle | listening | sample
+      sampleStarted: false,
+      paused: false,
+      source: -1,
       lines: [],             // 확정된 문장 [{who?, text, start, end}]
       interim: '',           // 듣는 중인 글(흐리게)
       interimStart: null,
@@ -126,56 +116,65 @@ export default {
     };
     let disposed = false;
     let playToken = 0;
+    let wakeSample = null;
     const timers = new Set();
     const later = (fn, ms) => { const t = setTimeout(() => { timers.delete(t); fn(); }, ms); timers.add(t); return t; };
     const cancel = (t) => { if (t) { clearTimeout(t); timers.delete(t); } };
     const sleep = (ms) => new Promise((resolve) => later(resolve, ms));
 
-    // ── 화면 틀 ──
-    // 마이크가 안 되는 브라우저에서는 샘플 대화가 주된 단추라 위에 크게 둔다
-    const sampleBlock = html`<div class="live-tools ${supported ? '' : 'is-main'}">
-      <button type="button" class="btn btn-block ${supported ? '' : 'btn-primary btn-lg'}" data-act="sample">샘플 대화 재생</button>
-      <p class="help">가짜 대화 8줄을 한 줄씩 보여 주고, 같은 방식으로 카드를 채웁니다.</p>
-    </div>`;
     render(el, html`<div class="page live-page">
-      <div class="page-head"><div>
-        <p class="eyebrow">F03 · 체험</p>
-        <h1>실시간 받아쓰기</h1>
-        <p class="sub">정비소 사장님이 된 것처럼 주문을 말해 보세요. 말하는 대로 글이 써지고, 말을 멈추면 주문 카드가 채워집니다.</p>
-      </div></div>
-      <div class="notice notice-warn" role="note"><strong>먼저 읽어 주세요.</strong> 말한 음성은 브라우저 회사(크롬은 구글 등) 서버에서 글로 바뀝니다. 실제 고객 이름 · 번호를 말하지 마세요. 가짜 주문으로 해 보세요.</div>
-      ${supported ? '' : html`<div class="notice" role="note">${secure
-        ? '이 브라우저는 실시간 받아쓰기(음성 인식)를 지원하지 않습니다. 파이어폭스나 일부 아이폰 브라우저가 그렇습니다. 크롬 · 엣지 · 안드로이드 크롬에서 열면 마이크로 해 볼 수 있습니다. 지금은 아래 「샘플 대화 재생」으로 같은 흐름을 볼 수 있습니다.'
-        : '마이크는 https 주소에서만 쓸 수 있습니다. 아래 「샘플 대화 재생」으로 같은 흐름을 볼 수 있습니다.'}</div>`}
+      <div class="page-head">
+        <div>
+          <h1>새 통화 기록</h1>
+          <p class="sub">대화를 받아쓰고 주문에 필요한 정보를 확인하세요.</p>
+        </div>
+        <a class="btn" href="#/upload">녹음 올리기</a>
+      </div>
+      <section class="card live-session" aria-label="받아쓰기 제어">
+        <div class="live-controls">
+          <div class="live-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="live-control-text">
+            <div class="live-readout"><span class="live-stage" data-ref="stage">시작 전</span><output class="live-clock" data-ref="elapsed" aria-label="받아쓰기 시간" aria-live="off">00:00</output></div>
+            <p class="live-state" data-ref="state" role="status">${readyText}</p>
+            <p class="help live-mode-note">${supported ? '받아쓴 글만 저장합니다. 음성은 브라우저 제공자가 처리하므로 고객 정보가 담긴 대화는 사용하지 마세요.' : '이 환경에서는 샘플 대화와 예시 문장을 사용할 수 있습니다.'}</p>
+          </div>
+          <div class="live-session-actions">
+            <button type="button" class="btn ${supported ? '' : 'btn-primary'}" data-act="sample">샘플 대화 재생</button>
+            <button type="button" class="btn hidden" data-act="pause" aria-pressed="false">일시 정지</button>
+            ${supported ? html`<button type="button" class="btn btn-primary live-mic" data-act="mic" aria-pressed="false"><span class="live-mic-icon">${MIC_SVG}</span><span class="live-mic-label">마이크로 받아쓰기</span></button>` : ''}
+            <button type="button" class="btn btn-primary hidden" data-act="save">끝내고 저장</button>
+          </div>
+        </div>
+        <div data-ref="saved" aria-live="polite"></div>
+      </section>
       <div class="live-grid">
         <section class="card live-talk" aria-labelledby="liveTalkTitle">
-          <div class="live-controls">
-            ${supported ? html`<button type="button" class="live-mic" data-act="mic" aria-pressed="false"><span class="live-mic-icon">${MIC_SVG}</span><span class="live-mic-label">누르고 말하기</span></button>` : ''}
-            <div class="live-control-text">
-              <p class="live-state" data-ref="state" role="status">${supported ? '마이크 단추를 누르고 주문을 말해 보세요.' : '「샘플 대화 재생」을 눌러 보세요.'}</p>
-              <div class="live-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-            </div>
+          <header class="live-panel-head">
+            <h2 id="liveTalkTitle">대화 기록</h2>
+            <span class="chip chip-working" data-ref="lineCount">0줄</span>
+          </header>
+          <div class="live-progress hidden" data-ref="progressBox">
+            <progress data-ref="progress" max="${SAMPLE.length}" value="0" aria-label="샘플 대화 진행률"></progress>
+            <span data-ref="progressText"></span>
           </div>
-          ${supported ? '' : sampleBlock}
-          <div class="live-examples">
-            <p class="field-label">예시 문장 — 이렇게 말해 보세요</p>
-            <div class="live-chips">${EXAMPLES.map((t) => html`<button type="button" class="live-chip" data-act="example" data-text="${t}">「${t}」</button>`)}</div>
-            <p class="help">누르면 말한 것처럼 글에 넣어 봅니다.</p>
+          <div class="live-lines" data-ref="lines" tabindex="0" aria-label="받아쓴 대화">
+            <div data-ref="settled"></div>
+            <div data-ref="draft" aria-hidden="true"></div>
           </div>
-          <h2 id="liveTalkTitle" class="live-subtitle">통화 글</h2>
-          <div class="live-lines" data-ref="lines" aria-live="off" tabindex="0" aria-label="받아쓴 통화 글"></div>
           <div class="live-actions">
-            <button type="button" class="btn btn-primary btn-lg" data-act="save">끝내고 저장</button>
-            <button type="button" class="btn btn-lg" data-act="reset">지우고 다시</button>
+            <button type="button" class="btn" data-act="reset">기록 지우기</button>
           </div>
-          <div data-ref="saved" aria-live="polite"></div>
-          ${supported ? sampleBlock : ''}
+          <details class="live-examples">
+            <summary>예시 문장으로 체험</summary>
+            <div class="live-chips">${EXAMPLES.map((t) => html`<button type="button" class="live-chip" data-act="example" data-text="${t}">${t}</button>`)}</div>
+          </details>
         </section>
         <section class="card live-card" aria-labelledby="liveCardTitle">
-          <div class="card-title"><h2 id="liveCardTitle">주문 카드 미리보기</h2><span class="chip chip-ai">AI 초안</span></div>
+          <header class="live-panel-head"><h2 id="liveCardTitle">AI 주문 카드</h2><span class="chip chip-ai">${isFixture ? '예시 초안' : '미리보기'}</span></header>
+          ${isFixture ? html`<p class="live-fixture-note">샘플 대화에 맞춰 준비된 예시 초안입니다.</p>` : ''}
           <div class="live-card-state" data-ref="cardState" role="status"></div>
           <div data-ref="card"></div>
-          <p class="help">미리보기는 저장되지 않습니다. 「끝내고 저장」을 누르면 통화와 카드가 저장됩니다. 품번은 AI 가 지어내지 않습니다 — 통화에서 불러 준 것만 적고, 나머지는 사람이 넣습니다.</p>
+          <p class="help">저장 후 주문 카드에서 품번을 입력하고 내용을 확인할 수 있습니다.</p>
         </section>
       </div>
     </div>`);
@@ -185,6 +184,7 @@ export default {
     const linesEl = ref('lines');
     const micBtn = root.querySelector('[data-act="mic"]');
     const sampleBtn = root.querySelector('[data-act="sample"]');
+    const pauseBtn = root.querySelector('[data-act="pause"]');
     const saveBtn = root.querySelector('[data-act="save"]');
     const resetBtn = root.querySelector('[data-act="reset"]');
 
@@ -193,25 +193,55 @@ export default {
       const s = ref('state');
       s.textContent = msg;
       s.className = `live-state${kind ? ' is-' + kind : ''}`;
+      renderSession();
     }
     function setCardState(content, kind = '') {
       const s = ref('cardState');
       render(s, content ? html`<div class="notice${kind ? ' notice-' + kind : ''}">${content}</div>` : html``);
     }
+    let paintedTail = null;
+    let paintedCard = null;
+    let paintedLines = null;
     function renderLines() {
       const nearBottom = linesEl.scrollHeight - linesEl.scrollTop - linesEl.clientHeight < 60;
-      const line = (l, extra = '') => html`<p class="live-line ${l.who === '대리점' ? 'is-shop' : ''} ${extra}"><span class="live-time">${l.start == null ? '…' : fmtSec(l.start)}</span>${l.who ? html`<span class="live-who">${l.who}</span>` : ''}<span class="live-text">${l.text}${extra === 'is-typing' ? html`<span class="live-caret" aria-hidden="true"></span>` : ''}</span></p>`;
-      const parts = st.lines.map((l) => line(l));
-      if (st.typing) parts.push(line(st.typing, 'is-typing'));
-      if (st.interim) parts.push(line({ text: st.interim, start: st.interimStart }, 'is-interim'));
-      render(linesEl, parts.length ? html`${parts}` : html`<p class="live-empty">${supported ? '마이크 단추를 누르고 말하면 여기에 글이 써집니다.' : '「샘플 대화 재생」을 누르면 여기에 대화가 써집니다.'}</p>`);
+      const tail = st.lines.at(-1);
+      const repaint = paintedTail !== tail || paintedCard !== st.card || paintedLines !== st.lines;
+      const marks = repaint ? buildMarks(st.card) : [];
+      const line = (l, index, extra = '') => html`<article class="live-line ${l.who === '대리점' ? 'is-shop' : ''} ${index >= 0 && index === st.source ? 'is-source' : ''} ${extra}" ${index >= 0 ? html`data-line="${index}" tabindex="-1"` : ''}>
+        <header class="live-line-meta">${l.who ? html`<span class="live-who">${l.who}</span>` : ''}<span class="live-time">${l.start == null ? '…' : fmtSec(l.start)}</span></header>
+        <p class="live-text">${index >= 0 ? highlight(l.text, marks) : l.text}${extra === 'is-typing' ? html`<span class="live-caret" aria-hidden="true"></span>` : ''}</p>
+      </article>`;
+      if (repaint) {
+        render(ref('settled'), html`${st.lines.map((l, i) => line(l, i))}`);
+        paintedTail = tail;
+        paintedCard = st.card;
+        paintedLines = st.lines;
+      }
+      const draft = st.typing ? line(st.typing, -1, 'is-typing') : st.interim ? line({ text: st.interim, start: st.interimStart }, -1, 'is-interim') : '';
+      render(ref('draft'), draft);
+      linesEl.classList.toggle('has-lines', Boolean(draft || st.lines.length));
+      if (!draft && !st.lines.length) render(ref('settled'), html`<p class="live-empty">기록을 시작하면 여기에 대화가 나타납니다.</p>`);
       if (nearBottom) linesEl.scrollTop = linesEl.scrollHeight;
+      ref('lineCount').textContent = `${st.lines.length}줄`;
+      ref('progressBox').classList.toggle('hidden', !st.sampleStarted);
+      ref('progress').value = st.lines.length;
+      ref('progressText').textContent = `${st.lines.length} / ${SAMPLE.length}줄`;
+    }
+    function evidenceFor(card, key) {
+      const evidence = key === 'items' ? items(card).findLast((item) => item.quote) : card?.evidence?.[key];
+      if (!evidence?.quote) return null;
+      const source = resolveEvidence(st.lines, { quote: evidence.quote });
+      return source?.segIndex >= 0 ? source : null;
     }
     function renderCard() {
       const card = st.card;
       const rows = FIELDS.map((f) => {
         const v = fieldView(card, f.key);
-        return html`<div class="live-field ${v ? 'is-filled' : ''} ${st.flash.has(f.key) ? 'is-flash' : ''}"><dt>${f.label}</dt><dd>${v || html`<span class="live-blank">—</span>`}</dd></div>`;
+        const source = v && evidenceFor(card, f.key);
+        return html`<div class="live-field ${v ? 'is-filled' : ''} ${st.flash.has(f.key) ? 'is-flash' : ''}">
+          <dt>${f.label}</dt><dd>${v || html`<span class="live-blank" aria-label="기록 없음">—</span>`}
+            ${source ? html`<button type="button" class="btn btn-ghost btn-sm live-source" data-act="source" data-line-index="${source.segIndex}" aria-label="${f.label} 근거 ${fmtSec(source.at)} 보기">근거 ${fmtSec(source.at)} <span aria-hidden="true">↗</span></button>` : ''}
+          </dd></div>`;
       });
       const unsure = Array.isArray(card?.unsure) ? card.unsure.filter((u) => u && (u.reason || u.field)) : [];
       render(ref('card'), html`
@@ -219,6 +249,7 @@ export default {
         <dl class="live-fields">${rows}</dl>
         ${unsure.length ? html`<ul class="live-unsure">${unsure.map((u) => html`<li><span class="listen-flag">확인 필요</span> ${FIELD_LABEL[u.field] || '확인할 곳'}${u.reason ? ` — ${u.reason}` : ''}</li>`)}</ul>` : ''}`);
       st.flash.clear();
+      renderLines();
     }
     function renderSaved(content) {
       const box = ref('saved');
@@ -228,23 +259,52 @@ export default {
       render(box, html`<div class="notice notice-ok live-saved"><p><strong>저장했습니다.</strong> 통화 기록에 「실시간 체험」으로 들어갔습니다.</p><a class="btn btn-primary btn-block" data-ref="goCall" href="${link}">통화 화면으로 바로 가기</a></div>`);
       box.querySelector('[data-ref="goCall"]')?.focus();
     }
+    function renderSession() {
+      const state = ref('state');
+      const isError = state.classList.contains('is-error');
+      const mode = st.mode;
+      const status = st.saving ? '저장 중' : st.saved ? '저장 완료' : isError ? '받아쓰기 오류'
+        : st.paused ? '일시 정지' : mode === 'sample' ? '예시 대화'
+        : mode === 'listening' ? (state.classList.contains('is-live') ? '받아쓰는 중' : '마이크 확인 중')
+        : st.lines.length ? '저장 전' : '시작 전';
+      ref('stage').textContent = status;
+      root.classList.toggle('has-session-error', isError && !st.saving);
+      const seconds = Math.floor(Math.max(clock(), lastEnd()));
+      const elapsed = `${String(Math.floor(seconds / 60)).padStart(2,'0')}:${String(seconds % 60).padStart(2,'0')}`;
+      const output = ref('elapsed');
+      if (output.textContent !== elapsed) output.textContent = elapsed;
+      output.setAttribute('aria-label', st.sampleStarted ? '예시 대화 시간' : '받아쓰기 시간');
+    }
     function updateButtons() {
       const listening = st.mode === 'listening';
       const sample = st.mode === 'sample';
-      root.classList.toggle('is-listening', listening);
-      root.classList.toggle('is-playing', sample);
+      root.classList.toggle('is-listening', listening && !st.paused && ref('state').classList.contains('is-live'));
+      root.classList.toggle('is-playing', sample && !st.paused);
       if (micBtn) {
-        micBtn.setAttribute('aria-pressed', String(listening));
+        micBtn.classList.toggle('hidden', listening || sample || st.saving);
         micBtn.disabled = sample || st.saving;
-        render(micBtn, html`<span class="live-mic-icon">${listening ? STOP_SVG : MIC_SVG}</span><span class="live-mic-label">${listening ? '멈추기' : '누르고 말하기'}</span>`);
+        micBtn.setAttribute('aria-pressed', String(listening));
       }
+      sampleBtn.classList.toggle('hidden', listening || st.saving);
       sampleBtn.disabled = listening || st.saving;
-      sampleBtn.textContent = sample ? '재생 멈추기' : '샘플 대화 재생';
-      saveBtn.disabled = st.saving || sample || Boolean(st.saved) || !st.lines.length;
+      sampleBtn.textContent = sample ? '기록 종료' : '샘플 대화 재생';
+      pauseBtn.classList.toggle('hidden', !sample && !listening);
+      pauseBtn.disabled = st.saving || (listening && st.paused && Boolean(rec));
+      pauseBtn.setAttribute('aria-pressed', String(st.paused));
+      pauseBtn.textContent = st.paused ? '재개' : '일시 정지';
+      saveBtn.classList.toggle('hidden', !listening && (sample || !st.lines.length || Boolean(st.saved)));
+      saveBtn.textContent = st.saving ? '저장 중…' : st.lines.length ? '끝내고 저장' : '기록 끝내기';
+      saveBtn.disabled = st.saving || Boolean(st.typing) || sample || Boolean(st.saved) || (!listening && !st.lines.length);
       resetBtn.disabled = st.saving;
-      root.querySelectorAll('[data-act="example"]').forEach((b) => { b.disabled = sample || st.saving; });
+      root.querySelectorAll('[data-act="example"]').forEach((b) => { b.disabled = sample || Boolean(st.typing) || st.saving; });
+      renderSession();
     }
-    function setMode(mode) { st.mode = mode; updateButtons(); }
+    let elapsedTimer;
+    function scheduleClock() {
+      cancel(elapsedTimer);
+      elapsedTimer = later(() => { if (!disposed) { renderSession(); scheduleClock(); } }, 250);
+    }
+    function setMode(mode) { st.mode = mode; updateButtons(); scheduleClock(); }
 
     // ── 카드 정리(말이 멈추면) ──
     let idleTimer = null;
@@ -347,8 +407,10 @@ export default {
       const utterStart = new Map();
       r.onstart = () => {
         if (disposed || rec !== r) return;
+        if (!want) { try { r.stop(); } catch { /* 종료 대기 */ } return; }
         if (listenFrom == null) listenFrom = performance.now();
         setState('듣는 중… 말을 멈추면 카드가 채워집니다.', 'live');
+        updateButtons();
       };
       r.onresult = (e) => {
         if (disposed || rec !== r) return;
@@ -381,14 +443,24 @@ export default {
         if (code === 'aborted') return;
         if (code === 'no-speech') { toast(SR_ERRORS['no-speech']); return; } // 계속 듣는다(끝나면 다시 시작)
         want = false;
+        st.paused = false;
         setState(SR_ERRORS[code] || `받아쓰기가 멈췄습니다(${code || '알 수 없음'}). 다시 눌러 주세요.`, 'error');
       };
       r.onend = () => {
+        if (disposed || rec !== r) return;
         if (listenFrom != null) { activeMs += performance.now() - listenFrom; listenFrom = null; }
         if (rec !== r) return;
         rec = null;
         if (st.interim) { pushLine({ text: st.interim, start: st.interimStart ?? lastEnd(), end: clock() }); st.interim = ''; st.interimStart = null; }
         if (disposed) return;
+        if (st.paused) {
+          setState('마이크를 잠시 멈췄습니다. 재개하면 이어서 받아씁니다.');
+          updateButtons();
+          renderLines();
+          endWaiters.splice(0).forEach((f) => f());
+          maybeExtract();
+          return;
+        }
         if (want) {
           const now = Date.now();
           restarts = restarts.filter((t) => now - t < 10_000);
@@ -397,7 +469,7 @@ export default {
           want = false;
           setState('받아쓰기가 자꾸 끊깁니다. 잠시 뒤 다시 눌러 주세요.', 'error');
         } else if (!ref('state').classList.contains('is-error')) {
-          setState(st.lines.length ? '멈췄습니다. 카드를 확인하고 「끝내고 저장」을 눌러 보세요.' : '마이크 단추를 누르고 주문을 말해 보세요.');
+          setState(st.lines.length ? '받아쓰기를 끝냈습니다. 글을 확인한 뒤 저장하세요.' : '받아쓴 글이 없습니다. 다시 시작할 수 있습니다.');
         }
         setMode('idle');
         renderLines();
@@ -405,18 +477,29 @@ export default {
         maybeExtract();
       };
       rec = r;
-      try { r.start(); } catch { /* 이미 시작됨 */ }
+      try { r.start(); } catch {
+        rec = null;
+        want = false;
+        st.paused = false;
+        setMode('idle');
+        setState('마이크를 시작하지 못했습니다. 마이크 권한을 확인한 뒤 다시 눌러 주세요.', 'error');
+      }
     }
     function startListening() {
       if (!supported || st.mode !== 'idle' || st.saving) return;
       if (st.saved) resetAll();
+      st.sampleStarted = false;
+      renderLines();
+      st.paused = false;
       want = true;
       restarts = [];
+      setState('마이크를 확인하는 중입니다. 브라우저의 마이크 요청을 확인해 주세요.');
       setMode('listening');
-      setState('마이크를 켜는 중… 허용을 묻는 창이 뜨면 「허용」을 눌러 주세요.');
       openRec();
+      if (st.mode === 'listening') pauseBtn.focus({ preventScroll:true });
     }
     function stopListening() {
+      st.paused = false;
       want = false;
       cancel(restartTimer);
       if (rec) {
@@ -427,22 +510,57 @@ export default {
         endWaiters.splice(0).forEach((f) => f());
       }
     }
+    function toggleMicPause() {
+      if (st.mode !== 'listening' || st.saving) return;
+      if (st.paused) {
+        if (rec) return; // stop의 마지막 result/end가 끝나기 전에는 새 인식을 열지 않는다.
+        st.paused = false;
+        want = true;
+        restarts = [];
+        updateButtons();
+        setState('마이크를 다시 켜는 중…');
+        openRec();
+      } else {
+        st.paused = true;
+        want = false;
+        cancel(restartTimer);
+        // 정지 클릭 시각부터 시계를 멈춘다. stop 이후 도착한 마지막 확정 글은 보존한다.
+        if (listenFrom != null) { activeMs += performance.now() - listenFrom; listenFrom = null; }
+        setState(rec ? '마이크를 잠시 멈추는 중…' : '마이크를 잠시 멈췄습니다. 재개하면 이어서 받아씁니다.');
+        updateButtons();
+        if (rec) { try { rec.stop(); } catch { /* onend를 기다려 중복 세션 방지 */ } }
+      }
+    }
     const waitEnd = (ms) => new Promise((resolve) => { endWaiters.push(resolve); later(resolve, ms); });
 
     // ── 샘플 대화 · 예시 문장(타자 치듯) ──
+    function releaseSample() {
+      const wake = wakeSample;
+      wakeSample = null;
+      wake?.();
+    }
+    function togglePause() {
+      st.paused = !st.paused;
+      setState(st.paused ? '기록을 잠시 멈췄습니다.' : '샘플 대화를 기록하는 중…', st.paused ? '' : 'live');
+      updateButtons();
+      if (!st.paused) releaseSample();
+    }
     function typeLine(who, text, start, token) {
+      if (reduceMotion) return Promise.resolve(!disposed && token === playToken);
       return new Promise((resolve) => {
         st.typing = { who, text: '', start };
+        updateButtons();
         const chars = Array.from(text);
         const step = Math.max(18, Math.min(45, Math.round(700 / chars.length)));
         let i = 0;
         const tick = () => {
-          if (disposed || token !== playToken) { st.typing = null; resolve(false); return; }
+          if (disposed || token !== playToken) { resolve(false); return; }
+          if (st.paused) { wakeSample = tick; return; }
           i += 1;
           st.typing.text = chars.slice(0, i).join('');
           renderLines();
           if (i < chars.length) later(tick, step);
-          else { st.typing = null; resolve(true); }
+          else { st.typing = null; updateButtons(); resolve(true); }
         };
         tick();
       });
@@ -451,9 +569,11 @@ export default {
       if (st.mode === 'sample') { // 재생 멈추기
         playToken += 1;
         st.typing = null;
+        st.paused = false;
+        releaseSample();
         setMode('idle');
         renderLines();
-        setState('재생을 멈췄습니다.');
+        setState('기록을 종료했습니다. 지금까지의 대화를 저장할 수 있습니다.');
         maybeExtract();
         return;
       }
@@ -464,8 +584,10 @@ export default {
       }
       resetAll();
       const token = playToken;
+      st.sampleStarted = true;
       setMode('sample');
-      setState('샘플 대화를 재생하는 중… (가짜 대화)', 'live');
+      renderLines();
+      setState('샘플 대화를 기록하는 중…', 'live');
       let t = 0.4;
       for (const line of SAMPLE) {
         const done = await typeLine(line.who, line.text, t, token);
@@ -479,6 +601,8 @@ export default {
         if (line.check) maybeExtract();
         await sleep(LINE_GAP_MS);
         if (disposed || token !== playToken) return;
+        if (st.paused) await new Promise((resolve) => { wakeSample = resolve; });
+        if (disposed || token !== playToken) return;
       }
       setMode('idle');
       setState('샘플 대화가 끝났습니다. 카드를 확인하고 「끝내고 저장」을 눌러 보세요.');
@@ -488,8 +612,10 @@ export default {
       if (st.mode === 'sample' || st.typing || st.saving) return;
       if (st.mode === 'listening') { toast('이 문장을 소리 내어 말해 보세요.'); return; }
       if (st.saved) resetAll();
+      st.sampleStarted = false;
       const token = playToken;
       const start = st.lines.length ? lastEnd() + 0.6 : 0.4;
+      setState('예시 문장을 입력하는 중입니다. 문장이 완성되면 저장할 수 있어요.');
       const done = await typeLine('정비소', text, start, token);
       if (!done || disposed || token !== playToken) return;
       pushLine({ who: '정비소', text, start, end: start + Math.max(1.2, Array.from(text).length / 6) });
@@ -502,12 +628,13 @@ export default {
     // ── 저장 · 지우기 ──
     let saveCtrl = null;
     async function save() {
-      if (st.saving || st.saved || st.mode === 'sample') return;
+      if (st.saving || st.saved || st.typing || st.mode === 'sample') return;
+      if (st.mode === 'listening' && !st.lines.length) { stopListening(); return; }
       st.saving = true; // 저장하는 동안에는 미리보기 정리를 부르지 않는다(서버가 카드를 만든다)
       cancel(idleTimer);
       cancel(gapTimer);
       updateButtons();
-      if (st.mode === 'listening') { stopListening(); await waitEnd(2000); if (disposed) return; }
+      if (st.mode === 'listening') { const ended = waitEnd(2000); stopListening(); await ended; if (disposed) return; }
       const text = fullText();
       if (!text.trim()) {
         st.saving = false;
@@ -529,7 +656,7 @@ export default {
         if (disposed) return;
         st.saved = { callId: out?.callId || out?.call?.id || null };
         renderSaved();
-        setState('저장했습니다. 새로 하려면 「지우고 다시」를 누르세요.');
+        setState('글을 저장했습니다. 통화 화면에서 주문 내용을 확인할 수 있습니다.');
         ctx.refreshMeta?.();
       } catch (err) {
         if (disposed || err?.name === 'AbortError') return;
@@ -542,6 +669,7 @@ export default {
     }
     function resetAll() {
       playToken += 1;
+      releaseSample();
       want = false;
       for (const t of timers) clearTimeout(t);
       timers.clear();
@@ -555,14 +683,14 @@ export default {
       listenFrom = null;
       fullWarned = false;
       endWaiters.splice(0).forEach((f) => f());
-      Object.assign(st, { lines: [], interim: '', interimStart: null, typing: null, card: null, cardNote: aiOff ? AI_OFF_TEXT : null, prevKeys: {}, saved: null });
+      Object.assign(st, { lines: [], interim: '', interimStart: null, typing: null, card: null, cardNote: aiOff ? AI_OFF_TEXT : null, prevKeys: {}, saved: null, sampleStarted: false, paused: false, source: -1 });
       st.flash.clear();
       setMode('idle');
       renderLines();
       renderCard();
       renderSaved();
       setCardState('');
-      setState(supported ? '마이크 단추를 누르고 주문을 말해 보세요.' : '「샘플 대화 재생」을 눌러 보세요.');
+      setState(readyText);
     }
     async function onReset() {
       if (st.saving) return;
@@ -580,6 +708,17 @@ export default {
       const act = btn.dataset.act;
       if (act === 'mic') { if (st.mode === 'listening') stopListening(); else startListening(); }
       else if (act === 'sample') playSample();
+      else if (act === 'pause') { if (st.mode === 'sample') togglePause(); else toggleMicPause(); }
+      else if (act === 'source') {
+        st.source = Number(btn.dataset.lineIndex);
+        linesEl.querySelector('.is-source')?.classList.remove('is-source');
+        const line = linesEl.querySelector(`[data-line="${st.source}"]`);
+        if (line) {
+          line.classList.add('is-source');
+          line.focus({ preventScroll: true });
+          line.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });
+        }
+      }
       else if (act === 'example') addExample(btn.dataset.text || '');
       else if (act === 'save') save();
       else if (act === 'reset') onReset();
@@ -589,10 +728,12 @@ export default {
     renderLines();
     renderCard();
     updateButtons();
+    scheduleClock();
 
     return () => {
       disposed = true;
       playToken += 1;
+      releaseSample();
       want = false;
       root.removeEventListener('click', onClick);
       for (const t of timers) clearTimeout(t);

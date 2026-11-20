@@ -1,70 +1,51 @@
-# 콜노트(가칭) 데모 사이트 — `src/app/`
+# 아맞다 웹 서버
 
-> AI 초안 · 돌린 사람: 배*결 · Claude Code(Opus 5.5) · 태림(개발) 작업방 · 2026-11-11 · 검토 전
+> AI 초안 · 돌린 사람: 신*림 · Codex · 2026-11-18
 
-자동차 부품 대리점의 **전화 주문 녹음 → 받아쓰기 → 주문 카드 → 확인 · 확정 → 출고**를 보여 주는 데모 사이트다.
-**모든 통화는 가짜**다(거래처 · 차번호 · 전화번호 · 품번 모두 지어냄).
+Node.js 24 · ES 모듈 · SQLite로 실행한다. 운영 서버는 별도 빌드 없이 저장소에 포함된 정적 파일을 제공한다. 운영 설치와 데이터 백업은 [자가 호스팅 안내](../../docs/self-hosting.md)를 따른다.
 
-- 데모 주소: https://t07.3-39-67-126.sslip.io
-- 설계: [docs/설계.md](docs/설계.md) · 일꾼 API: [docs/worker-api.md](docs/worker-api.md)
-- 기능 목록(F01~F15)과 구현 상태: [work/03-개발-태림/산출물/구현-대조표.md](../../work/03-개발-태림/산출물/구현-대조표.md)
+## 개발 환경에서 실행
 
-## 로컬에서 돌리기
-
-준비물: Node.js 24 이상. (녹음 올리기를 시험하려면 ffmpeg · ffprobe)
-
-```bash
+```sh
 cd src/app
 npm ci
-node server.mjs            # http://127.0.0.1:5600 — AI 키 없이도 화면이 뜬다(AI 기능만 「AI 키 없음」)
-npm test                   # node --test test/
+npm run start:offline
 ```
 
-AI 까지 켜려면 저장소 **밖**의 env 파일을 읽게 한다(파일 내용은 출력하지 않는다).
+[http://127.0.0.1:5600](http://127.0.0.1:5600)에서 가짜 샘플을 사용한다. `start:offline`은 fixture를 선택하고 유료 AI 호출을 끈다. 이름의 offline은 테스트 모드를 뜻하며 실제 로컬 모델 추론이 아니다. 실제 로컬 모델은 Ollama를 별도로 설치하고 `AI_PROVIDER=ollama`로 Node를 직접 실행한다. Docker는 필수가 아니다. [Mac 앱 안내](../../docs/mac-app.md)는 앱 빌드·음성 모델·언어 모델 준비와 검증 범위를 나눈다. 직접 설정해서 실행하려면 `.env.example`을 `.env`에 복사하고 `node --env-file=.env server.mjs`를 실행한다. `.env` 파일은 Git에서 제외한다.
 
-```bash
-node --env-file=C:\Users\pc\.t07-secrets\server.env server.mjs
+## Montage 화면 수정
+
+아차의 앱 메뉴·통화 기록 검색과 필터·주문 폼에 [Wanted Montage](https://montage.wanted.co.kr/docs/foundations)를 사용한다. UI 소스를 수정하면 `npm run build:montage`로 `public/montage/`를 재생성하고 소스와 함께 커밋한다. 운영 서버는 미리 생성된 파일을 사용한다.
+
+## 테스트
+
+```sh
+npm test
+npm run test:offline
 ```
 
-데이터는 `DATA_DIR`(기본 `src/app/.data/`, 저장소에 안 올라감)에 쌓인다. 처음 뜰 때 가짜 통화 시드가 들어간다.
+업로드·오디오 변환을 시험하려면 `ffmpeg`와 `ffprobe`를 PATH에 둔다. 일반 테스트와 오프라인 테스트는 유료 API 키 없이 실행한다. 오프라인 테스트는 합성 WAV·받아쓰기 일꾼 대역·AI fixture로 업로드부터 카드 저장까지 확인한다. fixture는 미리 준비한 샘플을 재현한다. 모델 품질과 지연 시간은 별도로 측정한다.
 
-## 환경변수
+### 업무 화면 회귀
 
-| 이름 | 기본 | 뜻 |
-|---|---|---|
-| `PORT` · `HOST` | `5600` · `127.0.0.1` | 듣는 주소 |
-| `DATA_DIR` | `src/app/.data` | DB(`callnote.sqlite`) · 오디오(`audio/`) — 앱이 쓰는 유일한 경로 |
-| `PUBLIC_BASE_URL` | (없음) | 일꾼에게 주는 오디오 주소의 앞부분 |
-| `ANTHROPIC_API_KEY` | (없음) | Claude API 키. 없으면 AI 기능만 꺼진다 |
-| `CLAUDE_MODEL` | `claude-opus-5-5` | 카드 · 브리핑 · 묻기에 쓰는 모델 |
-| `WORKER_TOKEN` | (없음) | 받아쓰기 일꾼 인증. 없으면 일꾼 API 꺼짐 |
-| `INGEST_TOKEN` | (없음) | 녹음 PC 프로그램(ingest) 인증. 없으면 ingest 꺼짐 |
-| `ADMIN_PASSCODE` | (없음) | 관리자(초기화 · 체험 신청 보기 · 지우기) 암호 |
-| `DAILY_AI_LIMIT` · `DAILY_UPLOAD_LIMIT` | `400` · `100` | 하루 전체 상한(누구나 쓰는 데모라 비용 보호) |
-| `PER_IP_DAILY_AI` | `40` | 한 기기(IP)가 하루에 쓸 수 있는 AI 횟수 |
-| `MAX_UPLOAD_BYTES` · `MAX_AUDIO_SEC` | 10MB · 300초 | 올리기 제한 |
-| `FFMPEG_PATH` · `FFPROBE_PATH` | `ffmpeg` · `ffprobe` | 변환기 |
-| `S3_BUCKET` 등 | (없음) | 지금은 쓰지 않는다(오디오는 `DATA_DIR`) |
+Playwright Chromium이 준비된 개발 환경에서 `npm run test:workflow-e2e`를 실행한다. 원문 검색 → 공유 지식 → 녹음·AI 연결 설정 → 다품목 주문의 회귀를 순서대로 실행하며 하나라도 실패하면 멈춘다. 개별 실행은 `test:transcript-e2e`, `test:knowledge-e2e`, `test:settings-e2e`, `test:multiitem-e2e`다.
 
-비밀값은 저장소 · 브라우저 · 응답 · 로그에 넣지 않는다. `.env` 는 `.gitignore` 에 있다.
+실제 화면 모듈과 가짜 fixture/mock API만 사용한다. 실제 고객 자료·모델 추론·기기 연결·운영 서버 저장은 검증하지 않는다. GitHub Actions는 결과를 `artifacts/e2e/`의 기능별 폴더에 모아 기존 증거 artifact로 보관한다. 로컬 기본 결과 위치와 변경용 환경변수는 각 테스트 파일 첫 부분에 있다. 원격 CI 실행 여부는 해당 커밋의 실행 결과로 별도 확인한다.
 
-빈도 제한(누구나 쓰는 데모): AI 는 IP 당 10분 12번 · 하루 40번 · 전체 하루 400번, 녹음 올리기는 IP 당 1시간 시도 30번 · 받아들이는 것 10건 · 전체 하루 100건, 동시에 받는 녹음은 2개(넘으면 503 busy).
+## 주요 경로
 
-시드 시각: 가짜 통화 54건은 서버가 10분마다 「오늘」에 맞춰 다시 놓는다. 08:05 KST 전(영업 전)에는 어제 하루로 두고 첫 화면은 「어제 흐름」을 안내와 함께 보여 준다. 그 뒤로는 오늘 통화를 08:00~지금 사이에 원래 간격 비율로 놓다가, 원래 시각이 지나면 원래 시각으로.
+| 경로 | 역할 |
+|---|---|
+| `server.mjs` · `routes/` | HTTP 서버와 API |
+| `lib/` | SQLite · 인증 · 오디오 변환 · 일감 · 카드 검증 · AI 호출 |
+| `public/` | 웹 화면과 실시간 받아쓰기 |
+| `seed/` | 공개 데모 전용 가짜 통화·사전 |
+| `tools/` | 개발·운영 보조 도구 |
+| `test/` | Node.js 테스트 |
 
-## 배포
+[시스템 구조](../../docs/architecture.md) · [기존 데모 설계](docs/설계.md) · [받아쓰기 일꾼 API](docs/worker-api.md)
 
-`dev` 가지에 푸시하면 서버(han-ops 가 만든 자동 배포 장치)가 1분 안에 당겨 `npm ci --omit=dev` 후 `node src/app/server.mjs` 로 다시 띄운다.
-30초 안에 `/healthz` 가 200 이 아니면 앞 버전으로 되돌린다. 결과는 `/_deploy/status.json`. 빌드 단계는 없다.
+## 기존 팀 데모 배포
 
-## 구조 한눈에
-
-```
-server.mjs        진입점 — routes/*.mjs 를 모두 읽어 주소를 단다
-lib/              설정 · DB(node:sqlite) · 보안 · AI(Claude) · 카드 검증 · 오디오 변환 · 일감 줄 · 시드
-routes/           API (설계.md 5.3 의 표)
-public/           화면(빌드 없는 ES 모듈, 해시 라우팅, PWA)
-tools/            attach-seed-audio.mjs(시드에 합성 음성 붙이기) · folder-sender.mjs(개발용 간이판 — F12 정본은 src/pc-agent/)
-seed/             가짜 데모 통화 · 사전 · 거래처
-test/             node --test
-```
+팀의 `dev` 가지 푸시는 기존 데모 배포를 시작한다. 서버는 `npm ci --omit=dev` 후 `node src/app/server.mjs`로 뜬다. 상태는 `/healthz`와 `/_deploy/status.json`을 확인한다. 팀 데모에 올리는 모든 녹음은 가짜다.

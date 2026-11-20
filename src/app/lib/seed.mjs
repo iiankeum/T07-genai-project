@@ -2,10 +2,11 @@
 // 시드 통화는 녹음이 없는 대본(source='seed', is_fake=1)이다. 형식은 seed/README.md.
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import path from 'node:path';
-import { APP_DIR, config } from './config.mjs';
-import { db, tx, newId, nowIso, getMeta, setMeta } from './db.mjs';
+import { APP_DIR } from './config.mjs';
+import { dataDir, db, tx, newId, nowIso, getMeta, setMeta } from './db.mjs';
 import { kstDay } from './security.mjs';
 import { makeTitle } from './repo.mjs';
+import { purgeCallReferences } from './call-retention.mjs';
 
 export const SEED_DIR = path.join(APP_DIR, 'seed');
 export const SEED_ENGINE = '대본(가짜 통화 · 녹음 없음)';
@@ -324,7 +325,7 @@ export function buildSeedCall(sc, { anchorMs, customers = [] }) {
   const iso = (ms) => (ms == null ? null : new Date(ms).toISOString());
 
   const audioRel = `audio/${String(sc.id).replace(/[^a-zA-Z0-9_-]/g, '_')}.wav`;
-  const hasAudio = existsSync(path.join(config.dataDir, audioRel));
+  const hasAudio = existsSync(path.join(dataDir(), audioRel));
   const call = {
     id: String(sc.id),
     created_at: iso(createdMs),
@@ -426,6 +427,7 @@ export async function seedDemo({ reset = false, dir = SEED_DIR, now = new Date()
   const anchorMs = seedAnchorMs(now);
   const inserted = tx((d) => {
     if (reset) {
+      purgeCallReferences(d, d.prepare('SELECT id FROM calls').all().map((row) => row.id));
       for (const t of ['jobs', 'cards', 'calls', 'briefings', 'recommendations', 'glossary']) d.exec(`DELETE FROM ${t}`);
     }
     if (d.prepare('SELECT COUNT(*) AS n FROM glossary').get().n === 0) {

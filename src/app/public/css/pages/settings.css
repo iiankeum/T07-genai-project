@@ -1,0 +1,63 @@
+@import url("./account.css");
+
+/* 계정 설정을 링크 나열 대신 명확한 탐색/편집 영역으로 구분한다. */
+.settings-page { max-width:1180px; }
+.settings-page .account-panel { background:#fff; border:1px solid var(--line); border-radius:16px; }
+.settings-nav { padding:8px; background:#eef0f3; border-radius:12px; gap:4px; }
+.settings-nav a { color:var(--muted); text-decoration:none; padding:10px 12px; border-radius:8px; font-size:.82rem; font-weight:500; }
+.settings-nav a:hover { color:var(--ink); background:#fff8; }
+.settings-nav a[aria-current="page"] { color:var(--brand-ink); background:#fff; text-decoration:none; font-weight:600; }
+.settings-directory { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.settings-destination { display:grid; gap:8px; padding:20px; border:1px solid var(--line); border-radius:12px; color:var(--ink); text-decoration:none; min-height:100px; }
+.settings-destination:hover { border-color:var(--brand-line); background:var(--brand-wash); }
+.settings-destination strong { display:flex; justify-content:space-between; gap:12px; font-size:.94rem; font-weight:600; }
+.settings-destination strong span { color:var(--muted); }
+.settings-destination > span { color:var(--muted); font-size:.8rem; }
+.settings-page .account-panel > p { margin:0; font-size:.88rem; }
+.settings-page .account-form { max-width:100%; }
+.settings-page .account-form label { font-size:.82rem; }
+@media(min-width:1100px) {
+ .settings-page { display:grid; grid-template-columns:190px minmax(0,1fr); gap:24px; align-items:start; }
+ .settings-page .page-head { grid-column:1/-1; margin-bottom:4px; }
+ .settings-nav { display:flex; flex-direction:column; align-items:stretch; margin:0; }
+ .settings-page .account-panel { padding:28px; }
+}
+@media(max-width:719px) {
+ .settings-directory { grid-template-columns:1fr; }
+ .settings-nav { flex-wrap:nowrap; overflow-x:auto; margin-bottom:20px; }
+ .settings-nav a { flex:none; white-space:nowrap; }
+ .settings-page .account-panel { padding:16px; }
+}
+.settings-home .settings-nav { display:none; }
+.settings-home .account-panel { grid-column:1/-1; }
+.settings-home .settings-directory { grid-template-columns:repeat(3,minmax(0,1fr)); }
+@media(max-width:719px) { .settings-home .settings-directory { grid-template-columns:1fr; } }
+
+/* 설정 홈은 목적지를 한 번만 보여주고 내부 화면은 돌아갈 경로를 명시한다. */
+.settings-back { grid-column:1/-1; color:var(--muted); text-decoration:none; width:fit-content; padding:8px 0; }
+.settings-back:hover { color:var(--brand); }
+.settings-home .account-panel { border:0; padding:0; background:transparent; }
+
+.integration-overview { padding-bottom:24px; }
+.integration-overview h2,.integration-step h2 { font-size:1.15rem; margin:0 0 12px; }
+.integration-overview > p,.integration-step > p { color:var(--muted); line-height:1.7; }
+.integration-overview ol { list-style:none; padding:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+.integration-overview a { display:grid; gap:8px; height:100%; padding:14px; border:1px solid var(--line); border-radius:10px; text-decoration:none; color:var(--ink); }
+.integration-overview a span { font-size:.8rem; color:var(--muted); }
+.integration-step { border-top:1px solid var(--line); padding:28px 0; scroll-margin-top:90px; }
+.integration-step h3 { font-size:1rem; margin:24px 0 8px; }
+.integration-step form { margin:16px 0; }
+.integration-advanced { margin:16px 0; color:var(--muted); }
+.integration-advanced summary { cursor:pointer; padding:8px 0; }
+@media(max-width:719px) { .integration-overview ol { grid-template-columns:1fr; } }
+
+/* Flat settings directory and thin subnavigation; form semantics remain unchanged. */
+.settings-page .settings-directory { display:grid; grid-template-columns:minmax(0,1fr); gap:0; }
+.settings-page .settings-destination { border:0; border-bottom:1px solid #e8ebef; border-radius:0; min-height:60px; padding:12px 0; }
+.settings-page .settings-destination:hover { background:#f8fafc; }
+.settings-page .settings-destination > span { font-size:14px; }
+.settings-page .settings-nav { background:#fff; padding:0; border-radius:0; border-bottom:1px solid #e8ebef; }
+.settings-page .settings-nav a { border-radius:0; border-bottom:2px solid transparent; }
+.settings-page .settings-nav a[aria-current="page"] { border-bottom-color:#285b92; }
+.settings-page .account-panel { border:0; border-radius:0; box-shadow:none; padding-inline:0; }
+.settings-page .account-form { max-width:670px; }

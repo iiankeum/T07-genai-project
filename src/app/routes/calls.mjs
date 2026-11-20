@@ -1,12 +1,15 @@
 // 통화 목록 · 찾기(F08) · 상세 · 오디오(Range) · 거래처별 모아 보기(F13) · 관리자 지우기. [C]
-import { statSync, createReadStream, rmSync, existsSync } from 'node:fs';
+import { statSync, realpathSync, createReadStream, rmSync, existsSync } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import path from 'node:path';
-import { config } from '../lib/config.mjs';
-import { db, tx, parseJson } from '../lib/db.mjs';
+import { dataDir, db, tx, parseJson } from '../lib/db.mjs';
 import { HttpError, cleanText } from '../lib/http.mjs';
 import { requireAdmin, kstDay } from '../lib/security.mjs';
-import { callView, getCallRow, maskPhone } from '../lib/repo.mjs';
+import { CALL_TYPES, callView, getCallRow, maskPhone, isShipTarget } from '../lib/repo.mjs';
+import { enqueue } from '../lib/jobs.mjs';
+import { registerDueSort } from '../lib/due-sort.mjs';
+import { purgeCallReferences } from '../lib/call-retention.mjs';
+import { recordAudit, requestAccess, requireRole } from '../lib/auth.mjs';
 
 // ── 함께 쓰는 도구(insights.mjs 도 쓴다) ─────────────────────────────
 
@@ -150,14 +153,37 @@ export function listCalls(query = {}) {
   const customer = cleanText(query.customer, 100);
   if (customer) { where.push(`${EFF_CUSTOMER} = ?`); args.push(customer); }
 
-  const limit = intParam(query.limit, 50, 1, 200);
+  const callType = cleanText(query.callType, 30);
+  if (callType) {
+    if (!CALL_TYPES.includes(callType)) throw new HttpError(400, 'bad_call_type', '통화 종류가 올바르지 않습니다.');
+    where.push('k.call_type = ?');
+    args.push(callType);
+  }
+  if (query.callback !== undefined && query.callback !== '') {
+    const flag = String(query.callback);
+    if (!['true', 'false', '1', '0'].includes(flag)) throw new HttpError(400, 'bad_callback', '재연락 조건이 올바르지 않습니다.');
+    where.push('COALESCE(k.callback, 0) = ?');
+    args.push(flag === 'true' || flag === '1' ? 1 : 0);
+  }
+
+  const orders = {
+    board: status === 'shipped' ? 'COALESCE(k.shipped_at, k.updated_at) DESC, ' : 'k.urgent DESC, ',
+    due: "NULLIF(TRIM(k.due), '') IS NULL, k.due, ",
+    dueDate: "ahcha_due_sort_v1(k.due, c.recorded_at) IS NULL, ahcha_due_sort_v1(k.due, c.recorded_at) COLLATE BINARY, ",
+    customer: EFF_CUSTOMER + ' IS NULL, ' + EFF_CUSTOMER + ', ',
+  };
+  const sort = cleanText(query.sort, 20);
+  if (sort && !Object.hasOwn(orders, sort)) throw new HttpError(400, 'bad_sort', '정렬 기준이 올바르지 않습니다.');
+  const orderBy = (sort ? orders[sort] : '') + 'c.recorded_at DESC, c.id DESC';
+  const limit = intParam(query.limit, 30, 1, 200);
   const offset = intParam(query.offset, 0, 0, 1_000_000);
   const whereSql = where.length ? 'WHERE ' + where.join(' AND ') : '';
   const from = 'FROM calls c LEFT JOIN cards k ON k.call_id = c.id';
 
   const d = db();
+  if (sort === 'dueDate') registerDueSort(d);
   const total = d.prepare(`SELECT COUNT(*) AS n ${from} ${whereSql}`).get(...args).n;
-  const rows = d.prepare(`SELECT c.* ${from} ${whereSql} ORDER BY c.recorded_at DESC, c.id DESC LIMIT ? OFFSET ?`).all(...args, limit, offset);
+  const rows = d.prepare(`SELECT c.* ${from} ${whereSql} ORDER BY ${orderBy} LIMIT ? OFFSET ?`).all(...args, limit, offset);
   const calls = rows.map((row) => {
     const view = callView(row);
     if (terms.length) view.matches = findMatches(parseJson(row.segments, []), row.transcript, terms);
@@ -177,7 +203,7 @@ function audioModule() {
   return audioModPromise;
 }
 
-const audioDir = () => path.resolve(config.dataDir, 'audio');
+const audioDir = () => path.resolve(dataDir(), 'audio');
 function isInside(dir, file) {
   const rel = path.relative(dir, file);
   return Boolean(rel) && !rel.startsWith('..') && !path.isAbsolute(rel);
@@ -185,7 +211,7 @@ function isInside(dir, file) {
 
 /** calls.audio_file(DATA_DIR 기준 상대 경로) → 절대 경로. DATA_DIR/audio 밖이면 400. */
 export async function resolveAudioFile(rel) {
-  const own = path.resolve(config.dataDir, String(rel));
+  const own = path.resolve(dataDir(), String(rel));
   if (!isInside(audioDir(), own)) throw new HttpError(400, 'bad_audio_path', '녹음 파일 위치가 올바르지 않습니다.');
   const mod = await audioModule();
   if (typeof mod?.audioPath === 'function') {
@@ -228,10 +254,10 @@ async function sendAudio({ req, res, params, query }) {
   if (!st || !st.isFile()) throw new HttpError(404, 'no_audio', '녹음 파일을 찾지 못했습니다.');
 
   const size = st.size;
-  const headers = { 'Content-Type': 'audio/wav', 'Accept-Ranges': 'bytes', 'Cache-Control': 'private, max-age=300' };
+  const headers = { 'Content-Type': 'audio/wav', 'Accept-Ranges': 'bytes', 'Cache-Control': 'no-store' };
   if (query.download === '1') {
     const safeId = String(row.id).replace(/[^A-Za-z0-9_-]/g, '');
-    headers['Content-Disposition'] = `attachment; filename="callnote-fake-${safeId}.wav"`;
+    headers['Content-Disposition'] = `attachment; filename="ahmatda-${row.is_fake ? 'fake-' : ''}${safeId}.wav"`;
   }
   const range = parseRange(req.headers.range, size);
   if (range === 'unsatisfiable') {
@@ -266,11 +292,21 @@ function glossaryCustomers() {
   return map;
 }
 
+// isShipTarget와 같은 조건. JS item.part의 truthiness를 JSON 타입별로 보존한다.
+// 집계는 SQL에서 유지해 카드마다 별도 조회하지 않는다.
+const CUSTOMER_SHIP_TARGET = `COALESCE(NULLIF(k.call_type, ''), '주문') IN ('주문', '반품·교환')
+  AND EXISTS (SELECT 1 FROM json_each(CASE WHEN json_valid(k.items) THEN k.items ELSE '[]' END) j
+    WHERE CASE WHEN j.type = 'object' THEN CASE json_type(j.value, '$.part')
+      WHEN 'text' THEN length(json_extract(j.value, '$.part')) > 0
+      WHEN 'integer' THEN json_extract(j.value, '$.part') != 0
+      WHEN 'real' THEN json_extract(j.value, '$.part') != 0
+      WHEN 'true' THEN 1 WHEN 'array' THEN 1 WHEN 'object' THEN 1 ELSE 0 END ELSE 0 END)`;
+
 export function listCustomers() {
   const d = db();
   const gl = glossaryCustomers();
   const agg = d.prepare(`SELECT ${EFF_CUSTOMER} AS name, COUNT(*) AS calls, MAX(c.recorded_at) AS lastAt,
-      SUM(CASE WHEN k.status IN ('draft', 'confirmed') THEN 1 ELSE 0 END) AS openCards
+      SUM(CASE WHEN k.status = 'draft' OR (k.status = 'confirmed' AND ${CUSTOMER_SHIP_TARGET}) THEN 1 ELSE 0 END) AS openCards
     FROM calls c LEFT JOIN cards k ON k.call_id = c.id
     WHERE ${EFF_CUSTOMER} IS NOT NULL GROUP BY name`).all();
   // 사전에 번호가 없으면 마지막으로 걸려 온 번호(가려서)
@@ -315,7 +351,7 @@ export function customerDetail(rawName) {
       phone: maskPhone(g?.phone || lastNum || null),
       inGlossary: Boolean(g),
       calls: calls.length,
-      openCards: calls.filter((c) => c.card && (c.card.status === 'draft' || c.card.status === 'confirmed')).length,
+      openCards: calls.filter((c) => c.card && (c.card.status === 'draft' || (c.card.status === 'confirmed' && isShipTarget(c.card)))).length,
     },
     calls,
   };
@@ -327,13 +363,13 @@ export function deleteCall(id) {
   const row = getCallRow(id);
   if (!row) throw new HttpError(404, 'not_found', '통화를 찾지 못했습니다.');
   tx((d) => {
-    d.prepare('DELETE FROM jobs WHERE call_id = ?').run(id);
-    d.prepare('DELETE FROM cards WHERE call_id = ?').run(id);
+    purgeCallReferences(d, [id]);
     d.prepare('DELETE FROM calls WHERE id = ?').run(id);
+    recordAudit({ entity: 'call', entityId: id, action: 'delete' });
   });
   let audioDeleted = false;
-  if (row.audio_file) {
-    const f = path.resolve(config.dataDir, String(row.audio_file));
+  if (row.audio_file && !db().prepare('SELECT 1 FROM calls WHERE audio_file = ? LIMIT 1').get(row.audio_file)) {
+    const f = path.resolve(dataDir(), String(row.audio_file));
     if (isInside(audioDir(), f)) {
       try { if (existsSync(f)) { rmSync(f, { force: true }); audioDeleted = true; } } catch { /* 파일은 남아도 DB 는 지워졌다 */ }
     }
@@ -343,7 +379,38 @@ export function deleteCall(id) {
 
 // ── 주소 달기 ─────────────────────────────────────────────────────
 
+/** 저장된 녹음으로 실패한 받아쓰기만 재시도한다. 가짜/실제 녹음 모두 기존 일감 경로를 따른다. */
+export function retryTranscription(id) {
+  requireRole('admin', 'reception');
+  return tx((d) => {
+    const row = getCallRow(id);
+    if (!row) throw new HttpError(404, 'not_found', '통화를 찾지 못했습니다.');
+    if (row.transcript || !['failed', 'queued', 'transcribing'].includes(row.status)) {
+      throw new HttpError(409, 'not_retryable', '실패한 받아쓰기만 다시 시도할 수 있습니다.');
+    }
+    const failed = d.prepare("SELECT id FROM jobs WHERE call_id = ? AND state = 'failed' LIMIT 1").get(id);
+    if (!failed) throw new HttpError(409, 'not_retryable', '자동 재시도가 끝난 받아쓰기만 다시 시도할 수 있습니다.');
+    // 워크스페이스 밖 경로와 심볼릭 링크도 거절한다.
+    let file;
+    try {
+      if (!row.audio_file) throw new Error();
+      const root = realpathSync(audioDir());
+      file = realpathSync(path.resolve(dataDir(), row.audio_file));
+      if (!isInside(root, file) || !statSync(file).isFile() || statSync(file).size === 0) throw new Error();
+    } catch {
+      throw new HttpError(409, 'no_audio', '저장된 녹음이 없어 다시 시도할 수 없습니다.');
+    }
+    const active = d.prepare("SELECT id FROM jobs WHERE call_id = ? AND state IN ('queued', 'leased') LIMIT 1").get(id);
+    if (active) return { callId: id, jobId: active.id, requeued: false, alreadyPending: true };
+    if (row.status !== 'failed') throw new HttpError(409, 'not_retryable', '현재 상태에서는 다시 시도할 수 없습니다.');
+    const jobId = enqueue(id);
+    recordAudit({ entity: 'call', entityId: id, action: 'retry_transcription', before: { status: row.status }, after: { jobId, status: 'queued' } });
+    return { callId: id, jobId, requeued: true, alreadyPending: false };
+  });
+}
+
 export function register(router) {
+  router.post('/api/calls/:id/retry-transcription', ({ params }) => retryTranscription(params.id));
   router.get('/api/calls', ({ query }) => listCalls(query));
 
   router.get('/api/calls/:id', ({ params }) => {
@@ -357,7 +424,8 @@ export function register(router) {
   // routes/admin.mjs 도 같은 주소를 단다. 먼저 달린 것이 있으면 겹치지 않게 건너뛴다(주인 정하기는 총괄에게 요청).
   if (!router.match('DELETE', '/api/calls/x')?.route) {
     router.delete('/api/calls/:id', ({ req, params }) => {
-      requireAdmin(req);
+      if (requestAccess().demo) requireAdmin(req);
+      else requireRole('admin');
       return deleteCall(params.id);
     });
   }

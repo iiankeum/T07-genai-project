@@ -1,0 +1,16 @@
+{
+  "results": [
+    "keyboard/mobile list-detail focus, return, visible pending review and collapsed history",
+    "zero optional relations",
+    "partial row blocked with focus; two relations serialized",
+    "existing edit retains and updates structured relation",
+    "10-row limit, deletion, cancel without writes",
+    "PC/mobile dialog no horizontal overflow",
+    "customer entry title follows category",
+    "saving blocks Escape; failure keeps inputs and focuses error; finally unlocks; Escape works after failure; success closes and returns focus",
+    "pending success/failure freezes all edits and duplicate/close actions; payload unchanged; failure restores values and each previous disabled state"
+  ],
+  "writes": 7,
+  "errors": [],
+  "blocked": []
+}

@@ -3,6 +3,7 @@
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { config } from './config.mjs';
 
 // node:sqlite 는 아직 실험 기능이라 경고를 한 번 낸다. 기능 경고만 걸러 로그를 깨끗하게 한다.
@@ -97,6 +98,7 @@ CREATE TABLE IF NOT EXISTS workers(
 );
 
 CREATE TABLE IF NOT EXISTS glossary(
+  contact_name TEXT,
   id TEXT PRIMARY KEY,
   kind TEXT NOT NULL,                   -- 현장말 | 오인식 | 거래처 | 차종
   term TEXT NOT NULL,                   -- 현장 말 / 틀린 말 / 거래처 이름 / 차종
@@ -134,6 +136,8 @@ CREATE TABLE IF NOT EXISTS trials(
   message TEXT,
   consent_at TEXT NOT NULL,
   ip_hash TEXT,
+  processed INTEGER NOT NULL DEFAULT 0 CHECK(processed IN (0, 1)),
+  processed_at TEXT,
   extra TEXT                            -- JSON: 소개 페이지 양식의 그 밖 칸(업종·하루 통화 수·지역·마케팅 동의 등)
 );
 
@@ -148,13 +152,80 @@ CREATE TABLE IF NOT EXISTS meta(
   key TEXT PRIMARY KEY,
   value TEXT
 );
+
+CREATE TABLE IF NOT EXISTS audit_log(
+  id TEXT PRIMARY KEY,
+  entity TEXT NOT NULL,
+  entity_id TEXT NOT NULL,
+  action TEXT NOT NULL,
+  actor_id TEXT,
+  actor_name TEXT,
+  occurred_at TEXT NOT NULL,
+  before_json TEXT,
+  after_json TEXT
+);
+CREATE INDEX IF NOT EXISTS audit_entity ON audit_log(entity, entity_id, occurred_at);
+
+CREATE TABLE IF NOT EXISTS knowledge_revisions(
+  id TEXT PRIMARY KEY,
+  knowledge_id TEXT NOT NULL REFERENCES glossary(id) ON DELETE CASCADE,
+  base_version INTEGER NOT NULL,
+  snapshot TEXT NOT NULL,
+  status TEXT NOT NULL,
+  reason TEXT,
+  submitted_by TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  reviewed_by TEXT,
+  reviewed_at TEXT,
+  approved_version INTEGER
+);
+CREATE INDEX IF NOT EXISTS knowledge_revision_item ON knowledge_revisions(knowledge_id, created_at);
+
+CREATE TABLE IF NOT EXISTS assistant_threads(
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  messages TEXT NOT NULL DEFAULT '[]',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS assistant_threads_user ON assistant_threads(user_id, updated_at);
+
+CREATE TABLE IF NOT EXISTS notification_reads(
+  user_id TEXT NOT NULL,
+  notification_id TEXT NOT NULL,
+  read_at TEXT NOT NULL,
+  PRIMARY KEY(user_id, notification_id)
+);
 `;
 
 let _db = null;
+let testDb = null;
+const workspaceStorage = new AsyncLocalStorage();
+const connections = new Map();
+const MAX_CONNECTIONS = 24;
+export const DEMO_WORKSPACE_ID = 'demo';
+export const LEGACY_WORKSPACE_ID = 'legacy';
+export const workspaceContext = () => workspaceStorage.getStore();
+export const defaultWorkspaceId = () => config.demoMode ? DEMO_WORKSPACE_ID : LEGACY_WORKSPACE_ID;
+
+export function withWorkspace(access, fn) {
+  const id = access?.workspace?.id;
+  if (id !== DEMO_WORKSPACE_ID && id !== LEGACY_WORKSPACE_ID && !/^ws_[a-z0-9]{19}$/.test(id ?? '')) {
+    throw new TypeError('유효한 워크스페이스가 필요합니다.');
+  }
+  return workspaceStorage.run(access, fn);
+}
+
+export function dataDir() {
+  const id = workspaceContext()?.workspace.id ?? defaultWorkspaceId();
+  if (id === LEGACY_WORKSPACE_ID || (testDb && id === DEMO_WORKSPACE_ID)) return config.dataDir;
+  return path.join(config.dataDir, 'workspaces', id);
+}
 
 export function openDb(file) {
-  const dbFile = file ?? path.join(config.dataDir, 'callnote.sqlite');
-  if (dbFile !== ':memory:') mkdirSync(path.dirname(dbFile), { recursive: true });
+  const dbFile = file ?? path.join(dataDir(), 'callnote.sqlite');
+  if (dbFile !== ':memory:') mkdirSync(path.dirname(dbFile), { recursive: true, mode: 0o700 });
   const db = new DatabaseSync(dbFile);
   db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 3000;');
   db.exec(SCHEMA);
@@ -170,21 +241,63 @@ const COLUMNS = [
   ['cards', 'customer_by_phone', 'INTEGER NOT NULL DEFAULT 0'],
   ['cards', 'call_type', "TEXT NOT NULL DEFAULT '주문'"],
   ['glossary', 'phone', 'TEXT'],
+  ['glossary', 'contact_name', 'TEXT'],
   ['trials', 'extra', 'TEXT'],
+  ['trials', 'processed', 'INTEGER NOT NULL DEFAULT 0 CHECK(processed IN (0, 1))'],
+  ['trials', 'processed_at', 'TEXT'],
+  ['cards', 'domain_version', "TEXT NOT NULL DEFAULT 'automotive@1'"],
+  ['cards', 'field_reviews', "TEXT NOT NULL DEFAULT '{}'"],
+  ['cards', 'revision', 'INTEGER NOT NULL DEFAULT 0'],
+  ['glossary', 'version', 'INTEGER NOT NULL DEFAULT 1'],
+  ['glossary', 'aliases', "TEXT NOT NULL DEFAULT '[]'"],
+  ['glossary', 'relations', "TEXT NOT NULL DEFAULT '[]'"],
+  ['glossary', 'source_call_id', 'TEXT'],
+  ['glossary', 'source_seg_index', 'INTEGER'],
+  ['glossary', 'submitted_by', 'TEXT'],
+  ['glossary', 'evidence_note', 'TEXT'],
 ];
 function migrate(db) {
-  for (const [table, col, ddl] of COLUMNS) {
-    const cols = db.prepare(`PRAGMA table_info(${table})`).all().map((c) => c.name);
-    if (!cols.includes(col)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${ddl}`);
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    for (const [table, col, ddl] of COLUMNS) {
+      const cols = db.prepare(`PRAGMA table_info(${table})`).all().map((c) => c.name);
+      if (!cols.includes(col)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${ddl}`);
+    }
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
   }
 }
 
-/** 앱 전체가 쓰는 DB 하나. 테스트는 setDb() 로 바꿔 끼운다. */
-export function db() {
-  if (!_db) _db = openDb();
+/** 서비스 전체 사용 상한과 도입 문의를 저장한다. */
+export function globalDb() {
+  if (testDb) return testDb;
+  if (!_db) _db = openDb(path.join(config.dataDir, 'callnote.sqlite'));
   return _db;
 }
-export function setDb(d) { _db = d; }
+
+/** 요청과 그 요청이 시작한 백그라운드 일이 같은 워크스페이스 DB를 쓴다. */
+export function db() {
+  const id = workspaceContext()?.workspace.id ?? defaultWorkspaceId();
+  if (id === LEGACY_WORKSPACE_ID) return globalDb();
+  if (testDb && id === DEMO_WORKSPACE_ID) return testDb;
+  const existing = connections.get(id);
+  if (existing) {
+    connections.delete(id);
+    connections.set(id, existing);
+    return existing;
+  }
+  const d = openDb();
+  connections.set(id, d);
+  if (connections.size > MAX_CONNECTIONS) {
+    const oldest = connections.keys().next().value;
+    connections.get(oldest).close();
+    connections.delete(oldest);
+  }
+  return d;
+}
+export function setDb(d) { testDb = d; }
 
 /** 짧고 시간순으로 정렬되는 ID: prefix_시간36진수+난수 */
 export function newId(prefix) {

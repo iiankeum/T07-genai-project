@@ -1,0 +1,51 @@
+{
+  "at": "2026-11-17T17:40:03.339Z",
+  "fixtureOnly": true,
+  "paidProviderEnabled": false,
+  "results": [
+    {
+      "name": "desktop call loads with three columns and evidence",
+      "status": "passed",
+      "elapsedMs": 490
+    },
+    {
+      "name": "autosave, human review, confirm, callback and shipping preserve states",
+      "status": "passed",
+      "elapsedMs": 472
+    },
+    {
+      "name": "mobile 360px navigation and card remain usable",
+      "status": "passed",
+      "elapsedMs": 73
+    },
+    {
+      "name": "assistant uses saved fake calls and labels fixture responses",
+      "status": "passed",
+      "elapsedMs": 124
+    },
+    {
+      "name": "knowledge proposal requires separate approval",
+      "status": "passed",
+      "elapsedMs": 302
+    },
+    {
+      "name": "live fake sample can pause without claiming completion",
+      "status": "passed",
+      "elapsedMs": 234
+    },
+    {
+      "name": "private signup, one-time verification, login and workspace isolation",
+      "status": "passed",
+      "elapsedMs": 549
+    },
+    {
+      "name": "stale tab cannot write or download after another tab switches workspace",
+      "status": "passed",
+      "elapsedMs": 283
+    }
+  ],
+  "pageErrors": [],
+  "blockedExternalOrigins": [
+    "https://cdn.jsdelivr.net"
+  ]
+}

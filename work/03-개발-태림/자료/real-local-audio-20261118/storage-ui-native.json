@@ -1,0 +1,35 @@
+{
+  "recordedAt": "2026-11-18T20:40:45.299004+09:00",
+  "sourceRevision": "0bf45dabf295f8b25ef063ee44574b8a59cd60af",
+  "profile": "development-whisper-pyav-lgpl-v1",
+  "build": {
+    "cleanRevision": true,
+    "adHocStrictSignatureVerified": true,
+    "developerIDNotarizationVerified": false,
+    "rangeAndLockHelpersMatchSource": true
+  },
+  "observedUI": [
+    "startup readiness sheet: manual mode, no Ollama runtime available",
+    "manual continue reaches login without credentials",
+    "menu opens read-only storage usage dialog",
+    "five empty development model/cache categories each show 0 bytes",
+    "close returns to login",
+    "Mac preflight second button reopens storage dialog",
+    "close and quit; ports5601/11435 no listeners"
+  ],
+  "preserved": [
+    "previous development app backed up",
+    "stable app unchanged",
+    "stable zip SHA256 c2324131bf44536ff0b8fca1524d64d2adf4c0b98b78e2c32c6f307c784e44dc",
+    "no account signup or permission grant",
+    "no model download"
+  ],
+  "notVerified": [
+    "nonempty actual model/cache GUI",
+    "actual CDN resume",
+    "authenticated native workflows",
+    "new Mac or older macOS compatibility",
+    "field inference quality"
+  ],
+  "publication": "local only; no push retry"
+}

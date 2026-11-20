@@ -20,7 +20,7 @@ delete process.env.ANTHROPIC_API_KEY;
 
 const APP = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const { makeWav, startServer, sleep } = await import('./fixtures/worker-helpers.mjs');
-const { db, nowIso } = await import('../lib/db.mjs');
+const { dataDir, db, nowIso } = await import('../lib/db.mjs');
 const audio = await import('../lib/audio.mjs');
 const jobs = await import('../lib/jobs.mjs');
 const worker = await import('../routes/worker.mjs');
@@ -111,7 +111,7 @@ test('ingest: 토큰 · 가짜 표시 · 필수 칸 · 오디오 아님 · 변�
   assert.equal(r.status, 503);
   assert.equal(r.body.error, 'converter_missing');
   assert.equal(db().prepare('SELECT COUNT(*) AS n FROM calls').get().n, 0);
-  const tmpDir = path.join(process.env.DATA_DIR, 'tmp');
+  const tmpDir = path.join(dataDir(), 'tmp');
   assert.deepEqual(fs.existsSync(tmpDir) ? fs.readdirSync(tmpDir) : [], []);
 });
 
@@ -302,7 +302,7 @@ test('claim: 녹음 파일이 없어진 일감은 실패로 넘기고 다음 것
 });
 
 test('주인 없는 녹음 파일 정리: 행이 없는 오래된 wav 만 지우고 시드 음성 · 새 파일 · 쓰는 파일은 남긴다', async () => {
-  const dir = path.join(process.env.DATA_DIR, 'audio');
+  const dir = path.join(dataDir(), 'audio');
   fs.mkdirSync(dir, { recursive: true });
   const old = new Date(Date.now() - 2 * 3600_000);
   const put = (name, { aged = true } = {}) => {

@@ -1,29 +1,24 @@
 // 오늘 대시보드 · 할 일(F10) · AI 브리핑 · 마감 요약 글 · 지난 통화에 묻기(F09) · 출고 목록과 CSV(F14). [C]
 import { config } from '../lib/config.mjs';
-import { db, parseJson, nowIso } from '../lib/db.mjs';
+import { requestAccess } from '../lib/auth.mjs';
+import { db, parseJson, nowIso, tx } from '../lib/db.mjs';
+import { assistantHistoryEpoch } from '../lib/assistant-history.mjs';
 import { HttpError, readJson, cleanText } from '../lib/http.mjs';
-import { limit, takeDaily, kstDay } from '../lib/security.mjs';
+import { limit, kstDay } from '../lib/security.mjs';
+import * as configuredAi from '../lib/ai.mjs';
+import { FIXTURE_MODEL } from '../lib/ai-fixture.mjs';
 import { callView, cardView, makeTitle, kstTime, CARD_STATUS_LABEL, isShipTarget } from '../lib/repo.mjs';
 import {
   EFF_CUSTOMER, parseDay, kstDayRange, addDays, kstDateTime, itemsText, knownCustomerNames,
 } from './calls.mjs';
 
-// ── AI 모듈(B 의 lib/ai.mjs). 없거나 키가 없으면 503 'ai_off' ─────────────
+// ── AI 모듈. 기능이 꺼져 있으면 503 'ai_off' ────────────────────────────
 let aiOverride = null;
-let aiModPromise = null;
 /** 시험용: 가짜 AI 를 끼운다({aiEnabled, writeBriefing, answerQuestion}). null 이면 원래대로. */
 export function setAiForTest(obj) { aiOverride = obj; }
-async function loadAi() {
-  if (aiOverride) return aiOverride;
-  aiModPromise ??= import('../lib/ai.mjs').catch((e) => {
-    console.error('[insights] lib/ai.mjs 를 읽지 못함:', e?.code || e?.message || e);
-    return null;
-  });
-  return aiModPromise;
-}
-async function requireAi(fnName) {
-  const ai = await loadAi();
-  if (!ai || typeof ai[fnName] !== 'function') throw new HttpError(503, 'ai_off', 'AI 키 없음');
+function requireAi(fnName) {
+  const ai = aiOverride ?? configuredAi;
+  if (typeof ai[fnName] !== 'function') throw new HttpError(503, 'ai_off', 'AI 키 없음');
   let on = true;
   try { on = typeof ai.aiEnabled === 'function' ? Boolean(ai.aiEnabled()) : true; } catch { on = false; }
   if (!on) throw new HttpError(503, 'ai_off', 'AI 키 없음');
@@ -37,6 +32,9 @@ function aiHttpError(e) {
     case 'refused': return new HttpError(422, 'ai_refused', 'AI 가 답하지 않았습니다. 다르게 물어봐 주세요.');
     case 'rate_limited': return new HttpError(429, 'ai_busy', 'AI 가 바쁩니다. 잠시 뒤 다시 해 주세요.');
     case 'bad_output': return new HttpError(502, 'ai_bad_output', 'AI 답을 읽지 못했습니다. 다시 해 주세요.');
+    case 'local_unavailable':
+    case 'local_model_unavailable':
+    case 'local_timeout': return configuredAi.aiHttpError(e);
     default:
       console.error('[insights] AI 호출 실패:', e?.code || e?.name || 'error');
       return new HttpError(502, 'ai_error', 'AI 를 부르지 못했습니다. 잠시 뒤 다시 해 주세요.');
@@ -126,6 +124,8 @@ export function buildTodos(entries) {
     }
     if (card && card.status !== 'cancelled') {
       const due = card.due ? ` · ${card.due}` : '';
+      const type = card.callType || '주문';
+      const isOrder = type === '주문';
       if (needsCallback(card)) {
         const why = card.askBack.length ? `물어볼 것: ${card.askBack.join(' · ')}` : (card.callbackReason || '다시 전화하기로 표시했어요.');
         cands.push({ kind: 'callback', title: `${who(e)}에 다시 전화`, why, priority: card.urgent ? 1 : 2 });
@@ -134,8 +134,8 @@ export function buildTodos(entries) {
         const extra = card.unsure.length ? ` · 들어 볼 곳 ${card.unsure.length}개` : '';
         cands.push({
           kind: 'confirm',
-          title: `${who(e)} ${card.callType && card.callType !== '주문' ? card.callType : '주문'} 확인하고 확정`,
-          why: (card.urgent ? '급하다고 한 주문이에요' : '확인 필요 상태예요') + due + extra,
+          title: `${who(e)} ${isOrder ? '주문 확인하고 확정' : `${type === '기타' ? '통화' : type} 내용 확인`}`,
+          why: (card.urgent ? (isOrder ? '급하다고 한 주문이에요' : '급하다고 한 통화예요') : '확인 필요 상태예요') + due + extra,
           priority: card.urgent ? 1 : 3,
         });
         if (card.unsure.length) {
@@ -144,7 +144,7 @@ export function buildTodos(entries) {
         }
       }
       if (card.status === 'confirmed' && card.urgent && isShipTarget(card)) {
-        cands.push({ kind: 'ship', title: `${who(e)} 출고`, why: `급한 주문 · 확정됨${due}${card.delivery ? ` · ${card.delivery}` : ''}`, priority: 1 });
+        cands.push({ kind: 'ship', title: `${who(e)} ${isOrder ? '출고' : '반품·교환 처리'}`, why: `${isOrder ? '급한 주문 · 확정됨' : '급한 반품·교환 · 처리 대기'}${due}${card.delivery ? ` · ${card.delivery}` : ''}`, priority: 1 });
       }
     }
     if (!cands.length) continue;
@@ -165,7 +165,11 @@ function getBriefing(day, currentStats) {
   const c = parseJson(r.content, null);
   if (!c || typeof c.paragraph !== 'string') return null;
   const stale = currentStats ? c.statsKey !== statsKey(currentStats) : false;
-  return { paragraph: c.paragraph, todos: Array.isArray(c.todos) ? c.todos : [], createdAt: r.created_at, model: r.model ?? null, stale };
+  return {
+    paragraph: c.paragraph, todos: Array.isArray(c.todos) ? c.todos : [], createdAt: r.created_at,
+    model: r.model ?? null, provider: c.provider || (r.model === FIXTURE_MODEL ? 'fixture' : 'anthropic'),
+    mode: r.model === FIXTURE_MODEL ? 'fixture' : c.provider === 'ollama' ? 'local' : 'ai', stale,
+  };
 }
 
 export function buildDashboard(day) {
@@ -203,7 +207,7 @@ export function buildDashboard(day) {
 export function buildBriefingText(day) {
   const entries = loadDay(day);
   const s = computeStats(entries);
-  const lines = [`[콜노트 마감 요약 · ${dayLabel(day)}] 가짜 통화 데모`];
+  const lines = [`[아맞다 마감 요약 · ${dayLabel(day)}]${requestAccess()?.demo ? ' 가짜 통화 데모' : ''}`];
   if (!s.calls) {
     lines.push('이날은 통화가 없습니다.');
     return lines.join('\n');
@@ -228,7 +232,10 @@ export function buildBriefingText(day) {
   }
   // AI 요약은 만든 뒤로 숫자가 그대로일 때만 붙인다(숫자가 바뀌었으면 옛 요약이 위 숫자와 어긋난다)
   const b = getBriefing(day, s);
-  if (b?.paragraph && !b.stale) lines.push('', `■ AI 요약(${kstTime(b.createdAt)} 기준)`, b.paragraph);
+  if (b?.paragraph && !b.stale) {
+    const label = b.model === FIXTURE_MODEL ? '가짜 테스트 브리핑' : 'AI 요약';
+    lines.push('', `■ ${label}(${kstTime(b.createdAt)} 기준)`, b.paragraph);
+  }
   return lines.join('\n');
 }
 
@@ -260,19 +267,22 @@ function cardSummaryForAi(e) {
 }
 
 async function makeBriefing(day, ip) {
+  const epoch = assistantHistoryEpoch(db());
   const entries = loadDay(day);
   const ids = new Set(entries.map((e) => e.row.id));
   const stats = computeStats(entries);
   // 숫자가 그대로이고 10분 안에 만든 것이면 그대로 쓴다(숫자가 바뀌었으면 다시 만든다)
   const cached = getBriefing(day, stats);
-  if (cached && !cached.stale && Date.now() - Date.parse(cached.createdAt) < BRIEFING_FRESH_MS) return cached;
-  const ai = await requireAi('writeBriefing');
+  const expectedModel = config.aiProvider === 'fixture' ? FIXTURE_MODEL : config.aiProvider === 'ollama' ? config.ollamaModel : config.model;
+  const sameProvider = cached?.provider === config.aiProvider && cached?.model === expectedModel;
+  if (cached && (sameProvider || (aiOverride && cached.provider === 'test')) && !cached.stale && Date.now() - Date.parse(cached.createdAt) < BRIEFING_FRESH_MS) return cached;
+  const ai = requireAi('writeBriefing');
   // 통화가 없는 날은 AI 도 DB 도 쓰지 않고 문장만 돌려준다(아무 날짜로 DB 를 채우지 못하게)
   if (!entries.length) {
     return { paragraph: `${dayLabel(day)}에는 통화가 없습니다.`, todos: [], createdAt: nowIso(), model: null, stale: false };
   }
   limit('ai', ip);
-  takeDaily('ai', config.dailyAiLimit);
+  configuredAi.takeAiDaily();
   const cards = entries.filter((e) => e.card).slice(0, 60).map(cardSummaryForAi);
   let out;
   try { out = await ai.writeBriefing({ day, stats, cards }); } catch (e) { throw aiHttpError(e); }
@@ -283,12 +293,17 @@ async function makeBriefing(day, ip) {
     why: cleanText(t?.why, 200),
     callId: ids.has(t?.callId) ? t.callId : null,
   })).filter((t) => t.title).slice(0, 8);
-  const model = cleanText(out?.model, 80) || config.model;
+  const model = cleanText(out?.model, 80) || expectedModel;
   const createdAt = nowIso();
-  db().prepare(`INSERT INTO briefings(day, content, model, created_at) VALUES(?, ?, ?, ?)
-    ON CONFLICT(day) DO UPDATE SET content = excluded.content, model = excluded.model, created_at = excluded.created_at`)
-    .run(day, JSON.stringify({ paragraph, todos, statsKey: statsKey(stats) }), model, createdAt);
-  return { paragraph, todos, createdAt, model, stale: false };
+  tx((d) => {
+    if (assistantHistoryEpoch(d) !== epoch) {
+      throw new HttpError(409, 'deleted_context', '통화 기록이 바뀌었어요. 요약을 다시 만들어 주세요.');
+    }
+    d.prepare(`INSERT INTO briefings(day, content, model, created_at) VALUES(?, ?, ?, ?)
+      ON CONFLICT(day) DO UPDATE SET content = excluded.content, model = excluded.model, created_at = excluded.created_at`)
+      .run(day, JSON.stringify({ paragraph, todos, statsKey: statsKey(stats), provider: aiOverride ? 'test' : config.aiProvider }), model, createdAt);
+  });
+  return { paragraph, todos, createdAt, model, provider: aiOverride ? 'test' : config.aiProvider, mode: model === FIXTURE_MODEL ? 'fixture' : config.aiProvider === 'ollama' ? 'local' : 'ai', stale: false };
 }
 
 // ── 지난 통화에 묻기 ──────────────────────────────────────────────
@@ -384,7 +399,7 @@ function pickSegments(segments, terms, max) {
 }
 
 /** 찾기: 통화 문장 contexts + 카드 한 줄 요약 contexts */
-export function buildAskContexts(question, history = []) {
+export function buildAskContexts(question, history = [], selectedCallId = null) {
   const today = kstDay();
   let terms0 = questionTerms(question);
   let range = questionRange(question, today);
@@ -417,7 +432,8 @@ export function buildAskContexts(question, history = []) {
 
   const lower = terms.map((t) => t.toLowerCase());
   const scored = rows.map((r) => {
-    if (!lower.length) return { r, score: 0 };
+    const selected = r.id === selectedCallId ? 1000 : 0;
+    if (!lower.length) return { r, score: selected };
     const tr = String(r.transcript || '').toLowerCase();
     const cardText = [r.eff, r.car_model, r.plate, r.note, r.due, r.contact, r.model_year, itemsText(parseJson(r.items, []))].filter(Boolean).join(' ').toLowerCase();
     const title = String(r.title || '').toLowerCase();
@@ -430,7 +446,7 @@ export function buildAskContexts(question, history = []) {
       if (n || inCard || inTitle) distinct += 1;
       occ += n + (inCard ? 3 : 0) + (inTitle ? 2 : 0);
     }
-    return { r, score: distinct * 10 + occ };
+    return { r, score: selected + distinct * 10 + occ };
   });
   let top = scored.filter((x) => x.score > 0).sort((a, b) => b.score - a.score || (a.r.recorded_at < b.r.recorded_at ? 1 : -1));
   // 낱말로 못 찾았어도 거래처 · 날짜로 좁혔으면 그 안의 최근 통화를 본다
@@ -523,43 +539,66 @@ export function mapCitations(raw, contexts) {
     if (!ctx || seen.has(ctx.ref)) continue;
     seen.add(ctx.ref);
     const q = typeof cit?.quote === 'string' ? cit.quote.trim() : '';
-    out.push({
+    const quote = q && ctx.text.includes(q) ? q : ctx.text;
+    if (ctx.kind === 'knowledge') {
+      out.push({ kind: 'knowledge', knowledgeId: ctx.knowledgeId, title: ctx.title, quote });
+    } else out.push({
       callId: ctx.callId,
       title: ctx.title,
       customer: ctx.customer ?? null,
       recordedAt: ctx.recordedAt,
       segIndex: ctx.segIndex ?? null,
       at: ctx.at ?? null,
-      quote: q && ctx.text.includes(q) ? q : ctx.text,
+      quote,
     });
     if (out.length >= 8) break;
   }
   return out;
 }
 
-async function ask(body, ip) {
+export async function askGrounded(body, ip, { signal, allowKnowledge = false, selectedCallId = null, onCallContext } = {}) {
+  signal?.throwIfAborted();
   const raw = typeof body.question === 'string' ? body.question : '';
   if (raw.trim().length > 300) throw new HttpError(400, 'too_long', '질문은 300자 안으로 써 주세요.');
   const question = cleanText(raw, 300);
   if (!question) throw new HttpError(400, 'empty_question', '물어볼 말을 써 주세요.');
   const history = cleanHistory(body.history);
-  const ai = await requireAi('answerQuestion');
+  const ai = requireAi('answerQuestion');
   limit('ai', ip);
 
-  const { contexts, scope } = buildAskContexts(question, history);
-  if (!contexts.length) return { answer: NOT_FOUND, found: false, citations: [], scope };
+  const { contexts, scope } = buildAskContexts(question, history, selectedCallId);
+  if (allowKnowledge) {
+    const { approvedKnowledge } = await import('../lib/knowledge.mjs');
+    const terms = questionTerms(question);
+    const hits = approvedKnowledge().filter((entry) => {
+      const names = [entry.term, ...(entry.aliases ?? [])];
+      return names.some((name) => typeof name === 'string' && terms.some((term) => name.includes(term)));
+    }).slice(0, 12);
+    contexts.unshift(...hits.map((entry, i) => ({
+      kind: 'knowledge', ref: `g${i + 1}`, knowledgeId: entry.id, title: entry.term,
+      text: [entry.term, entry.standard, entry.note].filter(Boolean).join(' · '),
+    })));
+  }
+  onCallContext?.([...new Set(contexts.map((context) => context.callId).filter(Boolean))]);
+  const mode = config.aiProvider === 'fixture' ? 'fixture' : config.aiProvider === 'ollama' ? 'local' : 'ai';
+  if (!contexts.length) return { answer: NOT_FOUND, found: false, citations: [], scope, mode, model: null };
 
-  takeDaily('ai', config.dailyAiLimit);
+  signal?.throwIfAborted();
+  configuredAi.takeAiDaily();
   let out;
   try {
-    out = await ai.answerQuestion({ question, history, contexts, today: kstDay(), scope });
-  } catch (e) { throw aiHttpError(e); }
+    out = await ai.answerQuestion({ question, history, contexts, today: kstDay(), scope }, { signal });
+  } catch (e) {
+    signal?.throwIfAborted();
+    throw aiHttpError(e);
+  }
   const citations = mapCitations(out?.citations, contexts);
   const answer = cleanText(out?.answer, 2000);
+  const model = cleanText(out?.model, 80);
   if (!out?.found || !citations.length) {
-    return { answer: out && out.found === false && answer ? answer : NOT_FOUND, found: false, citations: [], scope };
+    return { answer: out && out.found === false && answer ? answer : NOT_FOUND, found: false, citations: [], scope, mode, model };
   }
-  return { answer: answer || NOT_FOUND, found: true, citations, scope };
+  return { answer: answer || NOT_FOUND, found: true, citations, scope, mode, model };
 }
 
 // ── 출고 목록 ────────────────────────────────────────────────────
@@ -589,7 +628,7 @@ export function buildShipping(day, scope) {
     const item = {
       callId: r.call_id,
       title: r.ctitle || makeTitle({ customer: r.eff, items: card.items, recordedAt: r.rat, durationSec: r.dur, source: r.src }),
-      status: card.status, statusLabel: card.statusLabel,
+      status: card.status, statusLabel: card.statusLabel, revision: card.revision,
       items: card.items,
       carModel: card.carModel, modelYear: card.modelYear, plate: card.plate,
       due: card.due, delivery: card.delivery, urgent: card.urgent,
@@ -667,7 +706,16 @@ export function register(router) {
   });
   router.get('/api/briefing/text', ({ query }) => ({ text: buildBriefingText(parseDay(query.day)) }));
 
-  router.post('/api/ask', async ({ req, ip }) => ask(await readJson(req), ip));
+  router.post('/api/ask', async ({ req, res, ip }) => {
+    const ctrl = new AbortController();
+    const abort = () => ctrl.abort();
+    res.once('close', abort);
+    try {
+      return await askGrounded(await readJson(req), ip, { signal: ctrl.signal });
+    } finally {
+      res.off('close', abort);
+    }
+  });
 
   router.get('/api/shipping', ({ query }) => buildShipping(parseDay(query.day), parseScope(query.scope)));
   router.get('/api/shipping.csv', ({ req, res, query }) => {
@@ -676,7 +724,7 @@ export function register(router) {
     const body = buildShippingCsv(day, scope);
     res.writeHead(200, {
       'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': `attachment; filename="callnote-fake-shipping-${day}${scope === 'today' ? '-today' : ''}.csv"`,
+      'Content-Disposition': `attachment; filename="ahcha-${requestAccess()?.demo === true ? 'demo-' : ''}shipping-${day}${scope === 'today' ? '-today' : ''}.csv"`,
       'Cache-Control': 'no-store',
       'Content-Length': Buffer.byteLength(body),
     });

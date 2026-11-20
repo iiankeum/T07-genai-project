@@ -1,15 +1,16 @@
 // 관리자: 암호 로그인 · 체험 신청 보기 · 사용량 · 데모 초기화 · 통화 지우기. 시작할 때 가짜 데모 데이터를 넣는다.
 // 로그에는 동작 이름만 남긴다(암호 · 신청 내용 · IP 는 남기지 않는다).
-import { rmSync } from 'node:fs';
-import path from 'node:path';
-import { config, hasSecret } from '../lib/config.mjs';
-import { db, nowIso } from '../lib/db.mjs';
+import { config } from '../lib/config.mjs';
+import { aiStatus } from '../lib/ai.mjs';
+import { db, globalDb, nowIso, newId } from '../lib/db.mjs';
+import { accountDb, requestAccess, requireRole } from '../lib/auth.mjs';
 import { HttpError, readJson } from '../lib/http.mjs';
 import {
   limit, adminLogin, adminCookie, adminLogout, adminLogoutCookie, isAdmin, requireAdmin, kstDay, usageCount,
 } from '../lib/security.mjs';
 import { seedDemo, placeSeed } from '../lib/seed.mjs';
 import { removeAudio } from '../lib/audio.mjs';
+import { deleteCall } from './calls.mjs';
 import { workerStatus } from './system.mjs';
 import { visitStats } from '../lib/visits.mjs';
 import { parseJson } from '../lib/db.mjs';
@@ -46,14 +47,6 @@ function countBy(sql) {
   return out;
 }
 
-/** calls.audio_file(DATA_DIR 기준 상대 경로) → 지워도 되는 절대 경로(DATA_DIR/audio 밖이면 null) */
-function safeAudioPath(rel) {
-  if (!rel) return null;
-  const base = path.resolve(config.dataDir, 'audio');
-  const abs = path.resolve(config.dataDir, rel);
-  return abs.startsWith(base + path.sep) ? abs : null;
-}
-
 export function register(router) {
   router.post('/api/admin/login', async ({ req, res, ip }) => {
     limit('login', ip);
@@ -80,11 +73,11 @@ export function register(router) {
 
   router.get('/api/admin/trials', ({ req }) => {
     requireAdmin(req);
-    const rows = db().prepare('SELECT id, created_at, name, org, contact, role, message, consent_at, extra FROM trials ORDER BY created_at DESC, rowid DESC LIMIT 1000').all();
+    const rows = globalDb().prepare('SELECT id, created_at, name, org, contact, role, message, consent_at, extra, processed, processed_at FROM trials ORDER BY created_at DESC, rowid DESC LIMIT 1000').all();
     const trials = rows.map((r) => {
       const x = parseJson(r.extra, {}) || {};
       return {
-        id: r.id, createdAt: r.created_at, name: r.name, org: r.org ?? null, contact: r.contact,
+        id: r.id, processed: Boolean(r.processed), processedAt: r.processed_at, createdAt: r.created_at, name: r.name, org: r.org ?? null, contact: r.contact,
         role: r.role ?? null, message: r.message ?? null, consentAt: r.consent_at,
         source: x.source ?? null, industry: x.industry ?? null, callsPerDay: x.callsPerDay ?? null, region: x.region ?? null,
         recordingSetup: x.recordingSetup ?? null, heardFrom: x.heardFrom ?? null, interviewOk: Boolean(x.interviewOk),
@@ -95,7 +88,7 @@ export function register(router) {
     const tally = (key) => trials.reduce((m, t) => { const k = (typeof key === 'function' ? key(t) : t[key]) || '(없음)'; m[k] = (m[k] || 0) + 1; return m; }, {});
     return {
       trials,
-      total: db().prepare('SELECT COUNT(*) AS n FROM trials').get().n,
+      total: globalDb().prepare('SELECT COUNT(*) AS n FROM trials').get().n,
       counts: {
         bySource: tally('source'),
         byIndustry: tally('industry'),
@@ -105,10 +98,36 @@ export function register(router) {
     };
   });
 
+  // v1.6은 상태 이름을 정하지 않았다. 운영자가 수동으로 표시/취소하는 처리 여부만 둔다.
+  // 연락 전송 여부를 뜻하지 않으며 외부 연락을 실행하지 않는다.
+  router.patch('/api/admin/trials/:id', async ({ req, params }) => {
+    requireAdmin(req);
+    const body = await readJson(req, 1024);
+    if (typeof body.processed !== 'boolean' || Object.keys(body).some((k) => k !== 'processed')) {
+      throw new HttpError(400, 'invalid_processed', '처리 여부는 true 또는 false로 보내 주세요.');
+    }
+    const d = globalDb();
+    d.exec('BEGIN IMMEDIATE');
+    try {
+      const row = d.prepare('SELECT processed, processed_at FROM trials WHERE id = ?').get(params.id);
+      if (!row) throw new HttpError(404, 'not_found', '없는 신청입니다.');
+      const changed = Boolean(row.processed) !== body.processed;
+      const processedAt = changed ? (body.processed ? nowIso() : null) : row.processed_at;
+      if (changed) {
+        d.prepare('UPDATE trials SET processed = ?, processed_at = ? WHERE id = ?').run(Number(body.processed), processedAt, params.id);
+        // 서비스 전체 관리자 감사: 개인정보/신청 본문/쿠키는 기록하지 않는다.
+        d.prepare('INSERT INTO audit_log(id, entity, entity_id, action, occurred_at) VALUES(?, ?, ?, ?, ?)')
+          .run(newId('audit'), 'trial', params.id, body.processed ? 'mark_processed' : 'unmark_processed', nowIso());
+      }
+      d.exec('COMMIT');
+      return { id: params.id, processed: body.processed, processedAt, changed };
+    } catch (err) { d.exec('ROLLBACK'); throw err; }
+  });
+
   // 파기 요청 · 보유 기간 끝에 하나씩 지운다
   router.delete('/api/admin/trials/:id', ({ req, params }) => {
     requireAdmin(req);
-    const r = db().prepare('DELETE FROM trials WHERE id = ?').run(params.id);
+    const r = globalDb().prepare('DELETE FROM trials WHERE id = ?').run(params.id);
     if (!r.changes) throw new HttpError(404, 'not_found', '없는 신청입니다.');
     console.log('[admin] delete-trial');
     return { ok: true, id: params.id };
@@ -125,7 +144,7 @@ export function register(router) {
     return {
       day,
       serverTime: nowIso(),
-      aiEnabled: hasSecret('ANTHROPIC_API_KEY'),
+      ...aiStatus(),
       usage: { ai: usageCount('ai', day), upload: usageCount('upload', day) },
       limits: { ai: config.dailyAiLimit, upload: config.dailyUploadLimit },
       calls: {
@@ -139,7 +158,8 @@ export function register(router) {
         byStatus: countBy('SELECT status AS k, COUNT(*) AS n FROM cards GROUP BY status'),
       },
       glossary: d.prepare('SELECT COUNT(*) AS n FROM glossary').get().n,
-      trials: d.prepare('SELECT COUNT(*) AS n FROM trials').get().n,
+      trials: globalDb().prepare('SELECT COUNT(*) AS n FROM trials').get().n,
+      workspaces: accountDb().prepare('SELECT COUNT(*) AS n FROM workspaces').get().n,
       visits: visitStats(14),
       worker: workerStatus(),
     };
@@ -163,15 +183,10 @@ export function register(router) {
 
   // 통화 지우기(카드 · 일감은 함께 지워짐). 녹음 파일도 지운다.
   router.delete('/api/calls/:id', ({ req, params }) => {
-    requireAdmin(req);
-    const row = db().prepare('SELECT id, audio_file FROM calls WHERE id = ?').get(params.id);
-    if (!row) throw new HttpError(404, 'not_found', '없는 통화입니다.');
-    db().prepare('DELETE FROM calls WHERE id = ?').run(row.id);
-    const file = safeAudioPath(row.audio_file);
-    if (file) {
-      try { rmSync(file, { force: true }); } catch (e) { console.error('[admin] 녹음 파일 지우기 실패:', e?.code || e?.message); }
-    }
+    if (requestAccess().demo) requireAdmin(req);
+    else requireRole('admin');
+    const { id } = deleteCall(params.id);
     console.log('[admin] delete-call');
-    return { ok: true, id: row.id };
+    return { ok: true, id };
   });
 }

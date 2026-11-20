@@ -1,0 +1,18 @@
+{
+  "commit": "f9baa23be348e3cb377b86a0443c1498735f0088",
+  "scope": "actual modules with access.demo=false synthetic context; fake browser API only",
+  "customer": {
+    "eyebrow": "F13 · 거래처별 모아 보기 · 가짜 거래처",
+    "phone": "가짜 번호 000-0000-0000",
+    "title": "합성 검증 업체 · 콜노트(가칭)"
+  },
+  "shippingPrint": "가짜 통화 데모 데이터 · 11월 19일(목) 오전 3:39 출력 · 출고 기다리는 것 전체",
+  "transcriptCopy": "합성 검증 통화\n어제 오전 10:00 · 길이 0:20 · 올린 녹음\n(가짜 통화 데모 — 거래처 · 차번호 · 전화번호 · 품번은 지어낸 것입니다)\n\n합성 검증 문장",
+  "fakeGets": [
+    "/api/customers/%ED%95%A9%EC%84%B1%20%EA%B2%80%EC%A6%9D%20%EC%97%85%EC%B2%B4",
+    "/api/customers",
+    "/api/shipping"
+  ],
+  "errors": [],
+  "external": []
+}
