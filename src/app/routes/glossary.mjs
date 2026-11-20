@@ -38,6 +38,7 @@ function csvCell(value) {
 function exportCsv({ req, res }) {
   requireRole('admin', 'reception');
   const rows = approvedKnowledge().map((item) => CSV_FIELDS.map((field) => {
+    if (field === 'contactName') return null; // 담당자 원문/마스킹 문자를 CSV에 노출하지 않는다.
     if (field === 'phone' && item.phone?.includes('*')) return null;
     return item[field];
   }));
@@ -121,6 +122,7 @@ function importCsv(d, value, actor) {
       const row = duplicateKnowledge(d, { ...body, term: body.term.trim() });
       // 내보낸 파일의 빈 번호가 가린 번호를 덮어쓰지 않게 한다.
       if (row?.phone && body.phone === '') delete body.phone;
+      if (row?.contact_name && body.contactName === '') delete body.contactName;
       results.push(proposeKnowledge(d, body, actor, { row }));
     } catch (err) {
       if (!(err instanceof HttpError)) throw err;

@@ -24,3 +24,9 @@
 .cc-ask-label { color: var(--warn); font-size: .9rem; font-weight: 800; }
 .cc-q { font-weight: 600; }
 .cc-meta { margin-top: 6px; color: var(--muted); font-size: .95rem; }
+
+/* Customer history as a ledger instead of stacked cards. */
+.customer-page .cust-metrics .metric { border:0; border-bottom:1px solid #e8ebef; border-radius:0; box-shadow:none; text-align:start; background:#fff; padding-inline:0; }
+.customer-page .cust-call { border:0; border-bottom:1px solid #e8ebef; border-radius:0; box-shadow:none; padding-inline:0; }
+.customer-page .cust-call:hover { background:#f6f9fc; }
+.customer-page .cust-call .cc-ask { border:0; border-radius:0; border-inline-start:2px solid #a97539; }

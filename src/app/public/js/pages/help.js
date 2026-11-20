@@ -5,17 +5,17 @@ import { customerHref } from './board.js';
 
 // [ID, 이름, 해 보는 곳(해시 주소 · null 이면 「글씨 크게」 단추), 해 보는 곳 이름, 한 줄 설명]
 const FEATURES = [
-  ['F01', '녹음 올리기', '#/upload', '녹음 올리기', '가짜 녹음 파일(m4a · mp3 · wav)을 올리면 받아쓰기 줄에 들어가고, 다 되면 「확인 필요」 카드가 됩니다.'],
+  ['F01', '녹음 올리기', '#/upload', '녹음 올리기', '녹음 파일(m4a · mp3 · wav)을 올리면 받아쓰기 줄에 들어가고, 다 되면 「확인 필요」 카드가 됩니다.'],
   ['F02', '받아쓰기(통화 글)', '#/calls', '통화 기록', '통화를 문장마다 시각이 붙은 글로 읽습니다. 문장을 누르면 그 대목부터 녹음이 나옵니다.'],
-  ['F03', '실시간 받아쓰기 체험', '#/live', '실시간 받아쓰기', '마이크에 대고 주문을 말하면 글이 써지고, 말을 멈추면 주문 카드가 채워집니다.'],
+  ['F03', '실시간 받아쓰기', '#/live', '실시간 받아쓰기', '마이크에 대고 주문을 말하면 글이 써지고, 말을 멈추면 주문 카드가 채워집니다.'],
   ['F04', '주문 카드 자동 정리', '#/calls', '통화 하나 열기', 'AI 가 거래처 · 차 · 부품 · 수량 · 급함 · 되물을 것을 카드로 정리합니다. 고쳐 말한 수량은 마지막 값으로.'],
-  ['F05', '근거 표시 · 들어 보기', '#/calls', '통화 하나 열기', '카드 칸을 누르면 그 말을 한 문장이 칠해지고 녹음이 그 시각부터 나옵니다. 틀렸을 수 있는 값엔 노란 「들어 보기」.'],
+  ['F05', '근거 표시 · 들어 보기', '#/calls', '통화 하나 열기', '주문 카드의 「근거」를 누르면 연결된 대화가 표시됩니다. 녹음이 있으면 해당 대목을 다시 들을 수 있습니다.'],
   ['F06', '카드 고치기 · 확정', '#/board', '주문 카드 보드', '틀린 칸만 고치고 확정합니다. 확인 필요 → 확정 → 출고 완료. 되물을 것이 남으면 확정이 막힙니다.'],
   ['F07', '낱말 사전', '#/glossary', '낱말 사전', '휀다 · 쇼바 같은 현장 말과 거래처 이름을 넣고 「다시 정리」하면 카드에 반영됩니다.'],
   ['F08', '통화 찾기', '#/calls', '통화 기록 · 찾기', '「쏘렌토」처럼 낱말로 찾고 날짜 · 거래처 · 상태로 거릅니다. 맞은 문장이 굵게 보입니다.'],
   ['F09', '지난 통화에 묻기', '#/ask', '지난 통화에 묻기', '사람에게 묻듯 물으면 저장된 통화만 근거로 답하고 근거 문장을 붙입니다. 없으면 「찾지 못했어요」.'],
   ['F10', '오늘 브리핑 · 할 일', '#/', '오늘 브리핑', '오늘 숫자 · 할 일 · 다시 전화할 곳 · AI 한 단락 요약, 그리고 마감 요약 복사.'],
-  ['F11', '번호로 거래처 맞추기', '#/calls', '통화 하나 열기', '걸려 온 번호(가짜)가 거래처 목록에 있으면 카드의 거래처를 채우고 「번호로 확인」을 붙입니다.'],
+  ['F11', '번호로 거래처 맞추기', '#/calls', '통화 하나 열기', '걸려 온 번호가 거래처 목록에 있으면 카드의 거래처를 채우고 「번호로 확인」을 붙입니다.'],
   ['F12', '녹음 폴더 자동 보내기', '#/upload', '녹음 올리기 화면 안내', '대리점 PC 의 녹음 폴더에 새 파일이 생기면 작은 프로그램이 서버로 보냅니다.'],
   ['F13', '거래처별 모아 보기', '#/calls', '통화에서 거래처 이름 누르기', '한 정비소와의 통화 · 주문을 날짜별로 모아 봅니다.'],
   ['F14', '출고 목록 내보내기', '#/shipping', '출고 목록', '확정 주문을 거래처별로 묶어 인쇄하거나 CSV 로 내려받습니다.'],
@@ -31,6 +31,7 @@ export default {
     const root = el.firstElementChild;
     const alive = () => !ac.signal.aborted && root.isConnected;
     const meta = ctx.meta || {};
+    const demo = meta.demo === true;
 
     function bigOn() { return document.documentElement.classList.contains('big-text'); }
 
@@ -56,9 +57,9 @@ export default {
       if (!alive()) return;
       render(root, html`
         <div class="page-head"><div>
-          <p class="eyebrow">도움말 · 가짜 통화 데모</p>
-          <h1>이 데모 사이트 안내</h1>
-          <p class="sub">아차는 수업 팀 프로젝트로 만든 시험용 사이트입니다.</p>
+          <p class="eyebrow">도움말</p>
+          <h1>아차 사용 안내</h1>
+          <p class="sub">통화 기록부터 주문 확정, 출고까지의 사용 방법입니다.</p>
         </div></div>
 
         <section class="card help-what" aria-labelledby="h-what">
@@ -74,10 +75,7 @@ export default {
           <p class="help-note">AI 는 초안을 만들 뿐이고, <strong>확정은 사람이 합니다.</strong> 품번은 통화에서 불러 준 것만 적고, AI 가 지어내지 않습니다. 비어 있으면 사람이 넣습니다.</p>
         </section>
 
-        <div class="notice notice-warn help-fake" role="note">
-          <strong>모든 통화는 가짜입니다.</strong> 화면의 거래처 · 사람 이름 · 차번호 · 전화번호 · 품번은 모두 지어낸 것입니다.
-          <strong>실제 통화 녹음이나 실제 고객 정보는 올리지 마세요.</strong>
-        </div>
+        ${!demo && meta.access ? html`<p class="help-note">녹음과 대화 기록은 작업공간 구성원에게 공유됩니다. 업로드 전에 수집·처리·공유에 필요한 권한과 동의를 확인해 주세요.</p>` : ''}
 
         <section class="help-sec" aria-labelledby="h-feat">
           <h2 id="h-feat">기능 목록 (F01~F15)</h2>
@@ -91,12 +89,12 @@ export default {
 
         <section class="card help-data" aria-labelledby="h-data">
           <h2 id="h-data">통화 내용은 어디로 가나요</h2>
-          <p class="help-now">지금 상태: AI ${meta.aiEnabled ? '켜짐' : '꺼짐(키 없음)'} · 받아쓰기 일꾼 ${meta.worker?.online ? '켜짐' : '대기 중(꺼짐)'}</p>
+          <p class="help-now">지금 상태: 서버 AI ${meta.aiProvider === 'fixture' ? '예시 응답 모드' : meta.aiEnabled ? '사용 가능' : '꺼짐'} · 받아쓰기 PC ${meta.worker?.online ? '연결됨' : '연결 대기'}</p>
           <ul class="help-list">
-            <li><strong>받아쓰기(녹음 → 글)</strong>: 올린 녹음은 이 데모 서버에 저장되고, 팀의 GPU PC 에서 도는 <strong>Whisper 받아쓰기 일꾼</strong>이 서버에서 녹음을 가져가 글로 바꿉니다. 일꾼 PC 가 꺼져 있으면 위에 「대기 중」이 뜨고, 녹음은 줄을 서서 기다립니다. 그동안은 미리 받아쓴 가짜 통화로 다른 기능을 써 볼 수 있습니다.</li>
-            <li><strong>주문 카드 · 오늘 요약 · 지난 통화에 묻기</strong>: 받아쓴 글을 Anthropic 사의 AI <strong>Claude</strong> 에 보내 처리합니다. Claude 는 <strong>해외 서버</strong>에서 돕니다. AI 를 부르는 일은 모두 이 사이트 서버가 하고, 휴대폰 · PC 에는 AI 열쇠(키)가 없습니다.</li>
+            <li><strong>받아쓰기(녹음 → 글)</strong>: 서버에 저장된 녹음은 연결된 PC에서 글로 바뀝니다. PC가 연결되지 않았으면 대기열에 보관하고 연결된 뒤 순서대로 처리합니다.</li>
+            <li><strong>주문 카드 · 오늘 요약 · 지난 통화에 묻기</strong>: 서버와 작업공간의 AI 설정에 따라 처리합니다. 외부 AI 사용이 허용된 경우 받아쓴 글과 관련 업무 정보가 해당 제공자에게 전송될 수 있습니다. <a href="#/privacy">개인정보 처리 안내</a></li>
             <li><strong>실시간 받아쓰기</strong>: 브라우저에 들어 있는 음성 인식 기능을 씁니다. 이때 <strong>말소리는 브라우저 회사(크롬이면 구글 등)의 서버</strong>로 보내져 글로 바뀝니다. 안 되는 브라우저에서는 샘플 대화를 재생해 같은 흐름을 보여 줍니다.</li>
-            <li><strong>저장</strong>: 올린 원본 파일은 변환한 뒤 지우고, 받아쓰기용 음성 파일(16kHz WAV)만 남깁니다. 누가 올렸는지는 IP 주소를 알아볼 수 없게 바꾼 값으로만 남깁니다. 데모 데이터는 관리자가 초기화할 수 있습니다.</li>
+            <li><strong>저장</strong>: 올린 원본 파일은 변환한 뒤 지우고, 받아쓰기용 음성 파일(16kHz WAV)만 남깁니다. 누가 올렸는지는 IP 주소를 알아볼 수 없게 바꾼 값으로만 남깁니다. ${demo ? '공개 데모 데이터는 관리자가 초기화할 수 있습니다.' : ''}</li>
           </ul>
         </section>
 
@@ -104,7 +102,7 @@ export default {
           <h2 id="h-ai">AI 가 틀릴 수 있어요</h2>
           <ul class="help-list">
             <li>받아쓰기가 틀렸을 수 있는 값(차번호 가운데 한글, 품번 자릿수, 비슷한 거래처 이름)에는 <span class="listen-flag">들어 보기</span> 표시와 이유가 붙습니다.</li>
-            <li>카드 칸을 누르면 그 말을 한 문장이 칠해지고, 녹음이 그 시각부터 나옵니다. 「두 개라고 했나?」를 바로 확인하세요.</li>
+            <li>품목의 「근거」를 눌러 해당 대화에서 품번이나 수량을 확인하세요.</li>
             <li>「되물을 것」이 남아 있으면 확정 단추가 막힙니다. 거래처에 다시 물어본 뒤 지우고 확정하세요.</li>
           </ul>
         </section>
@@ -144,7 +142,7 @@ export default {
           <h2 id="h-more">더 알아보기</h2>
           <div class="help-links">
             <a class="btn btn-primary" href="#/">오늘 브리핑부터 보기</a>
-            <a class="btn" href="#/trial">무료 체험 신청</a>
+            ${!meta.access || demo ? html`<a class="btn" href="#/trial">무료 체험 신청</a>` : ''}
             <a class="btn" href="/intro/">소개 페이지</a>
           </div>
         </section>`);

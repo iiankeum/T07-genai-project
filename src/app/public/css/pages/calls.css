@@ -1,3 +1,4 @@
+@import url("./worklist-document.css");
 /* 검색 중심 아카이브. 자주 쓰는 상태·기간과 상세 조건을 분리한다. */
 .cl-page { max-width: 1280px; }
 .cl-control { padding: 20px; margin-bottom: 26px; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; }
@@ -184,15 +185,61 @@
  .cl-source { flex-basis:auto; margin-left:auto; font-size:10px; line-height:18px; }
 }
 
-/* Use the official search field and a keyboard-reachable Korean reset action. */
-.cl-montage-search:not([hidden]) {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
-  align-items: center;
-  width: 100%;
-  min-width: 0;
+/* 실패한 통화의 복구 작업만. 행의 상세 링크와 별개인 터치 타깃을 유지한다. */
+.cl-page .cl-retry-box { grid-column:2/-1; display:flex; flex-wrap:wrap; align-items:center; gap:4px 12px; margin-top:4px; }
+.cl-page .cl-retry-message { color:var(--ink-2); overflow-wrap:anywhere; }
+.cl-page .cl-retry-box button { min-height:44px; }
+.cl-page .cl-retry-box button[aria-disabled="true"] { color:var(--muted); cursor:default; }
+@media(max-width:899px) { .cl-page .cl-retry-box { grid-column:1/-1; } }
+
+/* Quiet date sections and time / content / status rows retain all filters and actions. */
+.cl-page .page-head {margin-bottom:21px}
+.cl-page .cl-control {gap:12px;margin-bottom:17px}
+.cl-page .cl-status [data-component="tab-list"],.cl-page .cl-tabs {border-color:var(--wl-rule)}
+.cl-page .cl-status [data-status] {min-height:44px;font-size:.78rem}
+.cl-page .cl-status [data-status][aria-pressed="true"],.cl-page .cl-status [data-status][aria-selected="true"] {color:var(--wl-blue)}
+.cl-page .cl-search {max-width:none;border-bottom:1px solid #dfe1e5}
+.cl-page .cl-search :is(.input,input#cl-q) {background-color:transparent;border-color:transparent}
+.cl-page .cl-search [data-component="text-field"] div,
+.cl-page .cl-search [data-component="text-field"] div::before,
+.cl-page .cl-search [data-component="text-field"] div::after {background:transparent!important;box-shadow:none!important;border-color:transparent!important}
+.cl-page .cl-search:focus-within {border-bottom-color:var(--wl-blue)}
+.cl-page .cl-range .tab[aria-pressed="true"] {background:#f0f1f3;border-radius:5px}
+.cl-page .cl-advanced summary {color:var(--wl-muted);font-weight:500}
+.cl-page .cl-count {margin-bottom:10px;color:var(--wl-muted)}
+.cl-page .cl-columns {display:none}
+.cl-page .cl-day-group > h2 {color:var(--wl-muted);font-size:.73rem;margin:4px 0 0}
+.cl-page .cl-list {border:0;border-radius:0}
+.cl-page .cl-item {display:grid;grid-template-columns:60px minmax(0,1fr) minmax(95px,auto);column-gap:12px;row-gap:1px;padding:10px 0;border-bottom:1px solid var(--wl-rule);min-height:78px}
+.cl-page .cl-item:hover {background:#fafafb}
+.cl-page .cl-time {grid-column:1;grid-row:1 / 3;color:var(--wl-muted);font-size:.74rem;align-self:start;text-align:left;padding-top:11px}
+.cl-page .cl-identity {grid-column:2;grid-row:1;margin:0;min-width:0;align-items:center}
+.cl-page .cl-identity .cl-title {font-size:.88rem;color:#252629}
+.cl-page .cl-identity .cl-cust {font-size:.65rem;color:var(--wl-muted);width:auto;padding-inline:4px}
+.cl-page .cl-content {grid-column:2;grid-row:2;margin-top:-5px}
+.cl-page .cl-context,.cl-page .cl-summary {font-size:.72rem;line-height:1.55;color:var(--wl-muted)}
+.cl-page .cl-chips {grid-column:3;grid-row:1 / 3;margin:0;align-self:start;justify-content:flex-end;gap:2px 5px;padding-top:9px}
+.cl-page .cl-chips .chip:not(.chip-urgent):not(.chip-callback) {background:transparent;color:var(--wl-muted);padding:0 3px}
+.cl-page .cl-source {text-align:right;color:var(--wl-muted);font-size:.62rem;margin:0;flex-basis:100%}
+.cl-page :is(.cl-error,.cl-matches,.cl-more-matches) {grid-column:2/-1}
+@media(max-width:899px) {
+ .cl-page {padding-inline:20px}
+ .cl-page .page-head > .row {flex-wrap:wrap;justify-content:flex-start}
+ .cl-page .page-head > .row .btn {flex:0 1 auto;font-size:.73rem;padding-inline:8px;background:white;border-color:var(--line);color:var(--ink)}
+ .cl-page .page-head > .row .wl-mobile-ask {color:var(--wl-blue);border-color:transparent}
+ .cl-page .cl-item {grid-template-columns:42px minmax(0,1fr) minmax(60px,auto);column-gap:7px}
+ .cl-page .cl-time {white-space:normal}
+ .cl-page .cl-identity {flex-wrap:wrap;gap:0}
+ .cl-page .cl-identity .cl-cust {min-height:44px}
+ .cl-page .cl-content {margin:0}
+ .cl-page .cl-chips {max-width:88px}
 }
-.cl-montage-search [data-component="search-field"] { min-width: 0; }
-.cl-montage-search [data-role="search-field-reset"] { display: none; }
-.cl-montage-statuses > button { flex-shrink: 0; min-height: 44px; }
+.cl-page .cl-tabs {gap:18px;border-bottom:1px solid var(--wl-rule)}
+.cl-page .cl-tabs button[data-status] {flex:none;border:0!important;border-bottom:2px solid transparent!important;box-shadow:none!important;border-radius:0;background:none!important;color:var(--wl-muted);padding:0 1px;font-weight:550;min-width:0}
+.cl-page .cl-tabs button[data-status][aria-pressed="true"] {border-bottom-color:var(--wl-blue)!important;color:var(--wl-blue)}
+.cl-page .cl-tabs button[data-status]:focus-visible {outline:2px solid var(--wl-blue);outline-offset:-4px}
+.cl-page .cl-search .cl-montage-search {display:flex;flex:1;min-width:0}
+.cl-page .cl-search .cl-montage-search > div:has(#cl-q) {flex:1;min-width:0;box-shadow:none!important}
+.cl-page .cl-search .cl-montage-search > div:has(#cl-q)::before,
+.cl-page .cl-search .cl-montage-search > div:has(#cl-q)::after {border:0!important;box-shadow:none!important}
+@media(max-width:899px) { .cl-page .cl-tabs {gap:16px} }

@@ -221,7 +221,7 @@ async function notificationSettings(el, key, account) {
     if (!account.access) { render(area, html`<p>워크스페이스를 선택해 주세요.</p>`); return; }
     const { items, unread } = await api.get('/api/notifications');
     render(area, html`
-      ${unread ? html`<form class="account-form"><button type="submit" class="btn">모두 읽음 표시</button>${status}</form>` : ''}
+      ${unread ? html`<form class="account-form"><button type="submit" class="btn">표시된 알림 읽음 처리</button>${status}</form>` : ''}
       ${items.length ? html`<ul class="account-stack">${items.map((item) => html`
         <li><a href="#/calls/${encodeURIComponent(item.callId)}">${item.title}</a> ${item.read ? '' : '· 새 알림'}
           <p>${item.message} · ${fmtWhen(item.createdAt)}</p></li>`)}</ul>` : html`<p>새 알림이 없어요.</p>`}`);

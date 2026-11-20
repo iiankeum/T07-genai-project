@@ -310,13 +310,21 @@ function H({ model: e }) {
 		className: "workspace-switch",
 		href: e.workspace.href,
 		title: "워크스페이스 선택",
-		children: [/* @__PURE__ */ (0, v.jsxs)("span", {
-			className: "workspace-copy",
-			children: [/* @__PURE__ */ (0, v.jsx)("strong", { children: e.workspace.name }), /* @__PURE__ */ (0, v.jsx)("span", { children: e.workspace.demo ? "예시 데이터로 체험 중" : "내 작업공간" })]
-		}), /* @__PURE__ */ (0, v.jsx)(x, {
-			className: "workspace-chevron",
-			"aria-hidden": "true"
-		})]
+		children: [
+			/* @__PURE__ */ (0, v.jsx)("span", {
+				className: "workspace-monogram",
+				"aria-hidden": "true",
+				children: Array.from(e.workspace.name || "")[0] || "·"
+			}),
+			/* @__PURE__ */ (0, v.jsxs)("span", {
+				className: "workspace-copy",
+				children: [/* @__PURE__ */ (0, v.jsx)("strong", { children: e.workspace.name }), /* @__PURE__ */ (0, v.jsx)("span", { children: e.workspace.demo ? "예시 데이터로 체험 중" : "내 작업공간" })]
+			}),
+			/* @__PURE__ */ (0, v.jsx)(x, {
+				className: "workspace-chevron",
+				"aria-hidden": "true"
+			})
+		]
 	});
 }
 function U({ model: e }) {
@@ -346,6 +354,7 @@ function W({ model: e }) {
 			as: "a",
 			href: e.href,
 			value: e.href,
+			"aria-current": e.active ? "page" : void 0,
 			icon: /* @__PURE__ */ (0, v.jsx)(V, { page: e.page }),
 			label: e.label
 		}, e.href))
@@ -356,7 +365,7 @@ async function G(e) {
 	let t = Object.values(e);
 	if (t.some((e) => !e?.isConnected)) throw Error("아차 메뉴 컨테이너가 없습니다.");
 	let n = (0, z.createRoot)(document.createElement("div"));
-	for (let e of t) e.replaceChildren(), e.classList.add("montage-scope", "ahcha-montage-shell");
+	for (let e of t) e.replaceChildren(), e.classList.add("montage-scope", "ahcha-montage-shell", "ahcha-plain-shell");
 	return {
 		update(t) {
 			(0, R.flushSync)(() => n.render(/* @__PURE__ */ (0, v.jsxs)(l, {
@@ -385,7 +394,7 @@ async function G(e) {
 		},
 		destroy() {
 			n.unmount();
-			for (let e of t) e.classList.remove("montage-scope", "ahcha-montage-shell");
+			for (let e of t) e.classList.remove("montage-scope", "ahcha-montage-shell", "ahcha-plain-shell");
 		}
 	};
 }

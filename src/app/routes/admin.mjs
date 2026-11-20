@@ -2,7 +2,7 @@
 // 로그에는 동작 이름만 남긴다(암호 · 신청 내용 · IP 는 남기지 않는다).
 import { config } from '../lib/config.mjs';
 import { aiStatus } from '../lib/ai.mjs';
-import { db, globalDb, nowIso } from '../lib/db.mjs';
+import { db, globalDb, nowIso, newId } from '../lib/db.mjs';
 import { accountDb, requestAccess, requireRole } from '../lib/auth.mjs';
 import { HttpError, readJson } from '../lib/http.mjs';
 import {
@@ -73,11 +73,11 @@ export function register(router) {
 
   router.get('/api/admin/trials', ({ req }) => {
     requireAdmin(req);
-    const rows = globalDb().prepare('SELECT id, created_at, name, org, contact, role, message, consent_at, extra FROM trials ORDER BY created_at DESC, rowid DESC LIMIT 1000').all();
+    const rows = globalDb().prepare('SELECT id, created_at, name, org, contact, role, message, consent_at, extra, processed, processed_at FROM trials ORDER BY created_at DESC, rowid DESC LIMIT 1000').all();
     const trials = rows.map((r) => {
       const x = parseJson(r.extra, {}) || {};
       return {
-        id: r.id, createdAt: r.created_at, name: r.name, org: r.org ?? null, contact: r.contact,
+        id: r.id, processed: Boolean(r.processed), processedAt: r.processed_at, createdAt: r.created_at, name: r.name, org: r.org ?? null, contact: r.contact,
         role: r.role ?? null, message: r.message ?? null, consentAt: r.consent_at,
         source: x.source ?? null, industry: x.industry ?? null, callsPerDay: x.callsPerDay ?? null, region: x.region ?? null,
         recordingSetup: x.recordingSetup ?? null, heardFrom: x.heardFrom ?? null, interviewOk: Boolean(x.interviewOk),
@@ -96,6 +96,32 @@ export function register(router) {
         consentMarketing: trials.filter((t) => t.consentMarketing).length,
       },
     };
+  });
+
+  // v1.6은 상태 이름을 정하지 않았다. 운영자가 수동으로 표시/취소하는 처리 여부만 둔다.
+  // 연락 전송 여부를 뜻하지 않으며 외부 연락을 실행하지 않는다.
+  router.patch('/api/admin/trials/:id', async ({ req, params }) => {
+    requireAdmin(req);
+    const body = await readJson(req, 1024);
+    if (typeof body.processed !== 'boolean' || Object.keys(body).some((k) => k !== 'processed')) {
+      throw new HttpError(400, 'invalid_processed', '처리 여부는 true 또는 false로 보내 주세요.');
+    }
+    const d = globalDb();
+    d.exec('BEGIN IMMEDIATE');
+    try {
+      const row = d.prepare('SELECT processed, processed_at FROM trials WHERE id = ?').get(params.id);
+      if (!row) throw new HttpError(404, 'not_found', '없는 신청입니다.');
+      const changed = Boolean(row.processed) !== body.processed;
+      const processedAt = changed ? (body.processed ? nowIso() : null) : row.processed_at;
+      if (changed) {
+        d.prepare('UPDATE trials SET processed = ?, processed_at = ? WHERE id = ?').run(Number(body.processed), processedAt, params.id);
+        // 서비스 전체 관리자 감사: 개인정보/신청 본문/쿠키는 기록하지 않는다.
+        d.prepare('INSERT INTO audit_log(id, entity, entity_id, action, occurred_at) VALUES(?, ?, ?, ?, ?)')
+          .run(newId('audit'), 'trial', params.id, body.processed ? 'mark_processed' : 'unmark_processed', nowIso());
+      }
+      d.exec('COMMIT');
+      return { id: params.id, processed: body.processed, processedAt, changed };
+    } catch (err) { d.exec('ROLLBACK'); throw err; }
   });
 
   // 파기 요청 · 보유 기간 끝에 하나씩 지운다

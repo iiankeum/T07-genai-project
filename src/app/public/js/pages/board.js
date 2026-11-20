@@ -34,6 +34,7 @@ const COLS = [
 ];
 const SORTS = [
   ['board', '긴급 우선'],
+  ['dueDate', '희망 일정 날짜순'],
   ['due', '희망 일정 문구순'],
   ['customer', '거래처순'],
 ];
@@ -107,6 +108,10 @@ export default {
 
     function draw() {
       if (!alive()) return;
+      // 열 응답으로 DOM이 교체돼도 키보드 필터/탭 위치만 유지한다. 다른 영역의 포커스는 건드리지 않는다.
+      const focused = document.activeElement;
+      const filter = root.contains(focused) && ['customer', 'sort'].includes(focused?.dataset?.filter) ? focused.dataset.filter : null;
+      const tab = root.contains(focused) && focused?.dataset?.act === 'col' && COLS.some(({ key }) => key === focused.dataset.col) ? focused.dataset.col : null;
       const customers = new Set(state.customers.map(({ name }) => name));
       if (state.customer) customers.add(state.customer);
       render(root, html`<div class="page-head">
@@ -121,15 +126,18 @@ export default {
           <option value="">모든 거래처</option>
           ${[...customers].map((name) => html`<option value="${name}" ${state.customer === name ? html`selected` : ''}>${name}</option>`)}
         </select></label>
-        <label class="field"><span>정렬</span><select class="select" data-filter="sort">
+        <label class="field"><span>정렬</span><select aria-describedby="board-due-sort-help" class="select" data-filter="sort">
           ${SORTS.map(([key, text]) => html`<option value="${key}" ${state.sort === key ? html`selected` : ''}>${text}</option>`)}
         </select></label>
+        <p class="help" id="board-due-sort-help">날짜순: YYYY-MM-DD · 오늘/내일(통화일 기준, 한국시간), 날짜 뒤 HH:mm만 해석합니다. 같은 날 시각 미정은 먼저, 해석할 수 없는 문구는 마지막에 둡니다.</p>
       </div>
       <div class="tabs board-tabs" role="group" aria-label="칸 고르기">
         ${COLS.map(({ key, label }) => html`<button type="button" class="tab" data-act="col" data-col="${key}" aria-pressed="${state.col === key}">${label} <span class="count">${columns[key].total ?? '…'}</span></button>`)}
       </div>
       <div class="board-grid">${COLS.map(columnView)}</div>
       ${state.working ? html`<p class="board-note"><a href="${href('/calls', { status: 'working' })}">받아쓰기·정리 중인 통화 ${state.working}건 보기</a></p>` : ''}`);
+      if (filter) root.querySelector(`[data-filter="${filter}"]`)?.focus({ preventScroll: true });
+      else if (tab) root.querySelector(`[data-act="col"][data-col="${tab}"]`)?.focus({ preventScroll: true });
     }
 
     async function loadColumn(key, { append = false } = {}) {

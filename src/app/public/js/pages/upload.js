@@ -54,7 +54,7 @@ export default {
       </div></div>
 
       <div class="notice notice-warn" role="note">${demo
-        ? html`<strong>실제 고객 통화는 올리지 마세요.</strong> 누구나 보는 공개 데모라 가짜(연습) 녹음만 받습니다.`
+        ? html`<strong>실제 고객 녹음은 올리지 마세요.</strong> 공개 작업공간에는 예시 녹음만 올릴 수 있습니다.`
         : html`<strong>녹음 처리 권한과 동의를 확인해 주세요.</strong> 이 작업공간의 구성원에게 녹음과 받아쓴 글이 공유됩니다. <a href="#/help">데이터 처리 안내</a>`}</div>
 
       <section class="card upload-box" aria-labelledby="upTitle">
@@ -73,11 +73,11 @@ export default {
         <p class="help">아래 정보는 선택한 파일 전체에 적용됩니다. 번호는 비워 두어도 됩니다.</p>
         <div class="upload-options">
           <label class="field"><span>녹음 시각</span><input class="input" type="datetime-local" data-ref="when" value="${localNow()}"></label>
-          <label class="field"><span>걸려 온 번호 (${demo ? '가짜 번호만 · ' : ''}선택)</span><input class="input" type="tel" inputmode="tel" data-ref="caller" maxlength="20" placeholder="예: 010-0000-0000" autocomplete="off"></label>
+          <label class="field"><span>걸려 온 번호 (${demo ? '예시 번호만 · ' : ''}선택)</span><input class="input" type="tel" inputmode="tel" data-ref="caller" maxlength="20" placeholder="예: 010-0000-0000" autocomplete="off"></label>
         </div>
         </fieldset>
         <fieldset class="upload-form-group"><legend class="upload-step-title"><span aria-hidden="true">3</span> 권한 확인 후 올리기</legend>
-        <label class="check upload-confirm"><input type="checkbox" data-ref="fake"><span><strong>${demo ? '가짜(연습) 녹음만 올립니다. 실제 고객 통화는 올리지 않습니다.' : '이 녹음의 수집·처리·공유 권한과 필요한 동의를 확인했습니다.'}</strong></span></label>
+        <label class="check upload-confirm"><input type="checkbox" data-ref="fake"><span><strong>${demo ? '실제 고객 정보가 없는 예시 녹음임을 확인했습니다.' : '이 녹음의 수집·처리·공유 권한과 필요한 동의를 확인했습니다.'}</strong></span></label>
         <button type="button" class="btn btn-primary btn-lg btn-block" data-act="upload" aria-describedby="uploadHint" disabled>올리기</button>
         <p id="uploadHint" class="help" data-ref="hint"></p>
         </fieldset>
@@ -90,9 +90,9 @@ export default {
           <div data-ref="worker" aria-live="off"><p class="loading">확인 중…</p></div>
           <p class="help">10초마다 저절로 새로 봅니다.</p>
         </section>
-        <section class="card" aria-labelledby="sampleTitle">
+        <section class="card" aria-labelledby="sampleTitle" data-ref="samplePanel" ${demo ? '' : html`hidden`}>
           <h2 id="sampleTitle">예시 녹음 내려받기</h2>
-          <p class="muted small">가짜 주문 통화 녹음입니다. 내려받아 위에 올려 보세요.</p>
+          <p class="muted small">사용 방법을 확인할 수 있는 예시 파일입니다. 실제 고객 통화가 아닙니다.</p>
           <div data-ref="samples"><p class="loading">불러오는 중…</p></div>
         </section>
       </div>
@@ -113,7 +113,7 @@ export default {
       <section class="card card-soft upload-f12" aria-labelledby="f12Title">
         <h2 id="f12Title">PC의 녹음 폴더 연결하기</h2>
         <p>PC 프로그램이 새 녹음을 찾아 전송하고, 같은 파일은 한 번만 처리합니다. 원본 녹음은 변경하지 않습니다.</p>
-        <p>${demo ? '공개 데모에는 가짜 녹음이 담긴 폴더만 연결하세요.' : '작업공간 관리자가 연결용 토큰과 녹음 처리 권한을 확인한 뒤 연결해 주세요.'} 받아쓰기 PC가 꺼져 있으면 서버에서 기다렸다가 연결 후 처리합니다.</p>
+        <p>${demo ? '공개 작업공간에 연결하는 폴더에는 예시 녹음만 넣어 주세요.' : '작업공간 관리자가 연결용 토큰과 녹음 처리 권한을 확인한 뒤 연결해 주세요.'} 받아쓰기 PC가 꺼져 있으면 서버에서 기다렸다가 연결 후 처리합니다.</p>
         <div class="row"><a class="btn" href="#/settings/integrations">수집·AI 설정</a><a class="btn btn-ghost" href="#/help">설치와 처리 방식 보기</a></div>
       </section>
     </div>`);
@@ -292,7 +292,7 @@ export default {
             ${w.gpu ? html`<div><dt>GPU</dt><dd>${w.gpu}</dd></div>` : ''}
             ${w.lastSeen ? html`<div><dt>마지막 신호</dt><dd>${when(w.lastSeen)}</dd></div>` : ''}
           </dl>`
-          : html`<p class="small">일꾼(GPU PC)이 꺼져 있으면 올린 녹음은 <strong>줄을 서서 기다렸다가</strong> 일꾼이 켜지면 차례로 받아씁니다. 그동안 미리 받아쓴 가짜 통화로 다른 기능을 써 보세요.</p>`}
+          : html`<p class="small">받아쓰기 PC가 연결되면 대기 중인 녹음부터 순서대로 처리합니다. 파일을 다시 올리지 않아도 됩니다.</p>`}
         <div class="upload-queue">
           <div><span class="upload-queue-num">${waiting}</span><span class="muted small">기다리는 녹음</span></div>
           <div><span class="upload-queue-num">${working}</span><span class="muted small">받아쓰는 중</span></div>
@@ -319,6 +319,7 @@ export default {
       } catch { list = []; }
       if (disposed) return;
       const usable = list.filter((s) => safePath(s?.url));
+      ref('samplePanel').hidden = !demo && usable.length === 0;
       render(ref('samples'), usable.length
         ? html`<ul class="upload-samples">${usable.map((s) => html`<li>
             <div class="upload-sample-title">${s.title || '예시 녹음'}${s.durationSec ? html` <span class="muted small">${fmtSec(s.durationSec)}</span>` : ''}</div>

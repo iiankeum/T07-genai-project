@@ -4,8 +4,8 @@
 
 /* ===== 여기만 바꾸면 된다 ===== */
 const CONFIG = {
-  productName: '콜노트',                 // 제품명 — 투표로 정해지면 바꾼다
-  productNameNote: '가칭',               // 이름이 정해지면 '' 로 비운다
+  productName: '아차',                   // 사용자 지정 제품명
+  productNameNote: '',                   // 가칭 안내 없음
   demoUrl: '/',                          // 데모 주소 — 같은 서버의 앱 첫 화면(/#/ 오늘 브리핑). 실시간 받아쓰기는 '/#/live'
   demoUrlForPreview: 'https://t07.3-39-67-126.sslip.io/',  // 이 파일을 내 컴퓨터에서 바로 열어 볼 때만 쓰는 주소
   signupEndpoint: '/api/trial-signup',   // 무료 체험 신청을 받는 곳(개발 방 답 2026-11-11: POST /api/trial-signup). 다르면 여기만 바꾼다
@@ -184,7 +184,7 @@ const CONFIG = {
       if (res.ok && data.ok !== false) {
         form.reset();
         setMode('phone');
-        showStatus('ok', '신청이 접수됐습니다. 고맙습니다! 체험판이 준비되면(' + CONFIG.trialWhen + ' 목표) 적어 주신 연락처로 먼저 연락드리겠습니다.');
+        showStatus('ok', '신청이 접수됐습니다. 팀이 확인한 뒤 체험 안내를 드릴 예정입니다. 확인 메일은 자동 발송되지 않으며, 계정이 바로 만들어지는 것은 아닙니다.');
         $('#shareBox').hidden = false;
       } else if (res.status === 404) {
         showStatus('warn', '아직 신청 받는 곳이 연결되지 않았습니다(시안). 조금 뒤 다시 시도해 주세요.');

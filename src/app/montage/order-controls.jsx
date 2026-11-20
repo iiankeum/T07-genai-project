@@ -3,7 +3,7 @@ import React from 'react';
 import {createRoot} from 'react-dom/client';
 import {flushSync} from 'react-dom';
 import {ThemeProvider,TextField,TextArea,Button} from '@montage-ui/core';
-import {IconPlus,IconMinus,IconTrash} from '@montage-ui/icon';
+import {IconPlus,IconTrash} from '@montage-ui/icon';
 import {ensureMontageStyles} from './runtime.js';
 await ensureMontageStyles();
 const roots=new Map();
@@ -22,8 +22,8 @@ export function enhanceControls(container){
   let component;
   if(tag==='button'){
    const primary=original.classList.contains('btn-primary');props.variant=primary?'solid':'outlined';props.color=primary?'primary':'assistive';props.size='medium';
-   const action=original.dataset.act,delta=original.dataset.qty;
-   const glyph=action==='item-add'?<IconPlus/>:original.hasAttribute('data-del')?<IconTrash/>:delta==='1'?<IconPlus/>:delta==='-1'?<IconMinus/>:null;
+   const action=original.dataset.act;
+   const glyph=action==='item-add'?<IconPlus/>:original.hasAttribute('data-del')?<IconTrash/>:null;
    if(glyph)props.leadingContent=glyph;
    component=<Button {...props}>{Array.from(original.childNodes).map(child)}</Button>;
   }else{delete props.value;delete props.rows;props.defaultValue=original.value;props.width='100%';props.size='medium';component=tag==='textarea'?<TextArea {...props} minRows={2}/>:<TextField {...props}/>}

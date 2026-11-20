@@ -261,7 +261,7 @@ export default {
     function updateButtons() {
       const listening = st.mode === 'listening';
       const sample = st.mode === 'sample';
-      root.classList.toggle('is-listening', listening);
+      root.classList.toggle('is-listening', listening && !st.paused);
       root.classList.toggle('is-playing', sample && !st.paused);
       if (micBtn) {
         micBtn.setAttribute('aria-pressed', String(listening));
@@ -270,7 +270,8 @@ export default {
       }
       sampleBtn.disabled = listening || st.saving;
       sampleBtn.textContent = sample ? '기록 종료' : '샘플 대화 재생';
-      pauseBtn.classList.toggle('hidden', !sample);
+      pauseBtn.classList.toggle('hidden', !sample && !listening);
+      pauseBtn.disabled = st.saving || (listening && st.paused && Boolean(rec));
       pauseBtn.setAttribute('aria-pressed', String(st.paused));
       pauseBtn.textContent = st.paused ? '재개' : '일시 정지';
       saveBtn.disabled = st.saving || Boolean(st.typing) || sample || Boolean(st.saved) || !st.lines.length;
@@ -380,6 +381,7 @@ export default {
       const utterStart = new Map();
       r.onstart = () => {
         if (disposed || rec !== r) return;
+        if (!want) { try { r.stop(); } catch { /* 종료 대기 */ } return; }
         if (listenFrom == null) listenFrom = performance.now();
         setState('듣는 중… 말을 멈추면 카드가 채워집니다.', 'live');
       };
@@ -414,14 +416,24 @@ export default {
         if (code === 'aborted') return;
         if (code === 'no-speech') { toast(SR_ERRORS['no-speech']); return; } // 계속 듣는다(끝나면 다시 시작)
         want = false;
+        st.paused = false;
         setState(SR_ERRORS[code] || `받아쓰기가 멈췄습니다(${code || '알 수 없음'}). 다시 눌러 주세요.`, 'error');
       };
       r.onend = () => {
+        if (disposed || rec !== r) return;
         if (listenFrom != null) { activeMs += performance.now() - listenFrom; listenFrom = null; }
         if (rec !== r) return;
         rec = null;
         if (st.interim) { pushLine({ text: st.interim, start: st.interimStart ?? lastEnd(), end: clock() }); st.interim = ''; st.interimStart = null; }
         if (disposed) return;
+        if (st.paused) {
+          setState('마이크를 잠시 멈췄습니다. 재개하면 이어서 받아씁니다.');
+          updateButtons();
+          renderLines();
+          endWaiters.splice(0).forEach((f) => f());
+          maybeExtract();
+          return;
+        }
         if (want) {
           const now = Date.now();
           restarts = restarts.filter((t) => now - t < 10_000);
@@ -438,13 +450,20 @@ export default {
         maybeExtract();
       };
       rec = r;
-      try { r.start(); } catch { /* 이미 시작됨 */ }
+      try { r.start(); } catch {
+        rec = null;
+        want = false;
+        st.paused = false;
+        setMode('idle');
+        setState('마이크를 시작하지 못했습니다. 마이크 권한을 확인한 뒤 다시 눌러 주세요.', 'error');
+      }
     }
     function startListening() {
       if (!supported || st.mode !== 'idle' || st.saving) return;
       if (st.saved) resetAll();
       st.sampleStarted = false;
       renderLines();
+      st.paused = false;
       want = true;
       restarts = [];
       setMode('listening');
@@ -452,6 +471,7 @@ export default {
       openRec();
     }
     function stopListening() {
+      st.paused = false;
       want = false;
       cancel(restartTimer);
       if (rec) {
@@ -460,6 +480,27 @@ export default {
       } else {
         setMode('idle');
         endWaiters.splice(0).forEach((f) => f());
+      }
+    }
+    function toggleMicPause() {
+      if (st.mode !== 'listening' || st.saving) return;
+      if (st.paused) {
+        if (rec) return; // stop의 마지막 result/end가 끝나기 전에는 새 인식을 열지 않는다.
+        st.paused = false;
+        want = true;
+        restarts = [];
+        updateButtons();
+        setState('마이크를 다시 켜는 중…');
+        openRec();
+      } else {
+        st.paused = true;
+        want = false;
+        cancel(restartTimer);
+        // 정지 클릭 시각부터 시계를 멈춘다. stop 이후 도착한 마지막 확정 글은 보존한다.
+        if (listenFrom != null) { activeMs += performance.now() - listenFrom; listenFrom = null; }
+        setState(rec ? '마이크를 잠시 멈추는 중…' : '마이크를 잠시 멈췄습니다. 재개하면 이어서 받아씁니다.');
+        updateButtons();
+        if (rec) { try { rec.stop(); } catch { /* onend를 기다려 중복 세션 방지 */ } }
       }
     }
     const waitEnd = (ms) => new Promise((resolve) => { endWaiters.push(resolve); later(resolve, ms); });
@@ -638,7 +679,7 @@ export default {
       const act = btn.dataset.act;
       if (act === 'mic') { if (st.mode === 'listening') stopListening(); else startListening(); }
       else if (act === 'sample') playSample();
-      else if (act === 'pause' && st.mode === 'sample') togglePause();
+      else if (act === 'pause') { if (st.mode === 'sample') togglePause(); else toggleMicPause(); }
       else if (act === 'source') {
         st.source = Number(btn.dataset.lineIndex);
         linesEl.querySelector('.is-source')?.classList.remove('is-source');

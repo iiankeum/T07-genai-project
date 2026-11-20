@@ -763,3 +763,24 @@ test('요약은 품명에 이미 있는 방향을 중복 표시하지 않고 별
   assert.equal(cards.composeSummary({ items: [{ part: '브레이크 패드', side: '뒤', qty: 1 }] }), '뒤 브레이크 패드 1개');
   assert.equal(cards.composeSummary({ items: [{ part: '후드', side: '후', qty: 1 }] }), '후 후드 1개');
 });
+
+test('수량과 이전 인용이 모순되면 원값·시각 보존하고 확인 전 확정을 막는다', async () => {
+ const id='fake-quantity-evidence';
+ const quote='아반대 시앤치랍범퍼 두 개, 22년씩 맞으시죠?';
+ insertCall(id,{segs:[{start:10.9,end:15.9,text:quote},{start:15.9,end:21.4,text:'아, 아니다. 세 개로 해주세요.'}]});
+ const value=cards.buildCardFromAi(getCallRow(id),{items:[{part:'아반대 시앤치랍범퍼',qty:3,quote}]});
+ assert.equal(value.items[0].qty,3);assert.equal(value.items[0].quote,quote);assert.equal(value.items[0].at,10.9);
+ const warning=value.unsure.find(w=>w.field==='qty');
+ assert.ok(warning);assert.equal(warning.blocking,true);assert.equal(warning.at,10.9);assert.equal(warning.item,0);
+ cards.saveCard(id,value);
+ const result=await req('POST','/api/cards/'+id+'/confirm');
+ assert.equal(result.status,409);assert.equal(result.data.error,'unsure_left');
+ // 가짜 담당자가 녹음의 정정을 확인한 뒤 기존 검토 API로 경고를 해제한다.
+ const reviewed=await req('POST','/api/cards/'+id+'/review',{id:warning.id});
+ assert.equal(reviewed.status,200);assert.ok(!reviewed.data.card.unsure.some(w=>w.id===warning.id));
+ const fixed=await req('PATCH','/api/cards/'+id,{customer:'가짜 거래처',carModel:'가짜 차량',items:reviewed.data.card.items.map(i=>({...i,partNo:'99999-TEST1'}))});
+ assert.equal(fixed.status,200);
+ const confirmed=await req('POST','/api/cards/'+id+'/confirm');
+ assert.equal(confirmed.status,200,JSON.stringify(confirmed.data));assert.equal(confirmed.data.card.status,'confirmed');
+ assert.equal(confirmed.data.card.items[0].qty,3);assert.equal(confirmed.data.card.items[0].quote,quote);assert.equal(confirmed.data.card.items[0].at,10.9);
+});

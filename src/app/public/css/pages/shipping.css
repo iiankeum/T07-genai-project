@@ -72,3 +72,32 @@
  .ship-meta dd,.ship-part,.si-part { font-weight:600; }
  .ship-total { font-size:.85rem; color:var(--muted); }
 }
+
+/* Screen-only workspace styling; printed tables and status actions are unchanged. */
+@media screen {
+ .shipping-page { --task-line:#e9ebef; --task-ink:#262a31; --task-secondary:#626976; --task-link:#285b92; color:var(--task-ink); }
+ .shipping-page .page-head { align-items:flex-end; margin-bottom:20px; gap:12px; }
+ .shipping-page .page-head h1 { font-size:clamp(29px,3vw,34px); letter-spacing:-.045em; }
+ .shipping-page .page-head .sub { color:var(--task-secondary); margin-top:8px; }
+ .shipping-page .eyebrow { font-size:13px; color:var(--task-secondary); font-weight:600; letter-spacing:0; }
+ .shipping-page .ship-scope { display:flex; gap:14px; margin:0 0 14px; border-bottom:1px solid var(--task-line); }
+ .shipping-page .ship-scope .tab { border:0; border-radius:0; border-bottom:2px solid transparent; box-shadow:none; padding:10px 6px; color:var(--task-secondary); background:transparent; }
+ .shipping-page .ship-scope .tab[aria-pressed=true] { color:var(--task-ink); border-bottom-color:var(--task-link); font-weight:650; }
+ .shipping-page .ship-tools { gap:8px; margin-bottom:18px; }
+ .shipping-page .ship-tools .btn { background:#fff; border:1px solid var(--task-line); border-radius:6px; box-shadow:none; font-size:14px; }
+ .shipping-page .ship-tools .btn:hover { background:#f7fafd; }
+ .shipping-page .ship-cust { margin-bottom:0; border-bottom:1px solid var(--task-line); padding:0 0 10px; }
+ .shipping-page .ship-cust-n { color:var(--task-secondary); }
+ .shipping-page .ship-table-wrap { border:0; border-radius:0; box-shadow:none; }
+ .shipping-page .ship-table { font-size:14px; }
+ .shipping-page .ship-table th, .shipping-page .ship-table td { background:#fff; padding:11px 9px; border-bottom:1px solid var(--task-line); }
+ .shipping-page .ship-table tbody.ship-order { border-top:0; }
+ .shipping-page .ship-card { border:0; border-bottom:1px solid var(--task-line); padding:12px 0; border-radius:0; }
+ .shipping-page .ship-card.is-urgent { box-shadow:inset 2px 0 #a97539; padding-left:10px; }
+ .shipping-page .ship-items li { border-color:var(--task-line); }
+ .shipping-page .ship-items { border-color:var(--task-line); }
+ .shipping-page .ship-meta dd { overflow-wrap:anywhere; }
+ .shipping-page .ship-card-act .ship-btn { width:auto; }
+ .shipping-page .ship-btn { background:#fff; color:var(--task-link); border:0; box-shadow:none; text-decoration:underline; text-underline-offset:3px; border-radius:6px; font-weight:600; }
+ .shipping-page .ship-btn:hover { background:#f7fafd; }
+}

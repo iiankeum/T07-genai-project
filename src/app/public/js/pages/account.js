@@ -125,8 +125,9 @@ function setupLogin(el, ctx) {
       <label class="account-check"><input name="remember" type="checkbox"> 로그인 유지</label>
       ${submit('로그인')}${status}
     </form>
+    <p><a class="btn btn-primary" href="#/trial">무료 체험 신청</a></p>
     <div class="account-links"><a href="#/signup">회원가입</a><a href="#/password/reset">비밀번호 재설정</a><a href="#/verify">인증 메일 다시 받기</a></div>
-    ${ctx.meta?.demoAvailable ? html`<a class="btn" href="#/calls">가짜 통화 데모 열기</a>` : ''}`);
+    ${ctx.meta?.demoAvailable ? html`<a class="btn" href="#/calls">예시 작업공간 둘러보기</a>` : ''}`);
   bindForm(el.querySelector('form'), async (body) => {
     const result = await api.post('/api/auth/login', body);
     continueTo(safeNext(ctx.query?.next) || (result.workspaceId ? '/calls' : '/workspaces'));

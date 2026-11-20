@@ -1,3 +1,4 @@
+@import url("./worklist-document.css");
 /* 날짜별 통화와 주문 처리 대기열 */
 .today-page {
   max-width: 1280px;
@@ -461,3 +462,43 @@ html.big-text .today-heading h1 { font-size: 2rem; line-height: 1.375; }
 .today-overview { margin-block:28px; }
 #today-stats-h { font-size:1rem; line-height:1.4; font-weight:600; margin:0 0 12px; }
 @media(max-width:560px) { .today-header { margin-bottom:20px; } }
+
+/* Work document, not a dashboard of tiles. Keep the original queue and actions. */
+.today-page .today-header {margin-bottom:20px}
+.today-page .today-heading {align-items:flex-start;gap:15px}
+.today-page .today-date {color:var(--wl-muted);font-size:.74rem;margin-bottom:8px}
+.today-page .today-date svg {width:14px;height:14px}
+.today-page .today-toolbar {padding:0;border:0;border-bottom:1px solid var(--wl-rule);border-radius:0;background:none}
+.today-page .today-day-switch {background:none;border:0;border-radius:0;padding:0;gap:16px}
+.today-page .today-day-switch button {border:0;border-radius:0;min-height:44px;background:none;color:var(--wl-muted);box-shadow:none;padding:0 4px;border-bottom:2px solid transparent;font-size:.79rem}
+.today-page .today-day-switch button[aria-pressed="true"] {color:var(--wl-blue);background:none;border-bottom-color:var(--wl-blue);box-shadow:none}
+.today-page .today-worker {opacity:.9;font-size:.72rem}
+.today-page .today-workspace {display:block}
+.today-page .wl-lead {font-size:1.08rem;line-height:1.75;margin:23px 0 20px}
+.today-page .today-panel {border:0;border-radius:0;background:white;box-shadow:none;padding:0}
+.today-page .today-panel-head {padding:0 0 8px;border:0;min-height:0;gap:12px}
+.today-page .today-panel-head h2 {font-size:1rem;line-height:1.4;font-weight:650}
+.today-page .today-priority-group h3 {padding:8px 0 2px;color:var(--wl-muted)}
+.today-page .today-row {padding:11px 0;border-radius:0;min-height:48px}
+.today-page .today-row:hover {background:#fafafb}
+.today-page .today-row-icon {background:none;color:#69707a;border-radius:0;width:27px;height:30px}
+.today-page .today-row-icon svg {width:17px;height:17px}
+.today-page .today-row-top strong {font-size:.92rem}
+.today-page .today-row-detail {font-size:.77rem;line-height:1.65;color:var(--wl-muted)}
+.today-page .today-row-time,.today-page .today-kind {color:var(--wl-muted);font-size:.7rem;background:transparent}
+.today-page .today-queue-count {background:transparent;color:var(--wl-muted);padding:0}
+.today-page .today-queue-groups {padding:0;margin-top:14px;border-top:1px solid var(--wl-rule)}
+.today-page .today-queue-group {border-color:var(--wl-rule)}
+.today-page .today-queue-group > summary {padding-inline:0;background:none}
+.today-page .today-rail {grid-template-columns:1fr;gap:25px;margin-top:26px}
+.today-page .today-rail > .today-panel {border-top:1px solid var(--wl-rule);padding-top:15px}
+.today-page .today-stat-row {border-radius:0;box-shadow:none}
+@media(max-width:899px) {
+ .today-page {padding-inline:20px}
+ .today-page .today-actions {width:auto;flex-wrap:wrap;justify-content:flex-start}
+ .today-page .today-actions .btn {flex:0 1 auto;font-size:.73rem;padding-inline:8px;background:white;border-color:var(--line);color:var(--ink)}
+ .today-page .today-actions .wl-mobile-ask {color:var(--wl-blue);border-color:transparent}
+ .today-page .today-toolbar {margin-top:10px}
+ .today-page .today-row-icon {width:23px}
+ .today-page .wl-lead {margin-block:14px}
+}

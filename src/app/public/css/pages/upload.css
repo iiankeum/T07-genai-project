@@ -115,3 +115,46 @@
 .upload-form-group > .help { margin-top:0; }
 .upload-pick:focus-within { outline:3px solid var(--brand); outline-offset:4px; }
 .upload-form-group .upload-confirm { margin-top:0; font-size:.875rem; line-height:1.6; }
+
+/* 주문 노트와 같은 단일 문서 흐름. 앱 메뉴와 업로드 동작은 그대로 둔다. */
+body .view .page.upload-page {
+  --intake-rule:#e5e7eb; --intake-muted:#606670; --intake-ink:#24272c;
+  display:block; max-width:900px; padding:44px clamp(20px,5vw,70px) 56px;
+  color:var(--intake-ink);
+}
+.upload-page > .page-head { margin:0 0 18px; }
+.upload-page .page-head h1 { margin:0; font-size:clamp(26px,3vw,32px); letter-spacing:-.045em; }
+.upload-page .page-head .eyebrow { margin:0 0 7px; color:var(--intake-muted); font-size:.75rem; font-weight:500; }
+.upload-page .page-head .sub { margin-top:8px; color:var(--intake-muted); }
+.upload-page > .notice { margin:0 0 26px; padding:10px 12px; border:0; border-left:2px solid var(--warn-line); border-radius:0; background:#fcfaf6; font-size:.83rem; }
+.upload-page :is(.upload-box,.upload-f12,.upload-explainer),.upload-page .upload-side > .card { margin:0; padding:0; border:0; border-radius:0; box-shadow:none; background:transparent; }
+.upload-page .upload-step-title { gap:8px; margin:0 0 12px; font-weight:650; color:var(--intake-ink); }
+.upload-page .upload-step-title > span { width:auto; height:auto; flex:0 0 1.2em; color:var(--intake-muted); background:none; font-size:.77rem; }
+.upload-page .upload-drop { padding:18px 14px; border:1px dashed #cad1d8; border-radius:6px; background:#fcfdff; }
+.upload-page .upload-drop:is(:focus-within,.is-drag) { border-color:var(--brand); background:#f3f7fb; }
+.upload-page .upload-drop-icon { width:25px; height:25px; margin:0; }
+.upload-page .upload-drop-title { margin:4px 0 5px; color:var(--intake-ink); font-size:.91rem; }
+.upload-page .upload-drop-or { margin:4px 0 5px; }
+.upload-page .upload-pick { padding-inline:14px; border-radius:6px; }
+.upload-page .upload-drop .help { max-width:68ch; margin-top:10px; color:var(--intake-muted); }
+.upload-page .upload-row { border:0; border-bottom:1px solid var(--intake-rule); border-radius:0; padding:9px 3px; }
+.upload-page .upload-row.is-blocked,.upload-page .upload-row.is-error { border-bottom-color:var(--danger-line); background:#fffafa; }
+.upload-page .upload-form-group { border-top:1px solid var(--intake-rule); padding-top:14px; margin-top:22px; }
+.upload-page .upload-options { gap:10px 16px; }
+.upload-page .upload-options .field { min-width:0; }
+.upload-page .upload-options .input { min-width:0; width:100%; border:0; border-bottom:1px solid #c8ced5; border-radius:0; background:transparent; }
+.upload-page .upload-options .input:focus-visible { background:#f4f8fc; }
+.upload-page .upload-confirm { padding:8px 0; border:0; background:transparent; }
+.upload-page .upload-confirm input { accent-color:var(--brand); }
+.upload-page [data-act="upload"] { width:auto; min-width:158px; border-radius:6px; }
+.upload-page > :is(.upload-side,.upload-explainer,.upload-f12) { margin-top:24px; padding:14px 0 0; border-top:1px solid var(--intake-rule); }
+.upload-page .upload-side { gap:18px; }
+.upload-page .upload-queue { gap:14px; }
+.upload-page .upload-queue > div { border:0; border-top:1px solid var(--intake-rule); border-radius:0; padding:9px 0 2px; }
+.upload-page .upload-explainer > summary { padding:0; min-height:44px; }
+.upload-page .upload-f12 .row { gap:6px 12px; }
+@media (max-width:639px) {
+  body .view .page.upload-page { padding:24px 20px 38px; }
+  .upload-page .upload-drop { padding:14px 10px; }
+  .upload-page [data-act="upload"] { width:100%; }
+}

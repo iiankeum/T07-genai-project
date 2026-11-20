@@ -6,6 +6,9 @@
 import { getMeta } from './api.js';
 import { html, render, esc, routeOf } from './ui.js';
 import { icon } from './icons.js';
+import { mountConnectivity } from './connectivity.js';
+
+mountConnectivity();
 
 const ROUTES = [
   { re: /^\/?$/, page: 'today' },
@@ -78,12 +81,16 @@ const isActive = (item, page) => (Array.isArray(item.page) ? item.page.includes(
 // The hash router and access checks remain the single source of truth.
 let montageShell;
 let currentNav;
+let workspaceLabelInvalidated = false;
 function renderNav(page, meta) {
   currentNav = { page, meta };
-  const workspace = meta?.access?.workspace;
+  const access = workspaceLabelInvalidated ? null : meta?.access;
+  const demo = access?.demo === true;
+  const name = typeof access?.workspace?.name === 'string' ? access.workspace.name.trim() : '';
+  const workspaceName = demo ? '작업공간' : (access?.user?.id && name) || '워크스페이스';
   const customerTab = new URLSearchParams(location.hash.split('?')[1]).get('tab') === 'customer';
   const model = {
-    workspace: { href: WORKSPACES.href, name: workspace?.name || '워크스페이스', demo: meta?.access?.demo !== false },
+    workspace: { href: WORKSPACES.href, name: workspaceName, demo },
     groups: [
       { label: '업무', items: NAV.slice(0, 4) },
       { label: '찾기와 관리', items: [NAV[6], NAV[5], { href: '#/knowledge?tab=customer', label: '거래처', page: 'glossary' }, NAV[7], { href: '#/more', label: '모든 도구', page: 'more' }] },
@@ -139,7 +146,7 @@ function renderMore(el, meta) {
     {title:'통화 기록하기', description:'파일을 올리거나 지금 통화를 받아써요.', items:[LIVE,NAV[4]]},
     {title:'찾고 물어보기', description:'지난 통화와 팀의 지식을 활용해요.', items:[...NAV.slice(5),{href:'#/knowledge?tab=customer',label:'거래처',page:'glossary'}]},
     {title:'내 작업공간', description:'계정, 팀 연결과 화면을 관리해요.', items:[WORKSPACES,SETTINGS,NOTIFICATIONS]},
-    {title:'도움과 관리', description:'사용 안내와 관리 메뉴를 확인해요.', items:[HELP,...(meta?.access?.role==='admin'?[ADMIN]:[]),{href:'#/trial',label:'무료 체험 신청',icon:'✉'}]},
+    {title:'도움과 관리', description:'사용 안내와 관리 메뉴를 확인해요.', items:[HELP,...(meta?.access?.role==='admin'?[ADMIN]:[]),...(meta?.demo===true?[{href:'#/trial',label:'무료 체험 신청',icon:'✉'}]:[])]},
   ];
   render(el, html`<div class="page tools-page"><div class="page-head"><div><h1>모든 도구</h1><p class="sub">필요한 작업을 골라 이어가세요.</p></div></div><div class="tools-directory">${groups.map(g=>html`<section class="card tools-section"><h2>${g.title}</h2><p>${g.description}</p><ul class="menu-list">${g.items.map(n=>html`<li><a class="menu-link" href="${n.href}"><span class="nav-icon">${icon(n.page)}</span><span>${n.label}</span><span class="menu-arrow" aria-hidden="true">›</span></a></li>`)}</ul></section>`)}</div></div>`);
 
@@ -166,12 +173,15 @@ async function route() {
     path.textContent = '없는 화면';
     document.title = '없는 화면 · 아차';
     render(mount, html`<div class="page"><div class="card empty"><h1>이 화면을 찾지 못했습니다</h1><a class="btn btn-primary" href="#/calls">통화 기록 보기</a></div></div>`);
+    view.focus({ preventScroll: true });
     return;
   }
   if (!['more', 'assistant'].includes(r.page)) ensureCss(r.page);
-  if (r.page === 'assistant') ensureCss('ask');
-  if (r.page === 'assistant' || r.page === 'glossary') ensureCss('knowledge-assistant');
+  if (r.page === 'assistant' || r.page === 'call') ensureCss('ask');
+  if (r.page === 'assistant' || r.page === 'call' || r.page === 'glossary') ensureCss('knowledge-assistant');
   render(mount, html`<div class="page"><p class="loading" role="status">불러오는 중…</p></div>`);
+  // 키보드 탐색을 새 본문에서 시작한다. 비동기 렌더 뒤에는 포커스를 다시 빼앗지 않는다.
+  view.focus({ preventScroll: true });
   try {
     const meta = await getMeta();
     if (my !== seq) return;
@@ -181,7 +191,6 @@ async function route() {
     }
     const guest = Object.hasOwn(meta, 'access') && !meta.access;
     document.body.classList.toggle('is-guest', guest);
-    document.querySelector('.fake-banner').hidden = guest || meta?.access?.demo === false;
     if (guest && !['account', 'help', 'trial', 'legal'].includes(r.page)) {
       goToLogin(location.hash);
       return;
@@ -251,6 +260,9 @@ document.querySelector('.skip-link').addEventListener('click', (event) => {
 });
 window.addEventListener('hashchange', route);
 window.addEventListener('ahmatda:workspace-changed', () => {
+  // Hide the old account label until this tab has reloaded.
+  workspaceLabelInvalidated = true;
+  if (currentNav) renderNav(currentNav.page, currentNav.meta);
   if (document.getElementById('workspaceChangedNotice')) return;
   const notice = document.createElement('div');
   notice.id = 'workspaceChangedNotice';

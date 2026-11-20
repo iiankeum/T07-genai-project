@@ -1,8 +1,9 @@
 // 통화 목록 · 찾기(F08): 글 · 카드 검색, 상태 · 날짜 · 거래처 거르기, 맞은 문장 굵게 → 누르면 그 대목으로.
+import { worklistAsk, bindWorklistAsk } from './worklist-ask.js';
 import { api } from '../api.js';
 import { CALL_TYPES } from '../domain.js';
 import { icon } from '../icons.js';
-import { html, render, fmtWhen, fmtClock, fmtSec, callChip, SOURCE_LABEL, highlight, errorBox, href, kstDay } from '../ui.js';
+import { html, render, fmtWhen, fmtClock, fmtSec, callChip, SOURCE_LABEL, highlight, errorBox, href, kstDay, toast } from '../ui.js';
 
 const STATUS_TABS = [
   ['all', '전체'], ['draft', '확인 필요'], ['callback', '다시 전화'], ['confirmed', '확정'],
@@ -89,6 +90,46 @@ export function searchMarks(q) {
   return String(q || '').split(/\s+/).filter(Boolean).map((t) => ({ text: t, kind: 'search' }));
 }
 
+// 목록에는 원문을 싣지 않는다. 실패한 녹음인지·권한이 있는지 먼저 거르고, 서버가 파일·작업 상태를 재검증한다.
+export const canRetryListCall = (call, role) => Boolean(call?.id && call.status === 'failed' &&
+  call.hasAudio === true && !call.transcript && (role === 'admin' || role === 'reception'));
+
+export function createListRetries(role, post) {
+  const states = new Map();
+  return {
+    get: id => states.get(id),
+    receipts: () => [...states].filter(([,s]) => s.phase === 'accepted').map(([id,s]) => [id,s]),
+    forget: id => states.delete(id),
+    async submit(call) {
+      if (!canRetryListCall(call, role)) return null;
+      const id = call.id;
+      if (['pending', 'accepted', 'blocked'].includes(states.get(id)?.phase)) return null;
+      states.set(id, {phase:'pending'});
+      let next;
+      try {
+        const receipt = await post('/api/calls/' + encodeURIComponent(id) + '/retry-transcription');
+        if (receipt?.callId !== id || (!receipt.requeued && !receipt.alreadyPending)) throw Error('처리 접수를 확인하지 못했습니다. 통화 상세에서 상태를 확인해 주세요.');
+        next = {phase:'accepted', message:receipt.alreadyPending ? '이미 받아쓰기 대기열에 있습니다.' : '저장된 녹음으로 받아쓰기를 다시 요청했습니다.'};
+      } catch (e) {
+        const blocked = ['not_retryable','no_audio','permission_denied','not_found'].includes(e?.code);
+        next = {phase:blocked ? 'blocked' : 'error', message:e?.message || '요청하지 못했습니다. 잠시 뒤 다시 시도해 주세요.'};
+      }
+      states.set(id,next);
+      return next;
+    },
+  };
+}
+export function listRetryMarkup(call, role, state) {
+  if (call.status !== 'failed') return '';
+  const eligible = canRetryListCall(call, role);
+  const locked = ['pending','accepted','blocked'].includes(state?.phase);
+  return html`<div class="cl-retry-box">
+    <span class="cl-retry-message">${state?.phase === 'pending' ? '받아쓰기 재요청 중…' : state?.message || ('실패 이유: ' + (call.error || '처리 중 오류가 발생했습니다.'))}</span>
+    ${eligible ? html`<button class="btn btn-sm" type="button" data-act="retry-audio" aria-disabled="${String(locked)}">${state?.phase === 'accepted' ? '재요청 접수됨' : '녹음 다시 받아쓰기'}</button>` :
+     !call.hasAudio ? html`<span class="help">저장된 녹음이 없어 다시 시도할 수 없습니다.</span>` : ''}
+  </div>`;
+}
+
 const custHref = (name) => '#/customers/' + encodeURIComponent(name);
 const shortDay = (d) => (d ? `${Number(d.slice(5, 7))}월 ${Number(d.slice(8, 10))}일` : '');
 /** 직접 정한 날짜 단추 글: 「11월 10일」 · 「11월 1일 ~ 11월 5일」 · 「11월 1일부터」 */
@@ -102,6 +143,8 @@ export default {
   async mount(el, ctx) {
     const state = stateFromQuery(ctx.query);
     const scope = accessKey(ctx.meta);
+    const role = ctx.meta?.access?.role;
+    const retries = createListRetries(role, path => api.post(path));
     const resume = scope && returnPosition?.scope === scope && returnPosition.hash === hashFor(state)
       ? returnPosition : null;
     const resumeEpoch = returnEpoch;
@@ -131,9 +174,9 @@ export default {
     render(el, html`<div class="page cl-page">
       <div class="page-head">
         <div>
-          <h1>통화 기록</h1>
+          <h1>통화 기록</h1><p class="wl-sub">주문으로 이어진 통화와 확인한 내용을 모아 봅니다.</p>
         </div>
-        <div class="row"><a class="btn" href="#/live">${icon('live')} 실시간 받아쓰기</a><a class="btn btn-primary cl-upload" href="#/upload">${icon('upload')} 녹음 올리기</a></div>
+        <div class="row"><a class="btn" href="#/live">${icon('live')} 실시간 받아쓰기</a><a class="btn btn-primary cl-upload" href="#/upload">${icon('upload')} 녹음 올리기</a><a class="wl-mobile-ask btn btn-ghost" href="#/ask">Ask 아차</a></div>
       </div>
       <section class="cl-control" aria-label="통화 검색과 필터"><div class="cl-group cl-status" data-slot="statuses"></div><form class="cl-search" role="search" data-slot="form">
         <label class="sr-only" for="cl-q">통화 찾기</label>
@@ -144,8 +187,10 @@ export default {
       <div class="cl-filters" data-slot="filters"></div></section>
       <div class="cl-refresh-note" data-slot="refresh-note" role="status" hidden></div>
       <div class="cl-results" data-slot="results" aria-live="polite"><p class="loading">불러오는 중…</p></div>
+      ${worklistAsk('calls')}
     </div>`);
     const root = el.querySelector('.cl-page');
+    bindWorklistAsk(root);
     const slot = (n) => root.querySelector(`[data-slot="${n}"]`);
     const form = slot('form');
     let montageSearch;
@@ -250,7 +295,7 @@ export default {
         <div class="cl-content"><p class="cl-context">${card?.carModel || '차종 미입력'}${card?.items?.length ? ` · ${card.items.map((item) => item.part).filter(Boolean).join(', ')}` : ''}</p>
         ${c.summary ? html`<p class="cl-summary">${c.summary}</p>` : ''}</div>
         <div class="cl-chips">${callChip(c)}${card?.callType ? html`<span class="chip">${card.callType}</span>` : ''}${card?.urgent ? html`<span class="chip chip-urgent">급함</span>` : ''}${card?.callback ? html`<span class="chip chip-callback">다시 전화</span>` : ''}<span class="cl-source">${source}${c.hasAudio ? '' : ' · 녹음 없음'}</span></div>
-        ${c.status === 'failed' && c.error ? html`<p class="cl-error">실패 이유: ${c.error}</p>` : ''}
+        ${listRetryMarkup(c, role, retries.get(c.id))}
         ${shown.length ? html`<ul class="cl-matches" aria-label="찾은 문장">${shown.map((m) => matchView(c, m))}</ul>` : ''}
         ${matches.length > shown.length ? html`<p class="cl-more-matches">이 통화에서 ${matches.length - shown.length}문장 더 찾았습니다 — 통화를 열어 보세요.</p>` : ''}
       </li>`;
@@ -331,14 +376,19 @@ export default {
         const r = e.getBoundingClientRect(); return r.bottom > top && r.top < innerHeight;
       });
       return { focused, rowId: row?.dataset.callId, href: focused?.getAttribute('href'),
-        act: focused?.dataset.act, anchorId: anchor?.dataset.callId, top: anchor?.getBoundingClientRect().top };
+        act: focused?.dataset.act, nextId: row?.nextElementSibling?.dataset.callId, anchorId: anchor?.dataset.callId, top: anchor?.getBoundingClientRect().top };
     }
-    function restoreListPosition(position) {
+    function restoreListPosition(position, removedId) {
       const rows = [...slot('results').querySelectorAll('[data-call-id]')];
       const row = rows.find(e => e.dataset.callId === position.rowId);
-      const target = position.href
+      let target = position.href
         ? [...(row || slot('results')).querySelectorAll('a[href]')].find(e => e.getAttribute('href') === position.href)
-        : position.act ? [...slot('results').querySelectorAll('[data-act]')].find(e => e.dataset.act === position.act) : null;
+        : position.act ? [...(row || slot('results')).querySelectorAll('[data-act]')].find(e => e.dataset.act === position.act) : null;
+      if (position.act === 'retry-audio') {
+        if (row) target ||= row.querySelector('.cl-title');
+        else if (removedId === position.rowId) target = rows.find(e => e.dataset.callId === position.nextId)?.querySelector('.cl-title') || rows.at(-1)?.querySelector('.cl-title') || input;
+        else target = null;
+      }
       target?.focus({ preventScroll: true });
       const anchor = rows.find(e => e.dataset.callId === position.anchorId);
       if (anchor) window.scrollBy(0, anchor.getBoundingClientRect().top - position.top);
@@ -352,12 +402,13 @@ export default {
       }
       if (calls.some((c) => WORKING.has(c.status))) refreshTimer = setTimeout(() => load({ silent: true }), REFRESH_MS);
     }
-    async function load({ append = false, silent = false } = {}) {
+    async function load({ append = false, silent = false, retriedId } = {}) {
       if (silent && (refreshPaused || resumeEpoch !== returnEpoch)) return false;
       if (!silent && !append) { refreshPaused = false; slot('refresh-note').hidden = true; }
       ctrl?.abort();
       ctrl = new AbortController();
       const my = ctrl;
+      const receiptsBeforeRead = retries.receipts();
       clearTimeout(refreshTimer);
       if (!append && !silent) slot('results').classList.add('is-loading');
       const limit = append ? PAGE : silent ? Math.min(200, Math.max(PAGE, calls.length)) : PAGE;
@@ -375,7 +426,7 @@ export default {
             focusedLinkMissing = ![...preview.querySelectorAll('a[href]')].some(a => a.getAttribute('href') === position.href);
           }
         }
-        if (position && (focusedLinkMissing || [position.rowId, position.anchorId].some(id => id && !list.some(c => c.id === id))
+        if (position && (focusedLinkMissing || [position.rowId, position.anchorId].some(id => id && id !== retriedId && !list.some(c => c.id === id))
           || (position.act === 'more' && list.length >= Number(r.total)))) {
           pauseRefresh('보고 있던 위치의 목록이 바뀌어 자동 적용을 멈췄습니다.');
           return false;
@@ -383,8 +434,12 @@ export default {
         const ids = new Set(calls.map((call) => call.id));
         calls = append ? calls.concat(list.filter((call) => !ids.has(call.id))) : list;
         total = Number.isFinite(Number(r?.total)) ? Number(r.total) : calls.length;
+        // 이 조회보다 먼저 접수한 건만 반영한다. 작업이 곧바로 다시 실패해도 재시도할 수 있다.
+        for (const [id, receipt] of receiptsBeforeRead) if (retries.get(id) === receipt &&
+          (id === retriedId || list.some(c => c.id === id) || (!append && state.status === 'failed'))) retries.forget(id);
+        for (const c of list) if (c.status !== 'failed' && retries.get(c.id)?.phase !== 'pending') retries.forget(c.id);
         renderResults();
-        if (position) restoreListPosition(position);
+        if (position) restoreListPosition(position, retriedId);
       } catch (e) {
         if (e?.name === 'AbortError' || !alive || my !== ctrl) return;
         if (silent) { scheduleRefresh(); return false; }
@@ -449,6 +504,34 @@ export default {
       input.blur(); // 휴대폰 자판 닫기
       changed({ push: true });
     }
+    async function retryAudio(id) {
+      const current = () => alive && el.isConnected && resumeEpoch === returnEpoch;
+      const call = calls.find(c => c.id === id);
+      if (!current() || !canRetryListCall(call,role)) return;
+      // 재렌더·연속 클릭에도 같은 요청은 한 번만 보낸다.
+      const result = retries.submit(call);
+      function paint() {
+        const row = [...slot('results').querySelectorAll('[data-call-id]')].find(r => r.dataset.callId === id);
+        const box = row?.querySelector('.cl-retry-box');
+        if (!box) return;
+        const focused = box.contains(document.activeElement);
+        const holder = document.createElement('div');
+        render(holder,listRetryMarkup(call,role,retries.get(id)));
+        box.replaceWith(holder.firstElementChild);
+        if (focused) row.querySelector('[data-act="retry-audio"]')?.focus({preventScroll:true});
+      }
+      paint();
+      const next = await result;
+      if (!next || !current()) return;
+      paint();
+      if (next.phase !== 'accepted') return;
+      toast(next.message,'ok');
+      if (!calls.some(c => c.id === id)) return;
+      // 200건 초과/자동 갱신 보류 목록을 강제로 축소하거나 현재 필터를 바꾸지 않는다.
+      if (calls.length > 200 || refreshPaused) { pauseRefresh('받아쓰기 재요청을 접수했습니다.'); return; }
+      const applied = await load({silent:true, retriedId:id});
+      if (applied === false && current() && !refreshPaused) pauseRefresh('재요청은 접수했지만 목록을 갱신하지 못했습니다.');
+    }
     function onClick(e) {
       restoreCancelled = true;
       const t = e.target;
@@ -492,6 +575,7 @@ export default {
           load().then(ok => { if (ok && alive && el.isConnected) { input.focus({ preventScroll: true }); input.scrollIntoView({ block: 'center' }); } });
           break;
         case 'more': act.disabled = true; act.textContent = '불러오는 중…'; load({ append: true }); break;
+        case 'retry-audio': if (act.getAttribute('aria-disabled') !== 'true') void retryAudio(act.closest('[data-call-id]')?.dataset.callId); break;
         case 'retry': load(); break;
         default: break;
       }

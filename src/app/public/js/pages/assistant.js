@@ -1,5 +1,6 @@
 import { api } from '../api.js';
 import { html, render, href, fmtWhen, errorBox, copyText, confirmBox, toast } from '../ui.js';
+import { evidenceResult } from './assistant-evidence.js';
 import { citeView } from './ask-citation.js';
 
 const DEFAULT_QUESTION_LIMIT = 300;
@@ -13,6 +14,7 @@ const THREADS = '/api/assistant/threads/';
 export default {
   title: '업무 도우미',
   mount(el, ctx) {
+    const embedded = ctx.embedded === true;
     let context = null;
     let threads = [];
     let thread = null;
@@ -26,8 +28,12 @@ export default {
     let draft = null;
     let failure = null;
     let disposed = false;
+    let evidenceInvalidated = false;
+    const invalidateEvidence = () => { evidenceInvalidated = true; };
+    const evidenceEvents = ['ahmatda:workspace-changed', 'ahmatda:session-expired', 'ahmatda:explicit-logout'];
+    for (const name of evidenceEvents) window.addEventListener(name, invalidateEvidence);
 
-    render(el, html`<div class="page as-page">
+    render(el, html`<div class="page as-page ${embedded ? 'as-embedded' : ''}">
       <div class="page-head">
         <div><h1>업무 도우미</h1><p class="sub">선택한 통화에서 할 일을 정리하고 재연락 문안을 준비하세요.</p></div>
         <a class="btn" href="#/ask">여러 통화에서 내용 찾기 →</a>
@@ -42,24 +48,32 @@ export default {
         </details>
         <section class="as-chat" aria-labelledby="as-chat-title">
           <header class="as-chat-head">
-            <div><h2 id="as-chat-title">아차 어시스턴트</h2><p class="help">통화와 승인된 지식을 근거로 답변해요.</p></div>
-            <div class="ka-actions"><button type="button" class="btn" data-act="new">＋ 새 대화</button></div>
+            <div><h2 id="as-chat-title">${embedded ? 'Ask 아차' : '아차 어시스턴트'}</h2><p class="help">통화와 승인된 지식을 근거로 답변해요.</p></div>
+            <div class="ka-actions"><button type="button" class="btn" data-act="new" aria-label="새 대화"><span class="as-new-icon" aria-hidden="true">↗</span><span class="as-new-label">＋ 새 대화</span></button></div>
           </header>
+          ${embedded ? html`<details class="as-history-menu"><summary>대화 기록</summary>` : ''}
           <div class="as-history">
             <label class="field"><span>저장된 대화</span><select class="select" data-ref="threads"><option value="">새 대화</option></select></label>
             <button type="button" class="btn btn-ghost" data-act="delete" disabled>대화 삭제</button>
           </div>
+          ${embedded ? html`</details>` : ''}
           <div class="ask-thread as-thread" data-ref="thread" aria-label="대화 메시지"></div>
           <p class="sr-only" data-ref="announce" role="status"></p>
           <div data-ref="error"></div>
+          <div class="as-scoped-prompts" ${embedded ? '' : html`hidden`} aria-label="현재 통화 질문 예시">${[
+            '수량을 마지막에 몇 개로 바꿨어?',
+            '이 부품 좌우가 확정됐어?',
+            '차종·연식·품번 중 뭐가 비었어?',
+            '출고 전에 다시 전화할 내용이 있어?'
+          ].map(q => html`<button type="button" class="btn" data-question="${q}">${q}</button>`)}</div>
           <div class="ka-actions as-shortcuts">
             ${ctx.meta?.access?.demo === false ? '' : html`<button type="button" class="btn" data-act="example">예시 대화 보기</button>`}
             <button type="button" class="btn" data-act="current-draft" disabled>재연락 문안 열기</button>
           </div>
           <form class="as-compose" data-ref="form">
             <label class="sr-only" for="as-question">어시스턴트에게 질문</label>
-            <textarea class="textarea" id="as-question" rows="2" maxlength="${DEFAULT_QUESTION_LIMIT}" enterkeyhint="send" placeholder="주문에서 다시 확인할 게 있을까요?"></textarea>
-            <button type="submit" class="btn btn-primary" data-act="send" disabled>보내기</button>
+            <textarea class="textarea" id="as-question" rows="${embedded ? 1 : 2}" maxlength="${DEFAULT_QUESTION_LIMIT}" enterkeyhint="send" placeholder="주문에서 다시 확인할 게 있을까요?"></textarea>
+            <button type="submit" class="btn btn-primary" data-act="send" aria-label="보내기" disabled>${embedded ? html`<span aria-hidden="true" class="as-arrow">↑</span><span class="as-send-label">전송</span>` : '보내기'}</button>
             <button type="button" class="btn" data-act="stop" hidden>응답 중단</button>
           </form>
           <p class="help" id="as-thread-loading" data-ref="thread-loading" role="status" hidden></p>
@@ -114,7 +128,7 @@ export default {
       render(select, context.calls.length ? html`${context.calls.map((call) => html`<option value="${call.id}">${call.title || call.customer || '통화'}</option>`)}`
         : html`<option value="">선택할 통화 없음</option>`);
       select.value = context.selected?.id || '';
-      select.disabled = !context.calls.length;
+      select.disabled = embedded || !context.calls.length;
       input.maxLength = context.questionLimit || DEFAULT_QUESTION_LIMIT;
       ref('count').textContent = '승인된 지식 ' + context.approvedCount + '개';
       act('current-draft').disabled = !context.selected;
@@ -124,6 +138,7 @@ export default {
     }
 
     async function refreshContext(callId = '', recoverMissing = false) {
+      if(embedded) { callId=ctx.query.call; recoverMissing=false; }
       contextRequest?.abort();
       const controller = new AbortController();
       contextRequest = controller;
@@ -166,9 +181,9 @@ export default {
       if (example) parts.push(...EXAMPLE.map((message) => messageView(message, true)));
       if (request) {
         parts.push(messageView({ role: 'user', text: request.question }));
-        parts.push(html`<div class="ask-msg is-bot"><div class="ask-bubble is-wait" role="status"><span class="spinner" aria-hidden="true"></span> 통화와 공유 지식을 살펴보는 중…</div></div>`);
+        parts.push(html`<div class="ask-msg is-bot"><div class="ask-bubble is-wait" role="status"><span class="spinner" aria-hidden="true"></span> 통화 기록 확인 중…</div></div>`);
       }
-      render(log, parts.length ? html`${parts}` : html`<div class="as-welcome"><span class="as-icon" aria-hidden="true">✧</span><h3>어떤 일부터 함께할까요?</h3><p>주문 내용이나 팀에서 승인한 현장 표현을 물어보세요.</p></div>`);
+      render(log, parts.length ? html`${parts}` : embedded ? html`<p class="as-welcome-note">이 통화의 주문 내용과<br>다시 확인할 부분을 물어보세요.</p>` : html`<div class="as-welcome"><span class="as-icon" aria-hidden="true">✧</span><h3>어떤 일부터 함께할까요?</h3><p>주문 내용이나 팀에서 승인한 현장 표현을 물어보세요.</p></div>`);
       log.scrollTop = log.scrollHeight;
       render(ref('error'), failure ? html`<div class="notice notice-error as-error" role="alert"><span>${failure.message}</span>
         ${failure.question ? html`<button type="button" class="btn" data-act="retry">다시 시도</button>` : ''}</div>` : '');
@@ -222,7 +237,8 @@ export default {
       const question = (text || '').trim().slice(0, input.maxLength);
       if (!question || !context || request || threadRequest) return;
       const controller = new AbortController();
-      const current = { controller, question };
+      const current = { controller, question, callId: context?.selected?.id,
+        workspaceId: ctx.meta?.access?.workspace?.id ?? null, route: location.hash };
       request = current;
       failure = null;
       example = false;
@@ -230,11 +246,20 @@ export default {
       announce('답변을 기다리는 중입니다.');
       paintChat();
       try {
-        const out = await api.post('/api/assistant', { message: question, threadId: thread?.id, callId: context?.selected?.id }, { signal: controller.signal });
+        const out = await api.post('/api/assistant', { message: question, threadId: thread?.id, callId: current.callId }, { signal: controller.signal });
         if (disposed || request !== current) return;
         thread = out.thread;
         rememberThread(thread);
         announce('답변이 도착했어요. ' + out.answer);
+        const evidence = evidenceResult({ question, response: out, embedded,
+          active: !disposed && !controller.signal.aborted && request === current && !evidenceInvalidated,
+          requestCallId: current.callId, selectedCallId: context?.selected?.id, viewCallId: ctx.query?.call,
+          workspaceUnchanged: current.workspaceId === (ctx.meta?.access?.workspace?.id ?? null),
+          routeUnchanged: current.route === location.hash });
+        if (evidence && typeof ctx.onEvidenceResult === 'function') {
+          // Receiver rechecks quote/time against its mounted call; this is a read-only UI hint.
+          try { ctx.onEvidenceResult(evidence); } catch { /* 답변은 유지하고 자동 이동만 생략한다. */ }
+        }
       } catch (error) {
         if (disposed || controller.signal.aborted || request !== current) return;
         failure = { message: friendlyError(error), question };
@@ -363,12 +388,14 @@ export default {
     ref('threads').addEventListener('change', (event) => openThread(event.target.value));
 
     root.addEventListener('click', (event) => {
+      const prompt=event.target.closest('[data-question]');
+      if(prompt && !request && !threadRequest){input.value=prompt.dataset.question.slice(0,input.maxLength);syncButtons();input.focus();return;}
       const button = event.target.closest('button[data-act]');
       if (!button || button.disabled || disposed) return;
       const { act: action, id } = button.dataset;
       if (action === 'new') newChat();
       else if (action === 'delete') deleteChat();
-      else if (action === 'refresh') refreshContext(context?.selected?.id);
+      else if (action === 'refresh' && !contextRequest) refreshContext(context?.selected?.id);
       else if (action === 'draft') openDraft(id);
       else if (action === 'current-draft') openDraft(context?.selected?.id);
       else if (action === 'close-draft') dialog.close();
@@ -382,14 +409,27 @@ export default {
       }
     });
 
+    let embeddedStarted = false;
+    function startEmbeddedContext() {
+      if (!embedded || embeddedStarted || disposed || evidenceInvalidated) return;
+      embeddedStarted = true;
+      refreshContext(ctx.query?.call, false);
+    }
     paintChat();
-    refreshContext(ctx.query?.call, true);
+    if (embedded) {
+      render(ref('suggestions'), html`<p class="muted">대화를 시작하면 현재 통화의 제안을 불러옵니다.</p>`);
+      root.addEventListener('focusin', startEmbeddedContext);
+      root.addEventListener('click', startEmbeddedContext, true);
+    } else refreshContext(ctx.query?.call, true);
     if (ctx.query?.q) {
       input.value = String(ctx.query.q).slice(0, input.maxLength);
       syncButtons();
     }
     return () => {
       disposed = true;
+      root.removeEventListener('focusin', startEmbeddedContext);
+      root.removeEventListener('click', startEmbeddedContext, true);
+      for (const name of evidenceEvents) window.removeEventListener(name, invalidateEvidence);
       layoutMedia.removeEventListener('change', syncLayout);
       request?.controller.abort();
       draftRequest?.abort();
