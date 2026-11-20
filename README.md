@@ -2,6 +2,37 @@
 
 > 인간-인공지능협업제품서비스설계 · T07 생성형 AI 팀 프로젝트
 
+## 설치 에이전트에게 이대로 보내세요
+
+> 이 저장소의 아차를 내 컴퓨터에서 먼저 체험할 수 있게 설치해 줘. Node.js 24가 있는지 확인하고, 아래 **로컬 첫 실행** 순서로 테스트해 줘. 기존 설정과 데이터는 그대로 두고 새 임시 데이터 폴더를 써. Docker, 유료 API, 고객 녹음, 인터넷 공개는 필요 없어. 켜지면 접속 주소와 `/healthz` 결과, 종료 방법을 알려 줘. 실제 모델이 필요하면 이어서 내 Mac 또는 팀 서버 설치 안내를 보고 필요한 것만 준비해 줘. 이 설치 요청만으로 원격 브랜치나 운영 환경을 변경하지 마.
+
+### 로컬 첫 실행: 키 없이 샘플 열기
+
+저장소 루트에서 시작한다. `npm ci`는 최초 의존성 다운로드에 인터넷이 필요하다. Node.js 24가 준비되지 않았으면 먼저 [Node.js 공식 설치 안내](https://nodejs.org/en/download)를 따른다.
+
+```sh
+node --version                      # v24.x 확인
+cd src/app
+npm ci --omit=dev --ignore-scripts --no-audit --no-fund
+demo_data="$(mktemp -d)" || exit 1
+printf '체험 데이터: %s\n' "$demo_data"
+env -i PATH="$PATH" HOME="$HOME" \
+  HOST=127.0.0.1 PORT=5600 PUBLIC_BASE_URL=http://127.0.0.1:5600 \
+  DEMO_MODE=1 DATA_DIR="$demo_data" AUTH_MAIL_MODE=outbox \
+  AI_PROVIDER=fixture ALLOW_PAID_AI=0 node server.mjs
+```
+
+- **접속:** [내 컴퓨터에서 아차 열기](http://127.0.0.1:5600/). 별도 터미널에서 `curl -fsS http://127.0.0.1:5600/healthz`로 기동을 확인한다. 포트가 이미 사용 중이면 기존 프로세스를 끄지 말고, 빈 포트로 `PORT`·`PUBLIC_BASE_URL`·접속 주소를 함께 바꾼다.
+- **범위:** 샘플 통화와 주문 화면을 체험한다. 실제 받아쓰기·메일 발송·AI 모델 연결은 이 방식에 포함되지 않는다. 외부에 포트를 열지 않는다.
+- **종료:** 실행 터미널에서 `Ctrl+C`. 출력한 임시 경로만 정리하면 된다. 기존 `.env`와 작업공간은 읽거나 변경하지 않는다.
+- **실사용:** [Mac 소스 설치](docs/mac-app.md) 또는 [팀 서버 자가 호스팅](docs/self-hosting.md). 서명·공증된 일반 설치 파일은 아직 제공하지 않는다.
+
+### 팀 dev 배포는 별도
+
+- 팀 서버의 [배포 구성](ops/server/README.md)은 `origin/dev`를 감시한다. **이 서버에서는 dev 머지가 곧 배포 경로**다. GitHub의 [배포 게이트](.github/workflows/dev-release-gate.yml)는 모의 자료로 검사할 뿐 실제 배포나 운영 백업 복원을 수행하지 않는다.
+- dev 반영 전: 정확한 후보 커밋의 CI와 깨끗한 환경에서 첫 실행을 확인한다. 운영 설정은 그대로 두고 최신 데이터 백업을 격리 복원하여 관리자·기존 주문/통화·권한이 보존되는지 확인한다.
+- dev 반영 후: [배포 상태](https://t07.3-39-67-126.sslip.io/status.json), [헬스 체크](https://t07.3-39-67-126.sslip.io/healthz), GitHub dev의 커밋을 대조한다. 이어서 작업공간과 주문 화면의 읽기 동작을 확인한다. 헬스 체크 실패의 자동 롤백은 앱 버전 기준이며, 실제 데이터 복원을 대신하지 않는다.
+
 ## 한 줄 소개
 
 **아차**는 전화 주문을 받아쓰고, 통화 근거가 붙은 주문 초안으로 정리해 **사람의 확인과 출고**를 돕는다. 현재 기본 업종은 자동차 부품 대리점이다.

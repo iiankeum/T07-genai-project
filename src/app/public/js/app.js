@@ -81,12 +81,16 @@ const isActive = (item, page) => (Array.isArray(item.page) ? item.page.includes(
 // The hash router and access checks remain the single source of truth.
 let montageShell;
 let currentNav;
+let workspaceLabelInvalidated = false;
 function renderNav(page, meta) {
   currentNav = { page, meta };
-  const workspace = meta?.access?.workspace;
+  const access = workspaceLabelInvalidated ? null : meta?.access;
+  const demo = access?.demo === true;
+  const name = typeof access?.workspace?.name === 'string' ? access.workspace.name.trim() : '';
+  const workspaceName = demo ? '작업공간' : (access?.user?.id && name) || '워크스페이스';
   const customerTab = new URLSearchParams(location.hash.split('?')[1]).get('tab') === 'customer';
   const model = {
-    workspace: { href: WORKSPACES.href, name: workspace?.name || '워크스페이스', demo: meta?.demo === true },
+    workspace: { href: WORKSPACES.href, name: workspaceName, demo },
     groups: [
       { label: '업무', items: NAV.slice(0, 4) },
       { label: '찾기와 관리', items: [NAV[6], NAV[5], { href: '#/knowledge?tab=customer', label: '거래처', page: 'glossary' }, NAV[7], { href: '#/more', label: '모든 도구', page: 'more' }] },
@@ -256,6 +260,9 @@ document.querySelector('.skip-link').addEventListener('click', (event) => {
 });
 window.addEventListener('hashchange', route);
 window.addEventListener('ahmatda:workspace-changed', () => {
+  // Hide the old account label until this tab has reloaded.
+  workspaceLabelInvalidated = true;
+  if (currentNav) renderNav(currentNav.page, currentNav.meta);
   if (document.getElementById('workspaceChangedNotice')) return;
   const notice = document.createElement('div');
   notice.id = 'workspaceChangedNotice';

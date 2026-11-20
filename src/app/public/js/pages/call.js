@@ -72,12 +72,14 @@ export default {
     const target = { seg: ctx.query.seg, at: ctx.query.t };
     let targetDone = ctx.query.seg === undefined && ctx.query.t === undefined;
     const wideMq = window.matchMedia('(min-width: 1024px)');
+    const evidenceDockMq = window.matchMedia('(min-width: 1380px)');
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     render(el, html`<div class="page cd-page cd-desk-page cd-with-assistant montage-scope" data-mobile-pane="card">
       <div class="cd-overview">
         <nav class="cd-topnav no-print" aria-label="통화 탐색">
           <a class="cd-back" href="${backHref()}">${icon('arrow')} 통화 기록으로</a>
+          <button type="button" class="btn btn-sm cd-evidence-toggle" data-act="open-transcript" aria-controls="cd-trans" aria-expanded="false">통화 원문 보기</button>
           <a class="btn btn-sm" href="#/upload">${icon('upload')} 녹음 올리기</a>
         </nav>
         <div data-slot="head"><p class="loading" role="status">불러오는 중…</p></div>
@@ -108,7 +110,7 @@ export default {
           </div>
         </details>
         <section class="cd-panel cd-trans" id="cd-trans" aria-labelledby="cd-trans-h" data-slot="trans" tabindex="-1">
-          <div class="cd-drawer-head"><span>선택 통화 · 원문 확인</span><button type="button" class="btn btn-sm" data-act="close-transcript">최근 주문 목록</button></div><div data-slot="trans-head"></div>
+          <div class="cd-drawer-head"><span>통화 원문</span><button type="button" class="btn btn-sm" data-act="close-transcript">원문 접기</button></div><div data-slot="trans-head"></div>
           <div class="cd-player-slot" data-slot="player"></div>
           <div class="cd-trans-scroll" data-slot="trans-scroll" tabindex="0" role="region" aria-label="대화 내용"></div>
         </section>
@@ -481,12 +483,14 @@ export default {
       if (fromBottom <= fromTop || toBottom <= toTop) return;
       const fromY = (fromTop + fromBottom) / 2;
       const toY = Math.min(Math.max(to.top + Math.min(to.height / 2, 22), toTop), toBottom);
-      const x1 = from.right - origin.left;
-      const x2 = to.left - origin.left;
+      // The recording can sit on either side of the order at different widths.
+      const transcriptOnLeft = panelRect.left < cardRect.left;
+      const x1 = (transcriptOnLeft ? from.right : from.left) - origin.left;
+      const x2 = (transcriptOnLeft ? to.left : to.right) - origin.left;
       const y1 = fromY - origin.top;
       const y2 = toY - origin.top;
       const mid = (x1 + x2) / 2;
-      if (x2 <= x1) return;
+      if (transcriptOnLeft ? x2 <= x1 : x2 >= x1) return;
       path.setAttribute('d', `M ${x1} ${y1} C ${mid} ${y1}, ${mid} ${y2}, ${x2} ${y2}`);
       start.setAttribute('cx', x1);
       start.setAttribute('cy', y1);
@@ -578,7 +582,7 @@ export default {
     function setDesktopTranscript(open) {
       if (!wideMq.matches) return;
       root.classList.toggle('cd-transcript-open', open);
-      root.querySelector('[data-act="open-transcript"]')?.setAttribute('aria-expanded', String(open));
+      root.querySelectorAll('[data-act="open-transcript"]').forEach(button => button.setAttribute('aria-expanded', String(open)));
       requestAnimationFrame(() => { measure(); scheduleConnector(); });
     }
     function onAssistantEvidence(result) {
@@ -718,6 +722,7 @@ export default {
       if (!prev || Boolean(prev.hasAudio) !== Boolean(c.hasAudio)) renderPlayer();
       renderProgress();
       slot('body').classList.remove('hidden');
+      if (!prev && evidenceDockMq.matches && c.hasAudio) setDesktopTranscript(true);
       const working = WORKING.includes(c.status);
       if (working) {
         cardCtl?.destroy();
@@ -810,7 +815,7 @@ export default {
       const act = t.closest('[data-act]');
       if (act && !slot('card').contains(act)) {
         switch (act.dataset.act) {
-          case 'open-transcript': setDesktopTranscript(true); return;
+          case 'open-transcript': setDesktopTranscript(!act.matches('.cd-evidence-toggle') || !root.classList.contains('cd-transcript-open')); return;
           case 'close-transcript': setDesktopTranscript(false); root.querySelector('[data-act="open-transcript"]')?.focus({preventScroll:true}); return;
           case 'back5': if (audio) { audio.currentTime = Math.max(0, audio.currentTime - 5); } return;
           case 'follow':

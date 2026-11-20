@@ -217,7 +217,7 @@ export function mountCard(el, o) {
     return html`<li class="cd-item ${flags.length ? 'is-unsure' : ''}" data-ev="item:${i}">
       <div class="cd-item-head">
         <span class="cd-item-no" aria-hidden="true">${n}</span>
-        <span class="cd-item-title">품목 ${n}</span>
+        <span class="cd-item-title">${it.part || `품목 ${n}`}</span>
         <span class="cd-chipslot" data-chip="item:${i}">${chipFor(`item:${i}`)}</span>
 
       </div>
@@ -394,7 +394,7 @@ export function mountCard(el, o) {
     const actions = actionsView();
     render(el, html`
       <header class="cd-card-head">
-        <div class="cd-pane-title"><h2 id="cd-card-h">주문서</h2><span data-slot="status">${cardChip(card.status)}</span></div>
+        <div class="cd-pane-title"><div class="cd-slip-title"><small>Order sheet</small><h2 id="cd-card-h">주문서</h2></div><span data-slot="status">${cardChip(card.status)}</span></div>
         <div class="cd-card-toolbar">
           <div class="cd-save-indicator" data-slot="save-indicator" aria-live="polite">${saveIndicator()}</div>
           ${actions ? html`<button type="button" class="cd-actions-jump" data-act="status-jump" aria-controls="cd-card-actions">처리 버튼 보기</button>` : ''}
@@ -403,7 +403,7 @@ export function mountCard(el, o) {
       <div class="cd-card-scroll" tabindex="0" role="region" aria-label="주문 카드 내용">
         <div data-slot="save-status" tabindex="-1" aria-live="polite">${saveStatus()}</div>
         ${card.aiError ? html`<p class="notice notice-warn" role="note">AI 초안을 만들지 못했습니다. 주문 정보를 직접 채워 주세요. ${card.aiError}</p>` : ''}
-        <section class="cd-order-primary" aria-label="거래처와 출고 요청일"><div class="cd-grid">${fieldBlock(TOP_FIELDS[0], groups)}${fieldBlock(WHEN_FIELDS[0], groups)}</div></section>
+        <section class="cd-order-primary" aria-label="거래처, 차량과 출고 요청일"><div class="cd-grid">${[TOP_FIELDS[0], WHEN_FIELDS[0], TOP_FIELDS[2], TOP_FIELDS[3]].map(f => fieldBlock(f, groups))}</div></section>
         ${itemsSection(groups)}
         <div class="cd-order-context" data-slot="order-context">${contextView()}</div>
         <section class="cd-card-section" aria-labelledby="cd-fields-h">
@@ -416,7 +416,7 @@ export function mountCard(el, o) {
               ${card.aiModel ? html`<p>${card.aiModel}${card.updatedAt ? ` · 마지막 저장 ${fmtWhen(card.updatedAt)}` : ''}</p>` : ''}
             </details>
           </div>
-          <div class="cd-grid">${TOP_FIELDS.slice(1).map((f) => fieldBlock(f, groups))}${typeBlock()}</div>
+          <div class="cd-grid">${[TOP_FIELDS[1], TOP_FIELDS[4]].map((f) => fieldBlock(f, groups))}${typeBlock()}</div>
         </section>
         <section class="cd-sec" aria-labelledby="cd-delivery-h">
           <h3 id="cd-delivery-h">배송 및 요청사항</h3>

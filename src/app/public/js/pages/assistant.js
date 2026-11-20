@@ -60,7 +60,12 @@ export default {
           <div class="ask-thread as-thread" data-ref="thread" aria-label="대화 메시지"></div>
           <p class="sr-only" data-ref="announce" role="status"></p>
           <div data-ref="error"></div>
-          <div class="as-scoped-prompts" ${embedded ? '' : html`hidden`} aria-label="현재 통화 질문 예시">${['이 통화에서 다시 확인할 내용을 정리해 줘.','이 통화의 수량 변경 근거를 찾아 줘.'].map(q => html`<button type="button" class="btn" data-question="${q}">${q.includes('수량') ? '수량 바뀐 근거 찾아줘' : '이 주문에서 확인할 건?'}</button>`)}</div>
+          <div class="as-scoped-prompts" ${embedded ? '' : html`hidden`} aria-label="현재 통화 질문 예시">${[
+            '수량을 마지막에 몇 개로 바꿨어?',
+            '이 부품 좌우가 확정됐어?',
+            '차종·연식·품번 중 뭐가 비었어?',
+            '출고 전에 다시 전화할 내용이 있어?'
+          ].map(q => html`<button type="button" class="btn" data-question="${q}">${q}</button>`)}</div>
           <div class="ka-actions as-shortcuts">
             ${ctx.meta?.access?.demo === false ? '' : html`<button type="button" class="btn" data-act="example">예시 대화 보기</button>`}
             <button type="button" class="btn" data-act="current-draft" disabled>재연락 문안 열기</button>
@@ -176,7 +181,7 @@ export default {
       if (example) parts.push(...EXAMPLE.map((message) => messageView(message, true)));
       if (request) {
         parts.push(messageView({ role: 'user', text: request.question }));
-        parts.push(html`<div class="ask-msg is-bot"><div class="ask-bubble is-wait" role="status"><span class="spinner" aria-hidden="true"></span> 통화와 공유 지식을 살펴보는 중…</div></div>`);
+        parts.push(html`<div class="ask-msg is-bot"><div class="ask-bubble is-wait" role="status"><span class="spinner" aria-hidden="true"></span> 통화 기록 확인 중…</div></div>`);
       }
       render(log, parts.length ? html`${parts}` : embedded ? html`<p class="as-welcome-note">현재 통화와 팀에서 확인한 지식을 함께 살펴봅니다.</p>` : html`<div class="as-welcome"><span class="as-icon" aria-hidden="true">✧</span><h3>어떤 일부터 함께할까요?</h3><p>주문 내용이나 팀에서 승인한 현장 표현을 물어보세요.</p></div>`);
       log.scrollTop = log.scrollHeight;

@@ -9,8 +9,9 @@
 ```sh
 cd src/app
 npm ci
-umask 077
-cp .env.example .env
+if [ ! -e .env ] && [ ! -L .env ]; then
+  (umask 077; set -C; cat .env.example > .env) || exit 1
+fi
 node --env-file=.env server.mjs
 ```
 
@@ -30,8 +31,9 @@ node --env-file=.env server.mjs
 Docker Engine/Compose를 이미 사용하는 설치자만 저장소 루트에서 실행한다. 첫 빌드에서 Node 이미지와 패키지를 다운로드한다.
 
 ```sh
-umask 077
-cp src/app/.env.example src/app/.env
+if [ ! -e src/app/.env ] && [ ! -L src/app/.env ]; then
+  (umask 077; set -C; cat src/app/.env.example > src/app/.env) || exit 1
+fi
 docker compose --env-file src/app/.env up -d --build --wait
 ```
 

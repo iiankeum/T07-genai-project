@@ -408,3 +408,32 @@ h2, h3, .card-title { font-weight: 650; }
   font-weight: 600;
 }
 .ahcha-montage-shell .nav-link > svg { width: 20px; height: 20px; flex: 0 0 20px; }
+
+/* Quiet typography on work pages without changing order detail, navigation or large text. */
+body:not(.is-guest):not([data-page="call"]) .view { background: var(--paper); }
+html:not(.big-text) body:not(.is-guest):not([data-page="call"]) .view :is(.page-head, .today-heading) h1 {
+  font-size: clamp(1.35rem, 2.15vw, 1.65rem);
+  line-height: 1.42;
+  letter-spacing: -.025em;
+}
+
+/* Desktop LNB: compact, neutral document navigation. Keep the shell layout and all routes. */
+@media (min-width: 900px) {
+  #sideNav.sidenav { background: #fafafa; border-right-color: #ebebed; padding: 16px 12px; }
+  #sideNav .lnb-workspace { margin: 0 0 14px; padding: 0 0 12px; border-bottom: 1px solid #ebebed; }
+  #sideNav .workspace-switch { margin: 0; border-color: transparent; background: transparent; border-radius: 6px; }
+  #sideNav .workspace-switch:hover { background: #ededf0; }
+  #sideNav .workspace-monogram { background: #eeeef0; border-color: #e8e8eb; color: #4b4e55; }
+  #sideNav .nav-group + .nav-group { margin-top: 18px; }
+  #sideNav .nav-group-label { margin: 0 9px 6px; color: #636670; font-size: .71rem; font-weight: 550; }
+  #sideNav ul { gap: 2px; }
+  #sideNav .nav-link { padding: 7px 9px; gap: 9px; border-radius: 6px; color: #43464e; font-size: .84rem; font-weight: 500; }
+  #sideNav .nav-link :is(svg, .nav-icon) { width: 17px; height: 17px; color: #646872; }
+  #sideNav .nav-link:hover { color: #24262a; background: #f0f0f2; }
+  #sideNav .nav-link[aria-current="page"] { color: #24262a; background: #e9e9ec; font-weight: 650; }
+  #sideNav .nav-link[aria-current="page"] :is(svg, .nav-icon) { color: #35383f; }
+  #sideNav .lnb-bottom { padding-top: 14px; }
+}
+@media (min-width: 900px) and (pointer: fine) {
+  html:not(.big-text) #sideNav .nav-link { min-height: 36px; }
+}

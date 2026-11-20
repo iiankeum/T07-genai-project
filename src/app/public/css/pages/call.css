@@ -842,3 +842,53 @@ body[data-page="call"] { background:#fff; }
 }
 
 .cd-sub-qty.cd-assistant-evidence-target { border-radius:8px; outline:2px solid var(--brand); outline-offset:3px; }
+
+/* Large desktop: the order document remains visible beside the call source. */
+.cd-evidence-toggle { display:none; }
+@media screen and (min-width:1380px) {
+ .cd-with-assistant { --cd-chat-width:300px; --cd-order-rule:#dcdde1; }
+ .cd-with-assistant .cd-topnav .cd-evidence-toggle { display:inline-flex; min-height:36px; }
+ .cd-with-assistant.cd-transcript-open .cd-body { grid-template-columns:minmax(0,1fr) minmax(252px, .61fr); grid-template-rows:minmax(0,1fr); gap:16px; }
+ .cd-with-assistant.cd-transcript-open .cd-body > .cd-history { display:none; }
+ .cd-with-assistant.cd-transcript-open .cd-body > .cd-card { grid-column:1;grid-row:1;padding:0 16px 0 0; }
+ .cd-with-assistant.cd-transcript-open .cd-body > .cd-trans { grid-column:2;grid-row:1;padding:0 0 0 14px; border-left:1px solid var(--cd-order-rule); }
+ .cd-with-assistant .cd-drawer-head { font-size:.83rem; }
+ .cd-with-assistant .cd-trans .cd-player-slot { min-width:0; }
+ .cd-with-assistant .cd-trans audio { display:block;width:100%;min-width:0; }
+}
+.cd-with-assistant .cd-card .cd-card-head { border-bottom:1px solid var(--line); }
+.cd-with-assistant .cd-card .cd-pane-title h2 { letter-spacing:-.025em; }
+
+/* Acha order slip: restrained document typography, shared rules and editable ruled cells. */
+.cd-with-assistant .cd-card { --slip-rule:#dcdde1; --slip-strong:#272b30; --slip-muted:#656b76; --slip-pad:16px; color:#24272d; }
+.cd-with-assistant .cd-card .cd-card-head { align-items:flex-end; border-bottom:2px solid var(--slip-strong); padding:6px 0 14px; }
+.cd-with-assistant .cd-card .cd-pane-title { align-items:flex-end; gap:12px; }
+.cd-slip-title small { display:block; color:var(--slip-muted); font-size:.58rem; font-weight:550; letter-spacing:.18em; line-height:1.5; text-transform:uppercase; }
+.cd-with-assistant .cd-card .cd-slip-title h2 { font-size:1.7rem; letter-spacing:.12em; line-height:1.4; font-weight:710; }
+.cd-with-assistant .cd-card .cd-card-scroll > .cd-order-primary { margin:0; padding:0; border:0; }
+.cd-with-assistant .cd-card .cd-order-primary .cd-grid { gap:0 14px; }
+.cd-with-assistant .cd-card .cd-order-primary .cd-field { border-bottom:1px solid var(--slip-rule); padding:10px 0 4px; }
+.cd-with-assistant .cd-card :is(.cd-label,.cd-sub > span) { color:var(--slip-muted); font-size:.74rem; }
+.cd-with-assistant .cd-card .cd-item { border-top:1px solid var(--slip-rule); padding:11px 0 7px; border-radius:0; background:none; }
+.cd-with-assistant .cd-card .cd-item-title { font-weight:650; }
+.cd-with-assistant .cd-card .cd-item-no { background:transparent; color:var(--slip-muted); border-radius:0; padding:0; }
+.cd-with-assistant .cd-card .cd-evbtn { border-color:transparent; background:transparent; }
+.cd-with-assistant .cd-card .cd-item-grid { gap:7px 12px; }
+.cd-with-assistant .cd-card .cd-item-grid .cd-sub-part { grid-column:1; grid-row:1; }
+.cd-with-assistant .cd-card .cd-item-grid .cd-sub-no { grid-column:2; grid-row:1; }
+.cd-with-assistant .cd-card .cd-item-grid .cd-sub-side { grid-column:1; grid-row:2; }
+.cd-with-assistant .cd-card .cd-item-grid .cd-sub-qty { grid-column:2; grid-row:2; }
+.cd-with-assistant .cd-card .cd-item-grid input.input:not([aria-invalid=true]),
+.cd-with-assistant .cd-card .cd-order-primary input.input:not([aria-invalid=true]) { border:0 !important; background:transparent; box-shadow:none; border-radius:4px; padding-inline:4px; font-weight:570; }
+.cd-with-assistant .cd-card .cd-item-grid input.input:focus,
+.cd-with-assistant .cd-card .cd-order-primary input.input:focus { background:#f2f7ff; }
+.cd-with-assistant .cd-card .cd-item-grid input.cd-qty-input { font-size:1.16rem; }
+.cd-with-assistant .cd-card .cd-action-state { border-top:1px solid var(--slip-rule); }
+@media screen and (min-width:1380px) {
+ .cd-with-assistant .cd-body>.cd-card { border-left:0; }
+ .cd-with-assistant .cd-card .cd-order-primary .cd-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media screen and (max-width:420px) {
+ .cd-with-assistant .cd-card .cd-order-primary .cd-grid { grid-template-columns:minmax(0,1fr); }
+ .cd-with-assistant .cd-card .cd-item .cd-item-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}

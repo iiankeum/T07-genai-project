@@ -11,15 +11,28 @@ for(const [label,demo,demoAvailable,sample,guest,provider] of [
  ['authenticated workspace, public demo enabled, actual sample + fixture mode',false,true,true,false,'fixture'],
  ['public anonymous demo',true,true,false,false,'fixture'],
  ['public help before sign-in',false,false,false,true,'off']]){
- const ctx=await browser.newContext({serviceWorkers:'block'}),worker={online:false,queue:{waiting:1}},meta={access:guest?null:{demo,role:'admin',workspace:{id:'scope-'+label,name:'확인 작업공간'},user:demo?null:{id:'local-test-actor'}},demo,demoAvailable,aiProvider:provider,aiEnabled:provider==='fixture',worker};
+ const ctx=await browser.newContext({serviceWorkers:'block'}),worker={online:false,queue:{waiting:1}},meta={access:guest?null:{demo,role:'admin',workspace:{id:'scope-'+label,name:demo?'비공개 테스트 이름':'확인 작업공간'},user:demo?null:{id:'local-test-actor'}},demo,demoAvailable,aiProvider:provider,aiEnabled:provider==='fixture',worker};
  await ctx.route('**/*',async r=>{const u=new URL(r.request().url());if(u.origin!==origin||r.request().method()!=='GET'){blocked.push([u.pathname,r.request().method()]);return r.abort();}if(!u.pathname.startsWith('/api/'))return r.continue();
  let status=200;let data={};if(u.pathname==='/api/meta')data=meta;else if(u.pathname==='/api/admin/me')data={admin:true};else if(u.pathname==='/api/worker/status')data=worker;else if(u.pathname==='/api/samples')data={samples:sample?[{title:'확인용 예시',url:'/api/calls/synthetic/audio',callId:'synthetic'}]:[]};else if(u.pathname==='/api/calls/missing'){data={error:'not_found'};status=404;}else if(u.pathname==='/api/calls/queued'){data={id:'queued',source:'upload',title:'대기 통화',status:'queued',statusLabel:'받아쓰기 대기',segments:[],isFake:demo,hasAudio:true,queuePosition:1};}else if(u.pathname==='/api/calls')data={calls:[]};else if(u.pathname==='/api/customers')data={customers:[]};return r.fulfill({status,json:data});});
  const p=await ctx.newPage();p.setDefaultTimeout(7000);p.on('pageerror',e=>errors.push(e.message));await p.goto(origin+'/#/help');await p.getByRole('heading',{name:'아차 사용 안내'}).waitFor();const help=await p.locator('.help-page').innerText();
+ const expectedName=guest?'워크스페이스':demo?'작업공간':'확인 작업공간';
+ for(const slot of ['#sideNav','#headerWorkspace']){
+   await p.locator(slot+' .workspace-copy strong').filter({hasText:expectedName}).waitFor({state:'attached'});
+   assert.equal(await p.locator(slot+' .workspace-copy strong').textContent(),expectedName);
+   assert.doesNotMatch(await p.locator(slot).textContent(),/비공개 테스트 이름/);
+ }
+
  assert.equal(await p.locator('.fake-banner').count(),0);assert.doesNotMatch(help,/모든 통화는 가짜|지어낸 것|실제 고객 녹음은 올리지/);assert.equal(help.includes('공개 데모 데이터는 관리자가 초기화'),demo);assert.equal(help.includes('예시 응답 모드'),provider==='fixture');assert.ok(!help.includes('데모 서버')&&!help.includes('번호(가짜)'));assert.equal(await p.locator('.help-page a[href="#/trial"]').count(),guest||demo?1:0);assert.doesNotMatch(await p.locator('meta[name=description]').getAttribute('content'),/가짜|데모|연습/);
  if(!guest){await p.goto(origin+'/#/');await p.locator('.today-heading').waitFor();assert.doesNotMatch(await p.locator('.today-heading').innerText(),/가짜 통화 데모|모두 지어낸/);await p.goto(origin+'/#/upload');await p.locator('.upload-worker-state').waitFor();await p.locator('[data-ref="samples"] .muted, [data-ref="samples"] .upload-samples').first().waitFor({state:'attached'});assert.equal(await p.locator('[data-ref="samplePanel"]').isVisible(),demo||sample);if(sample)assert.match(await p.locator('[data-ref="samplePanel"]').innerText(),/실제 고객 통화가 아닙니다/);assert.equal(await p.getByText('실제 고객 녹음은 올리지 마세요.',{exact:true}).isVisible(),demo);assert.match(await p.locator('.upload-confirm').innerText(),demo?/고객 정보가 없는 예시 녹음/:/수집·처리·공유 권한과 필요한 동의/);assert.equal(await p.locator('[data-act="upload"]').isDisabled(),true);
  await p.goto(origin+'/#/calls/queued');await p.locator('.cd-worker').waitFor();assert.match(await p.locator('.cd-worker').innerText(),/줄 1번째.*연결되면 순서대로/);assert.doesNotMatch(await p.locator('.cd-worker').innerText(),/가짜|연습/);
  await p.goto(origin+'/#/calls/missing');await p.locator('.cd-missing').waitFor();assert.doesNotMatch(await p.locator('.cd-missing').innerText(),/데모|가짜/);await p.goto(origin+'/#/more');await p.locator('.tools-directory').waitFor();assert.equal(await p.locator('.tools-directory a[href="#/trial"]').count(),demo?1:0);
  await p.goto(origin+'/#/admin');await p.locator('#adStatTitle').waitFor();assert.equal(await p.locator('#adResetTitle').count(),demoAvailable?1:0); }
+ if(!guest&&!demo){
+  await p.evaluate(()=>window.dispatchEvent(new CustomEvent('ahmatda:workspace-changed')));
+  await p.locator('#workspaceChangedNotice').waitFor();
+  assert.equal(await p.locator('#sideNav .workspace-copy strong').textContent(),'워크스페이스');
+  assert.equal(await p.locator('#headerWorkspace .workspace-copy strong').textContent(),'워크스페이스');
+ }
  checks.push(label);await ctx.close();
 }
 assert.deepEqual(errors,[]);assert.deepEqual(blocked,[]);console.log(JSON.stringify({checks,errors,blocked,scope:'rendered app against synthetic GET-only API; no authentication or backend mutation tested'}));
