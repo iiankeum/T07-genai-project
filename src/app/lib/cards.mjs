@@ -1,4 +1,4 @@
-import { contradictoryQuantityEvidence } from './quantity-evidence.mjs';
+import { adjacentQuantityCorrection, contradictoryQuantityEvidence } from './quantity-evidence.mjs';
 // 주문 카드: AI 결과 검증(품번 · 차번호 · 거래처) · 근거 문장 → 시각 · 저장 · 고치기 · 상태 바꾸기 · 통화 제목.
 import { db, newId, nowIso, parseJson, tx } from './db.mjs';
 import { HttpError, cleanText } from './http.mjs';
@@ -231,7 +231,11 @@ export function buildCardFromAi(callRow, aiOut) {
     };
     const idx = items.length;
     const quotedQty = contradictoryQuantityEvidence(row);
-    if (quotedQty !== null) {
+    const corrected = quotedQty !== null ? adjacentQuantityCorrection({
+      row, originalQty: quotedQty, segments: segs, itemCount: ai.items.length,
+    }) : null;
+    if (corrected) Object.assign(row, corrected);
+    else if (quotedQty !== null) {
       unsure.push({ id: newId('warn'), field: 'qty', item: idx, blocking: true,
         reason: `카드 수량 ${row.qty}개와 인용한 말의 ${quotedQty}개가 다릅니다 — 정정된 통화를 듣고 확인해 주세요`,
         value: row.qty, at: row.at, seg: row.seg });

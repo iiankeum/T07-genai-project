@@ -869,3 +869,44 @@ test('자동 AI 차종: 정확히 같은 부품명은 차종 인용 없으면 �
     assert.ok(!good.unsure.some(u=>u.field==='carModel'));
   } finally { ai.setClientForTest(null); }
 });
+
+test('신규 통화의 단일 품목 수량 정정은 초안에 최종 수량과 정확한 발화 시각을 함께 저장', async () => {
+  const segs = [
+    { start: 10.9, end: 13, text: '앞 범퍼 두 개 주세요.', speaker: '고객' },
+    { start: 15.9, end: 18, text: '아, 아니다. 세 개로 해주세요.', speaker: '고객' },
+  ];
+  insertCall('customer-order-correction', { segs, status:'queued' });
+  ai.setClientForTest(fakeClient(() => textResp({
+    ...AI4, customer:null, urgent:false, car_model:null,
+    items:[{part:'앞 범퍼',side:null,qty:3,part_no:null,quote:segs[0].text}],
+    evidence:{...AI4.evidence,customer:'',urgent:''},highlights:[],
+  })));
+  try {
+    const card = await pipeline.onTranscript('customer-order-correction',{text:joinText(segs),segments:segs});
+    assert.equal(card.status,'draft');
+    assert.equal(card.items[0].qty,3);
+    assert.equal(card.items[0].at,15.9);
+    assert.equal(card.items[0].seg,1);
+    assert.equal(card.items[0].quote,segs[1].text);
+    assert.equal(card.unsure.some(w=>w.field==='qty'),false);
+    assert.equal(cardView(getCardRow('customer-order-correction')).items[0].at,15.9);
+  } finally { ai.setClientForTest(null); }
+});
+
+test('재고·단가 문의를 자동 주문·출고로 바꾸지 않음', async () => {
+  const transcript='한성정비입니다. 앞 범퍼 재고가 있는지, 가격이 얼마인지 알려주세요. 주문은 아직 아닙니다.';
+  const segs=[{start:0,end:8,text:transcript}];
+  insertCall('customer-stock-question',{segs,status:'queued'});
+  ai.setClientForTest(fakeClient(()=>textResp({
+    ...AI4,call_type:'재고·단가 문의',items:[],urgent:false,ask_back:['앞 범퍼 재고·단가 확인'],summary:'재고와 가격 문의',
+  })));
+  try {
+    const card=await pipeline.onTranscript('customer-stock-question',{text:transcript,segments:segs});
+    assert.equal(card.status,'draft');
+    assert.equal(card.callType,'재고·단가 문의');
+    assert.deepEqual(card.items,[]);
+    const dash=(await req('GET','/api/dashboard?day=2026-11-11')).data;
+    assert.equal(dash.todos.find(todo=>todo.callId==='customer-stock-question')?.kind,'callback');
+    assert.equal(dash.todos.some(todo=>todo.kind==='ship'&&todo.callId==='customer-stock-question'),false);
+  } finally { ai.setClientForTest(null); }
+});

@@ -124,6 +124,8 @@ export function buildTodos(entries) {
     }
     if (card && card.status !== 'cancelled') {
       const due = card.due ? ` · ${card.due}` : '';
+      const type = card.callType || '주문';
+      const isOrder = type === '주문';
       if (needsCallback(card)) {
         const why = card.askBack.length ? `물어볼 것: ${card.askBack.join(' · ')}` : (card.callbackReason || '다시 전화하기로 표시했어요.');
         cands.push({ kind: 'callback', title: `${who(e)}에 다시 전화`, why, priority: card.urgent ? 1 : 2 });
@@ -132,8 +134,8 @@ export function buildTodos(entries) {
         const extra = card.unsure.length ? ` · 들어 볼 곳 ${card.unsure.length}개` : '';
         cands.push({
           kind: 'confirm',
-          title: `${who(e)} ${card.callType && card.callType !== '주문' ? card.callType : '주문'} 확인하고 확정`,
-          why: (card.urgent ? '급하다고 한 주문이에요' : '확인 필요 상태예요') + due + extra,
+          title: `${who(e)} ${isOrder ? '주문 확인하고 확정' : `${type === '기타' ? '통화' : type} 내용 확인`}`,
+          why: (card.urgent ? (isOrder ? '급하다고 한 주문이에요' : '급하다고 한 통화예요') : '확인 필요 상태예요') + due + extra,
           priority: card.urgent ? 1 : 3,
         });
         if (card.unsure.length) {
@@ -142,7 +144,7 @@ export function buildTodos(entries) {
         }
       }
       if (card.status === 'confirmed' && card.urgent && isShipTarget(card)) {
-        cands.push({ kind: 'ship', title: `${who(e)} 출고`, why: `급한 주문 · 확정됨${due}${card.delivery ? ` · ${card.delivery}` : ''}`, priority: 1 });
+        cands.push({ kind: 'ship', title: `${who(e)} ${isOrder ? '출고' : '반품·교환 처리'}`, why: `${isOrder ? '급한 주문 · 확정됨' : '급한 반품·교환 · 처리 대기'}${due}${card.delivery ? ` · ${card.delivery}` : ''}`, priority: 1 });
       }
     }
     if (!cands.length) continue;

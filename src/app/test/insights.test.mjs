@@ -411,6 +411,27 @@ test('이어진 질문은 앞 질문의 거래처 · 낱말을 쓴다 · AI 가 
   assert.deepEqual(todos.map((t) => [t.kind, t.priority]), [['retry', 2]]);
 });
 
+test('오늘 할 일은 긴급 문의를 주문으로 안내하지 않고 재연락 우선순위를 유지한다', () => {
+  const make = (id, callType, overrides = {}) => ({
+    row: { id, status: 'ready', recorded_at: at(today, '09:00') }, customer: '가짜 거래처',
+    card: { callType, status: 'draft', urgent: true, callback: false, items: [], askBack: [], unsure: [], ...overrides },
+  });
+  const todos = insights.buildTodos([
+    make('delivery', '배송 문의'),
+    make('stock', '재고·단가 문의'),
+    make('callback', '배송 문의', { askBack: ['배송 도착일'] }),
+    make('order', '주문'),
+    make('return', '반품·교환', { status: 'confirmed', items: [{ part: '가짜 부품', qty: 1 }] }),
+  ]);
+  assert.deepEqual(todos.map(({ callId, kind, title, why, priority }) => [callId, kind, title, why, priority]), [
+    ['delivery', 'confirm', '가짜 거래처 배송 문의 내용 확인', '급하다고 한 통화예요', 1],
+    ['stock', 'confirm', '가짜 거래처 재고·단가 문의 내용 확인', '급하다고 한 통화예요', 1],
+    ['callback', 'callback', '가짜 거래처에 다시 전화', '물어볼 것: 배송 도착일', 1],
+    ['order', 'confirm', '가짜 거래처 주문 확인하고 확정', '급하다고 한 주문이에요', 1],
+    ['return', 'ship', '가짜 거래처 반품·교환 처리', '급한 반품·교환 · 처리 대기', 1],
+  ]);
+});
+
 test('가짜 출고 날짜 경계: today는 희망일·통화일 아닌 KST 확정일, all은 미출고만', async t => {
   const day = '2030-01-02', customer = '가짜 출고 경계 거래처';
   const start = at(day, '00:00'), end = at(addDays(day, 1), '00:00');

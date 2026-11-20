@@ -15,3 +15,27 @@ export function contradictoryQuantityEvidence({ part, qty, quote } = {}) {
   const heard = WORDS[match[1]] ?? Number(match[1]);
   return Number.isSafeInteger(heard) && heard !== qty ? heard : null;
 }
+
+// A single line item, adjacent correction and the already extracted final quantity.
+// Keep the first evidence for part-number-bearing rows: the item has a shared citation.
+const correction = new RegExp(
+  `^(?:아[, .]*\\s*)?(?:((?:${COUNT}))\\s*개\\s*말고\\s*|아니(?:다|요)?[,.!\\s]+)(${COUNT})\\s*개(?:로)?\\s*(?:해\\s*주세요|부탁(?:해\\s*요|합니다)|주세요)[.!?…]?$`, 'u');
+const anyLaterCount = new RegExp(`(?:^|[^\\p{L}\\p{N}_])${COUNT}\\s*개${UNIT_END}`, 'u');
+const countValue = word => WORDS[word] ?? Number(word);
+export function adjacentQuantityCorrection({ row, originalQty, segments, itemCount } = {}) {
+  if (itemCount !== 1 || !row || !row.quote || row.partNo || !Number.isInteger(row.seg) || !Array.isArray(segments)) return null;
+  const first = segments[row.seg];
+  const next = segments[row.seg + 1];
+  if (!first || !next || !Number.isFinite(next.start) || next.start <= first.start ||
+      next.start < first.end || next.start - first.end > 8 || (first.speaker && next.speaker && first.speaker !== next.speaker)) return null;
+  // Do not derive from a merged cross-segment old citation.
+  if (!first.text.normalize('NFC').includes(row.quote.normalize('NFC'))) return null;
+  // A question, mixed car/part sentence, or bare number is not an unambiguous initial order.
+  const order = new RegExp(`^${escape(row.part.trim())}\\s+(${COUNT})\\s*개\\s*(?:주세요|부탁(?:해\\s*요|합니다))[.!…]?$`, 'u');
+  const initial = first.text.trim().match(order);
+  if (!initial || countValue(initial[1]) !== originalQty) return null;
+  const match = next.text.trim().match(correction);
+  if (!match || (match[1] && countValue(match[1]) !== originalQty) || countValue(match[2]) !== row.qty) return null;
+  if (segments.slice(row.seg + 2).some(seg => anyLaterCount.test(seg.text) || /말고|아니|취소|정정|바꿔|한두|두세/u.test(seg.text))) return null;
+  return { quote: next.text.trim(), at: next.start, seg: row.seg + 1 };
+}
