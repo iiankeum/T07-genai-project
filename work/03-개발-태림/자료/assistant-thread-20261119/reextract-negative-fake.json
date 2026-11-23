@@ -1,0 +1,24 @@
+{
+  "scope": "actual card module with call.js-equivalent update callback; fake revision-aware API, no real AI/backend",
+  "results": [
+    {
+      "mode": "unsaved",
+      "note": "가짜 대기중 메모",
+      "qty": "7",
+      "serverNote": "가짜 원본",
+      "serverQty": 1,
+      "serverRevision": 2,
+      "preserved": true
+    },
+    {
+      "mode": "saved-before-result",
+      "note": "가짜 대기중 메모",
+      "qty": "7",
+      "serverNote": "가짜 대기중 메모",
+      "serverQty": 7,
+      "serverRevision": 3,
+      "preserved": true
+    }
+  ],
+  "errors": []
+}

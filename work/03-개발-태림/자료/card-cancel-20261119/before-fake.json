@@ -1,0 +1,28 @@
+{
+  "editableWhileCancel": true,
+  "serverStatus": "cancelled",
+  "serverNote": "원본",
+  "uiNote": "취소 대기 중 추가한 메모",
+  "uiReadonly": "",
+  "storage": {
+    "cn.card.pending:v2:fake-user:fake-space:fake": "{\"revision\":1,\"patch\":{\"note\":\"취소 대기 중 추가한 메모\"}}"
+  },
+  "requests": [
+    {
+      "url": "/api/cards/fake/cancel",
+      "body": {
+        "reason": "가짜 취소",
+        "expectedRevision": 1
+      }
+    },
+    {
+      "url": "/api/cards/fake",
+      "body": {
+        "note": "취소 대기 중 추가한 메모",
+        "expectedRevision": 2
+      }
+    }
+  ],
+  "errors": [],
+  "noteAfterReload": "원본"
+}

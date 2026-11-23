@@ -1,0 +1,13 @@
+{
+  "scope": "temporary actual fixture server and two independent demo browser contexts; no actual users or AI",
+  "reproduced": true,
+  "displayedQuantity": 1,
+  "displayedRevision": 3,
+  "changedRevision": 6,
+  "requestBody": {},
+  "responseStatus": 200,
+  "finalStatus": "shipped",
+  "finalQuantity": 9,
+  "errors": [],
+  "blocked": []
+}

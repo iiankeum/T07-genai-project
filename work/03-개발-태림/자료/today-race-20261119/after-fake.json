@@ -1,0 +1,31 @@
+{
+  "scope": "actual today UI with deferred fake API; clipboard stub; no backend/AI/auth verification",
+  "results": [
+    {
+      "scenario": "dashboard ABA",
+      "pass": true
+    },
+    {
+      "scenario": "briefing ABA",
+      "pass": true
+    },
+    {
+      "scenario": "summary preview ABA",
+      "pass": true
+    },
+    {
+      "scenario": "summary copy ABA",
+      "pass": true
+    },
+    {
+      "scenario": "same-day summary reverse",
+      "pass": true
+    },
+    {
+      "scenario": "dashboard refresh versus new briefing",
+      "pass": true
+    }
+  ],
+  "blocked": [],
+  "errors": []
+}

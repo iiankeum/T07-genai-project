@@ -1,0 +1,77 @@
+{
+  "scope": "actual ui.copyText + fake clipboard/execCommand, not native clipboard validation",
+  "results": [
+    {
+      "mode": "normal",
+      "source": "#copy",
+      "pass": true
+    },
+    {
+      "mode": "normal",
+      "source": "#editor",
+      "pass": true
+    },
+    {
+      "mode": "success",
+      "source": "#copy",
+      "pass": true
+    },
+    {
+      "mode": "success",
+      "source": "#editor",
+      "pass": true
+    },
+    {
+      "mode": "failure",
+      "source": "#copy",
+      "pass": true
+    },
+    {
+      "mode": "failure",
+      "source": "#editor",
+      "pass": true
+    },
+    {
+      "mode": "throw",
+      "source": "#copy",
+      "pass": true
+    },
+    {
+      "mode": "throw",
+      "source": "#editor",
+      "pass": true
+    },
+    {
+      "mode": "remove",
+      "source": "#copy",
+      "pass": true
+    },
+    {
+      "mode": "remove",
+      "source": "#editor",
+      "pass": true
+    },
+    {
+      "mode": "deferred",
+      "source": "#copy",
+      "pass": true
+    },
+    {
+      "mode": "deferred",
+      "source": "#editor",
+      "pass": true
+    },
+    {
+      "mode": "moved",
+      "source": "#copy",
+      "pass": true
+    },
+    {
+      "mode": "moved",
+      "source": "#editor",
+      "pass": true
+    }
+  ],
+  "blocked": [],
+  "errors": []
+}

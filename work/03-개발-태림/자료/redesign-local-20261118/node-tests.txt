@@ -1,0 +1,43 @@
+✔ Ollama 선택은 카드 · 브리핑 · 묻기에 같은 스키마를 사용한다 (3.773625ms)
+✔ 원격 이름과 주소는 로컬 모델로 설정할 수 없다 (7.099541ms)
+▶ 설치 확인이 실패하면 모델에 통화 글을 보내지 않는다
+  ✔ local_model_unavailable (0.343375ms)
+  ✔ local_model_unavailable (0.115083ms)
+  ✔ local_unavailable (0.113708ms)
+✔ 설치 확인이 실패하면 모델에 통화 글을 보내지 않는다 (0.811541ms)
+✔ 스키마 오류 · 토큰 상한 · 너무 큰 응답은 실패하고 다시 호출하지 않는다 (1.147916ms)
+✔ 연결에 실패하면 로컬 오류를 반환한다 (0.148041ms)
+✔ 응답을 읽는 동안에도 시간 제한이 적용된다 (51.465125ms)
+✔ 호출자가 취소하면 요청을 중단하며 취소 이유를 전달한다 (0.578917ms)
+[ai] 카드 추출: 베타 호출 400 · 기본 호출로 다시
+[ai] 카드 추출: 베타 호출 400 · 기본 호출로 다시
+[ai] 카드 추출: API 오류 400 invalid_request_error
+✔ 꺼진 모드에서는 키가 있어도 AI를 호출하지 않는다 (0.681708ms)
+✔ 스키마: 모든 object 에 additionalProperties:false 와 required 전부 (0.174333ms)
+✔ extractCard: 호출 모양(모델 · 베타 · 대체 모델 · effort low · 구조화 출력, thinking/temperature/prefill 없음) (0.555584ms)
+✔ extractCard: 거절 · 길이 초과 · JSON 아님 → AiError (0.344917ms)
+✔ 베타 호출이 400 이면 한 번만 기본 호출(betas · fallbacks 없이)로 다시 (0.740833ms)
+✔ 오류 바꾸기: 429 → rate_limited, 401 → api_error(로그엔 인증 실패만), 그 밖 → api_error (0.426125ms)
+[ai] 카드 추출: TypeError
+[ai] 카드 추출: TypeError
+[ai] 카드 추출: TypeError
+[ai] 카드 추출: TypeError
+✔ 동시에 도는 AI 호출은 최대 2개 (80.456625ms)
+✔ writeBriefing: 할 일 최대 5개 · 모르는 callId 는 null · 숫자는 stats 를 넘긴다 (0.323833ms)
+✔ answerQuestion: 근거 ref 만 남기고, 근거 없으면 「찾지 못했어요」 (0.374292ms)
+✔ 로컬 브리핑은 외부 제공자·다른 모델 캐시를 사용하지 않고 실제 출처를 보존한다 (5.881625ms)
+✔ 마감 요약은 개인 작업공간을 가짜 데모로 표시하지 않는다 (1.390292ms)
+✔ routeOf: 이름에 / 가 든 거래처(%2F)도 거래처 화면으로 열린다 (0.403125ms)
+✔ routeOf: 한글 이름 · 물음 값 (0.500917ms)
+✔ routeOf: 깨진 %xx 는 원문 그대로 두고 화면은 연다 (0.069917ms)
+✔ routeOf: 빈 해시는 첫 화면, 칸이 더 많은 주소는 없는 화면 (0.063125ms)
+✔ itemMark: AI 초안과 같은 줄은 「AI 초안」, 고친 줄 · 새 줄은 「고침」 (0.108041ms)
+✔ sameItem: 수량은 숫자로, 글은 앞뒤 빈칸을 빼고 비교 (0.047584ms)
+ℹ tests 27
+ℹ suites 0
+ℹ pass 27
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 207.8615

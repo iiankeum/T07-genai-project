@@ -1,0 +1,30 @@
+{
+  "at": "2026-11-18 19:42",
+  "buildRevision": "4dae082c7df6-dirty",
+  "sourceSha256": {
+    "src/mac-app/Ahmatda.swift": "43be99097b1be0e0d03d9c55493586710126f45191bdccedb0a3bc00b46f1258",
+    "src/mac-app/LocalModelStatus.swift": "46d824086f0eea5b8c2d98192d591ec7b44831e34148f071a0d98d22f63d7a0d",
+    "src/mac-app/tests/main.swift": "d5a7c064eae52b9911ef0951da5b2a2fb565b0644968e7ec46fa0deabc8e1d90"
+  },
+  "swiftChecks": 47,
+  "helperTests": 148,
+  "nodeTests": 175,
+  "observed": [
+    "initial-sheet-entry",
+    "six-step-list",
+    "order-model-confirmation",
+    "cancel-before-download",
+    "menu-reentry",
+    "close-without-action",
+    "quit"
+  ],
+  "accountCreated": false,
+  "downloadStarted": false,
+  "authorizationGranted": false,
+  "fullWizardCompleted": false,
+  "limits": [
+    "No authenticated business flow",
+    "No new Mac or release signing",
+    "Dirty development build with exact source hashes"
+  ]
+}

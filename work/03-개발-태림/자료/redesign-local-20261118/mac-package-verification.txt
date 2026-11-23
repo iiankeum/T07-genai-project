@@ -1,0 +1,133 @@
+AI 초안 · 돌린 사람: 신*림 · Codex · 2026-11-18
+
+아맞다 Mac 패키지 검증
+
+저장소 루트에서 실행했다. 번들 소스 리비전은 38da244eeb29-dirty다.
+산출물은 out/Ahmatda.app 및 out/Ahmatda-macos-arm64.zip이다.
+ZIP 47,297,441 bytes (약 45 MiB)
+SHA-256 ebb67ae7d63ca6ae19c102c84dc5525ccd2cec564b568992451a68610fbf9894
+
+번들·ZIP 확인
+  bash src/mac-app/build.sh
+  ditto -c -k --sequesterRsrc --keepParent out/Ahmatda.app out/Ahmatda-macos-arm64.zip
+  codesign --verify --deep --strict --verbose=2 out/Ahmatda.app
+  codesign -dvv out/Ahmatda.app
+  plutil -p out/Ahmatda.app/Contents/Info.plist
+  file out/Ahmatda.app/Contents/MacOS/{Ahmatda,node}
+  xcrun vtool -show-build out/Ahmatda.app/Contents/MacOS/Ahmatda
+  out/Ahmatda.app/Contents/MacOS/node --version
+  otool -L out/Ahmatda.app/Contents/MacOS/node
+  unzip -tq out/Ahmatda-macos-arm64.zip
+  shasum -a 256 out/Ahmatda-macos-arm64.zip
+두 바이너리는 arm64다. 앱 최소 OS는 macOS 14.0이다. Node v24.19.0은 /usr/lib, /System/Library에만 링크한다. 앱과 Node의 ad hoc 서명을 검증했다. ZIP 무결성 확인 후 ditto -x -k로 임시 디렉터리에 풀어서 앱과 Node의 서명을 다시 검증했다.
+
+파일 선택 핸들러 확인
+  otool -ov out/Ahmatda.app/Contents/MacOS/Ahmatda | rg 'runOpenPanelWithParameters:initiatedByFrame:completionHandler:'
+파일 업로드용 WKUIDelegate 구현을 추가했다. URL의 앱 origin과 요청 프레임의 securityOrigin이 일치하면 NSOpenPanel을 표시한다. 녹음 선택은 다중 선택을 지원하고 CSV는 한 파일을 선택한다. 사용자가 확인하면 선택 URL을, 취소하거나 origin이 다르면 nil을 반환한다. 압축 해제본에 Objective-C selector가 포함된 것을 확인했다. 실제 파일 패널 상호작용은 GUI에서 확인해야 한다.
+Apple WebKit 문서 https://developer.apple.com/documentation/webkit/wkuidelegate/webview(_:runopenpanelwith:initiatedbyframe:completionhandler:)
+
+리소스와 의존성 확인
+  python3 - <<'PY'
+from pathlib import Path
+import json, re, subprocess
+
+bundle = Path('out/Ahmatda.app/Contents')
+app = bundle / 'Resources/app'
+files = subprocess.check_output(['git', 'ls-files', '--cached', '--others',
+    '--exclude-standard', '-z', '--', 'src/app/server.mjs', 'src/app/package.json',
+    'src/app/package-lock.json', 'src/app/lib/', 'src/app/routes/', 'src/app/public/',
+    'src/app/seed/']).decode().split('\0')
+mapped = {p: app / p.removeprefix('src/app/') for p in files
+    if p and Path(p).is_file() and not Path(p).is_symlink()}
+mapped.update({
+    'src/mac-app/Info.plist': bundle / 'Info.plist',
+    'src/mac-app/parent-lifetime.mjs': bundle / 'Resources/parent-lifetime.mjs',
+    'src/pc-agent/callnote_agent.py': bundle / 'Resources/pc-agent/callnote_agent.py',
+    'LICENSE': bundle / 'Resources/Project-LICENSE.txt',
+    'THIRD_PARTY_NOTICES.md': bundle / 'Resources/THIRD_PARTY_NOTICES.md',
+})
+font_link = re.compile(rb'^<link.*href="https://(?:cdn\.jsdelivr\.net|fonts\.googleapis\.com|fonts\.gstatic\.com).*\n', re.M)
+for src, dest in mapped.items():
+    expected = Path(src).read_bytes()
+    if src in ('src/app/public/index.html', 'src/app/public/intro/index.html'):
+        expected = font_link.sub(b'', expected)
+    assert dest.read_bytes() == expected, src
+extras = {p for p in app.rglob('*') if p.is_file() and p.name != 'REVISION'
+    and 'node_modules' not in p.relative_to(app).parts} - set(mapped.values())
+assert not extras, extras
+lock = json.loads((app / 'package-lock.json').read_text())['packages']
+prod = [p for p, meta in lock.items() if p and not meta.get('dev')]
+for p, meta in lock.items():
+    if not p:
+        continue
+    loc = app / p
+    if meta.get('dev'):
+        assert not loc.exists(), p
+    else:
+        assert json.loads((loc / 'package.json').read_text())['version'] == meta['version'], p
+print(len(mapped), len(prod))
+PY
+100개 파일과 운영 의존성 8개가 일치했다. 두 HTML의 CDN 폰트 링크를 제거한 뒤 비교했다. 개발용 의존성과 복사 목록 밖 소스가 없었다. 프로젝트와 Node 라이선스, 제3자 고지 문서가 있었다. 번들에 심볼릭 링크, .env, .npmrc, SQLite 파일, WAV가 없었다.
+
+Swift 컴파일 결과 확인
+  probe_dir=$(mktemp -d /tmp/ahmatda-swiftcheck.XXXXXX)
+  swiftc -target "$(uname -m)-apple-macosx14.0" -module-cache-path "$probe_dir/module-cache" -O src/mac-app/Ahmatda.swift -o "$probe_dir/Ahmatda"
+  otool -s __TEXT __text out/Ahmatda.app/Contents/MacOS/Ahmatda | tail -n +3 | shasum -a 256
+  otool -s __TEXT __text "$probe_dir/Ahmatda" | tail -n +3 | shasum -a 256
+  rm -rf "$probe_dir"
+현재 Swift 소스를 재컴파일했다. 두 바이너리에서 otool로 출력한 __TEXT,__text 내용의 SHA-256이 36aab2e8d98d57fa151e99f4014f20327add84f6afada7735d29f5da8362d287로 일치했다.
+
+Node와 부모 파이프 종료 확인
+  python3 - <<'PY'
+from pathlib import Path
+from subprocess import Popen, PIPE
+
+bundle = Path('out/Ahmatda.app/Contents').resolve()
+node = bundle / 'MacOS/node'
+boot = bundle / 'Resources/parent-lifetime.mjs'
+probe = 'process.on("SIGTERM", () => { console.log("eof-triggered-termination"); process.exit(0); }); console.log("ready"); setInterval(() => {}, 1000);'
+with Popen([node, '--import', boot, '-e', probe], stdin=PIPE, stdout=PIPE, stderr=PIPE, text=True) as child:
+    assert child.stdout.readline().strip() == 'ready' and child.poll() is None
+    child.stdin.close()
+    child.stdin = None
+    output, error = child.communicate(timeout=5)
+    assert child.returncode == 0 and output.strip() == 'eof-triggered-termination', (child.returncode, output, error)
+PY
+앱이 쓰기 쪽을 보유하는 stdin 파이프를 닫는 동작을 재현했다. 내장 Node가 SIGTERM을 받은 뒤 정상 종료했다. 앱 자체의 정상 종료와 강제 종료는 GUI에서 확인해야 한다.
+
+번들 서버 모듈과 헬스 핸들러 확인
+  probe_dir=$(mktemp -d /tmp/ahmatda-bundlecheck.XXXXXX)
+  env -i PATH=/usr/bin:/bin:/usr/sbin:/sbin DATA_DIR="$probe_dir/data" PUBLIC_BASE_URL=http://127.0.0.1:5601 HOST=127.0.0.1 PORT=5601 DEMO_MODE=0 TRUST_PROXY=0 AUTH_MAIL_MODE=outbox AI_PROVIDER=off ALLOW_PAID_AI=0 ANTHROPIC_API_KEY= out/Ahmatda.app/Contents/MacOS/node --input-type=module - <<'JS'
+import assert from 'node:assert/strict';
+import { statSync } from 'node:fs';
+import { createApp, buildRouter } from './out/Ahmatda.app/Contents/Resources/app/server.mjs';
+import { config, hasSecret } from './out/Ahmatda.app/Contents/Resources/app/lib/config.mjs';
+import { globalDb } from './out/Ahmatda.app/Contents/Resources/app/lib/db.mjs';
+import { accountDb } from './out/Ahmatda.app/Contents/Resources/app/lib/auth.mjs';
+assert.equal(config.allowPaidAi, false);
+assert.equal(hasSecret('ANTHROPIC_API_KEY'), false);
+assert.equal(config.demoMode, false);
+globalDb();
+accountDb();
+assert(statSync(config.dataDir + '/accounts.sqlite').isFile());
+const { router } = await buildRouter();
+const headers = {};
+let status, payload;
+await createApp(router)({ method: 'GET', url: '/healthz', headers: { host: '127.0.0.1:5601' } }, {
+    setHeader(k,v) { headers[k] = v; },
+    writeHead(code, h) { status = code; Object.assign(headers, h); },
+    end(body) { payload = body; }
+});
+assert.equal(status, 200);
+assert.equal(JSON.parse(payload).ok, true);
+assert(headers['Content-Security-Policy'].includes('connect-src'));
+JS
+  rm -rf "$probe_dir"
+모든 라우트를 로드하고 임시 SQLite를 초기화했다. 소켓 없이 /healthz 요청 핸들러의 200 및 ok=true 응답을 확인했다.
+
+소스 검토
+정상 실행 경로에서 부모만 파이프 쓰기 쪽을 유지한다. 앱이 종료되면 쓰기 쪽을 닫고 Node에 SIGTERM을 보낸다. Node는 HTTP 서버를 닫고, 서버가 닫히지 않더라도 3초 이후 종료하도록 처리한다. 아맞다 창은 동일 origin 이동만 허용한다. 로컬 프로세스는 루프백 바인딩과 유료 AI 비활성화를 명시하고 자식 환경에 실행에 필요한 값을 선별 전달한다.
+앱의 WebView origin 정책은 Node HTTP 서버 자체의 Host 정책과 별개다. 로컬 서버에 고정 Host 검사는 없다. 공개 상태 조회·인증 전 요청 수용 가능성에 해당하며, 로그인 쿠키는 host-only이고 제품 API에는 유효한 계정과 워크스페이스가 필요하다. 외부 사이트에서 연결되는 경우나 인증된 업무 자료 접근을 실제 재현하지 않았다.
+
+검증 범위
+ad hoc 서명은 이 로컬 패키지 기준이다. Developer ID 배포 서명과 공증은 완료 범위에 포함되지 않는다. 네트워크 및 루프백 권한 제한으로 WebKit 화면, GUI 인증·업로드, 실제 Ollama 및 Whisper 모델 추론, 완전 오프라인 업무 흐름을 검증하지 않았다. 운영 자료와 유료 API는 사용하지 않았다.

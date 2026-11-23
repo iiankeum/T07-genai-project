@@ -1,0 +1,107 @@
+{
+  "scope": "actual card module + fake API, PC/mobile viewport flow; no actual server persistence, audio playback or real-user test",
+  "results": [
+    {
+      "width": 1440,
+      "dismiss": "back",
+      "blankRejected": true,
+      "noRequest": true,
+      "focusRestored": true
+    },
+    {
+      "width": 1440,
+      "dismiss": "escape",
+      "blankRejected": true,
+      "noRequest": true,
+      "focusRestored": true
+    },
+    {
+      "width": 1440,
+      "failure": false,
+      "flushBeforeCancel": true,
+      "pendingLocked": true,
+      "duplicateBlocked": true,
+      "evidenceAvailable": true,
+      "retry": false,
+      "uiMatchesMock": true
+    },
+    {
+      "width": 1440,
+      "failure": true,
+      "flushBeforeCancel": true,
+      "pendingLocked": true,
+      "duplicateBlocked": true,
+      "evidenceAvailable": true,
+      "retry": true,
+      "uiMatchesMock": true
+    },
+    {
+      "width": 1440,
+      "failure": "no-evidence",
+      "flushBeforeCancel": true,
+      "pendingLocked": true,
+      "duplicateBlocked": true,
+      "evidenceAvailable": false,
+      "retry": true,
+      "uiMatchesMock": true
+    },
+    {
+      "width": 1440,
+      "flushConflict": true,
+      "noPrematureCancel": true,
+      "explicitRecovery": true
+    },
+    {
+      "width": 390,
+      "dismiss": "back",
+      "blankRejected": true,
+      "noRequest": true,
+      "focusRestored": true
+    },
+    {
+      "width": 390,
+      "dismiss": "escape",
+      "blankRejected": true,
+      "noRequest": true,
+      "focusRestored": true
+    },
+    {
+      "width": 390,
+      "failure": false,
+      "flushBeforeCancel": true,
+      "pendingLocked": true,
+      "duplicateBlocked": true,
+      "evidenceAvailable": true,
+      "retry": false,
+      "uiMatchesMock": true
+    },
+    {
+      "width": 390,
+      "failure": true,
+      "flushBeforeCancel": true,
+      "pendingLocked": true,
+      "duplicateBlocked": true,
+      "evidenceAvailable": true,
+      "retry": true,
+      "uiMatchesMock": true
+    },
+    {
+      "width": 390,
+      "failure": "no-evidence",
+      "flushBeforeCancel": true,
+      "pendingLocked": true,
+      "duplicateBlocked": true,
+      "evidenceAvailable": false,
+      "retry": true,
+      "uiMatchesMock": true
+    },
+    {
+      "width": 390,
+      "flushConflict": true,
+      "noPrematureCancel": true,
+      "explicitRecovery": true
+    }
+  ],
+  "errors": [],
+  "blocked": []
+}

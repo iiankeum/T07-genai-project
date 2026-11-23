@@ -1,0 +1,14 @@
+{
+  "revision": "ac9701f14c3ae348603770ef20c16bc4b9871020",
+  "sourceParityFiles": 5,
+  "displayName": "아차-PyAV-개발",
+  "profile": {
+    "version": 1,
+    "profile": "development-whisper-pyav-lgpl-v1"
+  },
+  "forbiddenDataFiles": [],
+  "stableZipUnchanged": true,
+  "previousDevPreserved": "out/backups/Ahmatda-PyAV-Dev-before-ac9701f-20261118-223745.app",
+  "validationScope": "build/source parity/icon/ad-hoc signature only; no launch, login, inference or deployment",
+  "developerIdNotarization": false
+}

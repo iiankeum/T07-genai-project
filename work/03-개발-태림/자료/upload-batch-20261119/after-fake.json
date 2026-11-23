@@ -1,0 +1,31 @@
+{
+  "scope": "real upload UI + deferred mock API, fake silence only; no backend/auth/transcription/real consent",
+  "results": [
+    {
+      "demo": true,
+      "addKind": "input",
+      "pass": true,
+      "uploads": 3
+    },
+    {
+      "demo": true,
+      "addKind": "drop",
+      "pass": true,
+      "uploads": 3
+    },
+    {
+      "demo": false,
+      "addKind": "input",
+      "pass": true,
+      "uploads": 3
+    },
+    {
+      "demo": false,
+      "addKind": "drop",
+      "pass": true,
+      "uploads": 3
+    }
+  ],
+  "errors": [],
+  "blocked": []
+}

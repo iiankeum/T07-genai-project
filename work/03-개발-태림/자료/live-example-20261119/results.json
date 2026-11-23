@@ -1,0 +1,67 @@
+{
+  "scope": "actual live module/fake API, no microphone or external AI; viewport flow not visual/user study",
+  "results": [
+    {
+      "width": 1440,
+      "motion": "no-preference",
+      "typingGuard": true,
+      "completePayload": true,
+      "failureKeepsLines": true,
+      "explicitRetry": true
+    },
+    {
+      "width": 1440,
+      "motion": "reduce",
+      "typingGuard": "not-applicable-reduced-motion",
+      "completePayload": true,
+      "failureKeepsLines": true,
+      "explicitRetry": true
+    },
+    {
+      "width": 390,
+      "motion": "no-preference",
+      "typingGuard": true,
+      "completePayload": true,
+      "failureKeepsLines": true,
+      "explicitRetry": true
+    },
+    {
+      "width": 390,
+      "motion": "reduce",
+      "typingGuard": "not-applicable-reduced-motion",
+      "completePayload": true,
+      "failureKeepsLines": true,
+      "explicitRetry": true
+    },
+    {
+      "width": 1440,
+      "sampleGuardPreserved": true
+    },
+    {
+      "width": 1440,
+      "resetCancelsPartialExample": true
+    },
+    {
+      "width": 390,
+      "sampleGuardPreserved": true
+    },
+    {
+      "width": 390,
+      "resetCancelsPartialExample": true
+    },
+    {
+      "width": 1440,
+      "actualArticleDOM": true,
+      "markupLikeTextEscaped": true,
+      "savedTextUnchanged": true
+    },
+    {
+      "width": 390,
+      "actualArticleDOM": true,
+      "markupLikeTextEscaped": true,
+      "savedTextUnchanged": true
+    }
+  ],
+  "errors": [],
+  "external": []
+}

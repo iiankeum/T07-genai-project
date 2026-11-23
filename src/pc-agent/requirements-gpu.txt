@@ -1,0 +1,3 @@
+# NVIDIA 그래픽카드로 받아쓰기를 빠르게 돌릴 때만 설치한다 (윈도우 · 리눅스)
+nvidia-cublas-cu12
+nvidia-cudnn-cu12

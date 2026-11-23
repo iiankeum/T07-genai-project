@@ -1,0 +1,76 @@
+{
+  "scope": "actual settings.js/API client + fake deferred API; no real deletion/backend authorization",
+  "status": "passed",
+  "results": [
+    {
+      "size": "desktop",
+      "snapshotTargetRemoved": true,
+      "pendingInputsLocked": true
+    },
+    {
+      "size": "desktop",
+      "failurePreservesSelectionAndConfirmation": true,
+      "retryUnlocked": true
+    },
+    {
+      "size": "desktop",
+      "lastDeletionEmptyStateFocus": true
+    },
+    {
+      "size": "mobile",
+      "snapshotTargetRemoved": true,
+      "pendingInputsLocked": true
+    },
+    {
+      "size": "mobile",
+      "failurePreservesSelectionAndConfirmation": true,
+      "retryUnlocked": true
+    },
+    {
+      "size": "mobile",
+      "lastDeletionEmptyStateFocus": true
+    },
+    {
+      "mode": "viewer",
+      "deleteUnavailable": true
+    },
+    {
+      "mode": "demo",
+      "deleteUnavailable": true
+    }
+  ],
+  "requests": [
+    {
+      "method": "DELETE",
+      "path": "/api/calls/fake-a",
+      "workspace": "fake-space"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/calls/fake-b",
+      "workspace": "fake-space"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/calls/fake-b",
+      "workspace": "fake-space"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/calls/fake-a",
+      "workspace": "fake-space"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/calls/fake-b",
+      "workspace": "fake-space"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/calls/fake-b",
+      "workspace": "fake-space"
+    }
+  ],
+  "errors": [],
+  "blocked": []
+}

@@ -1,0 +1,78 @@
+{
+  "scope": "actual ui.copyText + fake clipboard/execCommand, not native clipboard validation",
+  "results": [
+    {
+      "mode": "normal",
+      "source": "#copy",
+      "pass": true
+    },
+    {
+      "mode": "normal",
+      "source": "#editor",
+      "pass": true
+    },
+    {
+      "mode": "success",
+      "source": "#copy",
+      "pass": false,
+      "error": "focus restored to element active when fallback starts\n\n'' !== 'copy'\n"
+    },
+    {
+      "mode": "success",
+      "source": "#editor",
+      "pass": false,
+      "error": "focus restored to element active when fallback starts\n\n'' !== 'editor'\n"
+    },
+    {
+      "mode": "failure",
+      "source": "#copy",
+      "pass": false,
+      "error": "focus restored to element active when fallback starts\n\n'' !== 'copy'\n"
+    },
+    {
+      "mode": "failure",
+      "source": "#editor",
+      "pass": false,
+      "error": "focus restored to element active when fallback starts\n\n'' !== 'editor'\n"
+    },
+    {
+      "mode": "throw",
+      "source": "#copy",
+      "pass": false,
+      "error": "focus restored to element active when fallback starts\n\n'' !== 'copy'\n"
+    },
+    {
+      "mode": "throw",
+      "source": "#editor",
+      "pass": false,
+      "error": "focus restored to element active when fallback starts\n\n'' !== 'editor'\n"
+    },
+    {
+      "mode": "remove",
+      "source": "#copy",
+      "pass": true
+    },
+    {
+      "mode": "remove",
+      "source": "#editor",
+      "pass": true
+    },
+    {
+      "mode": "deferred",
+      "source": "#copy",
+      "pass": false,
+      "error": "focus restored to element active when fallback starts\n\n'' !== 'after'\n"
+    },
+    {
+      "mode": "deferred",
+      "source": "#editor",
+      "pass": false,
+      "error": "focus restored to element active when fallback starts\n\n'' !== 'after'\n"
+    },
+    {
+      "runError": "copy focus regression failed"
+    }
+  ],
+  "blocked": [],
+  "errors": []
+}

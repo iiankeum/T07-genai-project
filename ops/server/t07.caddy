@@ -1,0 +1,30 @@
+# 콜노트 데모 사이트 — /etc/caddy/t07.caddy
+# 원래 /etc/caddy/Caddyfile 에는 맨 끝에 `import /etc/caddy/t07.caddy` 한 줄만 더했다(실서비스 블록은 그대로).
+t07.3-39-67-126.sslip.io {
+	encode gzip
+	request_body {
+		max_size 60MB
+	}
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+	handle_path /_deploy/* {
+		root * /var/lib/callnote-deploy/public
+		header Cache-Control "no-store"
+		header Access-Control-Allow-Origin "*"
+		file_server
+	}
+	handle {
+		reverse_proxy 127.0.0.1:5600 {
+			flush_interval -1
+		}
+	}
+	handle_errors 502 503 504 {
+		root * /var/lib/callnote-deploy/public
+		rewrite * /placeholder.html
+		header Cache-Control "no-store"
+		file_server
+	}
+}

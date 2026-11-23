@@ -1,0 +1,171 @@
+name: App checks (no paid AI)
+on:
+  pull_request:
+    paths:
+      - 'src/app/**'
+      - 'src/mac-app/**'
+      - '.github/workflows/app-checks.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: src/app
+    env:
+      AI_PROVIDER: 'off'
+      ALLOW_PAID_AI: '0'
+      ANTHROPIC_API_KEY: ''
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: src/app/package-lock.json
+      - run: npm ci
+      - name: Verify committed Montage assets match source
+        run: |
+          npm run build:montage
+          git diff --exit-code -- public/montage
+          test -z "$(git status --porcelain --untracked-files=all -- public/montage)"
+      - run: npm test
+      - run: npx playwright install --with-deps chromium
+      - name: Montage shell mobile and desktop (temporary fake demo)
+        run: |
+          fixture_dir="$(mktemp -d)"
+          HOST=127.0.0.1 PORT=5627 DATA_DIR="$fixture_dir" DEMO_MODE=1 node --import ./tools/no-paid-ai.mjs server.mjs >"$fixture_dir/server.log" 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true; wait "$pid" 2>/dev/null || true; rm -rf "$fixture_dir"' EXIT
+          for _ in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:5627/healthz >/dev/null; then break; fi
+            sleep 0.25
+          done
+          if ! curl -fsS http://127.0.0.1:5627/healthz >/dev/null; then cat "$fixture_dir/server.log"; exit 1; fi
+          E2E_OUTPUT_DIR=artifacts/e2e/montage-shell node tools/montage-shell-browser-e2e.mjs
+      - run: npm run test:e2e
+      - run: npm run test:upload-e2e
+      - run: npm run test:card-recovery-e2e
+      - name: Fixture workflow regressions (search, knowledge, settings, multi-item)
+        run: npm run test:workflow-e2e
+        env:
+          TRANSCRIPT_OUTPUT: artifacts/e2e/transcript
+          KNOWLEDGE_OUTPUT_DIR: artifacts/e2e/knowledge
+          SETTINGS_OUTPUT: artifacts/e2e/settings
+          MULTIITEM_OUTPUT: artifacts/e2e/multiitem
+      - name: Fixture interaction regressions (form feedback, asynchronous modal)
+        run: npm run test:interaction-e2e
+        env:
+          FORM_FEEDBACK_OUTPUT_DIR: artifacts/e2e/form-feedback
+          ASSISTANT_FOCUS_OUTPUT: artifacts/e2e/assistant-focus
+      - name: Mobile evidence round-trip (fixture multi-item orders)
+        run: npm run test:mobile-return-e2e
+        env:
+          MOBILE_RETURN_OUTPUT: artifacts/e2e/mobile-return
+      - name: Settings deletion race (fake deferred API only)
+        run: npm run test:settings-delete-e2e
+        env:
+          SETTINGS_DELETE_OUTPUT: artifacts/e2e/settings-delete
+      - name: Form submit snapshot (fake profile and actions)
+        run: npm run test:form-pending-e2e
+        env:
+          FORM_PENDING_OUTPUT: artifacts/e2e/form-pending
+      - name: Calls list return position (fake API only)
+        run: npm run test:calls-return-e2e
+        env:
+          CALLS_RETURN_OUTPUT: artifacts/e2e/calls-return
+      - name: Calls automatic refresh position (fake API only)
+        run: npm run test:calls-refresh-e2e
+        env:
+          CALLS_REFRESH_OUTPUT: artifacts/e2e/calls-refresh
+      - name: Card confirmation snapshot (fake API only)
+        run: npm run test:card-confirm-e2e
+        env:
+          CARD_CONFIRM_OUTPUT: artifacts/e2e/card-confirm
+      - name: Shipping displayed revision (temporary fixture server)
+        run: npm run test:shipping-revision-e2e
+        env:
+          SHIPPING_REVISION_OUTPUT: artifacts/e2e/shipping-revision
+      - name: Shipping overlapping response order (fake API only)
+        run: npm run test:shipping-order-e2e
+        env:
+          SHIPPING_ORDER_OUTPUT: artifacts/e2e/shipping-order
+      - name: Card cancellation pending edits (fake API only)
+        run: npm run test:card-cancel-e2e
+        env:
+          CARD_CANCEL_OUTPUT: artifacts/e2e/card-cancel
+      - name: Assistant thread transition draft (fake API only)
+        run: npm run test:assistant-thread-e2e
+        env:
+          ASSISTANT_THREAD_OUTPUT: artifacts/e2e/assistant-thread
+      - name: Member settings independent drafts (fake API only)
+        run: npm run test:members-draft-e2e
+        env:
+          MEMBERS_DRAFT_OUTPUT: artifacts/e2e/members-draft
+      - name: Output context labels (fake private and demo only)
+        run: npm run test:output-context-e2e
+        env:
+          OUTPUT_CONTEXT_OUTPUT: artifacts/e2e/output-context
+      - name: Today dashboard response order (fake API only)
+        run: npm run test:today-order-e2e
+        env:
+          TODAY_ORDER_OUTPUT: artifacts/e2e/today-order
+      - name: Persistent workspace Ask on desktop and mobile (fake API only)
+        run: node tools/workspace-ask-e2e.mjs
+        env:
+          WORKSPACE_ASK_OUTPUT: artifacts/e2e/workspace-ask
+      - name: Live example save snapshot and safe DOM (fake API only)
+        run: npm run test:live-example-e2e
+        env:
+          LIVE_EXAMPLE_OUTPUT: artifacts/e2e/live-example
+      - name: Calls scan hierarchy (fake fixture, desktop and mobile)
+        run: npm run test:calls-density-e2e
+        env:
+          CALLS_DENSITY_OUTPUT: artifacts/e2e/calls-density
+      - name: Order card first item (fake fixture, desktop and mobile)
+        run: npm run test:card-first-item-e2e
+        env:
+          CARD_FIRST_ITEM_OUTPUT: artifacts/e2e/card-first-item
+      - name: Non-order empty guidance (fake card, desktop and mobile)
+        run: npm run test:nonorder-guidance-e2e
+        env:
+          NONORDER_GUIDANCE_OUTPUT: artifacts/e2e/nonorder-guidance
+      - name: Customer work status (fake inquiry and mixed calls)
+        run: npm run test:customer-status-e2e
+        env:
+          CUSTOMER_STATUS_OUTPUT: artifacts/e2e/customer-status
+      - name: Knowledge source review preserves draft (fake data only)
+        run: npm run test:knowledge-evidence-e2e
+        env:
+          KNOWLEDGE_EVIDENCE_OUTPUT: artifacts/e2e/knowledge-evidence
+      - name: Today briefing and summary stale response protection (fake data only)
+        run: npm run test:today-race-e2e
+      - name: Trial submission preserves pending input (fake policy and API)
+        run: npm run test:trial-submit-e2e
+      - name: Upload batch explicit selection (fake WAV and API only)
+        run: npm run test:upload-batch-e2e
+      - name: Copy fallback keyboard focus (fake clipboard only)
+        run: npm run test:copy-focus-e2e
+      - name: Mobile item deletion keyboard continuity (fake data only)
+        run: npm run test:item-delete-focus-e2e
+      - name: Calls pending search survives detail navigation (fake data only)
+        run: npm run test:calls-pending-search-e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fake-data-browser-evidence
+          path: src/app/artifacts/e2e
+
+  model-helpers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Model resume, runtime install and OS lock regressions (fake data only)
+        run: node --test src/mac-app/tests/model-prepare-lock.test.mjs src/mac-app/tests/setup-local-model.test.mjs src/mac-app/tests/setup-whisper-model.test.mjs src/mac-app/tests/install-whisper-runtime.test.mjs src/mac-app/tests/whisper-runtime-profile.test.mjs

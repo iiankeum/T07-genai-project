@@ -1,0 +1,148 @@
+{
+  "syntheticOnly": true,
+  "functionalRebuild": true,
+  "byteIdenticalRebuild": false,
+  "sources": [
+    {
+      "version": "9.0.2",
+      "filename": "ffmpeg-9.0.2.tar.xz",
+      "size": 12040788,
+      "sha256": "8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e",
+      "url": "https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz",
+      "hashSource": "https://formulae.brew.sh/api/formula/ffmpeg.json",
+      "license": "LGPL-2.1-or-later",
+      "pgpVerified": false
+    },
+    {
+      "version": "19.0.2",
+      "filename": "av-19.0.2.tar.gz",
+      "size": 4277157,
+      "sha256": "bebbc52598886480f4d861c575dc2b020785d6c04e1308680ddcc545e1b94c66",
+      "url": "https://files.pythonhosted.org/packages/23/01/76b6bf563fe907597cf58f10d10168e93fe588b6db9f2658db87e87efa7e/av-19.0.2.tar.gz",
+      "metadataURL": "https://pypi.org/pypi/av/19.0.2/json"
+    }
+  ],
+  "wheel": [
+    {
+      "path": "av-19.0.2-cp312-abi3-macosx_14_0_arm64.whl",
+      "size": 3264732,
+      "sha256": "b2a0291f5d55fbe92b463e30a504f09617c4dd536323ed36cd2635da893ff6ee"
+    }
+  ],
+  "audit": {
+    "license": "LGPL version 2.1 or later",
+    "machOCount": 57,
+    "distributionReady": false
+  },
+  "sourceNotices": [
+    {
+      "name": "COPYING.LGPLv2.1",
+      "sha256": "246041b6ecf9bc32d718a62c57877c78b5eb397b6467e74ed7ae2626ab189c30"
+    },
+    {
+      "name": "FFmpeg-LICENSE.md",
+      "sha256": "2e1d16c72fd74e12063776371da757322f8b77589386532f4fd8634bde7de1af"
+    },
+    {
+      "name": "PyAV-LICENSE.txt",
+      "sha256": "76af0461ffb92e19f1c14449e95557d83a2dfaa1baf202d49e5f1d8746c0da19"
+    }
+  ],
+  "inference": {
+    "syntheticOnly": true,
+    "rows": [
+      {
+        "format": "wav",
+        "shape": [
+          58660
+        ],
+        "dtype": "float32",
+        "result": {
+          "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다.",
+          "segments": [
+            {
+              "start": 0.0,
+              "end": 3.7,
+              "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다."
+            }
+          ],
+          "durationSec": 3.7,
+          "language": "ko",
+          "elapsedSec": 2.1
+        }
+      },
+      {
+        "format": "mp3",
+        "shape": [
+          58660
+        ],
+        "dtype": "float32",
+        "result": {
+          "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다.",
+          "segments": [
+            {
+              "start": 0.0,
+              "end": 3.7,
+              "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다."
+            }
+          ],
+          "durationSec": 3.7,
+          "language": "ko",
+          "elapsedSec": 1.1
+        }
+      },
+      {
+        "format": "m4a",
+        "shape": [
+          58660
+        ],
+        "dtype": "float32",
+        "result": {
+          "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다.",
+          "segments": [
+            {
+              "start": 0.0,
+              "end": 3.7,
+              "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다."
+            }
+          ],
+          "durationSec": 3.7,
+          "language": "ko",
+          "elapsedSec": 1.0
+        }
+      }
+    ],
+    "stream": {
+      "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다.",
+      "segments": [
+        {
+          "start": 0.0,
+          "end": 3.7,
+          "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다."
+        }
+      ],
+      "durationSec": 3.7,
+      "language": "ko",
+      "elapsedSec": 1.0
+    },
+    "workerWav": {
+      "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다.",
+      "segments": [
+        {
+          "start": 0.0,
+          "end": 3.7,
+          "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다."
+        }
+      ],
+      "durationSec": 3.7,
+      "language": "ko",
+      "elapsedSec": 1.0
+    },
+    "durationLimitRejected": true
+  },
+  "existingRuntimeReplaced": false,
+  "limits": [
+    "macOS26.6.1 동일기기 개발검증",
+    "정식서명·공증·macOS14 실기·법적적합성 미검증"
+  ]
+}

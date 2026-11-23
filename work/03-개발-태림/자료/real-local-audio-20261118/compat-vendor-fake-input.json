@@ -1,0 +1,85 @@
+{
+  "label": "vendor",
+  "avVersion": "19.0.2",
+  "originalSourceSha256": "60a1d8638f718cbf6d245aed3e5a5aa61c1f822a0b0fe9b48a7c928d47c23909",
+  "candidateSourceSha256": "69f2ab7c1a7370245d9ff18f3940baa0053034908d9c510a74aa2efc564582b7",
+  "onlyChange": {
+    "before": "av.open(input_file, mode=\"r\", metadata_errors=\"ignore\")",
+    "after": "av.open(input_file, mode=\"r\")"
+  },
+  "formats": [
+    {
+      "format": "wav",
+      "original": {
+        "ok": false,
+        "error": "TypeError",
+        "message": "open() got an unexpected keyword argument 'metadata_errors'"
+      },
+      "candidate": {
+        "ok": true,
+        "samples": 58660,
+        "dtype": "float32"
+      }
+    },
+    {
+      "format": "mp3",
+      "original": {
+        "ok": false,
+        "error": "TypeError",
+        "message": "open() got an unexpected keyword argument 'metadata_errors'"
+      },
+      "candidate": {
+        "ok": true,
+        "samples": 58660,
+        "dtype": "float32"
+      }
+    },
+    {
+      "format": "m4a",
+      "original": {
+        "ok": false,
+        "error": "TypeError",
+        "message": "open() got an unexpected keyword argument 'metadata_errors'"
+      },
+      "candidate": {
+        "ok": true,
+        "samples": 58660,
+        "dtype": "float32"
+      }
+    }
+  ],
+  "missingError": {
+    "type": "FileNotFoundError"
+  },
+  "invalidError": {
+    "type": "InvalidDataError"
+  },
+  "pcAgent": {
+    "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다.",
+    "segments": [
+      {
+        "start": 0.0,
+        "end": 3.7,
+        "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다."
+      }
+    ],
+    "durationSec": 3.7,
+    "language": "ko",
+    "elapsedSec": 1.9
+  },
+  "pcAgentVADFallback": false,
+  "candidateDecodedM4A": {
+    "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다.",
+    "segments": [
+      {
+        "start": 0.0,
+        "end": 3.7,
+        "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다."
+      }
+    ],
+    "durationSec": 3.7,
+    "language": "ko",
+    "elapsedSec": 1.0
+  },
+  "syntheticOnly": true
+}

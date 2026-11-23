@@ -1,0 +1,14 @@
+{
+  "results": [
+    "keyboard/mobile list-detail focus, return, visible pending review and collapsed history",
+    "zero optional relations",
+    "partial row blocked with focus; two relations serialized",
+    "existing edit retains and updates structured relation",
+    "10-row limit, deletion, cancel without writes",
+    "PC/mobile dialog no horizontal overflow",
+    "customer entry title follows category"
+  ],
+  "writes": 3,
+  "errors": [],
+  "blocked": []
+}
