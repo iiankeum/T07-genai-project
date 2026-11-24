@@ -1,0 +1,10 @@
+{"total":200,"pending":0,"byStatus":[{"status":"ready","n":200}],"jobs":[{"state":"done","n":200}]}
+녹음 길이(초): {"최단":1.4,"중앙값":60,"최장":556.3}
+녹음 길이 분포(통화 수): {"a.30초 미만":34,"b.30초-1분":66,"c.1-3분":85,"d.3-5분":10,"e.5분 이상":5}
+받아쓴 통화: {"n":200,"audioMin":270.5,"sttMin":13.9,"avgStt":4.2,"maxStt":38.5,"avgChars":282,"minChars":1,"maxChars":2811}
+글이 비었거나 20자 미만: 31
+분당 글자 수 분포(통화 수): [{"bucket":"a.60자 미만","n":37},{"bucket":"b.60-150","n":36},{"bucket":"c.150-300","n":107},{"bucket":"d.300 이상","n":20}]
+실패 이유(통화): []
+일감 재시도: [{"attempts":1,"n":200}]
+엔진: [{"engine":"faster-whisper large-v3 (cuda, float16)","n":200}]
+카드: [{"status":"draft","call_type":"기타","ai_model":"qwen3:4b","n":10,"customerFilled":1,"carFilled":2,"itemsFilled":1,"aiError":0},{"status":"draft","call_type":"반품·교환","ai_model":"qwen3:4b","n":2,"customerFilled":0,"carFilled":0,"itemsFilled":2,"aiError":0},{"status":"draft","call_type":"배송 문의","ai_model":"qwen3:4b","n":2,"customerFilled":2,"carFilled":0,"itemsFilled":0,"aiError":0},{"status":"draft","call_type":"재고·단가 문의","ai_model":"qwen3:4b","n":10,"customerFilled":4,"carFilled":2,"itemsFilled":9,"aiError":0},{"status":"draft","call_type":"주문","ai_model":null,"n":8,"customerFilled":0,"carFilled":0,"itemsFilled":0,"aiError":8},{"status":"draft","call_type":"주문","ai_model":"qwen3:4b","n":168,"customerFilled":45,"carFilled":61,"itemsFilled":160,"aiError":0}]
