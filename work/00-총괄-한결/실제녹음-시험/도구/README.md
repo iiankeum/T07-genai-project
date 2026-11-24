@@ -18,6 +18,9 @@
 | `card-stats.mjs` | 카드의 칸이 찼는지 · 경고 종류 | 읽기만 |
 | `grounding.mjs` | 카드 값이 받아쓴 글에 있는지 · 프롬프트 예시와 같은지 | 읽기만 |
 | `model-times.mjs` | Ollama 기록에서 카드 만들기 호출 시간 | 읽기만 |
+| `pick-samples.py` | 상호 · 이름 · 번호 · 주소가 안 나오는 통화를 고른다([예시 녹음](../예시-녹음/README.md)) | 읽기만 |
+| `build-samples.py` | 고른 통화의 첫머리를 자르고 파일 꼬리표를 지워 예시 파일을 만든다 | 만든다(시험 폴더에만) |
+| `recheck-samples.py` | 만든 예시 파일을 다시 받아써서 가림 검사를 한 번 더 한다 | 읽기만 |
 
 ## 미리 정할 것
 
@@ -27,8 +30,11 @@
 | `ACHA_WS_ID` | 작업공간 번호 | 시험 폴더의 `workspace-id.txt` |
 | `ACHA_APP_DIR` | 시험하는 아차 코드의 `src/app` 폴더 | 없음 — `make-cards` · `grounding` 에 꼭 준다 |
 | `ACHA_TEST_URL` | 시험 서버 주소(`setup-account` 만) | `http://127.0.0.1:5610` |
+| `ACHA_PC_AGENT_DIR` | 아차 코드의 `src/pc-agent` 폴더(`pick-samples` · `recheck-samples` — 가림 코드를 쓴다) | 없음 — 꼭 준다 |
+| `ACHA_INBOX_DIR` | 원본 녹음이 있는 폴더(`build-samples` 만) | 없음 — 꼭 준다 |
+| `ACHA_SAMPLE_DIR` | 고른 목록과 만든 예시 파일을 두는 폴더(저장소 밖) | 사용자 홈의 `.t07-real/samples/work` |
 
-Node.js 24 가 필요하다(`node:sqlite`). `quiet-calls.mjs` 는 ffmpeg 가 있어야 한다.
+Node.js 24 가 필요하다(`node:sqlite`). `quiet-calls.mjs` 는 ffmpeg 가 있어야 한다. `.py` 도구는 파이썬 3 과 ffmpeg 가 필요하고, `pick-samples.py` 는 PC 안 모델(Ollama)이, `recheck-samples.py` 는 받아쓰기 일꾼의 파이썬(faster-whisper)이 있어야 한다.
 
 ## 돌리는 순서
 
@@ -38,9 +44,10 @@ Node.js 24 가 필요하다(`node:sqlite`). `quiet-calls.mjs` 는 ffmpeg 가 있
 4. `node stats.mjs` · `node quiet-calls.mjs`
 5. 서버를 끄고, `AI_PROVIDER=ollama` 인 설정 파일로 `node --env-file=<설정 파일> make-cards.mjs` 를 돌린다. `--dry-run` 을 붙이면 대상 건수만 보여 주고 아무것도 바꾸지 않는다.
 6. `node card-stats.mjs` · `node grounding.mjs` · `node model-times.mjs`
+7. 예시 녹음을 고를 때만: `python pick-samples.py 11` → 후보를 정한 뒤 `python build-samples.py <후보 번호>:<앞에서 자를 초> …` → `recheck-samples.py`. 세 도구는 숫자만 낸다. 고른 통화의 글을 읽어 확인하는 일은 도구에 넣지 않았다(가림 코드를 통과한 글만 일회용으로 읽었다).
 
 ## 지킬 것
 
 - 실제 녹음은 공개 데모 서버에 보내지 않는다. `setup-account.mjs` 는 PC 안 주소가 아니면 멈춘다.
-- 실제 녹음 · 받아쓴 글 · 카드 · 서버 설정 파일 · 토큰을 저장소에 넣지 않는다([AGENTS.md](../../../../AGENTS.md)의 「AI 작업 기록 규칙」).
+- 실제 녹음 · 받아쓴 글 · 카드 · 서버 설정 파일 · 토큰을 저장소에 넣지 않는다([AGENTS.md](../../../../AGENTS.md)의 「AI 작업 기록 규칙」). 예외는 총괄이 정한 [예시 녹음 5개](../예시-녹음/README.md)뿐이다.
 - 출력에 통화 내용이 섞이는 도구를 여기에 추가하지 않는다.
