@@ -1,4 +1,4 @@
-> AI 초안 · 돌린 사람: 배*결 · Claude Code(Fable 5.2) · 2026-11-24 · 검토: 아직 없음
+> AI 초안 · 돌린 사람: 배*결 · Claude Code(Fable 5.2) · 2026-11-24 · `file-names.txt` 는 Claude Code(Opus 5.5) · 2026-11-25 · 검토: 아직 없음
 
 # 도구가 낸 숫자 원본
 
@@ -21,6 +21,7 @@
 | `qwen3-14b-grounding.txt` | `grounding.mjs` | qwen3:14b 카드의 값이 받아쓴 글에 있는지 |
 | `qwen3-14b-model-times.txt` | `model-times.mjs` | qwen3:14b 호출 200번의 시간 |
 | `compare-models.txt` | `compare-models.mjs` | 같은 통화를 두 모델이 어떻게 다르게 봤는지(A = qwen3:4b · B = qwen3:14b) |
+| `file-names.txt` | `name-stats.py` | 녹음 파일 이름에서 읽은 통화 시각 · 내선 · 건 사람 번호의 종류와 되풀이, 같은 번호에서 AI 가 적은 거래처가 같았는지(A = qwen3:4b · B = qwen3:14b). 11/25 에 뽑았다 |
 
 ## 읽을 때 알아 둘 것
 
@@ -28,4 +29,5 @@
 - 그 줄의 「null」은 모델이 값 대신 글자 그대로 「null」이라고 적은 것이다(시험 기록 5절 12번).
 - `card-stats` 의 「빈 카드 통화의 글 길이 · 녹음 길이」는 통화 하나하나의 숫자다. 어느 통화인지는 적혀 있지 않다.
 - `stats.txt` 와 `quiet-calls.txt` 는 11/24 13:49 에 다시 뽑았다. 받아쓴 글은 11/23 밤 이후 바뀌지 않았다.
+- `file-names.txt` 에는 번호 · 거래처 이름 · 파일 이름이 없다. 「많이 건 순서로 통화 수」는 번호마다의 통화 수만 늘어놓은 것이다.
 - 다시 뽑으려면 같은 자료가 있어야 한다. 자료는 총괄 PC 안에만 있다.
