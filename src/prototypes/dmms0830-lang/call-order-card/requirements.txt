@@ -1,0 +1,3 @@
+faster-whisper>=1.2
+numpy
+edge-tts>=7.0   # make_samples.py 에서 가짜 통화 음성을 만들 때만 쓴다
