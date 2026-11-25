@@ -1,0 +1,21 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import {prepare,inspect,bundleName,CONFIG,archiveNamesSafe,systemDependenciesOnly} from '../prepare-audio-runtime.mjs';
+async function fixture(t){const root=await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(),'audio-test-')));t.after(()=>fs.rm(root,{recursive:true,force:true}));return root;}
+const builder=async stage=>{const out=path.join(stage,'bundle');await fs.mkdir(out);await fs.writeFile(path.join(out,'fake-binary'),'가짜 실행 파일');return out;};
+const opts={builder,platform:'darwin',arch:'arm64'};
+test('상태 조회는 파일을 생성하지 않는다',async t=>{const root=await fixture(t);assert.equal((await inspect(root)).filesVerified,false);assert.deepEqual(await fs.readdir(root),[]);});
+test('준비와 자체 inventory 변경 탐지',async t=>{const root=await fixture(t);await prepare(root,opts);assert.equal((await inspect(root)).filesVerified,true);await prepare(root,{...opts,builder:()=>{throw Error('must not rebuild');}});await fs.writeFile(path.join(root,'runtime',bundleName,'fake-binary'),'변조');assert.equal((await inspect(root)).filesVerified,false);await assert.rejects(prepare(root,opts),/existing_runtime_preserved/);});
+test('실패 시 스테이지와 lock 정리',async t=>{const root=await fixture(t);await assert.rejects(prepare(root,{...opts,builder:async()=>{throw Error('fake');}}),/fake/);assert.deepEqual(await fs.readdir(path.join(root,'runtime')),[]);});
+test('취소는 게시하지 않는다',async t=>{const root=await fixture(t);const c=new AbortController();c.abort();await assert.rejects(prepare(root,{...opts,signal:c.signal}));assert.equal((await inspect(root)).filesVerified,false);});
+test('symlink 경로 거절',async t=>{const root=await fixture(t);await fs.symlink(root,path.join(root,'link'));await assert.rejects(prepare(path.join(root,'link'),opts),/unsafe_path/);});
+test('기존 lock 보존',async t=>{const root=await fixture(t);await fs.mkdir(path.join(root,'runtime/.audio-prepare.lock'),{recursive:true});await assert.rejects(prepare(root,opts),/EEXIST/);assert.ok(await fs.stat(path.join(root,'runtime/.audio-prepare.lock')));});
+test('최소 LGPL 구성과 archive·dylib 검사',()=>{for(const x of ['gpl','version3','nonfree','network','autodetect'])assert.ok(CONFIG.includes('--disable-'+x));assert.equal(archiveNamesSafe('ffmpeg-9.0.2/a\n'),true);assert.equal(archiveNamesSafe('ffmpeg-9.0.2/../bad'),false);assert.equal(systemDependenciesOnly('ffmpeg:\n\t/usr/lib/libSystem.B.dylib (compatibility version 1)'),true);assert.equal(systemDependenciesOnly('ffmpeg:\n\t/opt/homebrew/lib/libavcodec.dylib'),false);});
+test('다른 플랫폼 거절',async t=>{const root=await fixture(t);await assert.rejects(prepare(root,{...opts,platform:'linux'}),/requires_macos_arm64/);});
+test('실제 자식 프로세스 취소',async()=>{const {run}=await import('../prepare-audio-runtime.mjs');const c=new AbortController();const promise=run('/bin/sleep',['30'],{signal:c.signal});setTimeout(()=>c.abort(),30);await assert.rejects(promise,/preparation_cancelled/);});
+test('번들 검증은 변조된 inventory를 거절한다',async t=>{const {verifyRuntime}=await import('../prepare-audio-runtime.mjs');const root=await fixture(t);await prepare(root,opts);const source=path.join(root,'runtime',bundleName);await fs.writeFile(path.join(source,'fake-binary'),'변조');await assert.rejects(verifyRuntime(source),/audio_inventory_mismatch/);});
+test('번들 검증은 내부 symlink도 거절한다',async t=>{const {verifyRuntime}=await import('../prepare-audio-runtime.mjs');const root=await fixture(t);await prepare(root,opts);const source=path.join(root,'runtime',bundleName);await fs.symlink('fake-binary',path.join(source,'link'));await assert.rejects(verifyRuntime(source),/audio_symlink_rejected/);});
+test('번들 복사는 자기 자신으로 복사하지 않는다',async t=>{const {copyVerifiedRuntime}=await import('../prepare-audio-runtime.mjs');const root=await fixture(t);await assert.rejects(copyVerifiedRuntime(root,root),/invalid_copy_destination/);});

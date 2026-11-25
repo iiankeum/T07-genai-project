@@ -1,0 +1,70 @@
+{
+  "scope": "actual customer/shipping/transcript modules + fake API; no real clipboard/print/authentication",
+  "results": [
+    {
+      "demo": true,
+      "isFake": true,
+      "customerNeutralPhone": true,
+      "copyRespectsCallProvenance": true,
+      "printWorkspaceContext": true
+    },
+    {
+      "demo": true,
+      "isFake": false,
+      "customerNeutralPhone": true,
+      "copyRespectsCallProvenance": true,
+      "printWorkspaceContext": true
+    },
+    {
+      "demo": true,
+      "isFake": "unknown",
+      "customerNeutralPhone": true,
+      "copyRespectsCallProvenance": true,
+      "printWorkspaceContext": true
+    },
+    {
+      "demo": false,
+      "isFake": true,
+      "customerNeutralPhone": true,
+      "copyRespectsCallProvenance": true,
+      "printWorkspaceContext": true
+    },
+    {
+      "demo": false,
+      "isFake": false,
+      "customerNeutralPhone": true,
+      "copyRespectsCallProvenance": true,
+      "printWorkspaceContext": true
+    },
+    {
+      "demo": false,
+      "isFake": "unknown",
+      "customerNeutralPhone": true,
+      "copyRespectsCallProvenance": true,
+      "printWorkspaceContext": true
+    },
+    {
+      "demo": "unknown",
+      "isFake": true,
+      "customerNeutralPhone": true,
+      "copyRespectsCallProvenance": true,
+      "printWorkspaceContext": true
+    },
+    {
+      "demo": "unknown",
+      "isFake": false,
+      "customerNeutralPhone": true,
+      "copyRespectsCallProvenance": true,
+      "printWorkspaceContext": true
+    },
+    {
+      "demo": "unknown",
+      "isFake": "unknown",
+      "customerNeutralPhone": true,
+      "copyRespectsCallProvenance": true,
+      "printWorkspaceContext": true
+    }
+  ],
+  "errors": [],
+  "external": []
+}

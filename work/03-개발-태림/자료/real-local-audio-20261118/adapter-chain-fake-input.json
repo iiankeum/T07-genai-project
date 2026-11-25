@@ -1,0 +1,60 @@
+{
+  "at": "2026-11-18T06:03:54.522Z",
+  "syntheticInput": true,
+  "realInference": true,
+  "stt": {
+    "syntheticInput": true,
+    "realInference": true,
+    "sourceText": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다.",
+    "voice": "macOS Yuna",
+    "audioSha256": "6b3874d8baf5111c6ec1257359276f2b33668af0e339b51e0d760b0cc6c4e625",
+    "model": "Systran/faster-whisper-small",
+    "device": "cpu",
+    "compute": "int8",
+    "loadSec": 0.85,
+    "vadFallback": false,
+    "versions": {
+      "faster-whisper": "1.2.1",
+      "ctranslate2": "4.9.0",
+      "numpy": "2.5.5"
+    },
+    "result": {
+      "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다.",
+      "segments": [
+        {
+          "start": 0,
+          "end": 3.7,
+          "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다."
+        }
+      ],
+      "durationSec": 3.7,
+      "language": "ko",
+      "elapsedSec": 1.7
+    },
+    "modelRevision": "536b0662742c02347bc0e980a01041f333bce120",
+    "modelSHA256": "3e305921506d8872816023e4c273e75d2419fb89b24da97b4fe7bce14170d671",
+    "modelFileBytes": 483546902,
+    "hfHubOffline": true
+  },
+  "provider": "ollama",
+  "cloudDisabled": true,
+  "elapsedMs": 667,
+  "data": {
+    "items": [
+      {
+        "name": "앞 브레이크 패드",
+        "quantity": 1
+      },
+      {
+        "name": "앞 디스크",
+        "quantity": 2
+      }
+    ]
+  },
+  "model": "qwen3:4b",
+  "limits": [
+    "합성 한국어 음성 한 건만 검증; 실전화·잡음·사투리·화자분리 품질은 미검증",
+    "서버 작업큐·저장·UI 전체통합은 미검증",
+    "개별 앱 adapter로 두 실제 모델을 연결한 시험이며 OS 네트워크 자체 차단 시험은 아님"
+  ]
+}

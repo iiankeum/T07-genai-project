@@ -1,0 +1,87 @@
+{
+  "fixtureOnly": true,
+  "results": [
+    {
+      "count": 5,
+      "width": 360,
+      "big": false,
+      "returnsEditedInput": true,
+      "visibleAboveActions": true,
+      "normalTabRetainsField": true,
+      "otherEvidenceUsesOwnItem": true
+    },
+    {
+      "count": 5,
+      "width": 360,
+      "big": true,
+      "returnsEditedInput": true,
+      "visibleAboveActions": true,
+      "normalTabRetainsField": true,
+      "otherEvidenceUsesOwnItem": true
+    },
+    {
+      "count": 5,
+      "width": 390,
+      "big": false,
+      "returnsEditedInput": true,
+      "visibleAboveActions": true,
+      "normalTabRetainsField": true,
+      "otherEvidenceUsesOwnItem": true
+    },
+    {
+      "count": 5,
+      "width": 390,
+      "big": true,
+      "returnsEditedInput": true,
+      "visibleAboveActions": true,
+      "normalTabRetainsField": true,
+      "otherEvidenceUsesOwnItem": true
+    },
+    {
+      "count": 10,
+      "width": 360,
+      "big": false,
+      "returnsEditedInput": true,
+      "visibleAboveActions": true,
+      "normalTabRetainsField": true,
+      "otherEvidenceUsesOwnItem": true
+    },
+    {
+      "count": 10,
+      "width": 360,
+      "big": true,
+      "returnsEditedInput": true,
+      "visibleAboveActions": true,
+      "normalTabRetainsField": true,
+      "otherEvidenceUsesOwnItem": true
+    },
+    {
+      "count": 10,
+      "width": 390,
+      "big": false,
+      "returnsEditedInput": true,
+      "visibleAboveActions": true,
+      "normalTabRetainsField": true,
+      "otherEvidenceUsesOwnItem": true
+    },
+    {
+      "count": 10,
+      "width": 390,
+      "big": true,
+      "returnsEditedInput": true,
+      "visibleAboveActions": true,
+      "normalTabRetainsField": true,
+      "otherEvidenceUsesOwnItem": true
+    },
+    {
+      "boundary": "prior row removed, stable ID restored after re-render",
+      "passed": true
+    },
+    {
+      "boundary": "deleted remembered row falls back to card, never unrelated input",
+      "passed": true
+    }
+  ],
+  "errors": [],
+  "blocked": []
+}

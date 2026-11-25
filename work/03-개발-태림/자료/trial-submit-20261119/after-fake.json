@@ -1,0 +1,28 @@
+{
+  "scope": "actual trial UI with deferred fake API, not real submission/consent/backend validation",
+  "results": [
+    {
+      "name": "pending fields and consent locked",
+      "pass": true
+    },
+    {
+      "name": "duplicate submit produces one exact payload",
+      "pass": true
+    },
+    {
+      "name": "failure preserves values and unlocks",
+      "pass": true
+    },
+    {
+      "name": "retry succeeds once with updated payload",
+      "pass": true
+    },
+    {
+      "name": "pending edit cannot be silently discarded",
+      "pass": true
+    }
+  ],
+  "requestCount": 3,
+  "errors": [],
+  "blocked": []
+}

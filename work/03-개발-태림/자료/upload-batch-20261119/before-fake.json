@@ -1,0 +1,102 @@
+{
+  "scope": "real upload UI + deferred mock API, fake silence only; no backend/auth/transcription/real consent",
+  "results": [
+    {
+      "demo": true,
+      "addKind": "input",
+      "pass": false,
+      "error": "new B must not enter the already-approved batch\n\n3 !== 2\n",
+      "requests": [
+        {
+          "name": "fake-a.wav",
+          "caller": "010-0000-0000",
+          "when": "2030-01-02T00:00:00.000Z"
+        },
+        {
+          "name": "fake-a2.wav",
+          "caller": "010-0000-0000",
+          "when": "2030-01-02T00:00:00.000Z"
+        },
+        {
+          "name": "fake-b.wav",
+          "caller": "010-0000-0000",
+          "when": "2030-01-02T00:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "demo": true,
+      "addKind": "drop",
+      "pass": false,
+      "error": "new B must not enter the already-approved batch\n\n3 !== 2\n",
+      "requests": [
+        {
+          "name": "fake-a.wav",
+          "caller": "010-0000-0000",
+          "when": "2030-01-02T00:00:00.000Z"
+        },
+        {
+          "name": "fake-a2.wav",
+          "caller": "010-0000-0000",
+          "when": "2030-01-02T00:00:00.000Z"
+        },
+        {
+          "name": "fake-b.wav",
+          "caller": "010-0000-0000",
+          "when": "2030-01-02T00:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "demo": false,
+      "addKind": "input",
+      "pass": false,
+      "error": "new B must not enter the already-approved batch\n\n3 !== 2\n",
+      "requests": [
+        {
+          "name": "fake-a.wav",
+          "caller": "010-0000-0000",
+          "when": "2030-01-02T00:00:00.000Z"
+        },
+        {
+          "name": "fake-a2.wav",
+          "caller": "010-0000-0000",
+          "when": "2030-01-02T00:00:00.000Z"
+        },
+        {
+          "name": "fake-b.wav",
+          "caller": "010-0000-0000",
+          "when": "2030-01-02T00:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "demo": false,
+      "addKind": "drop",
+      "pass": false,
+      "error": "new B must not enter the already-approved batch\n\n3 !== 2\n",
+      "requests": [
+        {
+          "name": "fake-a.wav",
+          "caller": "010-0000-0000",
+          "when": "2030-01-02T00:00:00.000Z"
+        },
+        {
+          "name": "fake-a2.wav",
+          "caller": "010-0000-0000",
+          "when": "2030-01-02T00:00:00.000Z"
+        },
+        {
+          "name": "fake-b.wav",
+          "caller": "010-0000-0000",
+          "when": "2030-01-02T00:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "runError": "upload batch boundary failed"
+    }
+  ],
+  "errors": [],
+  "blocked": []
+}

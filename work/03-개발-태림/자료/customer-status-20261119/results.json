@@ -1,0 +1,31 @@
+{
+  "scope": "actual customer module/CSS with synthetic API; viewer context is not server authorization test; no real data or mutations",
+  "results": [
+    {
+      "width": 1440,
+      "completedInquiryNotPending": true
+    },
+    {
+      "width": 1440,
+      "mixedStatusCounts": true,
+      "callbackPreserved": true,
+      "allRowsRetained": true,
+      "viewerReadOnly": true,
+      "linksSortPickerKeyboard": true
+    },
+    {
+      "width": 390,
+      "completedInquiryNotPending": true
+    },
+    {
+      "width": 390,
+      "mixedStatusCounts": true,
+      "callbackPreserved": true,
+      "allRowsRetained": true,
+      "viewerReadOnly": true,
+      "linksSortPickerKeyboard": true
+    }
+  ],
+  "errors": [],
+  "external": []
+}

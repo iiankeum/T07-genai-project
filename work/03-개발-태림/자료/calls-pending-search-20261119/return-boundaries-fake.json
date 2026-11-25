@@ -1,0 +1,272 @@
+{
+  "results": [
+    {
+      "width": 1440,
+      "count": 60,
+      "baseline": false
+    },
+    {
+      "width": 390,
+      "count": 60,
+      "baseline": false
+    },
+    {
+      "boundary": "user",
+      "noRestore": true
+    },
+    {
+      "boundary": "workspace",
+      "noRestore": true
+    },
+    {
+      "boundary": "expired",
+      "noRestore": true
+    },
+    {
+      "browserBack": true,
+      "thirdPage": 65
+    },
+    {
+      "filterChanged": true,
+      "noRestore": true
+    },
+    {
+      "deletedTarget": true,
+      "searchFocusFallback": true
+    },
+    {
+      "leaveDuringRestore": true,
+      "noThirdPageRequest": true,
+      "noFocusSteal": true
+    },
+    {
+      "intent": "tab",
+      "delayedResponseNoFocusOrScrollSteal": true
+    },
+    {
+      "intent": "wheel",
+      "delayedResponseNoFocusOrScrollSteal": true
+    },
+    {
+      "intent": "pageDown",
+      "delayedResponseNoFocusOrScrollSteal": true
+    }
+  ],
+  "requests": [
+    {
+      "q": "부품",
+      "status": "draft",
+      "limit": "30",
+      "offset": "0"
+    },
+    {
+      "q": "부품",
+      "status": "draft",
+      "limit": "30",
+      "offset": "30"
+    },
+    {
+      "q": "부품",
+      "status": "draft",
+      "limit": "30",
+      "offset": "0"
+    },
+    {
+      "q": "부품",
+      "status": "draft",
+      "limit": "30",
+      "offset": "30"
+    },
+    {
+      "q": "부품",
+      "status": "draft",
+      "limit": "30",
+      "offset": "0"
+    },
+    {
+      "q": "부품",
+      "status": "draft",
+      "limit": "30",
+      "offset": "30"
+    },
+    {
+      "q": "부품",
+      "status": "draft",
+      "limit": "30",
+      "offset": "0"
+    },
+    {
+      "q": "부품",
+      "status": "draft",
+      "limit": "30",
+      "offset": "30"
+    },
+    {
+      "q": "부품",
+      "status": "draft",
+      "limit": "30",
+      "offset": "0"
+    },
+    {
+      "q": "부품",
+      "status": "draft",
+      "limit": "30",
+      "offset": "30"
+    },
+    {
+      "q": "부품",
+      "status": "draft",
+      "limit": "30",
+      "offset": "0"
+    },
+    {
+      "q": "부품",
+      "status": "draft",
+      "limit": "30",
+      "offset": "30"
+    },
+    {
+      "q": "부품",
+      "status": "draft",
+      "limit": "30",
+      "offset": "0"
+    },
+    {
+      "q": "부품",
+      "status": "draft",
+      "limit": "30",
+      "offset": "30"
+    },
+    {
+      "q": "부품",
+      "status": "draft",
+      "limit": "30",
+      "offset": "60"
+    },
+    {
+      "q": "부품",
+      "status": "draft",
+      "limit": "30",
+      "offset": "0"
+    },
+    {
+      "q": "부품",
+      "status": "draft",
+      "limit": "30",
+      "offset": "30"
+    },
+    {
+      "q": "부품",
+      "status": "draft",
+      "limit": "30",
+      "offset": "60"
+    },
+    {
+      "status": "confirmed",
+      "limit": "30",
+      "offset": "0"
+    },
+    {
+      "status": "confirmed",
+      "limit": "30",
+      "offset": "30"
+    },
+    {
+      "status": "confirmed",
+      "limit": "30",
+      "offset": "0"
+    },
+    {
+      "status": "confirmed",
+      "limit": "30",
+      "offset": "30"
+    },
+    {
+      "q": "부품",
+      "limit": "30",
+      "offset": "0"
+    },
+    {
+      "q": "부품",
+      "limit": "30",
+      "offset": "30"
+    },
+    {
+      "q": "부품",
+      "limit": "30",
+      "offset": "60"
+    },
+    {
+      "q": "부품",
+      "limit": "30",
+      "offset": "0"
+    },
+    {
+      "q": "부품",
+      "limit": "30",
+      "offset": "30"
+    },
+    {
+      "q": "부품",
+      "limit": "30",
+      "offset": "0"
+    },
+    {
+      "q": "부품",
+      "limit": "30",
+      "offset": "30"
+    },
+    {
+      "q": "부품",
+      "limit": "30",
+      "offset": "0"
+    },
+    {
+      "q": "부품",
+      "limit": "30",
+      "offset": "30"
+    },
+    {
+      "q": "부품",
+      "limit": "30",
+      "offset": "0"
+    },
+    {
+      "q": "부품",
+      "limit": "30",
+      "offset": "30"
+    },
+    {
+      "q": "부품",
+      "limit": "30",
+      "offset": "0"
+    },
+    {
+      "q": "부품",
+      "limit": "30",
+      "offset": "30"
+    },
+    {
+      "q": "부품",
+      "limit": "30",
+      "offset": "0"
+    },
+    {
+      "q": "부품",
+      "limit": "30",
+      "offset": "30"
+    },
+    {
+      "q": "부품",
+      "limit": "30",
+      "offset": "0"
+    },
+    {
+      "q": "부품",
+      "limit": "30",
+      "offset": "30"
+    }
+  ],
+  "errors": [],
+  "blocked": []
+}

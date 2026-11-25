@@ -1,0 +1,114 @@
+{
+  "fakeData": true,
+  "paidAI": false,
+  "checks": [
+    "mobile primary task navigation",
+    "task queue before metrics",
+    "detail fixed action visibility and last input clearance",
+    "detail transcript/card switch",
+    "8 mobile large-text layouts",
+    "responsive assistant disclosure",
+    "upload invalid file rejection",
+    "upload consent gate without sending audio",
+    "7 settings cards and display navigation"
+  ],
+  "results": [
+    {
+      "name": "today",
+      "size": "desktop",
+      "overflow": false,
+      "heading": "오늘 브리핑"
+    },
+    {
+      "name": "today",
+      "size": "mobile",
+      "overflow": false,
+      "heading": "오늘 브리핑"
+    },
+    {
+      "name": "calls",
+      "size": "desktop",
+      "overflow": false,
+      "heading": "통화 기록"
+    },
+    {
+      "name": "calls",
+      "size": "mobile",
+      "overflow": false,
+      "heading": "통화 기록"
+    },
+    {
+      "name": "board",
+      "size": "desktop",
+      "overflow": false,
+      "heading": "주문 보드"
+    },
+    {
+      "name": "board",
+      "size": "mobile",
+      "overflow": false,
+      "heading": "주문 보드"
+    },
+    {
+      "name": "shipping",
+      "size": "desktop",
+      "overflow": false,
+      "heading": "출고 목록"
+    },
+    {
+      "name": "shipping",
+      "size": "mobile",
+      "overflow": false,
+      "heading": "출고 목록"
+    },
+    {
+      "name": "upload",
+      "size": "desktop",
+      "overflow": false,
+      "heading": "녹음 올리기"
+    },
+    {
+      "name": "upload",
+      "size": "mobile",
+      "overflow": false,
+      "heading": "녹음 올리기"
+    },
+    {
+      "name": "live",
+      "size": "desktop",
+      "overflow": false,
+      "heading": "새 통화 기록"
+    },
+    {
+      "name": "live",
+      "size": "mobile",
+      "overflow": false,
+      "heading": "새 통화 기록"
+    },
+    {
+      "name": "assistant",
+      "size": "desktop",
+      "overflow": false,
+      "heading": "어시스턴트"
+    },
+    {
+      "name": "assistant",
+      "size": "mobile",
+      "overflow": false,
+      "heading": "어시스턴트"
+    },
+    {
+      "name": "settings",
+      "size": "desktop",
+      "overflow": false,
+      "heading": "설정"
+    },
+    {
+      "name": "settings",
+      "size": "mobile",
+      "overflow": false,
+      "heading": "설정"
+    }
+  ],
+  "errors": []
+}

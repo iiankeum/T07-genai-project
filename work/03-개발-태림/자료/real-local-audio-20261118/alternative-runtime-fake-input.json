@@ -1,0 +1,194 @@
+{
+  "syntheticOnly": true,
+  "kind": "development-whisper-pyav-lgpl-v1",
+  "existingInstallationChanged": false,
+  "automaticWorkerConnected": false,
+  "tamperedRealWheelRejected": true,
+  "inventoryIsPublisherSignature": false,
+  "runs": [
+    {
+      "syntheticOnly": true,
+      "results": [
+        {
+          "format": "wav",
+          "shape": [
+            58660
+          ],
+          "dtype": "float32",
+          "transcription": {
+            "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다.",
+            "segments": [
+              {
+                "start": 0.0,
+                "end": 3.7,
+                "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다."
+              }
+            ],
+            "durationSec": 3.7,
+            "language": "ko",
+            "elapsedSec": 1.8
+          }
+        },
+        {
+          "format": "mp3",
+          "shape": [
+            58660
+          ],
+          "dtype": "float32",
+          "transcription": {
+            "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다.",
+            "segments": [
+              {
+                "start": 0.0,
+                "end": 3.7,
+                "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다."
+              }
+            ],
+            "durationSec": 3.7,
+            "language": "ko",
+            "elapsedSec": 1.0
+          }
+        },
+        {
+          "format": "m4a",
+          "shape": [
+            58660
+          ],
+          "dtype": "float32",
+          "transcription": {
+            "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다.",
+            "segments": [
+              {
+                "start": 0.0,
+                "end": 3.7,
+                "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다."
+              }
+            ],
+            "durationSec": 3.7,
+            "language": "ko",
+            "elapsedSec": 1.0
+          }
+        }
+      ],
+      "bytesIO": {
+        "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다.",
+        "segments": [
+          {
+            "start": 0.0,
+            "end": 3.7,
+            "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다."
+          }
+        ],
+        "durationSec": 3.7,
+        "language": "ko",
+        "elapsedSec": 1.0
+      },
+      "workerWavContract": {
+        "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다.",
+        "segments": [
+          {
+            "start": 0.0,
+            "end": 3.7,
+            "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다."
+          }
+        ],
+        "durationSec": 3.7,
+        "language": "ko",
+        "elapsedSec": 1.0
+      },
+      "oneSecondLimitRejected": true
+    },
+    {
+      "syntheticOnly": true,
+      "results": [
+        {
+          "format": "wav",
+          "shape": [
+            58660
+          ],
+          "dtype": "float32",
+          "transcription": {
+            "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다.",
+            "segments": [
+              {
+                "start": 0.0,
+                "end": 3.7,
+                "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다."
+              }
+            ],
+            "durationSec": 3.7,
+            "language": "ko",
+            "elapsedSec": 1.7
+          }
+        },
+        {
+          "format": "mp3",
+          "shape": [
+            58660
+          ],
+          "dtype": "float32",
+          "transcription": {
+            "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다.",
+            "segments": [
+              {
+                "start": 0.0,
+                "end": 3.7,
+                "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다."
+              }
+            ],
+            "durationSec": 3.7,
+            "language": "ko",
+            "elapsedSec": 1.0
+          }
+        },
+        {
+          "format": "m4a",
+          "shape": [
+            58660
+          ],
+          "dtype": "float32",
+          "transcription": {
+            "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다.",
+            "segments": [
+              {
+                "start": 0.0,
+                "end": 3.7,
+                "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다."
+              }
+            ],
+            "durationSec": 3.7,
+            "language": "ko",
+            "elapsedSec": 1.0
+          }
+        }
+      ],
+      "bytesIO": {
+        "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다.",
+        "segments": [
+          {
+            "start": 0.0,
+            "end": 3.7,
+            "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다."
+          }
+        ],
+        "durationSec": 3.7,
+        "language": "ko",
+        "elapsedSec": 1.0
+      },
+      "workerWavContract": {
+        "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다.",
+        "segments": [
+          {
+            "start": 0.0,
+            "end": 3.7,
+            "text": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다."
+          }
+        ],
+        "durationSec": 3.7,
+        "language": "ko",
+        "elapsedSec": 1.0
+      },
+      "oneSecondLimitRejected": true
+    }
+  ]
+}

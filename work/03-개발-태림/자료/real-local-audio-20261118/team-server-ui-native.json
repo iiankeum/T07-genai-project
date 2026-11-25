@@ -1,0 +1,28 @@
+{
+  "recordedAt": "2026-11-18T21:00:58.941510+09:00",
+  "sourceRevision": "32d79209d1e926b4944e15ece353a40bcfca5fb6",
+  "profile": "development-whisper-pyav-lgpl-v1",
+  "cleanBundle": true,
+  "adHocStrictSignature": true,
+  "observed": [
+    "manual startup to local login",
+    "open team address input and cancel",
+    "http://team.example.invalid rejected with error",
+    "dismiss error and reopen input",
+    "https://team.example.invalid:8443 normalized with trailing slash in confirmation",
+    "transmission/cost/storage/local-data isolation notice visible",
+    "cancel before final connection returns to local login",
+    "reopen input contains no previous address",
+    "cancel and quit; ports5601/11435 absent"
+  ],
+  "noFinalConnectionClicked": true,
+  "noUserCredentialsEntered": true,
+  "limitations": [
+    "no external connection or actual team server",
+    "no remote process success/lifetime test",
+    "no authenticated workflow",
+    "no packet capture; no-network-before-confirm boundary checked by code and UI"
+  ],
+  "stableZipSHA256": "c2324131bf44536ff0b8fca1524d64d2adf4c0b98b78e2c32c6f307c784e44dc",
+  "oldDevelopmentAppBackedUp": true
+}

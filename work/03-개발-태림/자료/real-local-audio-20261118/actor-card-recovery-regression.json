@@ -1,0 +1,23 @@
+{
+  "scope": "actual mountCard/api.js + mock API; real app login routing, authentication and backend persistence NOT verified",
+  "status": "passed",
+  "results": [
+    "network failure keeps input; manual retry saves and clears pending",
+    "reload restores pending patch and original expectedRevision",
+    "401 emits session-expired and keeps pending; simulated authenticated remount restores",
+    "same-tab workspace switch never restores or submits another workspace pending patch",
+    "same workspace different user cannot restore or auto-save another account pending; original user can recover",
+    "unscoped legacy pending is preserved but never restored",
+    "private unidentified user retains only memory, not persisted restoration",
+    "explicit demo still restores its own pending draft"
+  ],
+  "requests": 14,
+  "errors": [],
+  "blocked": [],
+  "recordedKST": "2026-11-18 21:26",
+  "nodeTests": 184,
+  "existingBrowserJourneys": 10,
+  "uploadMockTransactions": 8,
+  "realHTTPActorTests": "8 actor-expectation tests plus 1 client pinning test; fake database and localhost",
+  "remoteCIExecuted": false
+}

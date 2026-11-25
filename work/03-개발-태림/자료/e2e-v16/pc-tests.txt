@@ -1,0 +1,36 @@
+test_api_refuses_other_origin_and_redirect (test_agent.TestPieces) ... ok
+test_clean_segments (test_agent.TestPieces) ... ok
+test_multipart_roundtrip (test_agent.TestPieces) ... /Users/tae/.pyenv/versions/3.10.22/lib/python3.10/email/_header_value_parser.py:154: ResourceWarning: unclosed <socket.socket fd=3, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 59568)>
+  return sum((x.all_defects for x in self), self.defects)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_vad_guard_falls_back_when_vad_drops_speech (test_agent.TestPieces) ... ok
+test_wav_validation (test_agent.TestPieces) ... ok
+test_stable_upload_dedupe_retry_reject (test_agent.TestWatcher) ... 11-18 02:42:37 [감시] 올림 f95ebafd25 (1KB) call_1
+11-18 02:42:37 [감시] 올리기 실패(HTTP 503 busy) · 24초 뒤 다시 · c94e1c8642
+11-18 02:42:37 [감시] 이미 있음 c94e1c8642 (0KB) call_b
+11-18 02:42:37 [감시] 거절됨 530d620114 (0KB) HTTP 415 unsupported_media_type
+ok
+test_too_large_is_rejected_locally (test_agent.TestWatcher) ... ok
+test_claim_transcribe_result_and_bad_jobs (test_agent.TestWorker) ... 11-18 02:42:38 [일꾼] 모델을 올리는 중… (처음이면 내려받기에 몇 분 걸린다)
+11-18 02:42:38 [일꾼] 준비 끝: fake-whisper (cpu, int8) · CPU · 이름 test-pc
+11-18 02:42:38 [일꾼] 서버 신호: ok
+11-18 02:42:38 [일꾼] 일감 기다리는 중(서버 연결 정상)
+11-18 02:42:38 [일꾼] 받아씀 job_ok: 녹음 1.0초 · 받기 0.0초 · 받아쓰기 0.1초 · 1구간 8자 → 결과 200
+11-18 02:42:38 [일꾼] 실패 알림 job_evil → 200 (끝)
+11-18 02:42:38 [일꾼] 실패 알림 job_bad → 200 (끝)
+ok
+test_ambiguous_customer_is_not_guessed (test_masking.TestMask) ... ok
+test_find_leaks_catches_what_was_not_masked (test_masking.TestMask) ... ok
+test_kinds_are_masked_and_order_info_kept (test_masking.TestMask) ... ok
+test_lists_names_and_extra_words (test_masking.TestMask) ... ok
+test_similarity (test_masking.TestMask) ... ok
+test_stem_only_self_intro (test_masking.TestMask) ... ok
+test_tricky_forms (test_masking.TestMask) ... ok
+test_unmask_card (test_masking.TestMask) ... ok
+test_only_masked_call_that_passed_check_is_sent (test_masking.TestSendGuard) ... ok
+
+----------------------------------------------------------------------
+Ran 17 tests in 2.460s
+
+OK

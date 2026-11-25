@@ -1,0 +1,259 @@
+{
+  "at": "2026-11-18T10:28:49.630735+00:00",
+  "codeRevision": "3fe13fe6c87ce3dd61080f9b612ce6ad5f391614",
+  "publicFileCount": 57,
+  "publicFilesMatchExpectedBuild": true,
+  "modelResumeHelpersMatch": true,
+  "publicFiles": [
+    {
+      "file": "css/app.css",
+      "sha256": "c67ef5d60ef3421df26be9e8901458d8ca86ed5f3b23fd68aabf006d1fe01c90"
+    },
+    {
+      "file": "css/pages/account.css",
+      "sha256": "780f770c0c26e83bf91a579b13ff6416b695a4ed1979ecc7f388de9c9cb2bc98"
+    },
+    {
+      "file": "css/pages/admin.css",
+      "sha256": "feb661a3e8126eb8faad048d5daf53953d91daf998a5a4733fe1dc6e6c093bed"
+    },
+    {
+      "file": "css/pages/ask.css",
+      "sha256": "a2fff7eaa5d9cd1b03f7c8d749ad6bdb2871b3bd536ced51bf0abbfdb22191b1"
+    },
+    {
+      "file": "css/pages/board.css",
+      "sha256": "11a4171dbd4f313458320bb904ae246f6973b939298b1d14ad5e7c350bcf224e"
+    },
+    {
+      "file": "css/pages/call.css",
+      "sha256": "0bec03e6bc4889f7a6648a0d995e83d790e5a336a7e2a5dbf294dae18750e375"
+    },
+    {
+      "file": "css/pages/calls.css",
+      "sha256": "3f890dcbd9e84d6ef3afe33c2ec2a95c96ef43012eb6fe0c229726ef7a822923"
+    },
+    {
+      "file": "css/pages/customer.css",
+      "sha256": "fd08103f742ad2b53a7df105bc653274c9fb50825bd94cdbbbb2d310745fea72"
+    },
+    {
+      "file": "css/pages/glossary.css",
+      "sha256": "59074b939c3be51418f886d36375f9976cfc3cbfa60f19754a60f4f5342c2060"
+    },
+    {
+      "file": "css/pages/help.css",
+      "sha256": "b2b0f8913193f10d0af490aa4c966868ce3a3eb72f31cdd2e4eb89f7375cc44f"
+    },
+    {
+      "file": "css/pages/knowledge-assistant.css",
+      "sha256": "28af5ad7c4df1b0229a594dca175ff39776cc33f8190a641b899427caa67de29"
+    },
+    {
+      "file": "css/pages/live.css",
+      "sha256": "c194a39f6750d8b100c9750ce65122f7f3f728227e62353dd788759693cbe4e5"
+    },
+    {
+      "file": "css/pages/settings.css",
+      "sha256": "fee8077c0b6374bcc4a9b08488709a9246e3a6a9129b42badd5ad7ec0c8fe307"
+    },
+    {
+      "file": "css/pages/shipping.css",
+      "sha256": "6d1412e96793c025c87a2f44c3016ae54679b3d72de84c1f0528684676e01f03"
+    },
+    {
+      "file": "css/pages/today.css",
+      "sha256": "701735b3c714bb0fd240afe1735dd6ef23a11f4eb95080aa373c08b5aeef44cc"
+    },
+    {
+      "file": "css/pages/trial.css",
+      "sha256": "383dca79704a7b53450b33f4f1cf1bd3293dc92043dc965b2cd0dd24ec673475"
+    },
+    {
+      "file": "css/pages/upload.css",
+      "sha256": "d2a28234b0575bd52f40d220616b249923f2c9e1aec2d94029031b6915378a14"
+    },
+    {
+      "file": "favicon.ico",
+      "sha256": "33953576d333d3e44e3dd008bc397d51353ac5b3f419e430ccf32ec0765b859e"
+    },
+    {
+      "file": "fonts/OFL.txt",
+      "sha256": "d31ddd9f2bed32fd7e302a205cf2380ba0de6529152d239ef99cfb6f261bfc04"
+    },
+    {
+      "file": "fonts/PretendardJPVariable.woff2",
+      "sha256": "bc47e34e10121f5464c701a5bf463e4f5ab0981bdf2dfaf6459a23059f979ff1"
+    },
+    {
+      "file": "icons/icon-192.png",
+      "sha256": "db2816eb18cfc46898f4cf9b218c4f89b047f96000f440e41cbef44b95119080"
+    },
+    {
+      "file": "icons/icon-512.png",
+      "sha256": "fc21e98030ed222f60dc3dd879930ce797be585925b7a1f10781cd8c676bbf04"
+    },
+    {
+      "file": "icons/icon-maskable-512.png",
+      "sha256": "fd0399ab93442ba1913dce84fa25a7b152cc557276d336da5e2f44bd3c81e6b6"
+    },
+    {
+      "file": "icons/icon.svg",
+      "sha256": "92a15bb572d5a42f4facbcbc9508c673e008a901766cc895e0e1185cd41794d1"
+    },
+    {
+      "file": "index.html",
+      "sha256": "b082959ebe488d3ddf09964d145eec96d4436b043d3a8927d360deec469c889b"
+    },
+    {
+      "file": "intro/index.html",
+      "sha256": "892a157d1f09faf38dccec78f7dde5b65703d9d7a744d73e3396ceb95f0a7d3c"
+    },
+    {
+      "file": "intro/intro.js",
+      "sha256": "2ff12ed9b10cd2dfecbbd4682557d28859a70e8201cc8eebcc0a9b39174158a6"
+    },
+    {
+      "file": "intro/og.png",
+      "sha256": "19f03c24d2f5d38d9585a18e4b12b3e5f69a95a57455e383558b8f91bcf2b347"
+    },
+    {
+      "file": "intro/privacy.html",
+      "sha256": "4e5caa8f6b8356bfc01df713f116695e7de3856156fa4d7eeaf4515a959b861a"
+    },
+    {
+      "file": "js/api.js",
+      "sha256": "0cfb55049b10b31971a5f954c01185feb39dea154e8e508959e92c13f95f66b0"
+    },
+    {
+      "file": "js/app.js",
+      "sha256": "9caf0e167070ca7792b154cc2a2b387dd97c7c407e2b014f2a2ccaf4de106f3d"
+    },
+    {
+      "file": "js/domain.js",
+      "sha256": "63a8a10cef023f3ddcd75cbaec86778c827a4abcc721531a530b5fbf6c07fe04"
+    },
+    {
+      "file": "js/icons.js",
+      "sha256": "46e46989243494546e7d384bbd3e5f25bad8e72efbfa4ffe9fea97c5e39d5cca"
+    },
+    {
+      "file": "js/live-samples.js",
+      "sha256": "951db7228342e755adff129c45c87e147a1fbe332ddebdc386ac105984b487d0"
+    },
+    {
+      "file": "js/pages/account.js",
+      "sha256": "1740bf5e15926d2e2bcdbe46492168ca7cd8c21351b1af669124a8a25f930191"
+    },
+    {
+      "file": "js/pages/admin.js",
+      "sha256": "05619fc91fc608c68d8bb1da427fedcac78df7aaaff1f35bdf528dae15fc22a9"
+    },
+    {
+      "file": "js/pages/ask-citation.js",
+      "sha256": "d13c1358b7b228017ff6a30c83430d9103b91209e1dd0b9f3247c548cb53113f"
+    },
+    {
+      "file": "js/pages/ask.js",
+      "sha256": "0ae981bde2a7f47164a4f12048548a49bd2ffbce35d4e58fea70d530c729ea5b"
+    },
+    {
+      "file": "js/pages/assistant.js",
+      "sha256": "c614aff13e3c816b8dab20b2fac6b3e549bddab5090c511704e19c1ef3fffdb8"
+    },
+    {
+      "file": "js/pages/board.js",
+      "sha256": "b1eb4557063ede9c1a5076cc0b13b8986b8ef0ff6152116f0e16bedb1c1b2b9e"
+    },
+    {
+      "file": "js/pages/call-card.js",
+      "sha256": "4b9f943617de740a4a0482fd4739eedb0d24fa5b00fff12a0188024d503c3758"
+    },
+    {
+      "file": "js/pages/call-util.js",
+      "sha256": "ee816c77b1547c88542c23e39bbae0415b0ad187894fc9762f0cf5bf8a0f5f99"
+    },
+    {
+      "file": "js/pages/call.js",
+      "sha256": "e2cfd39df140a1aef9578b313f71442447175b9bcc2f7f353e977d3074f4b524"
+    },
+    {
+      "file": "js/pages/calls.js",
+      "sha256": "e001a204003c50458c2b83d75353bdf3b4b59084d87a775ab42d6689e2fca3af"
+    },
+    {
+      "file": "js/pages/customer.js",
+      "sha256": "87103349f3d21fb4db00055aa9ea8ce69d22aa19580d5da19bbac4332e5f4659"
+    },
+    {
+      "file": "js/pages/glossary.js",
+      "sha256": "2a96c66888085488bf71459b7880bfcad2a08a2e15cd1f1c401377205bbf117c"
+    },
+    {
+      "file": "js/pages/help.js",
+      "sha256": "779d5b3cea361a8e3fda0df8b9c7cfed4ac5d2bd83e15617eff42dda5c3d2884"
+    },
+    {
+      "file": "js/pages/legal.js",
+      "sha256": "074ef12b0ca7d834f647d5b6909eaed399881ca79830f8da8bb51aaf69f187ff"
+    },
+    {
+      "file": "js/pages/live.js",
+      "sha256": "22557dba0f00aad3fa1b7a9a1e1bc3dae40d4f4a834ae977c5d7ba619d26cc23"
+    },
+    {
+      "file": "js/pages/settings.js",
+      "sha256": "5b476bd5f0d1add46daa8c3241e0e40a88770c9c90b08e3f3893749d17cc05a6"
+    },
+    {
+      "file": "js/pages/shipping.js",
+      "sha256": "66a644c22118b444846adf038b11ac2a71f9a66d72788671d6d4c31369b0d663"
+    },
+    {
+      "file": "js/pages/today.js",
+      "sha256": "275a37f9e8823be31fe3f53e79c0f6d4b32d8ec6f8ecf2758f822839c05b84da"
+    },
+    {
+      "file": "js/pages/trial.js",
+      "sha256": "116e7eecea503b797c82c1787e7f6039920a7cb31442e98eb98caf7223037d42"
+    },
+    {
+      "file": "js/pages/upload.js",
+      "sha256": "75cdab298e128c9fa782241af47be8dea568628935ff76c1052e85bd3a0e2a0f"
+    },
+    {
+      "file": "js/ui.js",
+      "sha256": "7968fcbc354165d9af477efdaa51125cc686ed2650af4b7d12c3b13320ce42aa"
+    },
+    {
+      "file": "manifest.webmanifest",
+      "sha256": "8f7fe449508357f9f140a11814234e858ab79225edcf1bcf8a17a7d272dc4eb9"
+    },
+    {
+      "file": "sw.js",
+      "sha256": "85bcfdd77f2d44697acef70fa000c92ed806b87fb17144c4556630eab810bd19"
+    }
+  ],
+  "stableZipSha256": "c2324131bf44536ff0b8fca1524d64d2adf4c0b98b78e2c32c6f307c784e44dc",
+  "priorDevAppPreserved": "out/backups/Ahmatda-PyAV-Dev-3bb4497.app",
+  "nativeObserved": [
+    "separate-development-window",
+    "AI-off-notice",
+    "manual-continue",
+    "login-rendered",
+    "quit"
+  ],
+  "portsReleased": [
+    5601,
+    11435
+  ],
+  "nativeAuthenticatedCoreScreensVerified": false,
+  "modelInferenceVerifiedThisRun": false,
+  "downloadPerformed": false,
+  "limits": [
+    "No native authenticated business flow without approved account",
+    "Ad hoc signature only, no notarization",
+    "No Ollama bundled; manual fallback expected",
+    "No new Mac or license clearance"
+  ]
+}
