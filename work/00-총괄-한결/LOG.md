@@ -4,6 +4,22 @@
 
 <!-- 새 기록은 이 줄 바로 아래에 -->
 
+## 2026-11-25 23:01 KST · 모의 채점 뒤 제출 준비 — main 합치기 · README 첫 화면 · 마일스톤
+- 돌린 사람 · 도구: 배*결(dmms0830-lang) · Claude Code(Opus 5.5) · 데스크톱 앱 「생성형 AI 프로젝트 평가 기준」 방
+- 한 일:
+  - 11/25 수업에서 교수님이 말한 평가 방식(과정 약 50% · 제3자 이해 · 홍보 과정 · 스타는 기준선까지 · AI 에이전트로 채점)을 바탕으로 AI 가 채점 기준을 추측하고, 이 저장소를 그 기준으로 모의 채점했다(dev 까지 보면 63 ~ 68 · main 만 보면 51 ~ 56, 추측한 기준이라 숫자는 참고용).
+  - 모의 채점에서 나온 것을 고쳤다: [PR #45](https://github.com/iiankeum/T07-genai-project/pull/45) 를 합쳐 제품 코드를 `main` 에 넣었고([#49](https://github.com/iiankeum/T07-genai-project/issues/49)), [README](../../README.md) 첫 화면을 처음 보는 사람용으로 바꿨다(소개 이미지 · 화면 캡처 · 유튜브 · 인스타 · 데모 · 사람과 AI 가 나눠 하는 일 · 걸어온 길 · 깨진 배포 상태 링크 · [#50](https://github.com/iiankeum/T07-genai-project/issues/50)). [예시 녹음](실제녹음-시험/예시-녹음/README.md)에 공개 허락을 적었고([#52](https://github.com/iiankeum/T07-genai-project/issues/52)), [`.mailmap`](../../.mailmap)([#51](https://github.com/iiankeum/T07-genai-project/issues/51)) · [CONTRIBUTING](../../CONTRIBUTING.md) 리뷰 규칙([#53](https://github.com/iiankeum/T07-genai-project/issues/53))을 더했다.
+  - [마일스톤](https://github.com/iiankeum/T07-genai-project/milestones) 4개(W48 ~ W51, 최종 발표 12/16)와 이슈 18개(#49 ~ #66)를 만들었다. 이슈는 [11/25 회의록](../../docs/meetings/2026-11-25.md)의 할 일 · 결정 · 미결과 모의 채점의 고칠 점에서 옮겼고, 담당은 회의록대로 붙였다.
+- 왜: 배*결이 「추천대로 조치할 테니 모두 올려라 · 마일스톤을 설정하고 모두 업데이트하라」고 했다. 녹음은 「다 허락을 받았고 고객 정보 누출 우려가 없는 것만 특별 선별해서 올렸다」고 확인해 줬다.
+- 어떻게: `git log` 전체 가지 · `gh` 로 커밋 날짜 · 작성자 · 메시지 · PR · 리뷰 · 이슈 · CI 를 셌다. `dev` README 의 로컬 첫 실행을 임시 폴더에서 그대로 따라 해 켜지는 것을 확인했고, 화면 캡처는 그 가짜 데이터 화면을 헤드리스 Edge 로 찍었다. 비밀키 꼴 · 회사 이름 · 전화번호를 `main` · `dev` 와 전체 기록에서 찾았다(나온 것 없음 · 테스트의 번호는 가짜). 에이전트 0개.
+- 결과물: [README.md](../../README.md), [docs/img/](../../docs/img/), [예시-녹음/README.md](실제녹음-시험/예시-녹음/README.md), [.mailmap](../../.mailmap), [CONTRIBUTING.md](../../CONTRIBUTING.md), [마일스톤](https://github.com/iiankeum/T07-genai-project/milestones)
+- AI 가 판단한 것 · 사람이 확인할 것:
+  - `dot` 이름의 커밋 3개는 신*림의 PR #44 가지에만 있어서 신*림으로 모았다. `huge-forest` 도 신*림으로 보이지만, 묶으려면 개인 메일 주소를 파일에 적어야 해서 넣지 않았다 — 신*림이 괜찮다면 더한다.
+  - 이슈 담당은 회의록의 담당을 그대로 붙였다(배정 알림이 간다). 담당이 다르면 고쳐 주세요.
+  - W51 마감일은 최종 발표일 12/16 으로 잡았다. 자료 제출 마감이 따로 있으면 [#62](https://github.com/iiankeum/T07-genai-project/issues/62)에서 맞춘다.
+  - README 의 「Up Next」 는 마케팅이 관리하는 칸이라 고치지 않았다(11/25 회의 그대로).
+- 다음 할 일: 다음 PR 부터 팀원 한 명이 리뷰 · 댓글 남기기 · 스타 20 ~ 30개 · 예시 녹음 사람 확인(#61).
+
 ## 2026-11-25 22:25 KST · 아차(로컬) v0.1 — 만든 기록을 폴더로 남김
 - 돌린 사람 · 도구: 배*결(dmms0830-lang) · Claude Code(Opus 5.5) · 데스크톱 앱 「AI 전사 기능 개발」 방
 - 한 일: 21:04 ~ 22:11 에 단어장 끼운 오프라인 받아쓰기 프로그램 「아차(로컬)」 v0.1 을 만들어 팀 저장소에 올렸고([PR #48](https://github.com/iiankeum/T07-genai-project/pull/48) → `dev` · [Release `acha-local-v0.1.0`](https://github.com/iiankeum/T07-genai-project/releases/tag/acha-local-v0.1.0)), 그 과정을 [`아차-로컬/`](아차-로컬/README.md) 폴더(이력 · 정한 것 · 원리 조사 · 시험 기록 · 숫자 원본)로 남겼다. 11/25 날짜별 기록 · 총괄 README 에 이어 적었다.
