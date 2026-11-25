@@ -196,7 +196,7 @@ node --env-file=.env server.mjs
 - [개발·무과금 테스트](src/app/README.md) · [시스템 구조](docs/architecture.md) · [시스템 구성도 한 장](docs/시스템구성도/README.md) · [개발 일지](work/03-개발-태림/LOG.md)
 
 ## 🚨 Up Next 🚨
-**[ 11/25(수) 22:00 ]** Weekly Meeting
+**[ 12/02(수) 22:00 ]** Weekly Meeting
 
 ## 팀원
 | 이름 | GitHub | 역할 |
