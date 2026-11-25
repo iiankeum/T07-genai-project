@@ -67,6 +67,8 @@ feat: 가상 소비자 페르소나 100명 생성
 
 - 문서(`docs/`)는 `main`에 바로 올려도 됩니다.
 - 코드(`src/`)는 브랜치를 만들어 PR로 올리고, 팀원 한 명 이상이 확인한 뒤 머지합니다.
+- 확인은 말이나 메신저가 아니라 **PR 의 리뷰(Approve)나 댓글**로 남깁니다. 「봤다 · 이 부분이 좋다 · 이건 고치자」 한 줄이면 됩니다. 과정 평가에서 보는 기록입니다([#53](https://github.com/iiankeum/T07-genai-project/issues/53)).
+- 할 일은 [이슈](https://github.com/iiankeum/T07-genai-project/issues)로 만들고 주차별 [마일스톤](https://github.com/iiankeum/T07-genai-project/milestones)에 넣습니다. PR 본문에 `closes #번호`를 적으면 합칠 때 이슈가 닫힙니다.
 - 브랜치 이름: `<종류>/<짧은-설명>` (예: `feat/persona-generator`)
 
 ## 올리기 전에
