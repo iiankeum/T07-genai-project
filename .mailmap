@@ -1,5 +1,8 @@
 # 한 사람의 커밋이 여러 이름으로 갈린 것을 GitHub 계정 하나로 모은다(#51).
 # git shortlog -sn --all 같은 집계에서 팀원 수가 맞게 나온다.
-# 개인 메일 주소는 적지 않는다(공개 저장소 · AGENTS.md) — noreply · 가짜 주소만 적는다.
+# 개인 메일 주소는 새로 적지 않는다(공개 저장소 · AGENTS.md) — noreply · 가짜 주소를 쓴다.
+# 예외: huge-forest 줄의 주소는 이미 이 저장소의 공개 커밋 기록에 들어 있는 것이다.
+#       메일 주소로만 짝을 지을 수 있어 그대로 적었다(총괄 배*결 결정 · 2026-11-26 · #51).
 taejs <41318449+taejs@users.noreply.github.com> Tae Shin <taejs@users.noreply.github.com>
 taejs <41318449+taejs@users.noreply.github.com> dot <dot-local@example.invalid>
+taejs <41318449+taejs@users.noreply.github.com> huge-forest <hugeforestshin@gmail.com>

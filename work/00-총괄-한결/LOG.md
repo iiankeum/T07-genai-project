@@ -4,6 +4,35 @@
 
 <!-- 새 기록은 이 줄 바로 아래에 -->
 
+## 2026-11-26 07:40 KST · 팀원 작업에 리뷰 · 댓글 10개 · huge-forest 를 신*림으로 묶음
+- 돌린 사람 · 도구: 배*결(dmms0830-lang) · Claude Code(Opus 5.5) · 데스크톱 앱 「생성형 AI 프로젝트 평가 기준」 방
+- 한 일:
+  - 지금까지 PR 리뷰가 0개였다([#53](https://github.com/iiankeum/T07-genai-project/issues/53)). 팀원이 만든 PR · 커밋 · 이슈 10곳에 AI 가 코드와 문서를 읽고 리뷰 · 댓글을 달았다. 모두 배*결 계정으로 올렸고, 글 끝에 「AI 초안 · 돌린 사람: 배*결 · Claude Code」를 적었다.
+
+    | 곳 | 누구의 것 | 남긴 말(줄인 것) |
+    |---|---|---|
+    | [PR #44 리뷰](https://github.com/iiankeum/T07-genai-project/pull/44#pullrequestreview-6065972563) | 신*림 | 실제 녹음 200건이 멈추지 않고 돎 · 근거 검사가 예시 베끼기를 걸러 냄 · 수량 검사 줄에 「말하지 않은 수량」 경고 제안 |
+    | [PR #42 리뷰](https://github.com/iiankeum/T07-genai-project/pull/42#pullrequestreview-6065972777) | 신*림 | `shell: bash` 만으로도 pipefail 이 켜짐 · 다른 워크플로엔 같은 구멍 없음 확인 |
+    | [PR #16 리뷰](https://github.com/iiankeum/T07-genai-project/pull/16#pullrequestreview-6065972994) | 신*림 | 사람 확인을 시험 코드로 못 박음 · 「들음」 표시 제안 · #61 과 이음 |
+    | [PR #11 리뷰](https://github.com/iiankeum/T07-genai-project/pull/11#pullrequestreview-6065973218) | 신*림 | 「머지 뒤 확인」대로 서버 상태 확인(`1f890e6`) · 배포 전 백업 순서 한 줄 제안 |
+    | [PR #46 리뷰](https://github.com/iiankeum/T07-genai-project/pull/46#pullrequestreview-6065973412) | 김*희 | 기획서 요약 README 제안 · 파일 이름 NFD 주의 · 캡처 속 옛 이름은 #65 때 |
+    | [커밋 f480f37 댓글](https://github.com/iiankeum/T07-genai-project/commit/f480f37897960eab41195a390d36fd5a62bcc69a#r211884670) | 신*림(huge-forest) | 부품명이 차종에 들어간 경우 검사 좋음 · 품목에도 근거 검사 제안(시험 기록 5절 2번) |
+    | [커밋 39c9517 댓글](https://github.com/iiankeum/T07-genai-project/commit/39c95179bca76ed56bba474b71ef0d764c660eb7#commitcomment-211884675) | 금*현 | 시험 기록 → 퀴즈 소재로 이어짐 · 유튜브 하루 4개 첫 주는 경고 알림도 기록 |
+    | [이슈 #54 댓글](https://github.com/iiankeum/T07-genai-project/issues/54#issuecomment-7176653370) | 신*림 담당 | #48 설치 방식 · `hotwords` 30초마다 · 용어집 마켓을 저장소에 PR 로 두는 안 · #48 리뷰 부탁 |
+    | [이슈 #59 댓글](https://github.com/iiankeum/T07-genai-project/issues/59#issuecomment-7176653696) | 금*현 담당 | 11/26 스타 3 · 14일 방문 548회 18명 · 방문 기록은 14일만 남으니 주 1회 옮겨 적기 |
+    | [이슈 #64 댓글](https://github.com/iiankeum/T07-genai-project/issues/64#issuecomment-7176653991) | 금*현 담당 | 지금까지 숫자 미리 정리(계속 시청 51.4% 대 27.5% 등) · 인사이트 주 1회 캡처 |
+
+  - [`.mailmap`](../../.mailmap) 에 `huge-forest` 를 신*림(taejs)으로 더했다. `git shortlog -sn --all` 이 팀원 수와 같은 4명으로 나온다(taejs 199 · dmms0830-lang 112 · iiankeum 68 · kamnamhee 30). [#51](https://github.com/iiankeum/T07-genai-project/issues/51) 을 닫는다.
+- 왜: 배*결이 「리뷰 달 만한 것 · 댓글 달 만한 것을 찾아 10개쯤 여러 곳에 달아라」 · 「huge-forest 는 태림님으로 하라」 · 「깃허브에 증거가 남도록 모두 커밋해서 올려라」고 했다.
+- 어떻게: `gh` 로 PR 48개 · 이슈 18개 · 팀원 커밋을 훑고, 실제 녹음 [시험 기록 5절](실제녹음-시험/시험-기록.md#5-개발-쪽에-넘길-것)의 숫자와 이어지는 곳을 골랐다. 리뷰는 PR 의 마지막 커밋 기준 줄에 달았다. 댓글에 넣은 숫자는 올리기 전에 저장소 · 서버(`/healthz` · `/_deploy/status.json`) · 저장소 방문 통계에서 다시 읽었다. 에이전트 0개.
+- 결과물: 위 표의 리뷰 · 댓글 10개, [.mailmap](../../.mailmap)
+- AI 가 판단한 것 · 사람이 확인할 것:
+  - 리뷰는 모두 「Comment」로 달았다. 이미 합친 PR 이라 승인(Approve)은 뜻이 없고, 내 PR(#47 · #48)은 스스로 승인할 수 없다 — 이 둘은 팀원 리뷰가 필요하다.
+  - 댓글의 제안은 AI 의 제안이고 정한 것이 아니라고 각 글에 적었다.
+  - `huge-forest` 의 메일 주소는 이미 공개 커밋 기록에 있는 것이다. 메일 주소로만 짝을 지을 수 있어 그대로 적었다(총괄 결정).
+  - 마케팅 영상 만드는 방법에 「AI 표시 켬」이 이미 있어서, 그 부분은 댓글에서 칭찬으로만 남겼다.
+- 다음 할 일: 팀원이 #47 · #48 에 리뷰 남기기 · 받은 댓글에 답 달기 · 데모 서버 이름 「콜노트(가칭)」 바꾸기([서버 운영 일지](자료/서버-운영-일지.md) 3번).
+
 ## 2026-11-25 23:01 KST · 모의 채점 뒤 제출 준비 — main 합치기 · README 첫 화면 · 마일스톤
 - 돌린 사람 · 도구: 배*결(dmms0830-lang) · Claude Code(Opus 5.5) · 데스크톱 앱 「생성형 AI 프로젝트 평가 기준」 방
 - 한 일:
