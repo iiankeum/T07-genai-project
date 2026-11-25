@@ -1,0 +1,19 @@
+# 설치본 시험 (2026-11-25) — 서버 요청 결과를 옮겨 적음
+# 설치 파일 AchaLocal-Setup-0.1.0.exe 를 시험 폴더에 /VERYSILENT 로 깔고 --no-window 로 켜서 API 로 확인
+
+## 첫 설치본 (CPU 일꾼 = 논리 코어 - 1 = 11)
+21:45 켬 · engine: large-v3-turbo (CPU) · gpu: nvidia=true packInstalled=false · 모델 3개 찾음 · 예시 녹음 2개
+21:45:54 가짜-부품주문-전화(82.6초) 받아쓰기 시작 → 21:53 까지 첫 문장 없음(다른 시험과 겹침) → 멈춤
+21:57 GPU 가속 받기 → 1264 / 1264 MB 받음 → cuda 폴더 2.0G · DLL 16개
+21:59:48 같은 프로세스에서 GPU 로 다시 열기 → 22:01 engine state=loading 그대로 · 프로세스 CPU +0.0s/3s · GPU 0% → 멈춤으로 판단
+22:01 프로그램 새로 켬 → engine: large-v3-turbo (GPU · NVIDIA GeForce RTX 5060 Ti)
+가짜-부품주문-전화 → state done · elapsed 4.3s · passes 2 · segs 14
+
+## 고친 설치본 (CPU 일꾼 = 논리 코어 / 2 = 6 · GPU 받은 뒤 다시 열기 안내)
+cuda 폴더를 잠시 cuda.off 로 바꿔 CPU 만 남김
+engine: large-v3-turbo (CPU)
+가짜-AI수업-강의(72.0초) → state done · wall 90.7s · elapsed 88.7s · passes 2
+
+## 깃허브 Release
+acha-local-v0.1.0 · AchaLocal-Setup-0.1.0.exe · 71428074 bytes · 로그인 없이 받은 파일의 SHA-256 이 올린 파일과 같음
+SHA-256: 7cf0ece6c964665ccac88d3ca69acae503bf62a5a44546aa2ea2e013a931d3f2
