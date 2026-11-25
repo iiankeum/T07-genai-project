@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>아차(로컬)</title>
+<link rel="icon" href="/web/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/web/style.css">
+</head>
+<body>
+<div class="app">
+  <nav class="side" aria-label="메뉴">
+    <div class="brand"><img src="/web/icon.svg" alt="" width="28" height="28"><span>아차 <small class="local">로컬</small></span></div>
+    <button class="nav active" data-page="new">받아쓰기</button>
+    <button class="nav" data-page="notes">기록</button>
+    <button class="nav" data-page="gloss">단어장</button>
+    <button class="nav" data-page="eval">효과 재기</button>
+    <button class="nav" data-page="settings">설정</button>
+    <div class="side-foot">
+      <div id="engineChip" class="chip">엔진 확인 중…</div>
+      <div class="offline">이 PC 안에서만 처리해요</div>
+    </div>
+  </nav>
+
+  <main>
+    <!-- 받아쓰기 -->
+    <section class="page" id="page-new">
+      <h1>새로 받아쓰기</h1>
+      <p class="lead">녹음을 넣으면 단어장의 낱말을 <b>30초마다</b> 엔진에 알려 주며 받아쓰고, 받아쓴 뒤 단어장으로 한 번 더 고칩니다.</p>
+
+      <div class="card">
+        <div id="drop" class="drop" tabindex="0" role="button" aria-label="녹음 파일 고르기">
+          <div class="drop-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="28" height="28"><path d="M12 16V4m0 0-4 4m4-4 4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div><b>녹음 파일을 여기에 끌어 놓거나 눌러서 고르세요</b></div>
+          <div class="muted">mp3 · m4a · wav · mp4 · webm 등 · 길이 제한 없음</div>
+          <input type="file" id="file" accept="audio/*,video/*,.m4a,.amr,.3gp" hidden>
+        </div>
+        <div class="rec-row">
+          <button id="recBtn" class="btn"><span class="dot"></span><span id="recLabel">지금 녹음하기</span></button>
+          <span id="recTime" class="muted"></span>
+        </div>
+        <div id="picked" class="picked" hidden></div>
+      </div>
+
+      <div class="card">
+        <div class="grid2">
+          <label>단어장<select id="newGloss"></select></label>
+          <label>언어<select id="newLang"><option value="ko">한국어</option><option value="">자동으로 알아내기</option><option value="en">English</option><option value="ja">日本語</option></select></label>
+        </div>
+        <label>이 녹음은… <span class="muted">(선택 · 엔진에게 주는 한 줄 설명)</span>
+          <input id="newContext" maxlength="80" placeholder="예: 자동차 부품 주문 전화입니다. / 경영학원론 3주차 수업입니다.">
+        </label>
+        <div id="newPlan" class="plan"></div>
+        <button id="startBtn" class="btn primary" disabled>받아쓰기 시작</button>
+      </div>
+
+      <div id="jobBox" class="card job" hidden>
+        <div class="row between"><b id="jobStage">기다리는 중</b><span id="jobPct" class="muted"></span></div>
+        <div class="bar"><div id="jobBar"></div></div>
+        <button id="cancelBtn" class="btn ghost">그만두기</button>
+      </div>
+    </section>
+
+    <!-- 기록 목록 -->
+    <section class="page" id="page-notes" hidden>
+      <h1>기록</h1>
+      <p class="lead">받아쓴 글은 이 PC 에만 저장됩니다.</p>
+      <div id="notesList" class="notes"></div>
+    </section>
+
+    <!-- 기록 하나 -->
+    <section class="page" id="page-note" hidden>
+      <div class="note-head">
+        <button class="btn ghost small" data-go="notes">← 기록</button>
+        <input id="noteTitle" class="title-input" aria-label="제목">
+        <div id="noteMeta" class="muted"></div>
+        <div class="toolbar">
+          <button class="btn small" data-exp="txt">글(.txt)</button>
+          <button class="btn small" data-exp="srt">자막(.srt)</button>
+          <button class="btn small" data-exp="md">마크다운</button>
+          <button class="btn small" id="copyBtn">복사</button>
+          <span class="sep"></span>
+          <button class="btn small" id="recorrectBtn" title="다시 듣지 않고, 지금 단어장으로 고치기만 새로 합니다">단어장으로 다시 고치기</button>
+          <button class="btn small" id="rerunBtn" title="지금 단어장으로 처음부터 다시 받아씁니다">다시 받아쓰기</button>
+          <button class="btn small danger" id="delNoteBtn">지우기</button>
+        </div>
+        <audio id="player" controls preload="metadata"></audio>
+        <div class="legend">
+          <span class="fx applied">고친 곳</span>
+          <span class="fx sugg">고칠까요?</span>
+          누르면 바뀌어요 · 틀린 말을 마우스로 고르면 <b>단어장에 넣기</b>가 나와요 · 시간을 누르면 그 자리부터 들려요
+        </div>
+      </div>
+      <div id="segs" class="segs"></div>
+      <div id="hintInfo" class="hint-info muted"></div>
+    </section>
+
+    <!-- 단어장 -->
+    <section class="page" id="page-gloss" hidden>
+      <h1>단어장</h1>
+      <p class="lead">받아쓰기가 알아야 할 낱말을 적어 두세요. <b>다르게 들리는 말</b>에는 엔진이 잘못 적는 모양이나 현장에서 부르는 말을 적으면, 그 말이 나올 때 낱말로 바꿉니다.</p>
+      <div class="gloss-layout">
+        <aside class="card gloss-list">
+          <div id="glossList"></div>
+          <button id="glossNew" class="btn small">+ 새 단어장</button>
+        </aside>
+        <div class="card gloss-edit">
+          <div class="row between wrap">
+            <h2 id="glossName">—</h2>
+            <div class="toolbar">
+              <button class="btn small" id="glossImport">가져오기</button>
+              <button class="btn small" id="glossExport">CSV 로 내보내기</button>
+              <button class="btn small" id="glossRename">이름 바꾸기</button>
+              <button class="btn small danger" id="glossDelete">지우기</button>
+              <input type="file" id="glossFile" accept=".csv,.txt,text/csv,text/plain" hidden>
+            </div>
+          </div>
+          <div id="glossPlan" class="plan"></div>
+          <div class="row wrap">
+            <input id="glossSearch" class="grow" placeholder="찾기">
+            <button class="btn small primary" id="glossAdd">+ 낱말 더하기</button>
+            <span id="glossSaved" class="muted"></span>
+          </div>
+          <div class="table-wrap">
+            <table class="gt">
+              <thead><tr>
+                <th>낱말<small>글에 이렇게 적혀야 함</small></th>
+                <th>다르게 들리는 말<small>쉼표로 구분 · 보이면 낱말로 바꿈</small></th>
+                <th>메모</th>
+                <th title="힌트 자리가 모자라도 먼저 넣기">항상<small>먼저 넣기</small></th>
+                <th title="받아쓴 글에 나온 횟수">쓰임</th>
+                <th></th>
+              </tr></thead>
+              <tbody id="glossBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 효과 재기 -->
+    <section class="page" id="page-eval" hidden>
+      <h1>단어장 효과 재기</h1>
+      <p class="lead">같은 녹음을 네 가지 방법으로 받아써서 <b>정답 글</b>과 비교합니다. 내 녹음에서 단어장이 얼마나 도움이 되는지 숫자로 볼 수 있어요.</p>
+      <div class="card">
+        <div class="row wrap">
+          <span class="muted">처음이면</span>
+          <select id="evalSample"></select>
+          <button class="btn small" id="evalSampleBtn">예시로 해 보기</button>
+        </div>
+        <hr>
+        <label>녹음 파일<input type="file" id="evalFile" accept="audio/*,video/*,.m4a"></label>
+        <label>정답 글 <span class="muted">(녹음에서 실제로 한 말을 사람이 그대로 적은 것)</span>
+          <textarea id="evalRef" rows="5" placeholder="여보세요, 다온부품이죠? …"></textarea>
+        </label>
+        <div class="grid2">
+          <label>단어장<select id="evalGloss"></select></label>
+          <label>이 녹음은…<input id="evalContext" maxlength="80"></label>
+        </div>
+        <button class="btn primary" id="evalStart">재기 시작</button>
+      </div>
+      <div id="evalJob" class="card job" hidden>
+        <div class="row between"><b id="evalStage"></b><span id="evalPct" class="muted"></span></div>
+        <div class="bar"><div id="evalBar"></div></div>
+      </div>
+      <div id="evalResult"></div>
+    </section>
+
+    <!-- 설정 -->
+    <section class="page" id="page-settings" hidden>
+      <h1>설정</h1>
+      <div class="card">
+        <h2>받아쓰기 모델</h2>
+        <p class="muted">처음 한 번만 인터넷으로 받습니다. 그 뒤로는 인터넷 없이 돕니다.</p>
+        <div id="modelList" class="models"></div>
+        <details>
+          <summary>인터넷이 안 되는 PC 라면</summary>
+          <p class="muted">다른 PC 에서 받은 모델 폴더(model.bin 이 든 폴더)를 복사해 와서 그 경로를 적으세요.</p>
+          <div class="row"><input id="customModel" class="grow" placeholder="C:\모델\faster-whisper-large-v3-turbo"><button class="btn small" id="customModelBtn">이 폴더 쓰기</button></div>
+        </details>
+      </div>
+      <div class="card">
+        <h2>장치</h2>
+        <div class="row wrap">
+          <select id="deviceSel"><option value="auto">자동(그래픽카드가 되면 씀)</option><option value="cpu">CPU 만</option></select>
+          <span id="deviceInfo" class="muted"></span>
+        </div>
+        <div id="gpuBox"></div>
+      </div>
+      <div class="card">
+        <h2>저장 위치</h2>
+        <div class="row wrap"><code id="dataDir"></code><button class="btn small" id="openData">폴더 열기</button></div>
+      </div>
+      <div class="card about">
+        <h2>어떻게 동작하나요</h2>
+        <p class="muted">아차(로컬)는 자동차 부품 대리점 전화 주문 받아쓰기 서비스 「아차」의 받아쓰기 원리를, 어떤 녹음 · 어떤 단어장에도 쓸 수 있게 PC 프로그램으로 뗀 것입니다.</p>
+        <ol>
+          <li><b>힌트 고르기</b> — 엔진(Whisper)은 30초씩 듣고, 한 번에 알려 줄 수 있는 힌트는 223 토큰(한국어 낱말 40개 안팎)뿐이에요. 그래서 「항상 넣기 → 자주 쓰인 낱말 → 단어장 순서」로 골라 넣습니다.</li>
+          <li><b>30초마다 다시 알려 주기</b> — 흔히 쓰는 방식(initial_prompt)은 첫 30초에만 힌트가 들어가요. 이 프로그램은 hotwords 로 30초마다 다시 넣습니다.</li>
+          <li><b>두 번 듣기</b> — 단어장이 힌트 자리보다 크면, 한 번 받아쓴 글에 비슷한 소리로 나온 낱말을 골라 다시 받아씁니다.</li>
+          <li><b>받아쓴 뒤 고치기</b> — 다르게 들리는 말 · 띄어쓰기 · 자모 단위 소리 비교로 단어장 낱말을 찾아 고칩니다(인터넷 · AI 없이).</li>
+          <li><b>배우기</b> — 사람이 고친 말은 단어장에 쌓여서 다음 받아쓰기부터 바로 고쳐집니다.</li>
+        </ol>
+        <p class="muted" id="aboutVer"></p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="selPop" class="sel-pop" hidden><button class="btn small primary" id="selLearn">단어장에 넣기</button></div>
+<dialog id="dlg">
+  <form method="dialog" id="dlgForm">
+    <h3 id="dlgTitle"></h3>
+    <div id="dlgBody"></div>
+    <div class="row end">
+      <button value="cancel" class="btn ghost">취소</button>
+      <button value="ok" class="btn primary" id="dlgOk">확인</button>
+    </div>
+  </form>
+</dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="/web/app.js"></script>
+</body>
+</html>
