@@ -1,0 +1,5 @@
+# 한 사람의 커밋이 여러 이름으로 갈린 것을 GitHub 계정 하나로 모은다(#51).
+# git shortlog -sn --all 같은 집계에서 팀원 수가 맞게 나온다.
+# 개인 메일 주소는 적지 않는다(공개 저장소 · AGENTS.md) — noreply · 가짜 주소만 적는다.
+taejs <41318449+taejs@users.noreply.github.com> Tae Shin <taejs@users.noreply.github.com>
+taejs <41318449+taejs@users.noreply.github.com> dot <dot-local@example.invalid>
