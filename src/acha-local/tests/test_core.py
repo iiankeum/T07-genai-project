@@ -123,5 +123,22 @@ class Correct(unittest.TestCase):
         self.assertEqual("".join(p["t"] for p in pieces), text)
 
 
+class TestEvaluateConditions(unittest.TestCase):
+    """효과 재기는 이웃한 두 줄이 한 가지만 달라야 차이가 어디서 왔는지 안다(태림 리뷰 · PR #48)."""
+
+    def test_neighbors_differ_in_one_thing(self):
+        from glossary_stt.evaluate import CONDITIONS
+        opts = [o for _, _, o in CONDITIONS]
+        for a, b in zip(opts[1:], opts[2:]):   # 단어장 없이 → 첫머리는 단어장 · 힌트가 같이 켜지므로 뺀다
+            changed = [k for k in a if a[k] != b[k]]
+            self.assertEqual(len(changed), 1, (a, b))
+
+    def test_prompt_and_hotwords_both_single_pass(self):
+        from glossary_stt.evaluate import CONDITIONS
+        by_key = {k: o for k, _, o in CONDITIONS}
+        self.assertEqual(by_key["prompt"]["two_pass"], "off")
+        self.assertEqual(by_key["hotwords1"]["two_pass"], "off")
+
+
 if __name__ == "__main__":
     unittest.main()

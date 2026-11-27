@@ -511,10 +511,12 @@ function renderEval(r) {
       <td><span class="num">${x.termHit}/${x.termTotal}</span><div class="hbar"><div style="width:${x.termTotal ? Math.round(x.termHit / x.termTotal * 100) : 0}%"></div></div>${x.missed.length ? `<div class="missed">놓침: ${esc(x.missed.join(', '))}</div>` : ''}</td>
       <td>${x.elapsed}초</td></tr>`).join('')}
     </tbody></table>
-    <details style="margin-top:12px"><summary>네 방법은 무엇이 다른가요</summary><ul class="muted">
+    <details style="margin-top:12px"><summary>다섯 방법은 무엇이 다른가요</summary><ul class="muted">
+      <li>위에서 아래로 한 가지씩만 바꿔요. 그래서 줄 사이의 차이가 그 한 가지의 효과예요.</li>
       <li><b>단어장 없이</b> — 엔진 그대로.</li>
-      <li><b>첫머리 힌트만</b> — 흔히 쓰는 initial_prompt. 첫 30초에만 힌트가 들어가요.</li>
-      <li><b>30초마다 힌트</b> — hotwords 로 30초마다 다시 알려 줘요. 단어장이 크면 두 번 들어 낱말을 골라요.</li>
+      <li><b>첫머리 힌트만</b> — 흔히 쓰는 initial_prompt. 첫 30초에만 힌트가 들어가요. 한 번 들어요.</li>
+      <li><b>30초마다 힌트 · 한 번 듣기</b> — hotwords 로 30초마다 다시 알려 줘요. 바로 위와 힌트 넣는 자리만 달라요.</li>
+      <li><b>30초마다 힌트 · 두 번 듣기</b> — 단어장이 힌트 자리보다 크면 한 번 듣고, 나온 소리에 맞는 낱말을 골라 다시 들어요. 단어장이 작으면 바로 위와 같아요.</li>
       <li><b>힌트 + 고치기</b> — 받아쓴 뒤 단어장으로 다르게 들리는 말 · 띄어쓰기 · 비슷한 소리를 고쳐요(자동 적용분만 셈).</li>
     </ul></details></div>`;
 }

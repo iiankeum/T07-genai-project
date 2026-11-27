@@ -38,13 +38,14 @@ def main() -> None:
     print(f"엔진: {engine.label} · 단어장 {len(glossary.entries)}개 · {audio_path.name}")
     res = compare(engine, load_audio(str(audio_path)), reference, glossary, a.context)
     print(f"녹음 {res['duration']}초 · 힌트에 들어간 낱말 {len(res['hints']['included'])}개 / {res['hints']['tokens']}토큰")
-    print(f"{'방식':<14}{'글자 오류율':>10}{'낱말 맞힘':>12}{'걸린 시간':>10}")
+    print(f"{'방식':<22}{'글자 오류율':>10}{'낱말 맞힘':>12}{'듣기':>6}{'걸린 시간':>10}")
     for r in res["rows"]:
-        print(f"{r['label']:<14}{r['cer'] * 100:>9.1f}%{r['termHit']:>7}/{r['termTotal']:<4}{r['elapsed']:>9.1f}초")
+        print(f"{r['label']:<22}{r['cer'] * 100:>9.1f}%{r['termHit']:>7}/{r['termTotal']:<4}"
+              f"{r['passes']:>5}번{r['elapsed']:>9.1f}초")
         if r["missed"]:
-            print(f"{'':<14}놓친 낱말: {', '.join(r['missed'])}")
+            print(f"{'':<22}놓친 낱말: {', '.join(r['missed'])}")
         if a.show_text:
-            print(f"{'':<14}{r['text']}")
+            print(f"{'':<22}{r['text']}")
     out = folder / f"result-{a.model}.json"
     out.write_text(json.dumps({"engine": engine.label, **res}, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"저장: {out}")
