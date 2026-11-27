@@ -18,8 +18,10 @@ test_budget_and_pinned_first (test_core.Hints.test_budget_and_pinned_first) ... 
 test_same_is_zero (test_core.Jamo.test_same_is_zero) ... ok
 test_similar_sound_is_cheap (test_core.Jamo.test_similar_sound_is_cheap) ... ok
 test_squash (test_core.Jamo.test_squash) ... ok
+test_neighbors_differ_in_one_thing (test_core.TestEvaluateConditions.test_neighbors_differ_in_one_thing) ... ok
+test_prompt_and_hotwords_both_single_pass (test_core.TestEvaluateConditions.test_prompt_and_hotwords_both_single_pass) ... ok
 
 ----------------------------------------------------------------------
-Ran 20 tests in 0.018s
+Ran 22 tests in 0.011s
 
 OK

@@ -1,0 +1,9 @@
+-r requirements.txt
+# 개발 PC 에서 GPU 로 돌리기
+nvidia-cublas-cu12==12.9.2.10
+nvidia-cudnn-cu12==9.28.1.4
+nvidia-cuda-nvrtc-cu12==12.9.86
+# 설치 파일 · 가짜 녹음 만들기
+pyinstaller==6.22.3
+pillow
+edge-tts==7.3.1

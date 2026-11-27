@@ -1,0 +1,6 @@
+.venv/
+build/
+__pycache__/
+*.pyc
+build*.log
+samples/*/result-*.json

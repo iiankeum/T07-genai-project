@@ -6,9 +6,9 @@
 
 | 파일 | 무엇 | 뽑은 법 |
 |---|---|---|
-| `효과-부품주문-전화-large-v3-turbo.txt` · `…-large-v3.txt` | 가짜 부품 주문 전화(83초)를 네 방법으로 받아쓴 오류율 · 낱말 맞힘 · 받아쓴 글 | `src/acha-local/tools/eval.py` `--show-text` · 22:1x 에 다시 뽑음 |
+| `효과-부품주문-전화-large-v3-turbo.txt` · `…-large-v3.txt` | 가짜 부품 주문 전화(83초)를 다섯 방법으로 받아쓴 오류율 · 낱말 맞힘 · 듣기 횟수 · 받아쓴 글 | `src/acha-local/tools/eval.py` `--show-text` · 11/27 10시에 다시 뽑음(한 번 듣기 줄을 더함 · 신*림 리뷰) |
 | `효과-AI수업-강의-large-v3-turbo.txt` · `…-large-v3.txt` | 가짜 AI 수업 강의(72초) — 같은 내용 | 위와 같음 |
-| `원리-검사.txt` | 원리 검사 20개 결과 | `python -m unittest discover -s tests -v` |
+| `원리-검사.txt` | 원리 검사 22개 결과(11/27) | `python -m unittest discover -s tests -v` |
 | `힌트-자리-재기.txt` | 부품 · 차종 이름 56개가 힌트 자리(223 토큰)에 몇 개 들어가나 | Whisper large-v3 토크나이저 |
 | `CPU-속도.txt` | 30초 녹음을 CPU 로 받아쓴 시간 — 겹친 상태 · 혼자 · MKL 켬/끔 | 시험 스크립트 출력을 옮겨 적음 |
 | `설치본-시험.txt` | 설치본을 깔아 CPU · GPU 로 돌린 결과와 멈춘 일 · Release 파일 SHA-256 | 서버 요청 결과를 옮겨 적음 |
