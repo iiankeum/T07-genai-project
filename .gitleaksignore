@@ -1,0 +1,12 @@
+# 비밀값 검사(gitleaks)가 「비밀값이 아니다」라고 확인한 것만 적는다. 한 줄에 하나, 검사 결과의 Fingerprint 를 그대로.
+# 새 비밀값을 덮으려고 여기에 적지 않는다 — 진짜 비밀값이면 키를 바꾸고(폐기) 지운다.
+#
+# 2026-11-27 · 총괄 배*결 결정 · 돌린 사람: 배*결 · Claude Code(Opus 5.5)
+# 11/11 커밋 5624ba6 에 기획서 PDF 를 찍을 때 쓴 일회용 브라우저 설정 폴더(_build/profile, 파일 244개)가 들어갔다.
+# 지금은 main 에 없고(기획서-src/.gitignore 가 _build/ 를 막는다) 옛 기록에만 있다.
+# 걸린 14건(지문 3개)은 브라우저가 스스로 만든 무작위 값(설정 무결성 값 · 복구 토큰)이다.
+# 열어 보니 저장된 로그인 0 · 쿠키 0 · 자동 입력 0 · 방문 기록은 로컬 파일 1개였다 — 어느 계정의 비밀번호 · 키도 아니다.
+# 11/27 PR #48 을 합칠 때 검사가 옛 기록까지 다시 훑어 처음 걸렸다.
+5624ba67429ddc830e87066ad1dbac1c17214142:work/01-기획-남희/산출물/기획서-src/_build/profile/Default/Preferences:generic-api-key:1
+5624ba67429ddc830e87066ad1dbac1c17214142:work/01-기획-남희/산출물/기획서-src/_build/profile/Default/Secure Preferences:generic-api-key:1
+5624ba67429ddc830e87066ad1dbac1c17214142:work/01-기획-남희/산출물/기획서-src/_build/profile/Local State:generic-api-key:1
