@@ -1,0 +1,19 @@
+{
+  "name": "아차 — 전화 주문 관리",
+  "short_name": "아차",
+  "description": "자동차 부품 주문 전화의 대화 기록, 주문 카드, 출고 목록을 관리합니다.",
+  "lang": "ko",
+  "start_url": "/#/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7f7f8",
+  "theme_color": "#0066ff",
+  "icons": [
+    {
+      "src": "/assets/ahcha-logo-original.jpeg",
+      "sizes": "1254x1254",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ]
+}

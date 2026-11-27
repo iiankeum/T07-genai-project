@@ -1,0 +1,60 @@
+{
+  "syntheticOnly": true,
+  "scope": "격리 재빌드 PyAV의 직접 디코딩 및 이동된 Python에서 합성음성 전사. 기존 앱 미교체.",
+  "artifacts": [
+    {
+      "file": "ffmpeg-9.0.2.tar.xz",
+      "size": 12040788,
+      "sha256": "8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e"
+    },
+    {
+      "file": "av-19.0.2.tar.gz",
+      "size": 4277157,
+      "sha256": "bebbc52598886480f4d861c575dc2b020785d6c04e1308680ddcc545e1b94c66"
+    },
+    {
+      "file": "av-19.0.2-cp312-abi3-macosx_14_0_arm64.whl",
+      "size": 3264750,
+      "sha256": "b6315114df45bc329ebec6098f3bd48cca1d1453db4c5e4d2d76888131f90f91"
+    }
+  ],
+  "externalAbsoluteLoads": [],
+  "x264x265Files": [],
+  "x264x265Loads": [],
+  "decodeResults": [
+    {
+      "format": "wav",
+      "avFrames": 58,
+      "decodedSamples": 58660,
+      "floatSamples16k": 58660
+    },
+    {
+      "format": "mp3",
+      "avFrames": 103,
+      "decodedSamples": 58660,
+      "floatSamples16k": 58660
+    },
+    {
+      "format": "m4a",
+      "avFrames": 58,
+      "decodedSamples": 58660,
+      "floatSamples16k": 58660
+    }
+  ],
+  "relocatedTranscript": "앞 브레이크 패드 한 세트와 앞 디스크 두 개 부탁합니다.",
+  "relocatedInferenceSec": 1.056,
+  "knownFailure": "TypeError: open() got an unexpected keyword argument 'metadata_errors'",
+  "license": "LGPL version 2.1 or later",
+  "sourceURLs": {
+    "ffmpeg": "https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz",
+    "ffmpegHashRegistry": "https://formulae.brew.sh/api/formula/ffmpeg.json",
+    "pyavMetadata": "https://pypi.org/pypi/av/19.0.2/json",
+    "pyav": "https://files.pythonhosted.org/packages/23/01/76b6bf563fe907597cf58f10d10168e93fe588b6db9f2658db87e87efa7e/av-19.0.2.tar.gz"
+  },
+  "limits": [
+    "합성음성만 검증",
+    "macOS26.6.1 동일기기 이동 시험, macOS14 실기 아님",
+    "개발용 서명, 공증/법적 적합성/외부배포 승인 아님",
+    "faster-whisper decode_audio 호환 수정 별도 검증 중"
+  ]
+}

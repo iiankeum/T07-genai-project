@@ -1,0 +1,21 @@
+{
+  "scope": "real upload UI + mocked API; no backend ingestion/transcription or authentication verified",
+  "results": [
+    {
+      "mode": "demo",
+      "uploads": 4,
+      "status": "passed"
+    },
+    {
+      "mode": "private",
+      "uploads": 4,
+      "status": "passed"
+    }
+  ],
+  "errors": [],
+  "blocked": [],
+  "recordedKST": "2026-11-18 21:13",
+  "baseDesignCommit": "f9a166c",
+  "nodeUnitTests": 175,
+  "remoteCIExecuted": false
+}

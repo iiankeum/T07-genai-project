@@ -1,0 +1,18 @@
+{
+  "at": "2026-11-18T06:21:23.053Z",
+  "event": "status",
+  "model": "faster-whisper-small",
+  "license": "MIT",
+  "revision": "536b0662742c02347bc0e980a01041f333bce120",
+  "source": "https://huggingface.co/Systran/faster-whisper-small",
+  "downloadBytes": 486212372,
+  "modelVerified": true,
+  "filesVerified": 4,
+  "totalFiles": 4,
+  "runtimePresent": false,
+  "runtimeVerified": false,
+  "inferenceVerified": false,
+  "automaticRuntimeInstall": false,
+  "automaticServerStart": false,
+  "cloudEnabled": false
+}

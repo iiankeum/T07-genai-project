@@ -1,0 +1,331 @@
+{
+  "_설명": "가짜 통화 데모 데이터. 거래처 · 사람 · 차번호 · 품번 · 전화번호는 모두 지어낸 것이다. 녹음은 없고 대본만 있다. seed-call01~10 은 대표님 프로토타입(call-order-card)의 가짜 통화 10건과 정답 카드, seed-call11~20 은 같은 말투로 더 지은 것이다. 형식은 seed/README.md.",
+  "calls": [
+    {
+      "id": "seed-call01", "offsetMin": -20, "callerNumber": "010-0000-0101",
+      "turns": [
+        {"who": "dealer", "say": "네, 부품 대리점입니다."},
+        {"who": "shop", "say": "예, 새한카센터인데요. 그, 아반떼 에이디 앞범퍼 하나 있어요?"},
+        {"who": "dealer", "say": "아반떼 에이디요. 몇 년식이에요?"},
+        {"who": "shop", "say": "십칠 년식이요. 좀 급해요, 오전 중으로 보내 주세요."},
+        {"who": "dealer", "say": "네, 앞범퍼 하나, 오전 배송으로 넣어 드릴게요."},
+        {"who": "shop", "say": "네, 수고하세요."}
+      ],
+      "card": {"customer": "새한카센터", "contact": null, "carModel": "아반떼 AD", "modelYear": "2017", "plate": null,
+        "items": [{"part": "앞범퍼", "side": null, "qty": 1, "partNo": null}],
+        "urgent": true, "due": "오전 중", "delivery": "배송", "askBack": [], "unsure": [], "note": null},
+      "say": {"carModel": "아반떼 에이디", "modelYear": "십칠 년식", "urgent": "좀 급해요", "due": "오전 중", "delivery": "오전 배송"},
+      "status": "confirmed", "confirmedOffsetMin": -12, "callback": false, "callbackReason": null
+    },
+    {
+      "id": "seed-call02", "offsetMin": 15, "callerNumber": null,
+      "turns": [
+        {"who": "dealer", "say": "네, 부품입니다."},
+        {"who": "shop", "say": "우리공업사예요. 쏘나타 디엔에잇인데, 차번호가 삼십사 나, 오육칠팔이에요."},
+        {"who": "dealer", "say": "네, 삼십사 나 오육칠팔. 뭐 필요하세요?"},
+        {"who": "shop", "say": "운전석 휀다 하나하고, 운전석 헤드라이트 하나 주세요."},
+        {"who": "dealer", "say": "헤드라이트는 엘이디예요, 일반이에요?"},
+        {"who": "shop", "say": "아, 그건 차 보고 다시 전화 드릴게요. 급한 건 아니고 내일 받아도 돼요."},
+        {"who": "dealer", "say": "네, 그럼 휀다 먼저 잡아 놓을게요."}
+      ],
+      "card": {"customer": "우리공업사", "contact": null, "carModel": "쏘나타 DN8", "modelYear": null, "plate": "34나5678",
+        "items": [{"part": "휀다(펜더)", "side": "운전석", "qty": 1, "partNo": null}, {"part": "헤드라이트", "side": "운전석", "qty": 1, "partNo": null}],
+        "urgent": false, "due": "내일", "delivery": null,
+        "askBack": ["헤드라이트 LED 인지 일반인지 — 정비소가 차 보고 다시 전화 준다고 함"], "unsure": [], "note": "휀다는 먼저 잡아 두기로 함"},
+      "say": {"carModel": "쏘나타 디엔에잇", "plate": "삼십사 나, 오육칠팔", "due": "내일 받아도 돼요", "items": [{"part": "휀다"}, {"part": "헤드라이트"}], "ask": ["엘이디예요, 일반이에요?"]},
+      "status": "draft", "callback": true, "callbackReason": "헤드라이트 LED · 일반 확인 — 정비소가 전화 주기로 함. 오후까지 없으면 먼저 전화"
+    },
+    {
+      "id": "seed-call03", "offsetMin": -1400, "callerNumber": null,
+      "turns": [
+        {"who": "dealer", "say": "네, 부품입니다."},
+        {"who": "shop", "say": "미래모터스입니다. 포터 투 앞쇼바 좌우로 두 개하고요, 활대링크도 두 개 주세요."},
+        {"who": "dealer", "say": "포터 투 몇 년식이죠?"},
+        {"who": "shop", "say": "십구 년식이요."},
+        {"who": "dealer", "say": "네, 앞쇼바 두 개, 활대링크 두 개요. 오후 차로 나가요."},
+        {"who": "shop", "say": "예, 천천히 주셔도 돼요."}
+      ],
+      "card": {"customer": "미래모터스", "contact": null, "carModel": "포터2", "modelYear": "2019", "plate": null,
+        "items": [{"part": "앞쇼바(쇼크업소버)", "side": "좌우", "qty": 2, "partNo": null}, {"part": "활대링크(스태빌라이저 링크)", "side": null, "qty": 2, "partNo": null}],
+        "urgent": false, "due": null, "delivery": "오후 차", "askBack": [], "unsure": [], "note": null},
+      "say": {"carModel": "포터 투", "modelYear": "십구 년식", "delivery": "오후 차", "items": [{"part": "앞쇼바", "qty": "두 개"}, {"part": "활대링크", "qty": "두 개"}]},
+      "status": "shipped", "confirmedOffsetMin": -1390, "shippedOffsetMin": -1140, "callback": false, "callbackReason": null
+    },
+    {
+      "id": "seed-call04", "offsetMin": -50, "callerNumber": null,
+      "turns": [
+        {"who": "dealer", "say": "네, 부품입니다."},
+        {"who": "shop", "say": "한성정비인데요, 품번으로 주문할게요."},
+        {"who": "dealer", "say": "네, 불러 주세요."},
+        {"who": "shop", "say": "오팔일공일, 다시, 디 사 에이 이 오. 앞 브레이크 패드예요. 두 개 주세요."},
+        {"who": "dealer", "say": "오팔일공일 다시 디사에이이오, 두 개 맞죠?"},
+        {"who": "shop", "say": "네 맞아요. 지금 차 올려놨으니까 빨리 좀 부탁해요."}
+      ],
+      "card": {"customer": "한성정비", "contact": null, "carModel": null, "modelYear": null, "plate": null,
+        "items": [{"part": "앞 브레이크 패드", "side": null, "qty": 2, "partNo": "58101-D4A25"}],
+        "urgent": true, "due": "지금 바로", "delivery": "퀵", "askBack": [], "unsure": [], "note": "정비소에 차를 올려 둠"},
+      "say": {"urgent": "빨리 좀 부탁해요", "due": "지금 차 올려놨으니까", "items": [{"part": "브레이크 패드", "qty": "두 개"}]},
+      "aiDraftDiff": {"delivery": null},
+      "status": "shipped", "confirmedOffsetMin": -46, "shippedOffsetMin": -30, "callback": false, "callbackReason": null
+    },
+    {
+      "id": "seed-call05", "offsetMin": 0, "callerNumber": "010-0000-0112",
+      "turns": [
+        {"who": "dealer", "say": "네, 부품입니다."},
+        {"who": "shop", "say": "동아카공업사예요. 그랜저 아이지, 렌터카라서 차번호가 백이십삼 허, 사오육칠이에요."},
+        {"who": "dealer", "say": "백이십삼 허 사오육칠, 네."},
+        {"who": "shop", "say": "라지에다 하나하고 에어컨 콘덴서 하나요. 오늘 오후까지 꼭 필요해요."},
+        {"who": "dealer", "say": "라지에다 하나, 콘덴서 하나. 오후 두 시 차로 보낼게요."}
+      ],
+      "card": {"customer": "동아카공업사", "contact": null, "carModel": "그랜저 IG", "modelYear": null, "plate": "123허4567",
+        "items": [{"part": "라지에다(라디에이터)", "side": null, "qty": 1, "partNo": null}, {"part": "에어컨 콘덴서", "side": null, "qty": 1, "partNo": null}],
+        "urgent": true, "due": "오늘 오후까지", "delivery": "오후 2시 차", "askBack": [], "unsure": [], "note": "렌터카 — 오늘 반납 전에 고쳐야 함"},
+      "say": {"carModel": "그랜저 아이지", "plate": "백이십삼 허, 사오육칠", "urgent": "꼭 필요해요", "due": "오늘 오후까지", "delivery": "오후 두 시 차", "items": [{"part": "라지에다"}, {"part": "콘덴서"}]},
+      "aiDraftDiff": {"note": "렌터카"},
+      "status": "confirmed", "confirmedOffsetMin": 6, "callback": false, "callbackReason": null
+    },
+    {
+      "id": "seed-call06", "offsetMin": -940, "callerNumber": null,
+      "turns": [
+        {"who": "dealer", "say": "네, 부품입니다."},
+        {"who": "shop", "say": "제일카서비스입니다. 싼타페 티엠 디젤 오일필터 열 개, 아니다, 스무 개 주세요."},
+        {"who": "dealer", "say": "스무 개요?"},
+        {"who": "shop", "say": "네 스무 개. 그리고 에어필터는 다섯 개만 주세요."},
+        {"who": "dealer", "say": "오일필터 스무 개, 에어필터 다섯 개. 급하세요?"},
+        {"who": "shop", "say": "아니요, 재고용이라 이번 주 안에만 주시면 돼요."}
+      ],
+      "card": {"customer": "제일카서비스", "contact": null, "carModel": "싼타페 TM", "modelYear": null, "plate": null,
+        "items": [{"part": "디젤 오일필터", "side": null, "qty": 20, "partNo": null}, {"part": "에어필터", "side": null, "qty": 5, "partNo": null}],
+        "urgent": false, "due": "이번 주 안", "delivery": null, "askBack": [], "unsure": [], "note": "재고용. 오일필터는 열 개라고 했다가 스무 개로 고쳐 말함"},
+      "say": {"carModel": "싼타페 티엠", "due": "이번 주 안에만", "items": [{"part": "오일필터", "qty": "스무 개"}, {"part": "에어필터", "qty": "다섯 개"}]},
+      "status": "confirmed", "confirmedOffsetMin": -925, "callback": false, "callbackReason": null
+    },
+    {
+      "id": "seed-call07", "offsetMin": 45, "callerNumber": null,
+      "turns": [
+        {"who": "dealer", "say": "네, 부품입니다."},
+        {"who": "shop", "say": "한빛카인데요, 어제 시킨 그거 하나 더 보내 주세요."},
+        {"who": "dealer", "say": "어제 거요? 어떤 거 말씀이세요?"},
+        {"who": "shop", "say": "아 그 케이파이브 백미러요. 그거 하나 더요."},
+        {"who": "dealer", "say": "운전석이에요, 조수석이에요?"},
+        {"who": "shop", "say": "어, 잠깐만요. 그건 기사님한테 물어보고 문자 드릴게요."},
+        {"who": "dealer", "say": "네, 확인되면 알려 주세요."}
+      ],
+      "card": {"customer": "한빛카", "contact": null, "carModel": "K5", "modelYear": null, "plate": null,
+        "items": [{"part": "백미러(사이드미러)", "side": null, "qty": 1, "partNo": null}],
+        "urgent": false, "due": null, "delivery": null,
+        "askBack": ["백미러 운전석인지 조수석인지 — 기사님께 물어보고 문자 준다고 함"], "unsure": [], "note": "어제 시킨 것과 같은 것 하나 더"},
+      "say": {"carModel": "케이파이브", "items": [{"part": "백미러", "qty": "하나 더"}], "ask": ["운전석이에요, 조수석이에요?"]},
+      "status": "draft", "callback": true, "callbackReason": "백미러 위치(운전석 · 조수석) — 문자가 안 오면 먼저 전화"
+    },
+    {
+      "id": "seed-call08", "offsetMin": -1165, "callerNumber": null,
+      "turns": [
+        {"who": "dealer", "say": "네, 부품입니다."},
+        {"who": "shop", "say": "대한모터스예요. 카니발 케이에이포, 이십이 년식이고 차번호는 육십칠 저, 팔구공일이요."},
+        {"who": "dealer", "say": "육십칠 저 팔구공일. 네, 말씀하세요."},
+        {"who": "shop", "say": "뒷범퍼 하나하고 운전석 쪽 후미등 하나 주세요."},
+        {"who": "dealer", "say": "뒷범퍼 하나, 운전석 후미등 하나요. 내일 오전에 들어가요."},
+        {"who": "shop", "say": "네 그렇게 해 주세요."}
+      ],
+      "card": {"customer": "대한모터스", "contact": null, "carModel": "카니발 KA4", "modelYear": "2022", "plate": "67저8901",
+        "items": [{"part": "뒷범퍼", "side": null, "qty": 1, "partNo": null}, {"part": "후미등(테일램프)", "side": "운전석", "qty": 1, "partNo": null}],
+        "urgent": false, "due": "내일 오전", "delivery": "배송", "askBack": [], "unsure": [], "note": null},
+      "say": {"carModel": "카니발 케이에이포", "modelYear": "이십이 년식", "plate": "육십칠 저, 팔구공일", "due": "내일 오전", "delivery": "내일 오전에 들어가요", "items": [{"part": "뒷범퍼"}, {"part": "후미등"}]},
+      "status": "shipped", "confirmedOffsetMin": -1150, "shippedOffsetMin": 20, "callback": false, "callbackReason": null
+    },
+    {
+      "id": "seed-call09", "offsetMin": 30, "callerNumber": null,
+      "turns": [
+        {"who": "dealer", "say": "네, 부품입니다."},
+        {"who": "shop", "say": "중앙공업사입니다. 투싼 엔엑스포 이십일 년식 사고차인데요."},
+        {"who": "dealer", "say": "네."},
+        {"who": "shop", "say": "본네트 하나, 라지에다 그릴 하나, 그리고 범퍼 레일은 품번으로 드릴게요. 육사구공공, 다시, 엔 구공공공. 하나요."},
+        {"who": "dealer", "say": "육사구공공 다시 엔구공공공. 네, 본네트, 그릴, 레일 하나씩이요."},
+        {"who": "shop", "say": "네, 모레까지만 주시면 돼요."}
+      ],
+      "card": {"customer": "중앙공업사", "contact": null, "carModel": "투싼 NX4", "modelYear": "2021", "plate": null,
+        "items": [{"part": "본네트(후드)", "side": null, "qty": 1, "partNo": null}, {"part": "라지에다 그릴", "side": null, "qty": 1, "partNo": null}, {"part": "범퍼 레일", "side": null, "qty": 1, "partNo": "64900-N9000"}],
+        "urgent": false, "due": "모레까지", "delivery": null, "askBack": [], "unsure": [], "note": "사고차"},
+      "say": {"carModel": "투싼 엔엑스포", "modelYear": "이십일 년식", "due": "모레까지", "items": [{"part": "본네트"}, {"part": "라지에다 그릴"}, {"part": "범퍼 레일", "qty": "하나요"}]},
+      "status": "confirmed", "confirmedOffsetMin": 40, "callback": false, "callbackReason": null
+    },
+    {
+      "id": "seed-call10", "offsetMin": -35, "callerNumber": null,
+      "turns": [
+        {"who": "dealer", "say": "네, 부품입니다."},
+        {"who": "shop", "say": "태양카센터요. 봉고 쓰리 세루모터 하나하고 제네레다 하나 급하게 필요해요."},
+        {"who": "dealer", "say": "차번호 있으세요?"},
+        {"who": "shop", "say": "팔십구 바, 일이삼사요. 지금 차가 길에 서 있어서 퀵으로 보내 주세요."},
+        {"who": "dealer", "say": "팔십구 바 일이삼사. 세루모터, 제네레다 하나씩 퀵으로 보낼게요."}
+      ],
+      "card": {"customer": "태양카센터", "contact": null, "carModel": "봉고3", "modelYear": null, "plate": "89바1234",
+        "items": [{"part": "세루모터(스타트모터)", "side": null, "qty": 1, "partNo": null}, {"part": "제네레다(발전기)", "side": null, "qty": 1, "partNo": null}],
+        "urgent": true, "due": "지금 바로", "delivery": "퀵", "askBack": [], "unsure": [], "note": "차가 길에 서 있음"},
+      "say": {"carModel": "봉고 쓰리", "plate": "팔십구 바, 일이삼사", "urgent": "급하게", "due": "지금 차가 길에 서 있어서", "delivery": "퀵으로", "items": [{"part": "세루모터"}, {"part": "제네레다"}]},
+      "status": "confirmed", "confirmedOffsetMin": -30, "callback": false, "callbackReason": null
+    },
+    {
+      "id": "seed-call11", "offsetMin": -1025, "callerNumber": null,
+      "turns": [
+        {"who": "dealer", "say": "네, 부품입니다."},
+        {"who": "shop", "say": "한빛카예요. 케이파이브 디엘쓰리 운전석 백미러 하나 주세요."},
+        {"who": "dealer", "say": "디엘쓰리요, 몇 년식이에요?"},
+        {"who": "shop", "say": "이십 년식이요. 내일 오전 첫 차로 주시면 돼요."},
+        {"who": "dealer", "say": "네, 운전석 백미러 하나, 내일 오전 첫 차로 넣어 드릴게요."}
+      ],
+      "card": {"customer": "한빛카", "contact": null, "carModel": "K5 DL3", "modelYear": "2020", "plate": null,
+        "items": [{"part": "백미러(사이드미러)", "side": "운전석", "qty": 1, "partNo": null}],
+        "urgent": false, "due": "내일 오전", "delivery": "첫 차 배송", "askBack": [], "unsure": [], "note": null},
+      "say": {"carModel": "케이파이브 디엘쓰리", "modelYear": "이십 년식", "due": "내일 오전", "delivery": "첫 차", "items": [{"part": "백미러"}]},
+      "status": "shipped", "confirmedOffsetMin": -1015, "shippedOffsetMin": -30, "callback": false, "callbackReason": null
+    },
+    {
+      "id": "seed-call12", "offsetMin": 55, "callerNumber": null,
+      "turns": [
+        {"who": "dealer", "say": "네, 부품입니다."},
+        {"who": "shop", "say": "우리카센터 박 실장이에요. 스포티지 엔큐파이브 앞 브레이크 디스크 두 장하고 패드 한 세트 주세요."},
+        {"who": "dealer", "say": "엔큐파이브 몇 년식이에요?"},
+        {"who": "shop", "say": "이십삼 년식이요. 오후 차에 같이 실어 주세요."},
+        {"who": "dealer", "say": "네, 디스크 두 장, 패드 한 세트, 오후 차로 보낼게요."}
+      ],
+      "card": {"customer": "우리카센터", "contact": "박 실장", "carModel": "스포티지 NQ5", "modelYear": "2023", "plate": null,
+        "items": [{"part": "앞 브레이크 디스크", "side": null, "qty": 2, "partNo": null}, {"part": "앞 브레이크 패드(세트)", "side": null, "qty": 1, "partNo": null}],
+        "urgent": false, "due": null, "delivery": "오후 차", "askBack": [], "unsure": [], "note": null},
+      "say": {"contact": "박 실장", "carModel": "스포티지 엔큐파이브", "modelYear": "이십삼 년식", "delivery": "오후 차", "items": [{"part": "브레이크 디스크", "qty": "두 장"}, {"part": "패드", "qty": "한 세트"}]},
+      "status": "confirmed", "confirmedOffsetMin": 62, "callback": false, "callbackReason": null
+    },
+    {
+      "id": "seed-call13", "offsetMin": 65, "callerNumber": null,
+      "turns": [
+        {"who": "dealer", "say": "네, 부품입니다."},
+        {"who": "shop", "say": "세한모터스인데요. 그랜저 지엔세븐 뒷범퍼 재고 있어요?"},
+        {"who": "dealer", "say": "지엔세븐 뒷범퍼요. 지금 창고에 있는지 확인해 보고 전화 드릴게요."},
+        {"who": "shop", "say": "네, 있으면 하나 주시고요, 범퍼 브래킷도 좌우로 하나씩 같이요."},
+        {"who": "dealer", "say": "네, 확인하고 바로 연락드릴게요."}
+      ],
+      "card": {"customer": "세한모터스", "contact": null, "carModel": "그랜저 GN7", "modelYear": null, "plate": null,
+        "items": [{"part": "뒷범퍼", "side": null, "qty": 1, "partNo": null}, {"part": "범퍼 브래킷", "side": "좌우", "qty": 2, "partNo": null}],
+        "urgent": false, "due": null, "delivery": null,
+        "askBack": ["뒷범퍼 재고 — 창고 확인해서 전화 드리기로 함"], "unsure": [], "note": null},
+      "say": {"carModel": "그랜저 지엔세븐", "items": [{"part": "뒷범퍼", "qty": "하나"}, {"part": "브래킷", "qty": "하나씩"}], "ask": ["재고 있어요?"]},
+      "status": "draft", "callback": true, "callbackReason": "뒷범퍼 재고 확인해서 전화 드리기로 함"
+    },
+    {
+      "id": "seed-call14", "offsetMin": 80, "callerNumber": null,
+      "turns": [
+        {"who": "dealer", "say": "네, 부품입니다."},
+        {"who": "shop", "say": "태양공업사입니다. 쏘렌토 엠큐포 차번호 오십육 어 칠칠팔팔이요."},
+        {"who": "dealer", "say": "네, 뭐 드릴까요?"},
+        {"who": "shop", "say": "조수석 앞문 하나하고 조수석 백미러 하나요. 앞문은 껍데기만 주세요."},
+        {"who": "dealer", "say": "조수석 앞문 껍데기 하나, 조수석 백미러 하나요. 언제까지요?"},
+        {"who": "shop", "say": "내일까지만 주시면 돼요."}
+      ],
+      "card": {"customer": "태양공업사", "contact": null, "carModel": "쏘렌토 MQ4", "modelYear": null, "plate": null,
+        "items": [{"part": "앞문", "side": "조수석", "qty": 1, "partNo": null}, {"part": "백미러(사이드미러)", "side": "조수석", "qty": 1, "partNo": null}],
+        "urgent": false, "due": "내일까지", "delivery": null, "askBack": [],
+        "unsure": [{"field": "plate", "reason": "차번호 가운데 한글이 안 들림(오십육 ? 칠칠팔팔) — 녹음을 다시 들어 보세요", "say": "오십육 어 칠칠팔팔"}],
+        "note": "앞문은 껍데기만"},
+      "say": {"carModel": "쏘렌토 엠큐포", "plate": "오십육 어 칠칠팔팔", "due": "내일까지만", "items": [{"part": "앞문"}, {"part": "백미러"}]},
+      "status": "draft", "callback": false, "callbackReason": null
+    },
+    {
+      "id": "seed-call15", "offsetMin": 95, "callerNumber": null,
+      "turns": [
+        {"who": "dealer", "say": "네, 부품입니다."},
+        {"who": "shop", "say": "제일모터스예요. 투싼 티엘 에어필터 품번으로 불러 드릴게요."},
+        {"who": "dealer", "say": "네, 불러 주세요."},
+        {"who": "shop", "say": "칠칠일이삼, 다시, 지 공공공공공. 열 개요."},
+        {"who": "dealer", "say": "칠칠일이삼 다시 지 공공공공공, 열 개요."},
+        {"who": "shop", "say": "네, 급한 건 아니에요. 다음 주 월요일까지요."}
+      ],
+      "card": {"customer": "제일모터스", "contact": null, "carModel": "투싼 TL", "modelYear": null, "plate": null,
+        "items": [{"part": "에어필터", "side": null, "qty": 10, "partNo": "77123-G00000"}],
+        "urgent": false, "due": "다음 주 월요일까지", "delivery": null, "askBack": [],
+        "unsure": [{"field": "partNo", "item": 0, "reason": "품번 뒷자리가 여섯 자리로 들림(보통 다섯 자리) — 녹음을 다시 들어 보세요", "say": "지 공공공공공"}],
+        "note": null},
+      "say": {"carModel": "투싼 티엘", "due": "다음 주 월요일까지", "items": [{"part": "에어필터", "qty": "열 개"}]},
+      "status": "draft", "callback": false, "callbackReason": null
+    },
+    {
+      "id": "seed-call16", "offsetMin": 110, "callerNumber": "010-0000-0110",
+      "turns": [
+        {"who": "dealer", "say": "네, 부품입니다."},
+        {"who": "shop", "say": "예, 한성이에요. 아반대 씨엔세븐 엔진 미미 하나 주세요."},
+        {"who": "dealer", "say": "씨엔세븐 엔진 미미 하나요. 몇 년식이에요?"},
+        {"who": "shop", "say": "이십이 년식이요. 그리고 조수석 로아암도 하나요."},
+        {"who": "dealer", "say": "네, 엔진 미미 하나, 조수석 로아암 하나. 오후 차로 갑니다."},
+        {"who": "shop", "say": "네, 감사합니다."}
+      ],
+      "card": {"customer": "한성모터스", "contact": null, "carModel": "아반떼 CN7", "modelYear": "2022", "plate": null,
+        "items": [{"part": "엔진 미미(엔진마운트)", "side": null, "qty": 1, "partNo": null}, {"part": "로아암(로어암)", "side": "조수석", "qty": 1, "partNo": null}],
+        "urgent": false, "due": null, "delivery": "오후 차", "askBack": [], "unsure": [],
+        "fixes": [{"heard": "아반대", "fixed": "아반떼"}],
+        "note": "「한성」이라고만 함 — 걸려 온 번호로 한성모터스 확인"},
+      "say": {"customer": "한성", "carModel": "아반대 씨엔세븐", "modelYear": "이십이 년식", "delivery": "오후 차", "items": [{"part": "엔진 미미"}, {"part": "로아암"}]},
+      "status": "draft", "callback": false, "callbackReason": null
+    },
+    {
+      "id": "seed-call17", "offsetMin": 125, "callerNumber": null,
+      "turns": [
+        {"who": "dealer", "say": "네, 부품입니다."},
+        {"who": "shop", "say": "중앙인데요, 레이 밧데리 하나하고 와이퍼 두 개요."},
+        {"who": "dealer", "say": "레이 몇 년식이에요?"},
+        {"who": "shop", "say": "십팔 년식이요. 오늘 중으로만 주세요."},
+        {"who": "dealer", "say": "네, 밧데리 하나, 와이퍼 두 개, 오늘 오후에 들어가요."}
+      ],
+      "card": {"customer": null, "contact": null, "carModel": "레이", "modelYear": "2018", "plate": null,
+        "items": [{"part": "밧데리(배터리)", "side": null, "qty": 1, "partNo": null}, {"part": "와이퍼", "side": null, "qty": 2, "partNo": null}],
+        "urgent": false, "due": "오늘 중", "delivery": "오늘 오후 배송", "askBack": [],
+        "unsure": [{"field": "customer", "reason": "「중앙」이라고만 들림 — 목록에 중앙공업사 · 중앙카센터 · 중앙모터스가 있고 걸려 온 번호도 없어요. 녹음으로 확인하세요", "say": "중앙인데요"}],
+        "note": null},
+      "say": {"carModel": "레이", "modelYear": "십팔 년식", "due": "오늘 중으로만", "delivery": "오늘 오후에 들어가요", "items": [{"part": "밧데리"}, {"part": "와이퍼", "qty": "두 개"}]},
+      "status": "draft", "callback": false, "callbackReason": null
+    },
+    {
+      "id": "seed-call18", "offsetMin": 140, "callerNumber": "010-0000-0121",
+      "turns": [
+        {"who": "dealer", "say": "네, 부품입니다."},
+        {"who": "shop", "say": "대한카센터예요. 카니발 와이피 뒤 마후라 하나요. 차번호는 이십삼 가, 사사오오."},
+        {"who": "dealer", "say": "이십삼 가 사사오오. 마후라 하나, 또 있으세요?"},
+        {"who": "shop", "say": "산소센서도 하나 주세요. 내일 오전에 받으면 돼요."},
+        {"who": "dealer", "say": "네, 내일 오전 배송으로 넣을게요."}
+      ],
+      "card": {"customer": "대한카센터", "contact": null, "carModel": "카니발 YP", "modelYear": null, "plate": "23가4455",
+        "items": [{"part": "뒤 마후라(머플러)", "side": null, "qty": 1, "partNo": null}, {"part": "산소센서", "side": null, "qty": 1, "partNo": null}],
+        "urgent": false, "due": "내일 오전", "delivery": "배송", "askBack": [], "unsure": [], "note": null},
+      "say": {"carModel": "카니발 와이피", "plate": "이십삼 가, 사사오오", "due": "내일 오전에", "delivery": "내일 오전 배송", "items": [{"part": "마후라"}, {"part": "산소센서"}]},
+      "status": "draft", "callback": false, "callbackReason": null
+    },
+    {
+      "id": "seed-call19", "offsetMin": 155, "callerNumber": null,
+      "turns": [
+        {"who": "dealer", "say": "네, 부품입니다."},
+        {"who": "shop", "say": "미래카센터요. 팰리세이드 엘엑스투 운전석 헤드라이트 앗세이로 하나 급하게요."},
+        {"who": "dealer", "say": "엘이디 맞죠?"},
+        {"who": "shop", "say": "네, 엘이디요. 손님이 가게에서 기다리고 있어서 퀵으로 빨리 보내 주세요."},
+        {"who": "dealer", "say": "네, 바로 퀵 부를게요."}
+      ],
+      "card": {"customer": "미래카센터", "contact": null, "carModel": "팰리세이드 LX2", "modelYear": null, "plate": null,
+        "items": [{"part": "헤드라이트 앗세이(ASSY) LED", "side": "운전석", "qty": 1, "partNo": null}],
+        "urgent": true, "due": "지금 바로", "delivery": "퀵", "askBack": [], "unsure": [], "note": "손님이 가게에서 기다림"},
+      "say": {"carModel": "팰리세이드 엘엑스투", "urgent": "급하게요", "due": "손님이 가게에서 기다리고 있어서", "delivery": "퀵으로", "items": [{"part": "헤드라이트 앗세이"}]},
+      "status": "draft", "callback": false, "callbackReason": null
+    },
+    {
+      "id": "seed-call20", "offsetMin": 170, "callerNumber": null,
+      "turns": [
+        {"who": "dealer", "say": "네, 부품입니다."},
+        {"who": "shop", "say": "동아모터스입니다. 스타리아 유에스포 이십삼 년식, 와이퍼 모터 하나하고 크락숀 하나 주세요."},
+        {"who": "dealer", "say": "크락숀은 한 개면 돼요? 보통 두 개 한 조인데요."},
+        {"who": "shop", "say": "한 개만요. 내일 오후까지 주세요."},
+        {"who": "dealer", "say": "네, 와이퍼 모터 하나, 크락숀 하나, 내일 오후요."}
+      ],
+      "card": {"customer": "동아모터스", "contact": null, "carModel": "스타리아 US4", "modelYear": "2023", "plate": null,
+        "items": [{"part": "와이퍼 모터", "side": null, "qty": 1, "partNo": null}, {"part": "크락숀(경음기)", "side": null, "qty": 1, "partNo": null}],
+        "urgent": false, "due": "내일 오후까지", "delivery": null, "askBack": [], "unsure": [], "note": null},
+      "say": {"carModel": "스타리아 유에스포", "modelYear": "이십삼 년식", "due": "내일 오후까지", "items": [{"part": "와이퍼 모터"}, {"part": "크락숀", "qty": "한 개만"}]},
+      "status": "draft", "callback": false, "callbackReason": null
+    }
+  ]
+}

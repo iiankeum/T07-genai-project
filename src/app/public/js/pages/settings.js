@@ -1,0 +1,410 @@
+import { api } from '../api.js';
+import { html, render, fmtWhen } from '../ui.js';
+import { bindForm, roleName } from './account.js';
+
+const sections = [
+  ['profile', '프로필'], ['workspace', '업체 정보'], ['members', '구성원·권한'],
+  ['notifications', '알림 설정'], ['display', '화면 설정'], ['data', '데이터·개인정보'],
+  ['integrations', '녹음·AI 연결'],
+];
+const sectionDescriptions = {profile:'이름, 연락처와 로그인 정보',workspace:'상호, 대표 번호와 영업시간',members:'팀원 초대와 역할 관리',notifications:'놓치지 않을 업무 알림',display:'글씨 크기와 화면 보기',data:'녹음·기록 보관과 개인정보',integrations:'로컬 받아쓰기와 AI 연결'};
+const roles = ['admin', 'reception', 'shipping', 'viewer'];
+const status = html`<p class="account-status" role="status" aria-live="polite" hidden></p>`;
+const save = (text = '저장') => html`<button class="btn btn-primary" type="submit">${text}</button>`;
+const roleOptions = (active = 'reception') => roles.map((role) => html`<option value="${role}" ${role === active ? html`selected` : ''}>${roleName(role)}</option>`);
+const restricted = html`<p>이 설정은 워크스페이스 관리자에게 요청해 주세요.</p>`;
+const demoOnly = html`<p>계정 워크스페이스에서 사용할 수 있어요.</p><a class="btn" href="#/workspaces">워크스페이스 선택</a>`;
+const localBigText = () => {
+  try { return localStorage.getItem('cn.bigText') === '1'; } catch { return false; }
+};
+
+function show(el, active, body) {
+  const section = sections.find(([key]) => key === active);
+  render(el, html`<div class="page account-page settings-page ${section ? '' : 'settings-home'}">
+    <div class="page-head"><div><p class="eyebrow">내 작업공간</p><h1>${section?.[1] || '설정'}</h1><p class="sub">${section ? sectionDescriptions[active] : '내 계정과 팀의 작업 환경을 관리하세요.'}</p></div></div>
+    ${section ? html`<a class="settings-back" href="#/settings">← 전체 설정</a><nav class="account-links settings-nav" aria-label="설정 메뉴">${sections.map(([key, label]) => html`
+      <a href="#/settings/${key}" ${key === active ? html`aria-current="page"` : ''}>${label}</a>`)}</nav>` : ''}
+    <section class="panel account-panel">${body}</section>
+  </div>`);
+}
+
+function profile(el, key, account) {
+  const user = account.user;
+  if (!user) return show(el, key, demoOnly);
+  show(el, key, html`
+    <form id="settings-profile" class="account-form">
+      <label>이메일<input type="email" value="${user.email}" readonly></label>
+      <label>이름<input name="name" value="${user.name}" autocomplete="name" maxlength="50" required></label>
+      <label>연락처<input name="phone" type="tel" value="${user.phone}" autocomplete="tel" maxlength="30"></label>
+      ${save('프로필 저장')}${status}
+    </form>
+    <h2>비밀번호 변경</h2>
+    <form id="settings-password" class="account-form">
+      <label>현재 비밀번호<input name="currentPassword" type="password" autocomplete="current-password" maxlength="256" required></label>
+      <label>새 비밀번호<input name="password" type="password" autocomplete="new-password" minlength="8" maxlength="256" required>
+        <small>8자 이상이며 영문, 숫자, 특수문자 중 두 종류 이상</small></label>
+      ${save('비밀번호 변경')}${status}
+    </form>
+    <form id="settings-logout" class="account-form"><button type="submit" class="btn">로그아웃</button>${status}</form>`);
+  bindForm(el.querySelector('#settings-profile'), async (body) => {
+    await api.patch('/api/auth/profile', body);
+    return '프로필을 저장했어요.';
+  });
+  const passwordForm = el.querySelector('#settings-password');
+  bindForm(passwordForm, async (body) => {
+    await api.post('/api/auth/password/change', body);
+    passwordForm.reset();
+    return '비밀번호를 변경했어요.';
+  });
+  bindForm(el.querySelector('#settings-logout'), async () => {
+    await api.post('/api/auth/logout');
+    history.replaceState(null, '', '/#/login');
+    location.reload();
+  });
+}
+
+function workspace(el, key, account) {
+  const access = account.access;
+  if (!access || access.demo) return show(el, key, demoOnly);
+  const { workspace, role } = access;
+  const readOnly = role !== 'admin';
+  show(el, key, html`
+    <form class="account-form">
+      <label>상호<input name="name" value="${workspace.name}" maxlength="80" required ${readOnly ? html`readonly` : ''}></label>
+      <label>대표 번호<input name="phone" type="tel" value="${workspace.phone}" maxlength="30" ${readOnly ? html`readonly` : ''}></label>
+      <label>영업시간<input name="hours" value="${workspace.hours}" maxlength="120" ${readOnly ? html`readonly` : ''}></label>
+      ${readOnly ? restricted : save()}${status}
+    </form><a class="btn" href="#/workspaces">워크스페이스 전환</a>`);
+  if (!readOnly) bindForm(el.querySelector('form'), async (body) => {
+    await api.patch('/api/settings/workspace', body);
+    return '워크스페이스 정보를 저장했어요.';
+  });
+}
+
+async function members(el, key, account) {
+  const access = account.access;
+  if (!access || access.demo) return show(el, key, demoOnly);
+  if (access.role !== 'admin') return show(el, key, restricted);
+  show(el, key, html`<p role="status">구성원을 불러오는 중입니다.</p>`);
+  const placeholder = el.firstElementChild;
+  let initial;
+  try { initial = await api.get('/api/settings/members'); } catch (error) {
+    if (!placeholder.isConnected || el.firstElementChild !== placeholder) return;
+    throw error;
+  }
+  if (!placeholder.isConnected || el.firstElementChild !== placeholder) return;
+  const { members, invites } = initial;
+  function inviteList(invites) { return html`${invites.length ? html`<div class="account-stack">${invites.map((i) => html`
+        <form class="account-form invite-row" data-invite="${i.id}">
+          <div><strong>${i.email}</strong><p>${roleName(i.role)} · ${i.expired ? '만료됨' : '수락 대기'}</p></div>
+          <fieldset data-invite-actions style="border:0;padding:0;margin:0"><button type="submit" class="btn" name="action" value="resend">다시 보내기</button>
+          <button type="submit" class="btn" name="action" value="cancel">초대 취소</button></fieldset>
+          ${status}
+        </form>`)}</div>` : html`<p>수락을 기다리는 초대가 없어요.</p>`}`; }
+    show(el, key, html`
+      <h2>구성원 초대</h2>
+      <form id="member-invite" class="account-form">
+        <label>이메일<input name="email" type="email" maxlength="254" required></label>
+        <label>역할<select name="role">${roleOptions()}</select></label>
+        <fieldset data-invite-actions style="border:0;padding:0;margin:0">${save('초대 보내기')}</fieldset>${status}
+      </form>
+      <h2>구성원</h2>
+      <div class="account-stack">${members.map((m) => html`
+        <form class="account-form member-row" data-member="${m.id}">
+          <div><strong>${m.name}${m.id === account.user.id ? ' · 나' : ''}</strong><p>${m.email}</p></div>
+          <label>역할<select name="role" aria-label="${m.name} 역할">${roleOptions(m.role)}</select></label>
+          <label class="account-check"><input name="active" type="checkbox" ${m.active ? html`checked` : ''}> 활성 계정</label>
+          ${save('변경 저장')}${status}
+        </form>`)}</div>
+      <h2>수락 대기 중인 초대</h2>
+      <div data-ref="invite-list">${inviteList(invites)}
+      </div><p data-ref="invite-result" role="status" tabindex="-1" hidden></p><button type="button" class="btn" data-act="reload-invites">초대 목록 새로고침</button>
+    `);
+  const page = el.firstElementChild;
+  const alive = () => page.isConnected && el.firstElementChild === page;
+  const area = page.querySelector('[data-ref="invite-list"]');
+  const feedback = page.querySelector('[data-ref="invite-result"]');
+  const inviteForm = page.querySelector('#member-invite');
+  let busy = false;
+  let needsRefresh = false;
+  let generation = 0;
+  function syncActions() {
+    for (const fieldset of page.querySelectorAll('[data-invite-actions]')) fieldset.disabled = busy || needsRefresh;
+    page.querySelector('[data-act="reload-invites"]').disabled = busy;
+  }
+  // Prevent a second form's bindForm snapshot while another invitation operation owns the list.
+  page.addEventListener('submit', event => {
+    if ((busy || needsRefresh || !alive()) && event.target.matches('#member-invite, .invite-row')) {
+      event.preventDefault(); event.stopImmediatePropagation();
+    }
+  }, true);
+  function notice(message) {
+    if (!alive()) return;
+    feedback.textContent = message;
+    feedback.hidden = false;
+  }
+  async function refreshInvites(successMessage = '') {
+    const request = ++generation;
+    try {
+      const data = await api.get('/api/settings/members');
+      if (!alive() || request !== generation) return false;
+      const restoreFocus = area.contains(document.activeElement) || document.activeElement === document.body;
+      render(area, inviteList(data.invites));
+      bindInvites();
+      needsRefresh = false;
+      notice(successMessage || '초대 목록을 새로 불러왔어요.');
+      if (restoreFocus) feedback.focus();
+      return true;
+    } catch (error) {
+      if (!alive() || request !== generation) return false;
+      needsRefresh = true;
+      notice((successMessage ? successMessage + ' 하지만 ' : '') + '초대 목록을 불러오지 못했어요. 다시 발송하지 말고 초대 목록을 새로고침해 주세요.');
+      return false;
+    }
+  }
+  async function invitationOperation(mutate, message, reset = false) {
+    if (busy || needsRefresh || !alive()) return;
+    busy = true;
+    syncActions();
+    notice('초대를 처리하는 중입니다. 다른 폼에 작성한 내용은 그대로 유지됩니다.');
+    try {
+      await mutate();
+      if (!alive()) return;
+      if (reset) inviteForm.reset();
+      await refreshInvites(message);
+    } catch (error) {
+      if (alive()) notice('초대를 처리하지 못했어요. 입력은 그대로 남아 있어요.');
+      throw error;
+    } finally {
+      busy = false;
+      if (alive()) syncActions();
+    }
+  }
+  bindForm(inviteForm, async body => {
+    await invitationOperation(() => api.post('/api/settings/invites', body), '초대를 준비했어요.', true);
+  });
+  for (const form of page.querySelectorAll('.member-row')) bindForm(form, async body => {
+    await api.patch(`/api/settings/members/${encodeURIComponent(form.dataset.member)}`, body);
+    return '구성원 역할과 상태를 저장했어요.';
+  });
+  function bindInvites() {
+    for (const form of area.querySelectorAll('.invite-row')) bindForm(form, async (body, button) => {
+      const route = `/api/settings/invites/${encodeURIComponent(form.dataset.invite)}`;
+      await invitationOperation(() => button.value === 'cancel' ? api.del(route) : api.post(`${route}/resend`), button.value === 'cancel' ? '초대를 취소했어요.' : '초대 재발송을 요청했어요.');
+    });
+  }
+  bindInvites();
+  page.querySelector('[data-act="reload-invites"]').addEventListener('click', async () => {
+    if (busy || !alive()) return;
+    busy = true; syncActions();
+    try { await refreshInvites(); } finally { busy = false; if (alive()) syncActions(); }
+  });
+}
+
+async function notificationSettings(el, key, account) {
+  const prefs = account.user?.notifications || { urgent: true, review: true, upload: true };
+  show(el, key, html`
+    ${account.user ? html`<form id="notification-prefs" class="account-form">
+      ${[['urgent', '긴급 주문'], ['review', '확인 필요 주문'], ['upload', '녹음 처리 완료·실패']].map(([name, label]) => html`
+        <label class="account-check"><input name="${name}" type="checkbox" ${prefs[name] ? html`checked` : ''}> ${label}</label>`)}
+      ${save()}${status}
+    </form>` : html`<p>로그인하면 알림 종류를 설정할 수 있어요.</p>`}
+    <h2>받은 알림</h2><div id="notice-items" aria-live="polite"></div>`);
+  const prefsForm = el.querySelector('#notification-prefs');
+  if (prefsForm) bindForm(prefsForm, async (body) => {
+    await api.patch('/api/auth/preferences', { notifications: body });
+    await refresh();
+    return '알림 설정을 저장했어요.';
+  });
+  async function refresh() {
+    const area = el.querySelector('#notice-items');
+    if (!account.access) { render(area, html`<p>워크스페이스를 선택해 주세요.</p>`); return; }
+    const { items, unread } = await api.get('/api/notifications');
+    render(area, html`
+      ${unread ? html`<form class="account-form"><button type="submit" class="btn">표시된 알림 읽음 처리</button>${status}</form>` : ''}
+      ${items.length ? html`<ul class="account-stack">${items.map((item) => html`
+        <li><a href="#/calls/${encodeURIComponent(item.callId)}">${item.title}</a> ${item.read ? '' : '· 새 알림'}
+          <p>${item.message} · ${fmtWhen(item.createdAt)}</p></li>`)}</ul>` : html`<p>새 알림이 없어요.</p>`}`);
+    const form = area.querySelector('form');
+    if (form) bindForm(form, async () => {
+      await api.post('/api/notifications/read', { ids: items.filter((i) => !i.read).map((i) => i.id) });
+      await refresh();
+    });
+  }
+  await refresh();
+}
+
+function display(el, key, account) {
+  show(el, key, html`<form class="account-form">
+    <label class="account-check"><input type="checkbox" name="bigText" ${(account.user?.bigText ?? localBigText()) ? html`checked` : ''}> 큰 글씨 모드</label>
+    ${save()}${status}</form>`);
+  bindForm(el.querySelector('form'), async ({ bigText }) => {
+    if (account.user) await api.patch('/api/auth/preferences', { bigText });
+    try { localStorage.setItem('cn.bigText', bigText ? '1' : '0'); } catch { /* 현재 화면에는 적용 */ }
+    document.documentElement.classList.toggle('big-text', bigText);
+    return '화면 설정을 저장했어요.';
+  });
+}
+
+async function dataSettings(el, key, account) {
+  const access = account.access;
+  if (!access || access.demo) return show(el, key, demoOnly);
+  if (access.role !== 'admin') return show(el, key, restricted);
+  const { calls = [] } = await api.get('/api/calls', { limit: 30 });
+  show(el, key, html`
+    <h2>보관 기간</h2>
+    <p>보관 기간이 지난 통화의 녹음과 받아쓴 글, 주문 카드, 변경 기록을 정리해요.</p>
+    <form id="retention" class="account-form">
+      <label>통화 보관 기간(일)<input name="retentionDays" type="number" min="1" max="3650" value="${access.workspace.retentionDays}" required></label>
+      ${save('기간 저장')}${status}
+    </form>
+    <h2>내보내기</h2>
+    <p>통화, 받아쓴 글, 주문 카드와 변경 이력을 JSON으로 내려받아요. 녹음은 각 통화에서 내려받을 수 있어요.</p>
+    <a class="btn" href="${api.url('/api/settings/data/export')}" download>워크스페이스 데이터 내려받기</a>
+    <h2>통화 삭제</h2>
+    ${calls.length ? html`<form id="data-delete" class="account-form">
+      <label>최근 통화<select name="id" required>${calls.map((c) => html`<option value="${c.id}">${fmtWhen(c.recordedAt)} · ${c.title}</option>`)}</select></label>
+      <label>삭제 확인을 위해 ‘삭제’를 입력해 주세요<input name="confirm" pattern="삭제" required></label>
+      <button class="btn btn-danger" type="submit">통화 삭제</button>${status}
+    </form>` : html`<p>삭제할 통화가 없어요.</p>`}
+  `);
+  bindForm(el.querySelector('#retention'), async (body) => {
+    await api.patch('/api/settings/data', { retentionDays: Number(body.retentionDays) });
+    return '보관 기간을 저장했어요.';
+  });
+  const deleteForm = el.querySelector('#data-delete');
+  if (deleteForm) bindForm(deleteForm, async (body) => {
+    const selectedId = String(body.id || '');
+    const select = deleteForm.elements.id;
+    const confirmation = deleteForm.elements.confirm;
+    if (!selectedId || ![...select.options].some(option => option.value === selectedId)) throw new Error('삭제할 통화를 선택해 주세요.');
+    select.disabled = true;
+    confirmation.disabled = true;
+    deleteForm.setAttribute('aria-busy', 'true');
+    try {
+      await api.del(`/api/calls/${encodeURIComponent(selectedId)}`);
+      // 요청 시점의 대상을 제거한다. 대기 중 선택값/DOM이 달라져도 다른 통화는 남긴다.
+      [...select.options].find(option => option.value === selectedId)?.remove();
+      confirmation.value = '';
+      if (!select.options.length) {
+        const empty = document.createElement('p');
+        empty.setAttribute('role', 'status');
+        empty.tabIndex = -1;
+        empty.textContent = '통화를 삭제했어요. 삭제할 통화가 없어요.';
+        deleteForm.replaceWith(empty);
+        empty.focus();
+      }
+      return '통화를 삭제했어요.';
+    } finally {
+      select.disabled = false;
+      confirmation.disabled = false;
+      deleteForm.removeAttribute('aria-busy');
+      if (deleteForm.isConnected) select.focus({ preventScroll: true });
+    }
+  });
+}
+
+async function integrations(el, key, account, ctx) {
+  const access = account.access;
+  if (!access || access.demo) return show(el, key, demoOnly);
+  if (access.role !== 'admin') return show(el, key, restricted);
+  async function draw(token, completion) {
+    const rr = await api.get('/api/settings/integrations');
+    show(el, key, html`
+      <div class="integration-overview"><h2>녹음이 주문으로 정리되는 과정</h2><p>필요한 단계만 연결하세요. 아래 표시는 연결 설정 상태이며, 실제 처리 성공을 뜻하지 않습니다.</p><ol>
+        <li><a href="#integration-ingest" data-step="integration-ingest"><strong>1. 녹음 가져오기</strong><span>${rr.ingestConfigured ? '폴더 연결용 토큰 발급됨' : '파일 직접 올리기 가능'}</span></a></li>
+        <li><a href="#integration-transcribe" data-step="integration-transcribe"><strong>2. 글로 받아쓰기</strong><span>${rr.localWorker?.connected ? '이 작업공간에 Mac 연결됨' : ctx.meta?.worker?.online ? '받아쓰기 실행기 응답 있음' : '실행기 연결 확인 필요'}</span></a></li>
+        <li><a href="#integration-ai-step" data-step="integration-ai-step"><strong>3. 주문 정리</strong><span>${ctx.meta?.aiProvider === 'ollama' ? '로컬 모델 설정됨' : ctx.meta?.aiProvider === 'fixture' ? '고정 예시 모드' : ctx.meta?.aiProvider === 'anthropic' ? '외부 AI 설정 확인' : 'AI 꺼짐'}</span></a></li>
+      </ol></div>
+      <section class="integration-step" id="integration-ingest" tabindex="-1"><h2>1. 녹음 가져오기</h2><p>가끔 올린다면 파일을 직접 선택하세요. 반복해서 올린다면 폴더 전송 프로그램을 연결할 수 있어요.</p><a class="btn" href="#/upload">녹음 파일 직접 올리기</a>
+      <h3>폴더에서 자동으로 가져오기</h3>
+      <p>${rr.ingestConfigured ? '연결용 토큰이 발급됐어요.' : '연결용 토큰을 발급해 폴더 전송 프로그램에 설정해 주세요.'}</p>
+      ${token ? html`<label>새 연결용 토큰<input class="token-output" type="text" readonly value="${token}"></label>
+        <p>토큰은 이 화면에서 한 번 보여요. 폴더 전송 프로그램에 입력해 주세요.</p>` : ''}
+      <form id="integration-token" class="account-form">
+        ${rr.ingestConfigured ? html`<label class="account-check"><input name="confirm" type="checkbox" required> 기존 연결이 끊기는 것을 확인했어요.</label>` : ''}
+        ${save(rr.ingestConfigured ? '토큰 다시 발급' : '토큰 발급')}${status}
+      </form>
+      ${rr.ingestConfigured ? html`<form id="integration-revoke" class="account-form">
+        <label class="account-check"><input name="confirm" type="checkbox" required> 폴더 전송 연결을 해제합니다.</label>
+        <button type="submit" class="btn btn-danger">토큰 폐기</button>${status}
+      </form>` : ''}
+      </section><section class="integration-step" id="integration-transcribe" tabindex="-1"><h2>2. 글로 받아쓰기</h2><p>녹음에서 대화 내용을 만듭니다. ${ctx.meta?.worker?.online ? '실행기 응답이 있어요. 개별 녹음의 완료 여부는 통화 기록에서 확인하세요.' : '현재 실행기의 응답이 확인되지 않았어요. 연결 후 통화 기록에서 처리 상태를 확인하세요.'}</p>
+      ${rr.localWorker?.available ? html`<h3>이 Mac에서 처리하기</h3>
+        <p>${rr.localWorker.connected ? '현재 작업공간이 연결돼 있어요.' : rr.localWorker.configuredElsewhere ? '다른 작업공간의 연결이 있어요. 새 연결을 시작하면 기존 연결은 즉시 해제돼요.' : '전사 모델과 실행기를 준비한 뒤 이 작업공간을 연결하세요.'}</p>
+        <p>승인은 30일 동안 유효해요. 앱이 열려 있을 때 이 작업공간의 녹음을 이 Mac에서 처리해요. 화면에서 다른 공간을 선택해도 연결된 공간은 자동으로 바뀌지 않아요.</p>
+        <form id="local-worker-connect" class="account-form">
+          <label class="account-check"><input name="confirm" type="checkbox" required> 현재 작업공간의 로컬 받아쓰기에 동의하고 기존 연결이 있으면 교체해요.</label>
+          ${save(rr.localWorker.connected ? '연결 갱신' : '이 Mac에서 받아쓰기 연결')}${status}
+        </form>
+        ${rr.localWorker.connected ? html`<form id="local-worker-disconnect" class="account-form">
+          <label class="account-check"><input name="confirm" type="checkbox" required> 이 작업공간의 로컬 받아쓰기 연결을 해제해요.</label>
+          <button type="submit" class="btn btn-danger">연결 해제</button>${status}
+        </form>` : ''}` : ''}
+      ${!rr.localWorker?.available ? html`<p class="help">이 화면에서는 Mac 연결을 설정할 수 없어요. 받아쓰기 실행기가 준비된 기기에서 연결을 설정해 주세요.</p>` : ''}
+      </section><section class="integration-step" id="integration-ai-step" tabindex="-1"><h2>3. 주문 정리</h2>
+      <p>받아쓴 글을 바탕으로 주문 초안을 만듭니다. 담당자의 확인과 확정은 별도입니다.</p>
+      <p class="notice">${ctx.meta?.aiProvider === 'ollama'
+        ? `로컬 모델 설정 · ${ctx.meta.model || 'Ollama'}. 앱 서버와 같은 기기의 Ollama로 처리합니다. 모델 설치와 실행 여부는 실제 요청 시 확인됩니다.`
+        : ctx.meta?.aiProvider === 'fixture' ? '고정 예시 응답 모드입니다. 실제 AI 추론을 하지 않습니다.'
+        : ctx.meta?.aiProvider === 'anthropic' ? '외부 Claude 연결 설정입니다. 아래 동의와 서버의 유료 호출 허용이 모두 필요합니다.'
+        : 'AI 처리가 꺼져 있습니다.'}</p>
+      ${ctx.meta?.aiProvider === 'ollama' ? html`<details class="integration-advanced"><summary>관리자용: 로컬 모델 끄기</summary><p>아래 설정은 외부 AI 전송에만 적용됩니다. 로컬 모델을 끄려면 Node 설치의 AI_PROVIDER를 off로 바꾸세요. Mac 앱은 ‘로컬 자료 폴더 열기’에서 ai.json의 provider를 off로 바꾼 뒤 앱을 다시 실행하세요.</p></details>` : ''}
+      <p>서버에서 외부 AI를 켠 경우 ‘서버 AI 사용’으로 저장하면 받아쓴 글 원문과 관련 업무 정보가 외부 AI에 전송될 수 있어요.</p>
+      <form id="integration-ai" class="account-form">
+        <label>처리 방식<select name="aiMode">
+          ${[['off', '외부 AI 사용 안 함'], ['masked', '가림 처리 미지원 · 외부 전송 차단'], ['configured', '서버 AI 사용 · 외부 전송 허용']].map(([value, label]) => html`
+            <option value="${value}" ${rr.aiMode === value ? html`selected` : ''}>${label}</option>`)}
+        </select></label>${save()}${status}
+      </form></section>
+    `);
+    el.querySelectorAll('[data-step]').forEach(link => link.addEventListener('click', event => {
+      event.preventDefault(); const target = el.querySelector('#' + link.dataset.step);
+      target?.scrollIntoView({block:'start'}); target?.focus({preventScroll:true});
+    }));
+    const localConnect=el.querySelector('#local-worker-connect');
+    if(localConnect) bindForm(localConnect,async()=>{await api.post('/api/settings/local-worker',{confirm:true});await draw(undefined,{section:'integration-transcribe',message:'이 작업공간의 Mac 받아쓰기 연결을 저장했어요.'});});
+    const localDisconnect=el.querySelector('#local-worker-disconnect');
+    if(localDisconnect) bindForm(localDisconnect,async()=>{await api.del('/api/settings/local-worker',{body:{confirm:true}});await draw(undefined,{section:'integration-transcribe',message:'이 작업공간의 Mac 받아쓰기 연결을 해제했어요.'});});
+    bindForm(el.querySelector('#integration-token'), async () => {
+      const result = await api.post('/api/settings/ingest-token');
+      await draw(result.token,{section:'integration-ingest',message:'새 연결용 토큰을 발급했어요. 아래 입력란에서 확인해 주세요.'});
+    });
+    const revoke = el.querySelector('#integration-revoke');
+    if (revoke) bindForm(revoke, async () => {
+      await api.del('/api/settings/ingest-token');
+      await draw(undefined,{section:'integration-ingest',message:'폴더 전송 연결용 토큰을 폐기했어요.'});
+    });
+    bindForm(el.querySelector('#integration-ai'), async (body) => {
+      await api.patch('/api/settings/integrations', body);
+      return 'AI 처리 설정을 저장했어요.';
+    });
+    if (completion) {
+      const section = el.querySelector('#' + completion.section);
+      const feedback = document.createElement('p');
+      feedback.className = 'notice';
+      feedback.dataset.ref = 'integration-completion';
+      feedback.setAttribute('role', 'status');
+      feedback.tabIndex = -1;
+      feedback.textContent = completion.message;
+      section.querySelector('h2').after(feedback);
+      feedback.focus();
+    }
+  }
+  await draw();
+}
+
+const handlers = { profile, workspace, members, notifications: notificationSettings, display, data: dataSettings, integrations };
+export default {
+  title: '설정',
+  async mount(el, ctx) {
+    const key = ctx.params?.section || ctx.path?.split('/')[2];
+    const handler = handlers[key];
+    if (!handler) {
+      show(el, key, html`<div class="settings-directory">${sections.map(([key,label]) => html`<a class="settings-destination" href="#/settings/${key}"><strong>${label}<span aria-hidden="true">↗</span></strong><span>${sectionDescriptions[key]}</span></a>`)}</div>`);
+      return;
+    }
+    const account = await api.get('/api/auth/me');
+    await handler(el, key, account, ctx);
+  },
+};

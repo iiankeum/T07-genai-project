@@ -1,0 +1,100 @@
+{
+  "scope": "actual members/account modules + fake promises, viewport behavior only; no real mail/server/authorization test",
+  "results": [
+    {
+      "width": 1440,
+      "action": "cancel",
+      "draftsPreserved": true,
+      "memberDOMPreserved": true,
+      "duplicateBlocked": true
+    },
+    {
+      "width": 1440,
+      "action": "resend",
+      "draftsPreserved": true,
+      "memberDOMPreserved": true,
+      "duplicateBlocked": true
+    },
+    {
+      "width": 1440,
+      "mutationSuccessRefreshFailure": true,
+      "manualGetOnlyRecovery": true
+    },
+    {
+      "width": 1440,
+      "newInvite": "success resets only submitted form"
+    },
+    {
+      "width": 1440,
+      "newInvite": "failure preserves input"
+    },
+    {
+      "width": 1440,
+      "mutationFailureRestoresActions": true
+    },
+    {
+      "width": 1440,
+      "newInviteSuccessRefreshFailure": true,
+      "noAutomaticResend": true
+    },
+    {
+      "width": 1440,
+      "memberSaveIndependentOfInvite": true
+    },
+    {
+      "width": 1440,
+      "reloadSerialized": true,
+      "navigationProtected": true
+    },
+    {
+      "width": 390,
+      "action": "cancel",
+      "draftsPreserved": true,
+      "memberDOMPreserved": true,
+      "duplicateBlocked": true
+    },
+    {
+      "width": 390,
+      "action": "resend",
+      "draftsPreserved": true,
+      "memberDOMPreserved": true,
+      "duplicateBlocked": true
+    },
+    {
+      "width": 390,
+      "mutationSuccessRefreshFailure": true,
+      "manualGetOnlyRecovery": true
+    },
+    {
+      "width": 390,
+      "newInvite": "success resets only submitted form"
+    },
+    {
+      "width": 390,
+      "newInvite": "failure preserves input"
+    },
+    {
+      "width": 390,
+      "mutationFailureRestoresActions": true
+    },
+    {
+      "width": 390,
+      "newInviteSuccessRefreshFailure": true,
+      "noAutomaticResend": true
+    },
+    {
+      "width": 390,
+      "memberSaveIndependentOfInvite": true
+    },
+    {
+      "width": 390,
+      "reloadSerialized": true,
+      "navigationProtected": true
+    },
+    {
+      "nonAdminAndDemoRestricted": true
+    }
+  ],
+  "errors": [],
+  "external": []
+}

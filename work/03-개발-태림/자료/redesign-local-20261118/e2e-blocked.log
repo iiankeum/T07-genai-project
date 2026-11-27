@@ -1,0 +1,24 @@
+Error: Server exited: [seed] 가짜 통화 61건을 넣었습니다
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EPERM: operation not permitted 127.0.0.1:5627
+    at Server.setupListenHandle [as _listen2] (node:net:2145:21)
+    at listenInCluster (node:net:2224:12)
+    at node:net:2448:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:2203:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EPERM',
+  errno: -1,
+  syscall: 'listen',
+  address: '127.0.0.1',
+  port: 5627
+}
+
+Node.js v24.19.0
+
+    at server (file://[repository]/src/app/tools/browser-e2e.mjs:40:104)
+    at async file://[repository]/src/app/tools/browser-e2e.mjs:59:16

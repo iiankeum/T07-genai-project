@@ -1,0 +1,10 @@
+{
+  "scope": "actual bindForm with fake action; no real account/network",
+  "results": [
+    "unique stable feedback id; field error linked/focused; help retained; other form untouched",
+    "no duplicate links; new submit clears own error only; success preserves help and id",
+    "non-field error visible and focused; submit unlocks"
+  ],
+  "errors": [],
+  "external": []
+}

@@ -1,0 +1,116 @@
+{
+  "scope": "actual mountCard and CSS with mock API and simulated callbacks; no actual backend, audio, native app, or full shell verification",
+  "status": "passed",
+  "results": [
+    {
+      "items": 1,
+      "size": "desktop",
+      "bigText": false,
+      "stableIds": true,
+      "explicitEvidenceOnly": true,
+      "jumpFocus": true,
+      "flushBeforeConfirm": true
+    },
+    {
+      "items": 1,
+      "size": "desktop",
+      "bigText": true,
+      "stableIds": true,
+      "explicitEvidenceOnly": true,
+      "jumpFocus": true,
+      "flushBeforeConfirm": true
+    },
+    {
+      "items": 1,
+      "size": "mobile",
+      "bigText": false,
+      "stableIds": true,
+      "explicitEvidenceOnly": true,
+      "jumpFocus": true,
+      "flushBeforeConfirm": true
+    },
+    {
+      "items": 1,
+      "size": "mobile",
+      "bigText": true,
+      "stableIds": true,
+      "explicitEvidenceOnly": true,
+      "jumpFocus": true,
+      "flushBeforeConfirm": true
+    },
+    {
+      "items": 5,
+      "size": "desktop",
+      "bigText": false,
+      "stableIds": true,
+      "explicitEvidenceOnly": true,
+      "jumpFocus": true,
+      "flushBeforeConfirm": true
+    },
+    {
+      "items": 5,
+      "size": "desktop",
+      "bigText": true,
+      "stableIds": true,
+      "explicitEvidenceOnly": true,
+      "jumpFocus": true,
+      "flushBeforeConfirm": true
+    },
+    {
+      "items": 5,
+      "size": "mobile",
+      "bigText": false,
+      "stableIds": true,
+      "explicitEvidenceOnly": true,
+      "jumpFocus": true,
+      "flushBeforeConfirm": true
+    },
+    {
+      "items": 5,
+      "size": "mobile",
+      "bigText": true,
+      "stableIds": true,
+      "explicitEvidenceOnly": true,
+      "jumpFocus": true,
+      "flushBeforeConfirm": true
+    },
+    {
+      "items": 10,
+      "size": "desktop",
+      "bigText": false,
+      "stableIds": true,
+      "explicitEvidenceOnly": true,
+      "jumpFocus": true,
+      "flushBeforeConfirm": true
+    },
+    {
+      "items": 10,
+      "size": "desktop",
+      "bigText": true,
+      "stableIds": true,
+      "explicitEvidenceOnly": true,
+      "jumpFocus": true,
+      "flushBeforeConfirm": true
+    },
+    {
+      "items": 10,
+      "size": "mobile",
+      "bigText": false,
+      "stableIds": true,
+      "explicitEvidenceOnly": true,
+      "jumpFocus": true,
+      "flushBeforeConfirm": true
+    },
+    {
+      "items": 10,
+      "size": "mobile",
+      "bigText": true,
+      "stableIds": true,
+      "explicitEvidenceOnly": true,
+      "jumpFocus": true,
+      "flushBeforeConfirm": true
+    }
+  ],
+  "errors": [],
+  "blocked": []
+}

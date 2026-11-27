@@ -1,0 +1,39 @@
+{
+  "fixtureOnly": true,
+  "results": [
+    {
+      "width": 360,
+      "big": false,
+      "returnsEditedInput": true,
+      "visibleAboveActions": true,
+      "normalTabRetainsField": true,
+      "otherEvidenceUsesOwnItem": true
+    },
+    {
+      "width": 360,
+      "big": true,
+      "returnsEditedInput": true,
+      "visibleAboveActions": true,
+      "normalTabRetainsField": true,
+      "otherEvidenceUsesOwnItem": true
+    },
+    {
+      "width": 390,
+      "big": false,
+      "returnsEditedInput": true,
+      "visibleAboveActions": true,
+      "normalTabRetainsField": true,
+      "otherEvidenceUsesOwnItem": true
+    },
+    {
+      "width": 390,
+      "big": true,
+      "returnsEditedInput": true,
+      "visibleAboveActions": true,
+      "normalTabRetainsField": true,
+      "otherEvidenceUsesOwnItem": true
+    }
+  ],
+  "errors": [],
+  "blocked": []
+}

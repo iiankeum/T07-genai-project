@@ -1,0 +1,11 @@
+/* 연결 안내만 범위 지정한다. 화면 재마운트·입력 이동·하단 메뉴 변경 없음. */
+.connectivity-banner { position: fixed; inset: 0 0 auto; z-index: 45; display: flex; align-items: center; gap: 12px; padding: calc(10px + env(safe-area-inset-top)) 16px 10px; background: #fff8e6; color: #543b00; border-bottom: 1px solid #e2c46b; font-size: .875rem; line-height: 1.5; }
+.connectivity-banner[hidden], .connectivity-banner button[hidden] { display: none; }
+.connectivity-banner > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.connectivity-banner > button { flex: none; }
+body[data-connectivity-visible] { padding-top: var(--connectivity-h, 0px); }
+body[data-connectivity-visible] .topbar { top: var(--connectivity-h, 0px); }
+@media (min-width: 900px) {
+  body[data-connectivity-visible] .sidenav { top: calc(var(--topbar-h) + var(--connectivity-h, 0px)); height: calc(100dvh - var(--topbar-h) - var(--connectivity-h, 0px)); }
+}
+@media print { .connectivity-banner { display: none; } body[data-connectivity-visible] { padding-top: 0; } }

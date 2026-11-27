@@ -1,0 +1,17 @@
+{
+  "at": "2026-11-18T06:51:08.459Z",
+  "event": "status",
+  "runtime": "whisper-portable-3.12.16",
+  "bundledVerified": true,
+  "installedVerified": true,
+  "verification": "build-inventory-change-detection",
+  "distributionSigningVerified": false,
+  "inferenceVerified": false,
+  "networkRequired": false,
+  "isolatedImportsVerified": true,
+  "limits": [
+    "동일 Mac의 빈 private root 설치 시험",
+    "실물 신규 Mac 전체 설치와 다름",
+    "Developer ID/공증 미완료"
+  ]
+}
