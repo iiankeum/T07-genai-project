@@ -1,0 +1,9 @@
+# 실제 통화 녹음은 절대 올리지 않는다
+real/
+
+# 만들어지는 것들
+.venv/
+out/
+samples/
+__pycache__/
+.env
