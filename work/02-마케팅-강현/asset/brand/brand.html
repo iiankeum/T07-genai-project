@@ -1,0 +1,29 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><style>
+:root{--sky:#d3e6f5;--slate:#3a5f79;--coral:#e4927c;--cream:#f9f5f2}
+*{margin:0;padding:0;box-sizing:border-box}body{background:#ddd;font-family:"Noto Sans CJK KR",sans-serif}
+.slide{margin:0 auto 40px;position:relative;overflow:hidden}
+.sq{width:1080px;height:1080px}
+.word{font-weight:900;letter-spacing:-.05em;line-height:1;color:var(--slate)}
+</style></head><body>
+<!-- 1 app icon on cream -->
+<div class="slide sq" style="background:var(--cream);display:flex;align-items:center;justify-content:center">
+ <svg width="900" height="900" viewBox="0 0 1000 1000"><rect width="1000" height="1000" rx="230" fill="var(--sky)"/><use href="#m"/></svg>
+</div>
+<!-- 2 profile (full bleed sky, mark scaled for circle) -->
+<div class="slide sq" style="background:var(--sky)">
+ <svg width="1080" height="1080" viewBox="0 0 1000 1000"><g transform="translate(500 500) scale(1.12) translate(-527 -497)"><use href="#m"/></g></svg>
+</div>
+<!-- 3 lockup horizontal -->
+<div class="slide" style="width:1600px;height:700px;background:var(--cream);display:flex;align-items:center;gap:60px;padding:0 140px">
+ <svg width="380" height="380" viewBox="0 0 1000 1000" style="flex:none"><rect width="1000" height="1000" rx="230" fill="var(--sky)"/><use href="#m"/></svg>
+ <div><div class="word" style="font-size:250px">아차</div><div style="font-size:44px;font-weight:700;letter-spacing:.3em;color:var(--slate);opacity:.7;margin-top:24px">ACHA</div></div>
+</div>
+<!-- 4 dark version -->
+<div class="slide sq" style="background:var(--slate)">
+ <svg width="1080" height="1080" viewBox="0 0 1000 1000"><g transform="translate(500 500) scale(1.12) translate(-527 -497)"><use href="#mw"/></g></svg>
+</div>
+<svg width="0" height="0" style="position:absolute"><defs>
+ <g id="m"><g fill="none" stroke="#3a5f79" stroke-linecap="round"><path d="M281 478 V547" stroke-width="104"/><path d="M407 372 V607" stroke-width="104"/><path d="M526 441 V562" stroke-width="104"/><path d="M660 273 V590" stroke-width="112"/><path d="M660 421 H773" stroke-width="86"/></g><circle cx="660" cy="722" r="58" fill="#e4927c"/></g>
+ <g id="mw"><g fill="none" stroke="#f9f5f2" stroke-linecap="round"><path d="M281 478 V547" stroke-width="104"/><path d="M407 372 V607" stroke-width="104"/><path d="M526 441 V562" stroke-width="104"/><path d="M660 273 V590" stroke-width="112"/><path d="M660 421 H773" stroke-width="86"/></g><circle cx="660" cy="722" r="58" fill="#e4927c"/></g>
+</defs></svg>
+</body></html>

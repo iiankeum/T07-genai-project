@@ -1,0 +1,25 @@
+test_alias_replaced (test_core.Correct.test_alias_replaced) ... ok
+test_alias_with_spacing_error (test_core.Correct.test_alias_with_spacing_error) ... ok
+test_already_correct (test_core.Correct.test_already_correct) ... ok
+test_english_alias_not_inside_word (test_core.Correct.test_english_alias_not_inside_word) ... ok
+test_longer_match_first (test_core.Correct.test_longer_match_first) ... ok
+test_merged_after_known_term (test_core.Correct.test_merged_after_known_term) ... ok
+test_pieces (test_core.Correct.test_pieces) ... ok
+test_short_alias_needs_particle (test_core.Correct.test_short_alias_needs_particle) ... ok
+test_sound_auto_for_long_close_term (test_core.Correct.test_sound_auto_for_long_close_term) ... ok
+test_sound_suggestion_not_auto_for_short (test_core.Correct.test_sound_suggestion_not_auto_for_short) ... ok
+test_spacing_of_term (test_core.Correct.test_spacing_of_term) ... ok
+test_unrelated_text_untouched (test_core.Correct.test_unrelated_text_untouched) ... ok
+test_english_headers_and_dupes (test_core.Csv.test_english_headers_and_dupes) ... ok
+test_plain_list (test_core.Csv.test_plain_list) ... ok
+test_roundtrip_korean_headers (test_core.Csv.test_roundtrip_korean_headers) ... ok
+test_boost_goes_before_hits (test_core.Hints.test_boost_goes_before_hits) ... ok
+test_budget_and_pinned_first (test_core.Hints.test_budget_and_pinned_first) ... ok
+test_same_is_zero (test_core.Jamo.test_same_is_zero) ... ok
+test_similar_sound_is_cheap (test_core.Jamo.test_similar_sound_is_cheap) ... ok
+test_squash (test_core.Jamo.test_squash) ... ok
+
+----------------------------------------------------------------------
+Ran 20 tests in 0.018s
+
+OK

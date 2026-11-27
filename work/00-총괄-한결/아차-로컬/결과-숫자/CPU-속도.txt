@@ -1,0 +1,16 @@
+# CPU 받아쓰기 속도 (2026-11-25) — 도구 출력을 옮겨 적음
+# PC: AMD Ryzen 5 7500F (6코어 12스레드) · 모델 large-v3-turbo · int8 · 녹음: 가짜-부품주문-전화 앞 30초 · VAD 켬 · 힌트 없음
+# 「겹침」= 설치본 받아쓰기 · GPU 가속 파일 받기가 같은 때 돌고 있었음
+
+## 겹친 상태 (21:5x)
+small beam 1 threads 6 load 8.6 s / 30s audio -> 130.9 s
+large-v3-turbo beam 1 threads 6 load 7.3 s / 30s audio -> 75.6 s
+large-v3-turbo beam 1 threads 12 load 16.7 s / 30s audio -> 92.1 s
+large-v3-turbo beam 5 threads 6 load 5.4 s / 30s audio -> 32.2 s
+
+## 혼자 (22:0x · 다른 시험 모두 끈 뒤)
+MKL - beam 5 threads 6 -> 10.5 s for 30s
+MKL 1 beam 5 threads 6 -> 44.0 s for 30s
+MKL - beam 1 threads 6 -> 6.5 s for 30s
+MKL 1 beam 1 threads 6 -> 52.2 s for 30s
+# MKL - = 기본값(CT2_USE_MKL 안 줌) · MKL 1 = CT2_USE_MKL=1

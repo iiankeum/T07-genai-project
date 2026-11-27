@@ -1,0 +1,38 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><link rel="stylesheet" href="../_tools/base.css">
+<style>
+.p{width:1080px;height:1080px;padding:0;align-items:center;justify-content:center}
+/* A: memo card with phone wave */
+.a{background:var(--ink)}
+.a .cardi{width:560px;height:640px;background:var(--paper);border-radius:46px;transform:rotate(-6deg);padding:70px 60px;display:flex;flex-direction:column;gap:34px;box-shadow:0 30px 0 rgba(0,0,0,.25)}
+.a .ln{height:26px;border-radius:13px;background:var(--rule)}
+.a .ln.o{background:var(--accent);width:62%}
+.a .ln.s{width:78%}.a .ln.t{width:48%}
+.a .wave{display:flex;align-items:center;gap:16px;height:120px;margin-top:auto}
+.a .wave i{display:block;width:26px;border-radius:13px;background:var(--ink)}
+/* B: wordmark */
+.bw{background:var(--paper)}
+.bw .mark{font-size:150px;font-weight:900;letter-spacing:-6px;line-height:1}
+.bw .mark span{color:var(--accent)}
+.bw .sub{font-size:52px;font-weight:700;color:var(--ink-2);margin-top:26px;letter-spacing:6px}
+/* C: bubble -> card */
+.c{background:var(--accent)}
+.c .bub{width:520px;height:400px;background:#fff;border-radius:70px 70px 70px 14px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:30px;padding:60px}
+.c .bub .r{width:100%;height:30px;border-radius:15px;background:#ffd8c2}
+.c .bub .r.k{background:var(--ink);width:70%}
+.c .lbl{color:#fff;font-size:64px;font-weight:900;margin-top:60px;letter-spacing:-1px}
+</style></head><body>
+<div class="slide p a center">
+  <div class="cardi">
+    <div class="ln o"></div><div class="ln s"></div><div class="ln"></div><div class="ln t"></div>
+    <div class="wave"><i style="height:40px"></i><i style="height:90px"></i><i style="height:60px"></i><i style="height:120px"></i><i style="height:70px"></i><i style="height:100px"></i><i style="height:46px"></i><i style="height:84px"></i></div>
+  </div>
+</div>
+<div class="slide p bw center">
+  <div class="mark">call<span>card</span></div>
+  <div class="sub">.LAB</div>
+</div>
+<div class="slide p c center">
+  <div class="bub"><div class="r k"></div><div class="r"></div><div class="r"></div></div>
+  <div class="lbl">callcard.lab</div>
+</div>
+</body></html>

@@ -1,0 +1,77 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#e9e9ee;font-family:"Noto Sans CJK KR",sans-serif}
+.slide{width:1600px;height:900px;margin:0 auto 40px;position:relative;overflow:hidden;display:flex;align-items:center;padding:0 130px;gap:90px}
+.app{width:420px;height:420px;border-radius:98px;overflow:hidden;flex:none;box-shadow:0 30px 60px rgba(0,0,0,.18)}
+.word{font-size:230px;font-weight:900;letter-spacing:-12px;line-height:1}
+.latin{font-size:44px;font-weight:700;letter-spacing:14px;margin-top:30px;opacity:.75}
+.name{position:absolute;left:130px;top:60px;font-size:30px;font-weight:700;opacity:.55}
+svg{display:block}
+</style></head><body>
+
+<!-- A · 세로 파형이 가로 글줄로 눕는다 -->
+<div class="slide" style="background:#f2f1ff;color:#1a12a8">
+  <div class="name">A · 파형이 눕으면 글줄이 된다</div>
+  <div class="app"><svg width="420" height="420" viewBox="0 0 1000 1000">
+    <defs><linearGradient id="ag" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4b3bff"/><stop offset="1" stop-color="#2410d6"/></linearGradient></defs>
+    <rect width="1000" height="1000" fill="url(#ag)"/>
+    <g stroke="#d6ff3d" stroke-width="62" stroke-linecap="round" fill="none">
+      <path d="M190 440 V560"/>
+      <path d="M290 360 V640"/>
+      <path d="M390 410 V590"/>
+    </g>
+    <rect x="480" y="300" width="340" height="400" rx="56" fill="#d6ff3d"/>
+    <g stroke="#2410d6" stroke-width="40" stroke-linecap="round">
+      <path d="M545 400 H755"/><path d="M545 500 H720"/><path d="M545 600 H650"/>
+    </g>
+  </svg></div>
+  <div><div class="word">아차</div><div class="latin">ACHA</div></div>
+</div>
+
+<!-- B · 한 줄: 파형이 그대로 카드 테두리가 된다 -->
+<div class="slide" style="background:#fff3ec;color:#2a1209">
+  <div class="name">B · 한 줄로: 파형 → 카드</div>
+  <div class="app"><svg width="420" height="420" viewBox="0 0 1000 1000">
+    <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff6a3d"/><stop offset="1" stop-color="#f23b2e"/></linearGradient></defs>
+    <rect width="1000" height="1000" fill="url(#bg)"/>
+    <path d="M120 500 C160 500 170 400 210 400 C250 400 255 600 300 600 C345 600 350 450 390 450 C420 450 430 500 460 500 H470 V330 Q470 280 520 280 H800 Q850 280 850 330 V670 Q850 720 800 720 H520 Q470 720 470 670 V500"
+      fill="none" stroke="#fff4e8" stroke-width="58" stroke-linecap="round" stroke-linejoin="round"/>
+    <g stroke="#fff4e8" stroke-width="40" stroke-linecap="round">
+      <path d="M560 400 H760"/><path d="M560 500 H720"/><path d="M560 600 H660"/>
+    </g>
+  </svg></div>
+  <div><div class="word">아차</div><div class="latin">ACHA</div></div>
+</div>
+
+<!-- C · 카드 첫 줄은 목소리, 아래는 정리된 글 -->
+<div class="slide" style="background:#e9fbf3;color:#082a1f">
+  <div class="name">C · 카드 첫 줄은 목소리</div>
+  <div class="app"><svg width="420" height="420" viewBox="0 0 1000 1000">
+    <rect width="1000" height="1000" fill="#0e3a2d"/>
+    <rect x="230" y="200" width="540" height="600" rx="80" fill="#f4fff9"/>
+    <path d="M310 330 C335 330 340 270 365 270 C390 270 395 390 420 390 C445 390 450 300 475 300 C500 300 505 360 530 360 C555 360 560 310 585 310 C610 310 615 330 690 330"
+      fill="none" stroke="#22c78a" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+    <g stroke="#0e3a2d" stroke-width="40" stroke-linecap="round">
+      <path d="M310 480 H690"/><path d="M310 580 H640"/><path d="M310 680 H540"/>
+    </g>
+    <circle cx="680" cy="680" r="44" fill="#ff7a45"/>
+  </svg></div>
+  <div><div class="word">아차</div><div class="latin">ACHA</div></div>
+</div>
+
+<!-- D · 말풍선이 접혀 카드가 된다 -->
+<div class="slide" style="background:#111214;color:#f4f4f0">
+  <div class="name">D · 말풍선 모서리를 접으면 카드</div>
+  <div class="app"><svg width="420" height="420" viewBox="0 0 1000 1000">
+    <rect width="1000" height="1000" fill="#18191d"/>
+    <defs><linearGradient id="dg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd84a"/><stop offset="1" stop-color="#ffb21e"/></linearGradient></defs>
+    <path d="M250 260 Q250 220 290 220 H620 L770 370 V660 Q770 700 730 700 H420 L300 800 L320 700 H290 Q250 700 250 660 Z" fill="url(#dg)"/>
+    <path d="M620 220 V330 Q620 370 660 370 H770 Z" fill="#fff4c2"/>
+    <g stroke="#18191d" stroke-width="40" stroke-linecap="round">
+      <path d="M330 440 H560"/><path d="M330 540 H660"/><path d="M330 620 H520"/>
+    </g>
+  </svg></div>
+  <div><div class="word">아차</div><div class="latin" style="color:#ffd84a;opacity:1">ACHA</div></div>
+</div>
+</body></html>

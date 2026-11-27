@@ -10,6 +10,7 @@ T07 팀원이 이 저장소에 글과 코드를 올릴 때 지키는 약속입�
 | 회의록 | `docs/meetings/` | `YYYY-MM-DD.md` — [템플릿](docs/meetings/_template.md) 복사 |
 | 리서치 메모 | `docs/research/` | `주제.md` |
 | 홍보 기록 | `docs/promotion/` | `YYYY-MM-DD-채널.md` |
+| 시스템 구성도 | `docs/시스템구성도/` | `T07-시스템구성도.pdf` · 원본은 `원본/` — [안내](docs/시스템구성도/README.md) |
 | 역할별 작업 과정 · 산출물 | `work/<번호>-<역할>-<이름>/` | `LOG.md`(작업 기록) · `산출물/` · `자료/` — [안내](work/README.md) |
 | 소스 코드 | `src/` | 7번 제품 코드는 `src/app/` (`dev` 가지 → 데모 서버 자동 배포) |
 
@@ -66,6 +67,8 @@ feat: 가상 소비자 페르소나 100명 생성
 
 - 문서(`docs/`)는 `main`에 바로 올려도 됩니다.
 - 코드(`src/`)는 브랜치를 만들어 PR로 올리고, 팀원 한 명 이상이 확인한 뒤 머지합니다.
+- 확인은 말이나 메신저가 아니라 **PR 의 리뷰(Approve)나 댓글**로 남깁니다. 「봤다 · 이 부분이 좋다 · 이건 고치자」 한 줄이면 됩니다. 과정 평가에서 보는 기록입니다([#53](https://github.com/iiankeum/T07-genai-project/issues/53)).
+- 할 일은 [이슈](https://github.com/iiankeum/T07-genai-project/issues)로 만들고 주차별 [마일스톤](https://github.com/iiankeum/T07-genai-project/milestones)에 넣습니다. PR 본문에 `closes #번호`를 적으면 합칠 때 이슈가 닫힙니다.
 - 브랜치 이름: `<종류>/<짧은-설명>` (예: `feat/persona-generator`)
 
 ## 올리기 전에

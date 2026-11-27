@@ -1,0 +1,25 @@
+Generate ONE image with your built-in image generation tool and save it. Do not write code or scripts to draw anything.
+1. Look at the reference file ref/char-sheet.png (the character design sheet; it is the style and character reference).
+2. Call the image generation tool once, passing that reference and the brief below.
+3. Save (or copy) the result as a PNG to out/s00-cover.png in the working folder. Create no other files and change nothing else.
+4. Answer with one line: saved out/s00-cover.png and its pixel size.
+
+BRIEF — illustration s00-cover for a product-planning document about an AI that transcribes phone orders at a Korean auto-parts dealership.
+
+STYLE: warm, friendly 2D digital illustration in the style of a modern Korean webtoon / editorial illustration — exactly the same drawing style, line weight, shading and palette as the character sheet ref/char-sheet.png. Clean confident line art, soft cel shading, gentle gradients. Palette: deep teal #1E6E6E, warm orange #F28C28, navy #23395B, warm grays and warm whites. Landscape 3:2, one single panel (not a comic strip unless the brief says panels).
+
+WORLD: a small Korean auto-parts dealership (sells genuine car parts to repair shops). The parts counter office: a long counter desk with a desktop PC monitor, a desk phone with several line buttons, a cordless phone, piles of yellow sticky notes and a spiral memo pad; behind the glass window, tall metal shelves with brown and white parts boxes (bumpers, filters, brake pads). The repair shop: a small garage with a car lifted on a two-post lift, tool cabinets, tires.
+
+CHARACTERS IN THIS IMAGE (match ref/char-sheet.png exactly):
+- PARK — the 61-year-old order clerk (salt-and-pepper short hair, rimless reading glasses low on the nose, light blue shirt, navy quilted vest with a pen in the pocket, single-ear headset)
+- KIM — the 48-year-old repair-shop owner (short black hair, stubble, charcoal coverall tied at the waist over a white T-shirt with an orange stripe, gray towel on the shoulder)
+- LEE — the 34-year-old delivery and shipping staff (black low ponytail, navy cap without logo, orange-and-navy windbreaker, cargo pants)
+
+SCENE: Cover illustration. Center: PARK at the parts counter wearing his headset, smiling with relief, looking at a large tablet that shows a clean order card (car silhouette icon, bumper icon, '2' as two dots, a green check). On the left in a soft round inset bubble, KIM in his garage talking on his phone, sound-wave lines flowing from his phone toward PARK's screen and turning into neat text bars. On the right, LEE holding a parts box giving a thumbs-up. Warm morning light. Calm, hopeful, uncluttered composition with empty space at the top for a title (leave the top 25% as plain warm-white background).
+
+RULES:
+- Match the character sheet exactly for every person who appears (same face, hair, glasses, outfit, colours, body type). Only the listed characters appear as main figures.
+- Every person has exactly two arms and two hands with five fingers each.
+- NO readable text anywhere: no letters, words, numbers, Korean or English, no captions, no speech-bubble text, no logos or brand marks (no car or parts company logos). On screens, cards, papers and labels use simple flat UI shapes: rounded rectangles, short gray bars for text lines, small coloured chips, simple icons (car silhouette, bumper shape, play triangle, magnifying glass, check mark, waveform). Speech is shown as empty speech bubbles or small icons only.
+- Screens show a clean modern app UI in teal/white with large elements (the user is older), as described in the brief.
+- Opaque background, no transparency.

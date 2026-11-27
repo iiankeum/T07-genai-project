@@ -1,0 +1,592 @@
+<!doctype html>
+<!--
+  AI 초안 · 돌린 사람: 배*결 · Claude Code(Opus 5.5) · 강현(마케팅) 작업방 · 2026-11-11 · 검토 전
+  무료 체험 신청 소개 페이지 시안 — 이 폴더(index.html · intro.js · privacy.html · og.png)째 열린다. 외부는 글꼴(Google Fonts)뿐.
+
+  바꿀 곳은 같은 폴더 intro.js 맨 위의 CONFIG 한 군데다(폴더째 열면 된다).
+    - productName      : 제품명(투표 전이라 가칭). 페이지의 모든 제품명이 이 값으로 바뀐다.
+    - productNameNote  : 이름 옆 작은 표시. 이름이 정해지면 '' 로 비운다.
+    - demoUrl          : 「데모 체험」 버튼이 가는 곳
+    - signupEndpoint   : 무료 체험 신청을 보내는 곳(개발 방이 만든다)
+    - contactEmail     : 개인정보 문의 · 삭제 요청 받을 팀 공용 메일(정해지면 적는다)
+    - privacyOfficer   : 개인정보 담당 직함(정해지면 적는다)
+    - storage          : 저장 위치(AWS 지역 확인되면 적는다)
+    - retentionUntil   : 신청 정보 보관 마감일(가정)
+    - demoHasLiveMic   : 데모에 마이크 받아쓰기 체험이 되면 true
+  주소 뒤에 ?src=채널이름 을 붙이면 신청서와 데모 링크에 그 값이 실려, 어느 채널에서 왔는지 셀 수 있다.
+  같은 폴더: privacy.html(개인정보 처리방침 시안) · og.png(카톡 · 문자 공유 미리보기 1200×630)
+  동의 문구 근거: work/02-마케팅-강현/자료/조사-소개페이지-개인정보동의.md — 변호사 검토 전이다.
+-->
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>콜노트(가칭) — 주문 전화를 글로, 주문 카드로</title>
+<meta name="description" content="자동차 부품 대리점·정비소 주문 전화를 받아쓰고, 주문을 카드로 정리하고, 필요할 때 바로 찾게 돕는 도구를 만들고 있습니다. 무료 체험 신청을 받습니다.">
+<meta property="og:title" content="주문 전화, 녹음만 쌓이고 다시 찾기 어렵죠?">
+<meta property="og:description" content="걸려 온 주문 전화를, 확인할 수 있는 주문 카드로 — 대학 수업 팀 프로젝트, 무료 체험 신청 받는 중">
+<meta property="og:type" content="website">
+<!-- 카톡 미리보기는 절대 주소가 안전하다. 올린 주소에 맞게 바꾼다(가정: /intro/og.png). -->
+<meta property="og:image" content="https://t07.3-39-67-126.sslip.io/intro/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="theme-color" content="#4f3bb8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%234f3bb8%27/%3E%3Crect x=%277%27 y=%2712%27 width=%273%27 height=%278%27 rx=%271.5%27 fill=%27white%27/%3E%3Crect x=%2712%27 y=%277%27 width=%273%27 height=%2718%27 rx=%271.5%27 fill=%27white%27/%3E%3Crect x=%2717%27 y=%2710%27 width=%273%27 height=%2712%27 rx=%271.5%27 fill=%27white%27/%3E%3Crect x=%2722%27 y=%2713%27 width=%273%27 height=%276%27 rx=%271.5%27 fill=%27white%27/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: light;
+    --ink: #17171f;          /* 본문 글자 — 흰 바탕 대비 약 18:1 */
+    --ink-soft: #3d3d4a;     /* 보조 글자 — 대비 약 10:1 */
+    --line: #d9d9e3;
+    --bg: #ffffff;
+    --bg-soft: #f4f3fa;
+    --accent: #4f3bb8;       /* 버튼·강조 — 흰 글자와 대비 약 8:1 */
+    --accent-dark: #3d2c97;
+    --accent-soft: #ece9fb;
+    --green: #17694f;
+    --green-soft: #e3f3ec;
+    --amber: #8a4b00;
+    --amber-soft: #fff1dc;
+    --red: #b3261e;
+    --radius: 16px;
+    --tap: 56px;             /* 누르는 것의 최소 높이 */
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  [id] { scroll-margin-top: 80px; }   /* 위 고정 막대에 제목이 가리지 않게 */
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    font-size: 19px;         /* 14pt ≈ 18.7px 이상(서울디지털재단 고령층 표준) */
+    line-height: 1.65;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+  a { color: var(--accent); }
+  img, svg { max-width: 100%; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+  .narrow { max-width: 720px; }
+  .skip { position: absolute; left: -9999px; }
+  .skip:focus { left: 16px; top: 16px; background: #fff; padding: 12px; z-index: 99; }
+  :focus-visible { outline: 3px solid #f2a900; outline-offset: 3px; }
+
+  /* 위 막대 */
+  .top { position: sticky; top: 0; z-index: 20; background: rgba(255,255,255,.96); border-bottom: 1px solid var(--line); }
+  .top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 64px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 21px; color: var(--ink); text-decoration: none; }
+  .mark { display: inline-flex; align-items: center; gap: 3px; height: 26px; }
+  .mark i { display: block; width: 5px; border-radius: 3px; background: var(--accent); }
+  .mark i:nth-child(1) { height: 12px; } .mark i:nth-child(2) { height: 24px; } .mark i:nth-child(3) { height: 18px; } .mark i:nth-child(4) { height: 10px; }
+  .name-note { font-size: 13px; font-weight: 700; color: var(--amber); background: var(--amber-soft); border-radius: 999px; padding: 2px 9px; }
+  .name-note:empty { display: none; }
+
+  /* 버튼 */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    min-height: var(--tap); padding: 12px 22px; border-radius: 12px;
+    font: inherit; font-weight: 700; font-size: 18px; text-decoration: none; cursor: pointer;
+    border: 2px solid var(--accent); background: var(--accent); color: #fff;
+  }
+  .btn:hover { background: var(--accent-dark); border-color: var(--accent-dark); }
+  .btn.ghost { background: #fff; color: var(--accent); }
+  .btn.ghost:hover { background: var(--accent-soft); }
+  .btn.small { min-height: 48px; padding: 8px 16px; font-size: 16px; }
+  .btn.block { width: 100%; }
+
+  section { padding: 56px 0; }
+  section.soft { background: var(--bg-soft); }
+  h1, h2, h3 { line-height: 1.3; margin: 0 0 16px; letter-spacing: -0.5px; }
+  h1 { font-size: 32px; font-weight: 800; }
+  h2 { font-size: 27px; font-weight: 800; }
+  h3 { font-size: 21px; font-weight: 700; }
+  p { margin: 0 0 14px; }
+  .eyebrow { display: inline-block; font-size: 16px; font-weight: 700; color: var(--accent); background: var(--accent-soft); padding: 4px 12px; border-radius: 999px; margin-bottom: 16px; }
+  .lead { font-size: 20px; color: var(--ink-soft); }
+  .note { font-size: 16px; color: var(--ink-soft); }
+  .tag { display: inline-block; font-size: 14px; font-weight: 700; padding: 2px 10px; border-radius: 999px; }
+  .tag.fake { background: var(--amber-soft); color: var(--amber); }
+  .tag.plan { background: var(--green-soft); color: var(--green); }
+
+  /* 첫 화면 */
+  .hero { padding: 40px 0 48px; }
+  .hero-grid { display: grid; gap: 32px; }
+  .hero-cta { display: grid; gap: 12px; margin: 24px 0 12px; }
+  .status { display: flex; gap: 8px; align-items: flex-start; font-size: 16px; color: var(--ink-soft); }
+  .status::before { content: ''; flex: none; width: 10px; height: 10px; margin-top: 8px; border-radius: 50%; background: var(--green); }
+
+  /* 예시 화면(가짜) */
+  .phone { border: 2px solid var(--line); border-radius: 28px; padding: 16px; background: #fff; box-shadow: 0 10px 30px rgba(40,30,90,.10); max-width: 420px; margin: 0 auto; width: 100%; }
+  .phone-head { display: flex; justify-content: space-between; align-items: center; font-size: 15px; color: var(--ink-soft); margin-bottom: 12px; gap: 8px; flex-wrap: wrap; }
+  .bubble { border-radius: 14px; padding: 10px 14px; margin: 0 0 8px; font-size: 17px; max-width: 92%; }
+  .bubble small { display: block; font-size: 13px; font-weight: 700; color: var(--ink-soft); }
+  .bubble.them { background: var(--bg-soft); }
+  .bubble.me { background: var(--accent-soft); margin-left: auto; }
+  .bubble mark { background: #ffe39a; color: inherit; padding: 0 2px; border-radius: 3px; }
+  .card { border: 2px solid var(--accent); border-radius: 14px; padding: 14px; margin-top: 12px; }
+  .card h4 { margin: 0 0 8px; font-size: 17px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .card dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-size: 16px; }
+  .card dt { color: var(--ink-soft); }
+  .card dd { margin: 0; font-weight: 700; }
+  .card .check { color: var(--amber); }
+
+  /* 문제 · 해결 */
+  .grid { display: grid; gap: 16px; }
+  .box { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; }
+  .box .ico { width: 44px; height: 44px; border-radius: 12px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; margin-bottom: 12px; }
+  .box .ico svg { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .box p:last-child { margin-bottom: 0; }
+  .quote { font-weight: 700; font-size: 19px; }
+  .steps { counter-reset: s; list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+  .steps li { counter-increment: s; display: grid; grid-template-columns: 44px 1fr; gap: 12px; align-items: start; background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+  .steps li::before { content: counter(s); width: 44px; height: 44px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 800; display: grid; place-items: center; font-size: 20px; }
+  .search-demo { display: flex; gap: 8px; align-items: center; border: 2px solid var(--line); border-radius: 12px; padding: 10px 14px; margin: 12px 0 8px; font-size: 17px; }
+  .search-demo svg { width: 22px; height: 22px; stroke: var(--ink-soft); fill: none; stroke-width: 2; flex: none; }
+  .result { font-size: 16px; background: var(--bg-soft); border-radius: 10px; padding: 10px 12px; }
+
+  /* 데모 */
+  .demo-box { background: var(--accent); color: #fff; border-radius: 24px; padding: 32px 22px; text-align: center; }
+  .demo-box h2 { color: #fff; }
+  .demo-box p { color: #ecebff; }
+  .demo-box .btn { background: #fff; color: var(--accent); border-color: #fff; margin-top: 8px; }
+  .demo-box .btn:hover { background: var(--accent-soft); }
+
+  /* 신청서 */
+  form { display: grid; gap: 22px; }
+  fieldset { border: 0; padding: 0; margin: 0; }
+  legend, label.lbl { display: block; font-weight: 700; font-size: 19px; margin-bottom: 8px; }
+  .req { color: var(--red); font-size: 15px; font-weight: 700; margin-left: 4px; }
+  .opt { color: var(--ink-soft); font-size: 15px; font-weight: 500; margin-left: 4px; }
+  input[type=text], input[type=tel], input[type=email], select, textarea {
+    width: 100%; min-height: var(--tap); padding: 12px 14px; font: inherit; font-size: 19px;
+    border: 2px solid #8e8ea0; border-radius: 12px; background: #fff; color: var(--ink);
+  }
+  textarea { min-height: 110px; resize: vertical; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); outline: 3px solid #c9c0f5; outline-offset: 0; }
+  .hint { font-size: 15px; color: var(--ink-soft); margin-top: 6px; }
+  .choices { display: grid; gap: 10px; }
+  .choice { display: flex; align-items: center; gap: 12px; min-height: var(--tap); padding: 10px 14px; border: 2px solid var(--line); border-radius: 12px; cursor: pointer; background: #fff; font-size: 18px; }
+  .choice input { width: 24px; height: 24px; accent-color: var(--accent); flex: none; margin: 0; }
+  .choice:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); font-weight: 700; }
+  .two { display: grid; gap: 16px; }
+  .consent { border: 2px solid var(--line); border-radius: 14px; padding: 16px; background: #fff; }
+  .consent .choice { border: 0; padding: 0; min-height: 44px; font-weight: 700; background: transparent; }
+  .consent details { margin-top: 8px; }
+  .consent summary { cursor: pointer; color: var(--accent); font-weight: 700; min-height: 44px; display: flex; align-items: center; }
+  .consent table { width: 100%; border-collapse: collapse; font-size: 16px; margin-top: 8px; }
+  .consent th, .consent td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+  .consent th { background: var(--bg-soft); width: 32%; font-weight: 700; }
+  .consent-title { font-size: 19px; margin: 0 0 4px; }
+  .consent > .choice { margin-top: 12px; }
+  .linkish { background: none; border: 0; padding: 4px 0; font: inherit; color: var(--accent); text-decoration: underline; cursor: pointer; min-height: 32px; }
+  .more { border: 2px solid var(--line); border-radius: 14px; padding: 4px 16px; background: #fff; }
+  .more > summary { cursor: pointer; font-weight: 700; font-size: 19px; min-height: var(--tap); display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+  .more-body { display: grid; gap: 22px; padding: 8px 0 18px; }
+  .who { font-size: 16px; color: var(--ink-soft); border-top: 1px solid var(--line); padding-top: 16px; }
+  .who p { margin: 0 0 6px; }
+  .sticky-cta { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); background: rgba(255,255,255,.97); border-top: 1px solid var(--line); transition: transform .2s; }
+  .sticky-cta.hide { transform: translateY(110%); }
+  @media (min-width: 720px) { .sticky-cta { display: none; } }
+  .error { color: var(--red); font-weight: 700; font-size: 16px; margin-top: 6px; }
+  .error:empty { display: none; }
+  .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+  .form-status { border-radius: 14px; padding: 16px; font-size: 18px; font-weight: 700; }
+  .form-status:empty { display: none; }
+  .form-status.ok { background: var(--green-soft); color: var(--green); }
+  .form-status.warn { background: var(--amber-soft); color: var(--amber); }
+  .form-status.bad { background: #fde8e6; color: var(--red); }
+
+  /* 팀 · 자주 묻는 것 · 아래 */
+  .team { display: grid; gap: 12px; grid-template-columns: repeat(2, 1fr); }
+  .member { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; text-align: center; }
+  .member .av { width: 56px; height: 56px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-weight: 800; font-size: 22px; display: grid; place-items: center; margin: 0 auto 8px; }
+  .member strong { display: block; font-size: 19px; }
+  .member span { font-size: 15px; color: var(--ink-soft); }
+  .faq details { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 4px 16px; margin-bottom: 10px; }
+  .faq summary { cursor: pointer; font-weight: 700; min-height: var(--tap); display: flex; align-items: center; font-size: 19px; }
+  .faq details p { margin: 0 0 14px; }
+  footer { background: #1c1b26; color: #d7d6e3; padding: 36px 0 48px; font-size: 16px; }
+  footer a { color: #fff; }
+  footer p { margin: 0 0 8px; }
+
+  @media (min-width: 720px) {
+    body { font-size: 20px; }
+    h1 { font-size: 44px; }
+    h2 { font-size: 32px; }
+    section { padding: 80px 0; }
+    .hero { padding: 64px 0 72px; }
+    .hero-cta { grid-template-columns: auto auto; justify-content: start; }
+    .grid.three { grid-template-columns: repeat(3, 1fr); }
+    .grid.two-col { grid-template-columns: repeat(2, 1fr); }
+    .two { grid-template-columns: 1fr 1fr; }
+    .team { grid-template-columns: repeat(4, 1fr); }
+    .choices.cols { grid-template-columns: 1fr 1fr; }
+  }
+  @media (min-width: 960px) {
+    .hero-grid { grid-template-columns: 1.15fr 1fr; align-items: center; }
+  }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+<a class="skip" href="#signup">무료 체험 신청으로 바로 가기</a>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="처음으로">
+      <span class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      <span data-product>콜노트</span>
+      <span class="name-note" data-product-note>가칭</span>
+    </a>
+    <a class="btn small ghost" data-demo-link href="https://t07.3-39-67-126.sslip.io/">데모 체험</a>
+  </div>
+</header>
+
+<main id="top">
+  <!-- 1. 첫 화면 -->
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <span class="eyebrow">자동차 부품 대리점 · 정비소 주문 전화용</span>
+        <h1>주문 전화, 녹음만 쌓이고<br>다시 찾기 어렵죠?</h1>
+        <p class="lead"><strong>걸려 온 주문 전화를, 확인할 수 있는 주문 카드로.</strong><br>통화를 글로 받아쓰고, 주문을 카드로 정리하고, 필요할 때 그 대목을 바로 찾게 돕는 도구를 만들고 있습니다.</p>
+        <div class="hero-cta">
+          <a class="btn" href="#signup">무료 체험 신청</a>
+          <a class="btn ghost" data-demo-link href="https://t07.3-39-67-126.sslip.io/">데모 먼저 눌러 보기</a>
+        </div>
+        <p class="status"><span>대학 수업 팀이 만드는 시험판입니다 · 무료 · 카드 등록 없음. 데모는 팀원이 만든 <strong>가짜 주문 통화</strong>로 움직입니다.</span></p>
+      </div>
+
+      <div class="phone" role="img" aria-label="예시 화면: 받아쓴 통화와 주문 카드. 가짜 데이터입니다.">
+        <div class="phone-head">
+          <span>통화 · 오후 2:42 · 3분 24초</span>
+          <span class="tag fake">예시 화면 · 가짜 데이터</span>
+        </div>
+        <p class="bubble them"><small>정비소</small>새한카센터인데요, <mark>아반떼</mark> <mark>앞범퍼 두 개</mark>, <mark>급해요</mark>.</p>
+        <p class="bubble me"><small>대리점</small>CN7 맞으시죠? 오늘 5시 전에 보낼게요.</p>
+        <div class="card">
+          <h4>주문 카드 <span class="tag plan">AI 초안</span></h4>
+          <dl>
+            <dt>거래처</dt><dd>새한카센터(가짜)</dd>
+            <dt>차종</dt><dd>아반떼 CN7</dd>
+            <dt>부품</dt><dd>앞범퍼</dd>
+            <dt>수량</dt><dd>2개 <span style="font-weight:500;font-size:15px;color:var(--accent)">▶ 들어 보기</span></dd>
+            <dt>급한지</dt><dd>오늘 중</dd>
+            <dt>품번</dt><dd class="check">담당자가 확인</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. 문제 -->
+  <section class="soft" aria-labelledby="problem-title">
+    <div class="wrap">
+      <h2 id="problem-title">이럴 때 있으시죠?</h2>
+      <p class="note">전화로 주문을 받는 곳에서 흔히 생기는 일을 정리했습니다.</p>
+      <div class="grid two-col">
+        <div class="box">
+          <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg></div>
+          <p class="quote">「아까 그 공업사가 몇 개라고 했더라?」</p>
+          <p>바쁠 때는 메모가 빠지고, 결국 다시 전화를 겁니다.</p>
+        </div>
+        <div class="box">
+          <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></div>
+          <p class="quote">녹음은 쌓이는데 찾을 수가 없다</p>
+          <p>녹음 파일은 시간순으로만 쌓여, 원하는 통화를 찾으려면 처음부터 들어야 합니다.</p>
+        </div>
+        <div class="box">
+          <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 8h10M7 12h6"/><path d="M5 4h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-6l-5 4v-4H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg></div>
+          <p class="quote">「분명히 두 개라고 했잖아요」</p>
+          <p>말이 엇갈릴 때 무엇이 맞는지 바로 확인하기 어렵습니다.</p>
+        </div>
+        <div class="box">
+          <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5"/><path d="M17 11l4 4M21 11l-4 4"/></svg></div>
+          <p class="quote">담당자가 쉬는 날에는?</p>
+          <p>누가 무엇을 주문했는지 그 사람 메모와 기억에만 남아 있습니다.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. 해결 -->
+  <section aria-labelledby="solve-title">
+    <div class="wrap">
+      <h2 id="solve-title">통화가 끝나면, 주문이 정리돼 있게</h2>
+      <p class="lead"><span data-product>콜노트</span>는 세 가지를 합니다.</p>
+      <div class="grid three">
+        <div class="box">
+          <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></div>
+          <h3>1. 받아쓰기</h3>
+          <p>통화 녹음을 글로 옮깁니다. 누가 무슨 말을 했는지 읽어서 확인합니다.</p>
+        </div>
+        <div class="box">
+          <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h8M8 17h5"/></svg></div>
+          <h3>2. 주문 카드</h3>
+          <p>거래처 · 차종 · 부품 · 수량 · 급한지를 AI 가 뽑아 <strong>카드 초안</strong>을 만듭니다. 정확한 품번과 확정은 <strong>담당자가</strong> 합니다.</p>
+        </div>
+        <div class="box">
+          <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></div>
+          <h3>3. 통화 찾기</h3>
+          <p>「범퍼」, 「새한카센터」처럼 찾으면 그 낱말이 나온 통화만 남고, 누르면 그 대목으로 바로 갑니다.</p>
+          <div class="search-demo" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>범퍼</div>
+          <div class="result">11/11 오후 2:42 · 새한카센터(가짜)<br>「아반떼 <strong>앞범퍼</strong> 두 개, 급해요」 <span class="tag fake">예시</span></div>
+        </div>
+      </div>
+
+      <h3 style="margin-top:40px">그리고</h3>
+      <div class="grid three">
+        <div class="box">
+          <h3>들어 보기</h3>
+          <p>카드의 「수량 2개」를 누르면 그 말을 한 문장이 표시되고, 녹음이 그 대목부터 나옵니다. 「두 개라고 했다 / 안 했다」를 바로 확인합니다.</p>
+        </div>
+        <div class="box">
+          <h3>지난 통화에 묻기</h3>
+          <p>「새한카센터가 이번 주에 범퍼 몇 번 시켰지?」처럼 물으면, 저장된 통화만 근거로 답하고 근거 통화를 붙입니다. 없으면 「찾지 못했어요」라고 합니다.</p>
+        </div>
+        <div class="box">
+          <h3>오늘 브리핑</h3>
+          <p>오늘 통화 수, 확인이 필요한 주문, 다시 전화할 곳을 한 화면에 모읍니다.</p>
+        </div>
+      </div>
+      <p class="note" style="margin-top:12px" data-live-mic-line hidden>데모에서는 마이크 단추를 누르고 「아반떼 앞범퍼 두 개, 급해요」라고 직접 말해 볼 수도 있습니다(크롬 · 엣지).</p>
+
+      <h3 style="margin-top:40px">이렇게 씁니다</h3>
+      <ol class="steps">
+        <li><div><strong>평소처럼 전화를 받습니다.</strong><br><span class="note">녹음 파일을 올리거나, 녹음이 저장되는 폴더를 연결하는 방식을 시험하고 있습니다. <span class="tag plan">시험 중</span></span></div></li>
+        <li><div><strong>받아쓴 글과 주문 카드 초안이 생깁니다.</strong></div></li>
+        <li><div><strong>담당자가 확인하고 고쳐서 확정합니다.</strong><br><span class="note">AI 는 초안까지만 만듭니다.</span></div></li>
+        <li><div><strong>나중에 찾거나 묻습니다.</strong><br><span class="note">말이 엇갈리면 그 통화의 글과 녹음을 바로 엽니다.</span></div></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 4. 데모 -->
+  <section class="soft" aria-labelledby="demo-title">
+    <div class="wrap narrow">
+      <div class="demo-box">
+        <h2 id="demo-title">말로 듣는 것보다 한 번 눌러 보세요</h2>
+        <p>가입 없이 바로 열립니다. 휴대폰·태블릿·PC 어디서나 됩니다.</p>
+        <a class="btn" data-demo-link href="https://t07.3-39-67-126.sslip.io/">데모 체험하기</a>
+        <p class="note" style="margin-top:14px;color:#ecebff">데모는 팀원이 정비소·대리점 역할을 나눠 만든 가짜 통화만 씁니다. 실제 고객 통화는 쓰지 않습니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. 무료 체험 신청 -->
+  <section id="signup" aria-labelledby="signup-title">
+    <div class="wrap narrow">
+      <h2 id="signup-title">무료 체험 신청</h2>
+      <p class="lead">출시 전에 먼저 써 보고 의견을 주실 분을 찾습니다. 체험판이 준비되면 먼저 연락드립니다.</p>
+      <p><span class="tag plan">결제 없음</span> <span class="tag plan">카드 등록 없음</span> <span class="tag plan">1분이면 끝</span></p>
+      <p class="note">체험판 목표 시기: <strong data-trial-when>2026년 12월 초</strong> <span class="tag plan">목표</span> · 쓰시는 환경에 맞는지 먼저 여쭤보고 안내합니다.</p>
+
+      <form id="trialForm" novalidate>
+        <div>
+          <label class="lbl" for="f-name">연락드릴 때 부를 이름<span class="req">필수</span></label>
+          <input id="f-name" name="name" type="text" autocomplete="name" maxlength="40">
+          <p class="hint">실명이 아니어도 됩니다. 예: 김 부장</p>
+          <div class="error" id="e-name"></div>
+        </div>
+
+        <div id="phoneWrap">
+          <label class="lbl" for="f-phone">휴대폰 번호<span class="req">필수</span></label>
+          <input id="f-phone" name="phone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="13">
+          <p class="hint">숫자만 적으셔도 됩니다. 예: 010-1234-5678 · <button type="button" class="linkish" id="useEmail">이메일이 더 편해요</button></p>
+        </div>
+        <div id="emailWrap" hidden>
+          <label class="lbl" for="f-email">이메일<span class="req">필수</span></label>
+          <input id="f-email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="80">
+          <p class="hint">예: name@example.com · <button type="button" class="linkish" id="usePhone">휴대폰 번호로 할게요</button></p>
+        </div>
+        <div class="error" id="e-contact"></div>
+
+        <fieldset>
+          <legend>하시는 일<span class="opt">선택</span></legend>
+          <div class="choices cols">
+            <label class="choice"><input type="radio" name="industry" value="parts-dealer"> 부품 대리점 · 도매</label>
+            <label class="choice"><input type="radio" name="industry" value="repair-shop"> 정비소(공업사 · 카센터)</label>
+            <label class="choice"><input type="radio" name="industry" value="other-wholesale"> 전화 주문 받는 다른 도매업</label>
+            <label class="choice"><input type="radio" name="industry" value="other"> 그 밖의 일</label>
+          </div>
+        </fieldset>
+
+        <details class="more">
+          <summary>더 알려 주시면 도움이 돼요 <span class="opt">선택 · 건너뛰어도 됩니다</span></summary>
+          <div class="more-body">
+            <fieldset>
+              <legend>하루 주문 전화</legend>
+              <div class="choices cols">
+                <label class="choice"><input type="radio" name="callsPerDay" value="lt10"> 10통 미만</label>
+                <label class="choice"><input type="radio" name="callsPerDay" value="10-30"> 10~30통</label>
+                <label class="choice"><input type="radio" name="callsPerDay" value="30-100"> 30~100통</label>
+                <label class="choice"><input type="radio" name="callsPerDay" value="100+"> 100통 넘게</label>
+                <label class="choice"><input type="radio" name="callsPerDay" value="unknown"> 잘 모름</label>
+              </div>
+            </fieldset>
+
+            <div>
+              <label class="lbl" for="f-region">지역(시 · 도)</label>
+              <select id="f-region" name="region">
+                <option value="">고르지 않음</option>
+                <option>서울</option><option>부산</option><option>대구</option><option>인천</option><option>광주</option>
+                <option>대전</option><option>울산</option><option>세종</option><option>경기</option><option>강원</option>
+                <option>충북</option><option>충남</option><option>전북</option><option>전남</option><option>경북</option>
+                <option>경남</option><option>제주</option>
+              </select>
+            </div>
+
+            <fieldset>
+              <legend>지금 통화 녹음은 어떻게 하세요?</legend>
+              <div class="choices">
+                <label class="choice"><input type="radio" name="recordingSetup" value="office-phone"> 사무실 전화기 · PC 에 녹음이 저장된다</label>
+                <label class="choice"><input type="radio" name="recordingSetup" value="mobile-auto"> 휴대폰 자동 녹음을 쓴다</label>
+                <label class="choice"><input type="radio" name="recordingSetup" value="none"> 녹음하지 않는다</label>
+                <label class="choice"><input type="radio" name="recordingSetup" value="unknown"> 잘 모르겠다</label>
+              </div>
+            </fieldset>
+
+            <div>
+              <label class="lbl" for="f-heard">어디서 보고 오셨어요?</label>
+              <select id="f-heard" name="heardFrom">
+                <option value="">고르지 않음</option>
+                <option value="instagram">인스타그램</option>
+                <option value="threads">스레드</option>
+                <option value="kakao-openchat">카톡 오픈채팅</option>
+                <option value="naver-cafe">네이버 카페</option>
+                <option value="band">밴드</option>
+                <option value="referral">아는 분 소개</option>
+                <option value="offline">직접 만나서</option>
+                <option value="search">검색</option>
+                <option value="other">그 밖</option>
+              </select>
+            </div>
+
+            <label class="choice"><input type="checkbox" id="f-interview" name="interviewOk"> 15분 전화 인터뷰도 괜찮아요</label>
+
+            <div>
+              <label class="lbl" for="f-msg">하고 싶은 말</label>
+              <textarea id="f-msg" name="message" maxlength="500" rows="3"></textarea>
+              <p class="hint">거래처 이름이나 다른 분의 이름 · 전화번호는 적지 말아 주세요.</p>
+            </div>
+          </div>
+        </details>
+
+        <!-- 스팸 막기: 사람에게는 안 보이는 칸. 채워져 오면 서버가 버린다. -->
+        <div class="hp" aria-hidden="true">
+          <label for="f-website">웹사이트</label>
+          <input id="f-website" name="website" type="text" tabindex="-1" autocomplete="off">
+        </div>
+
+        <!-- 동의: 고지 내용은 접지 않고 펼쳐 둔다(통합 안내서 p.26 · p.121 · 대법원 2014두2638). 두 칸 모두 체크 안 된 상태로 시작한다. -->
+        <div class="consent">
+          <h3 class="consent-title">[필수] 체험 신청을 위한 개인정보 수집 · 이용 동의</h3>
+          <table>
+            <tr><th scope="row">무엇에 쓰나요</th><td>① 무료 체험 안내 연락과 체험 진행<br>② (고르신 경우) 15분 전화 인터뷰 연락<br>③ 신청 현황 집계 — 이름 · 연락처를 뺀 <strong>숫자로만</strong> 수업 과제 보고서에 씁니다</td></tr>
+            <tr><th scope="row">무엇을 받나요</th><td>꼭 적을 것: 이름(호칭도 됨), 휴대폰 번호 또는 이메일 중 하나<br>적고 싶으면: 하시는 일, 하루 주문 전화, 지역(시 · 도), 녹음 방식, 어디서 보셨는지, 인터뷰 가능 여부, 하고 싶은 말</td></tr>
+            <tr><th scope="row">언제까지 갖고 있나요</th><td><strong>체험과 수업 과제가 끝나는 <span data-retention>2026년 12월 31일</span>까지. 그 뒤 바로 지웁니다.</strong> 그 전에라도 지워 달라고 하시면 바로 지웁니다.</td></tr>
+            <tr><th scope="row">동의하지 않으면</th><td>동의하지 않으셔도 됩니다. 다만 연락드릴 방법이 없어 체험 신청이 접수되지 않습니다. 「적고 싶으면」 칸은 비워 두셔도 신청됩니다.</td></tr>
+          </table>
+          <label class="choice"><input type="checkbox" id="f-consent" name="consentPrivacy"> 위 내용을 읽었고, 개인정보 수집 · 이용에 동의합니다 <span class="req">필수</span></label>
+          <div class="error" id="e-consent"></div>
+        </div>
+
+        <div class="consent">
+          <h3 class="consent-title">[선택] 새 소식 받기 동의(홍보 목적 연락)</h3>
+          <table>
+            <tr><th scope="row">무엇에 쓰나요</th><td><strong><span data-product>콜노트</span><span data-product-note-inline>(가칭)</span> 정식 공개 · 새 기능 소식과 설문 안내를 문자 또는 이메일로 보내 드립니다.</strong></td></tr>
+            <tr><th scope="row">무엇을 받나요</th><td>이름(호칭), 휴대폰 번호 또는 이메일</td></tr>
+            <tr><th scope="row">언제까지</th><td><strong>그만 받겠다고 하실 때, 또는 <span data-retention>2026년 12월 31일</span> 중 먼저 오는 날까지</strong></td></tr>
+            <tr><th scope="row">동의하지 않으면</th><td>체험 신청에는 아무 불이익이 없습니다. 받으신 뒤에도 「그만」이라고 답하시면 바로 멈춥니다. 밤 9시부터 아침 8시까지는 보내지 않습니다.</td></tr>
+          </table>
+          <label class="choice"><input type="checkbox" id="f-marketing" name="consentMarketing"> 새 소식을 문자 · 이메일로 받겠습니다 <span class="opt">선택</span></label>
+        </div>
+
+        <button class="btn block" type="submit" id="submitBtn">무료 체험 신청하기</button>
+        <div class="form-status" id="formStatus" role="status" aria-live="polite"></div>
+        <div id="shareBox" class="box" hidden>
+          <p><strong>주변에 전화 주문 받는 분이 계신가요?</strong><br>이 페이지를 보내 주시면 큰 도움이 됩니다.</p>
+          <button class="btn ghost block" type="button" id="shareBtn">다른 분께 이 페이지 보내기</button>
+        </div>
+
+        <div class="who">
+          <p>신청 정보를 받는 곳: 대학 수업 「인간-인공지능협업제품서비스설계」 T07 팀 · 개인정보 담당 <span data-privacy-officer>정해지면 적습니다(시안)</span> · 문의 · 삭제 요청 <span data-contact>정해지면 적습니다(시안)</span></p>
+          <p>신청 정보는 팀 안에서만 씁니다. 다른 회사나 다른 사람에게 주지 않습니다.</p>
+          <p>정보는 <span data-storage>팀이 쓰는 클라우드 서버(Amazon Web Services)</span>에만 저장하고, 해외 AI 등 다른 곳으로 보내지 않습니다.</p>
+          <p>만 14세 미만은 신청할 수 없습니다. · <a data-privacy-link href="privacy.html">개인정보 처리방침</a></p>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- 6. 안심: 녹음은 어디로 가나요 -->
+  <section class="soft" aria-labelledby="trust-title">
+    <div class="wrap">
+      <h2 id="trust-title">녹음은 어디로 가나요?</h2>
+      <p class="note">통화 녹음은 민감합니다. 정해진 것과 아직 정하는 것을 그대로 적습니다.</p>
+      <div class="grid two-col">
+        <div class="box">
+          <h3>데모 <span class="tag fake">지금</span></h3>
+          <p>팀원이 정비소 · 대리점 역할을 나눠 만든 <strong>가짜 통화만</strong> 씁니다. 실제 고객 통화 · 이름 · 번호는 쓰지도, 공개하지도 않습니다.</p>
+          <p>데모의 주문 카드 정리에는 <strong>해외 AI 서비스(Anthropic Claude)</strong>가, 실시간 받아쓰기 체험에는 브라우저의 음성 인식이 쓰입니다. 그래서 <strong>데모에는 실제 녹음을 올리지 마세요.</strong></p>
+        </div>
+        <div class="box">
+          <h3>실제 체험 <span class="tag plan">정하는 중</span></h3>
+          <p>녹음을 어디서 받아쓸지(가게 PC 안 / 팀 서버), 얼마나 보관하고 언제 지우는지를 정하는 중입니다. <strong>체험 전에 단계별로 설명드리고, 동의를 받은 뒤에만</strong> 시작합니다.</p>
+        </div>
+      </div>
+      <ol class="steps" style="margin-top:16px" aria-label="녹음 처리 단계">
+        <li><div><strong>녹음</strong> — 지금 쓰시는 방식 그대로</div></li>
+        <li><div><strong>받아쓰기</strong> — 어디서 하는지 체험 전에 알려 드립니다 <span class="tag plan">정하는 중</span></div></li>
+        <li><div><strong>주문 카드</strong> — AI 는 초안까지, 확정은 담당자가</div></li>
+        <li><div><strong>보관 · 삭제</strong> — 기간을 정해 알려 드리고, 지워 달라고 하시면 지웁니다 <span class="tag plan">정하는 중</span></div></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 7. 팀 -->
+  <section aria-labelledby="team-title">
+    <div class="wrap">
+      <h2 id="team-title">만드는 사람들</h2>
+      <p>대학 수업 「인간-인공지능협업제품서비스설계」 T07 팀입니다. 네 명이 기획 · 마케팅 · 개발 · 서버를 나눠 맡고, 만드는 과정을 모두 공개합니다.</p>
+      <p>팀원 한 명이 <strong>자동차 부품 대리점 업무 프로그램을 만드는 회사</strong>를 운영하고 있어, 현장에서 시험해 볼 예정입니다.</p>
+      <div class="team">
+        <div class="member"><div class="av" aria-hidden="true">김</div><strong>김*희</strong><span>기획</span></div>
+        <div class="member"><div class="av" aria-hidden="true">금</div><strong>금*현</strong><span>마케팅</span></div>
+        <div class="member"><div class="av" aria-hidden="true">신</div><strong>신*림</strong><span>개발</span></div>
+        <div class="member"><div class="av" aria-hidden="true">배</div><strong>배*결</strong><span>총괄 · 서버 · 음성 인식</span></div>
+      </div>
+      <p class="note" style="margin-top:16px">만드는 과정: <a data-repo-link href="https://github.com/iiankeum/T07-genai-project">GitHub 공개 저장소</a></p>
+    </div>
+  </section>
+
+  <!-- 8. 자주 묻는 것 -->
+  <section class="soft faq" aria-labelledby="faq-title">
+    <div class="wrap narrow">
+      <h2 id="faq-title">자주 묻는 것</h2>
+      <details><summary>돈이 드나요?</summary><p>지금은 대학 수업 팀 프로젝트라 무료 체험 신청만 받습니다. 정식 서비스 여부와 가격은 정하지 않았습니다.</p></details>
+      <details><summary>녹음이 밖으로 나가나요?</summary><p>데모는 가짜 통화만 쓰고, 카드 정리에 해외 AI 서비스(Anthropic Claude)를 씁니다. 실제 체험을 하게 되면, 녹음을 어디서 받아쓰고 글을 어디로 보내는지 먼저 단계별로 설명드리고 동의를 받은 뒤 시작합니다. 「녹음이 밖으로 전혀 안 나간다」고는 지금 말씀드릴 수 없습니다.</p></details>
+      <details><summary>품번까지 맞춰 주나요?</summary><p>아니요. AI 는 대화에 나온 차종 · 부품 · 수량으로 주문 카드 초안을 만들고, 정확한 품번은 담당자가 정합니다.</p></details>
+      <details><summary>「휀다」, 「쇼바」 같은 현장 말도 알아듣나요?</summary><p>음성 인식이 틀리기 쉬운 부분이라, 자주 틀리는 낱말을 모아 고치는 방법을 시험하고 있습니다. 체험하시면서 틀린 말을 알려 주시면 큰 도움이 됩니다.</p></details>
+      <details><summary>어떤 전화기에서 되나요?</summary><p>사무실 전화기 · PC 에 저장되는 녹음과 휴대폰 통화 녹음을 대상으로 시험하고 있습니다. 신청서에 지금 녹음 방식을 골라 주시면 맞는지 먼저 알려 드립니다.</p></details>
+    </div>
+  </section>
+</main>
+
+<div class="sticky-cta" id="stickyCta"><a class="btn block" href="#signup">무료 체험 신청</a></div>
+
+<footer>
+  <div class="wrap">
+    <p><strong><span data-product>콜노트</span><span data-product-note-inline>(가칭)</span></strong> · 제품명은 팀 투표로 정할 예정입니다.</p>
+    <p>이 페이지와 데모는 만드는 중인 시안입니다. 화면의 거래처 · 통화는 모두 가짜 예시입니다.</p>
+    <p>대학 수업 「인간-인공지능협업제품서비스설계」 T07 팀 · <a data-repo-link href="https://github.com/iiankeum/T07-genai-project">GitHub</a></p>
+  </div>
+</footer>
+
+<script src="intro.js" defer></script>
+</body>
+</html>

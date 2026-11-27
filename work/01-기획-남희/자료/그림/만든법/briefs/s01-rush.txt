@@ -1,0 +1,23 @@
+Generate ONE image with your built-in image generation tool and save it. Do not write code or scripts to draw anything.
+1. Look at the reference file ref/char-sheet.png (the character design sheet; it is the style and character reference).
+2. Call the image generation tool once, passing that reference and the brief below.
+3. Save (or copy) the result as a PNG to out/s01-rush.png in the working folder. Create no other files and change nothing else.
+4. Answer with one line: saved out/s01-rush.png and its pixel size.
+
+BRIEF — illustration s01-rush for a product-planning document about an AI that transcribes phone orders at a Korean auto-parts dealership.
+
+STYLE: warm, friendly 2D digital illustration in the style of a modern Korean webtoon / editorial illustration — exactly the same drawing style, line weight, shading and palette as the character sheet ref/char-sheet.png. Clean confident line art, soft cel shading, gentle gradients. Palette: deep teal #1E6E6E, warm orange #F28C28, navy #23395B, warm grays and warm whites. Landscape 3:2, one single panel (not a comic strip unless the brief says panels).
+
+WORLD: a small Korean auto-parts dealership (sells genuine car parts to repair shops). The parts counter office: a long counter desk with a desktop PC monitor, a desk phone with several line buttons, a cordless phone, piles of yellow sticky notes and a spiral memo pad; behind the glass window, tall metal shelves with brown and white parts boxes (bumpers, filters, brake pads). The repair shop: a small garage with a car lifted on a two-post lift, tool cabinets, tires.
+
+CHARACTERS IN THIS IMAGE (match ref/char-sheet.png exactly):
+- PARK — the 61-year-old order clerk (salt-and-pepper short hair, rimless reading glasses low on the nose, light blue shirt, navy quilted vest with a pen in the pocket, single-ear headset)
+
+SCENE: The problem: a hectic morning at the parts counter. PARK holds the cordless phone to one ear while the desk phone's line buttons blink red; he scribbles on a memo pad; yellow sticky notes are stuck all over the monitor edge and some fall to the floor; a clock on the wall shows a little after 9 (hands only, no numbers). His face is stressed and sweaty. Behind the glass, shelves of parts boxes. Show motion lines and three empty speech bubbles popping from the phones.
+
+RULES:
+- Match the character sheet exactly for every person who appears (same face, hair, glasses, outfit, colours, body type). Only the listed characters appear as main figures.
+- Every person has exactly two arms and two hands with five fingers each.
+- NO readable text anywhere: no letters, words, numbers, Korean or English, no captions, no speech-bubble text, no logos or brand marks (no car or parts company logos). On screens, cards, papers and labels use simple flat UI shapes: rounded rectangles, short gray bars for text lines, small coloured chips, simple icons (car silhouette, bumper shape, play triangle, magnifying glass, check mark, waveform). Speech is shown as empty speech bubbles or small icons only.
+- Screens show a clean modern app UI in teal/white with large elements (the user is older), as described in the brief.
+- Opaque background, no transparency.

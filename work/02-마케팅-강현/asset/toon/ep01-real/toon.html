@@ -1,0 +1,162 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<!-- AI 초안 · 돌린 사람: 금*현 · 배경 사진: GPT(이미지 생성) · 말풍선 · 글자: Claude · 2026-11-20 -->
+<!-- 글꼴: Jua(대사) · Black Han Sans(효과음 · 제목) · Nanum Pen Script(메모) — 모두 Google Fonts(OFL) -->
+<style>
+:root{--ink:#3a5f79;--accent:#d8664c;--coral:#e4927c;--line:#1c2530;--cream:#fffaf0}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#d9dce2}
+body{font-family:"Jua","Noto Sans CJK KR",sans-serif;word-break:keep-all;-webkit-font-smoothing:antialiased;color:var(--line)}
+.slide{width:1080px;height:1350px;position:relative;overflow:hidden;margin:0 auto 40px;background:#111 center/cover no-repeat}
+svg.bubbles{position:absolute;left:0;top:0;width:1080px;height:1350px;z-index:2;overflow:visible}
+.bub{position:absolute;z-index:3;text-align:center;font-size:52px;line-height:1.25;color:var(--line)}
+.bub em{font-style:normal;color:var(--accent)}
+.bub.shout{font-family:"Black Han Sans","Jua",sans-serif;font-size:64px;letter-spacing:-1px}
+.bub small{display:block;font-size:30px;color:#6b7785;margin-bottom:4px}
+.box{position:absolute;z-index:3;background:var(--cream);border:5px solid var(--line);padding:14px 24px;font-size:38px;line-height:1.3;box-shadow:7px 7px 0 var(--line)}
+.box b{font-family:"Black Han Sans",sans-serif;font-weight:400;color:var(--accent);margin-right:12px}
+.sfx{position:absolute;z-index:3;font-family:"Black Han Sans",sans-serif;color:var(--coral);-webkit-text-stroke:9px var(--line);paint-order:stroke fill;letter-spacing:-2px;line-height:1}
+.sfx.w{color:#fff}
+.memo{position:absolute;z-index:3;background:var(--cream);padding:34px 40px 26px;transform:rotate(3deg);border:5px solid var(--line);box-shadow:8px 8px 0 var(--line);font-family:"Nanum Pen","Nanum Pen Script",cursive;color:#2e4c61}
+.memo .row{font-size:74px;line-height:1.2}
+.memo s{color:#c92a2a}
+.tag{position:absolute;z-index:3;font-size:34px;color:#fff;padding:8px 20px;border:5px solid var(--line);box-shadow:6px 6px 0 var(--line)}
+.foot{position:absolute;z-index:4;left:40px;right:40px;bottom:30px;display:flex;justify-content:space-between;align-items:center;font-family:"Noto Sans CJK KR",sans-serif;font-size:26px;font-weight:700}
+.foot span{background:rgba(255,250,240,.92);border:3px solid var(--line);padding:6px 16px;border-radius:999px}
+.foot b:before{content:"";display:inline-block;width:1.15em;height:1.1em;margin-right:.35em;vertical-align:-.18em;background:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%22215%20205%20620%20580%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%233a5f79%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22M281%20478%20V547%22%20stroke-width%3D%22104%22/%3E%3Cpath%20d%3D%22M407%20372%20V607%22%20stroke-width%3D%22104%22/%3E%3Cpath%20d%3D%22M526%20441%20V562%22%20stroke-width%3D%22104%22/%3E%3Cpath%20d%3D%22M660%20273%20V590%22%20stroke-width%3D%22112%22/%3E%3Cpath%20d%3D%22M660%20421%20H773%22%20stroke-width%3D%2286%22/%3E%3C/g%3E%3Ccircle%20cx%3D%22660%22%20cy%3D%22722%22%20r%3D%2258%22%20fill%3D%22%23e4927c%22/%3E%3C/svg%3E") no-repeat center/contain}
+.note{position:absolute;z-index:4;left:40px;bottom:84px;font-family:"Noto Sans CJK KR",sans-serif;font-size:22px;font-weight:500;background:rgba(255,250,240,.92);border:3px solid var(--line);padding:4px 14px}
+.title{position:absolute;z-index:3;left:60px;top:120px}
+.title .ep{display:inline-block;font-family:"Black Han Sans",sans-serif;font-size:34px;color:#fff;background:var(--accent);border:5px solid var(--line);padding:4px 18px;box-shadow:6px 6px 0 var(--line);transform:rotate(-2deg)}
+.title h1{font-family:"Black Han Sans",sans-serif;font-weight:400;font-size:132px;line-height:1.02;color:var(--ink);-webkit-text-stroke:10px #fff;paint-order:stroke fill;margin-top:26px;letter-spacing:-3px;filter:drop-shadow(8px 8px 0 var(--line))}
+.title h1 em{font-style:normal;color:var(--accent)}
+.end{background:#3a5f79;background-image:radial-gradient(rgba(255,255,255,.10) 3px,transparent 3.5px);background-size:28px 28px}
+</style></head><body>
+
+<!-- 1 · 표지 -->
+<div class="slide" style="background-image:url(img/s1.jpg)">
+  <div class="title"><span class="ep">아차! 부품집 전화 극장 · 1화</span>
+    <h1>전화 한 통의<br><em>나비효과</em></h1></div>
+  <div class="bub" data-k="speech" data-t="770,745" style="left:690px;top:520px;width:320px">오늘도 잘<br>부탁해요~</div>
+  <div class="tag" style="left:60px;top:1100px;background:var(--ink)">부품집 사장님</div>
+  <div class="tag" style="right:50px;top:1100px;background:var(--accent)">정비소 실장님</div>
+  <div class="note">※ 있을 법한 일을 재구성한 가상 이야기입니다 · 이미지는 AI로 만들었습니다</div>
+  <div class="foot"><span><b>@acha.lab.kr</b></span><span>넘겨서 보기 →</span></div>
+</div>
+
+<!-- 2 · 08:30 전화 폭주 -->
+<div class="slide" style="background-image:url(img/s2.jpg)">
+  <div class="box" style="left:50px;top:50px"><b>08:30</b>아침 주문 전화가 몰리는 시간</div>
+  <div class="bub shout" data-k="shout" data-t="470,700" style="left:640px;top:250px;width:360px">네네!!<br>잠시만요!!</div>
+  <div class="sfx" style="left:30px;top:1010px;font-size:96px;transform:rotate(-10deg)">따르르릉!!</div>
+  <div class="sfx" style="right:40px;top:1110px;font-size:64px;transform:rotate(10deg)">띠리링</div>
+  <div class="foot"><span><b>@acha.lab.kr</b></span><span>2 / 7</span></div>
+</div>
+
+<!-- 3 · 정비소 -->
+<div class="slide" style="background-image:url(img/s3.jpg)">
+  <div class="box" style="left:50px;top:50px"><b>08:32</b>같은 시각, 시끄러운 정비소</div>
+  <div class="sfx w" style="right:50px;top:170px;font-size:62px;transform:rotate(6deg)">위이잉~ 쾅쾅</div>
+  <div class="bub" data-k="speech" data-t="540,520" style="left:560px;top:860px;width:440px">사장님~<br>아반떼 AD 앞범퍼,<br>그거 <em>두 개</em>!<br>오후에 급해요!</div>
+  <div class="foot"><span><b>@acha.lab.kr</b></span><span>3 / 7</span></div>
+</div>
+
+<!-- 4 · 메모 -->
+<div class="slide" style="background-image:url(img/s4.jpg)">
+  <div class="memo" style="left:480px;top:150px;width:540px">
+    <div class="row">거래처: 새한? 세안?</div>
+    <div class="row">아반떼 앞범..</div>
+    <div class="row">수량: 1? <s>2</s>?</div>
+  </div>
+  <div class="bub" data-k="phone" data-t="150,260" style="left:70px;top:620px;width:330px"><small>수화기 너머</small>새한모터스요!<br>두 개!! 오후!!</div>
+  <div class="sfx" style="left:600px;top:760px;font-size:74px;transform:rotate(-8deg)">슥슥슥…</div>
+  <div class="box" style="left:50px;top:1120px">받아 적는 손보다 말이 더 빠르다</div>
+  <div class="foot"><span><b>@acha.lab.kr</b></span><span>4 / 7</span></div>
+</div>
+
+<!-- 5 · 두 개였나 하나였나 -->
+<div class="slide" style="background-image:url(img/s5.jpg)">
+  <div class="box" style="left:50px;top:50px"><b>08:35</b>전화를 끊고 나니…</div>
+  <div class="bub" data-k="think" data-t="520,470" style="left:80px;top:270px;width:300px">두 개…<br>였나?</div>
+  <div class="bub" data-k="think" data-t="690,430" style="left:720px;top:200px;width:280px">하나…<br>였나?</div>
+  <div class="sfx" style="right:40px;top:1030px;font-size:72px;transform:rotate(8deg)">따르릉!</div>
+  <div class="box" style="left:50px;top:1120px">…생각할 틈도 없이 다음 전화</div>
+  <div class="foot"><span><b>@acha.lab.kr</b></span><span>5 / 7</span></div>
+</div>
+
+<!-- 6 · 15:10 아차 -->
+<div class="slide" style="background-image:url(img/s6.jpg)">
+  <div class="box" style="left:50px;top:50px"><b>15:10</b>그리고 오후, 다시 울리는 전화</div>
+  <div class="bub shout" data-k="shout" data-t="680,690" style="left:110px;top:860px;width:380px;font-size:110px">아차…!</div>
+  <div class="bub" data-k="think" data-t="760,420" style="left:690px;top:190px;width:300px;font-size:40px">아침 그<br>앞범퍼…<br>몇 개였지?</div>
+  <div class="sfx" style="right:40px;top:1080px;font-size:80px;transform:rotate(-6deg)">따르르릉…</div>
+  <div class="foot"><span><b>@acha.lab.kr</b></span><span>6 / 7</span></div>
+</div>
+
+<!-- 7 · 2화에 계속 -->
+<div class="slide end">
+  <div class="title" style="top:120px">
+    <span class="ep">1화 끝 · 다음 화 예고</span>
+    <h1 style="color:#fff;-webkit-text-stroke:10px var(--line)">2화에<br><em>계속…</em></h1>
+  </div>
+  <div class="bub" data-k="phone" data-t="1075,640" style="left:150px;top:650px;width:640px"><small>다음 날, 정비소 실장님</small>사장님, 두 개 시켰는데<br><em>하나만</em> 왔어요!!</div>
+  <div class="box" style="left:60px;top:1000px">녹음은 분명 있는데… 어느 통화였지?</div>
+  <div class="box" style="left:60px;top:1110px;background:var(--accent);color:#fff">이런 일 겪어 보셨으면 댓글로 🙋</div>
+  <div class="note">※ 있을 법한 일을 재구성한 가상 이야기입니다 · 이미지는 AI로 만들었습니다</div>
+  <div class="foot"><span><b>@acha.lab.kr</b> 팔로우하고 2화 보기</span><span>7 / 7</span></div>
+</div>
+
+<script>
+// 말풍선 모양: .bub 글자 상자를 둘러싸는 모양과 꼬리를 SVG로 그린다.
+const NS='http://www.w3.org/2000/svg', LINE='#1c2530', SW=6;
+function el(n,a){const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);return e}
+function pts(a){return a.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}
+function ep(cx,cy,rx,ry,t,s=1){return [cx+rx*s*Math.cos(t),cy+ry*s*Math.sin(t)]}
+function draw(){
+  document.querySelectorAll('.slide').forEach(sl=>{
+    const svg=el('svg',{class:'bubbles',viewBox:'0 0 1080 1350'}); sl.appendChild(svg);
+    const back=el('g',{}),front=el('g',{}); svg.appendChild(back); svg.appendChild(front);
+    sl.querySelectorAll('.bub').forEach(b=>{
+      const k=b.dataset.k, [tx,ty]=b.dataset.t.split(',').map(Number);
+      const cx=b.offsetLeft+b.offsetWidth/2, cy=b.offsetTop+b.offsetHeight/2;
+      const rx=b.offsetWidth/2*1.2+30, ry=b.offsetHeight/2*1.25+30;
+      const th=Math.atan2((ty-cy)/ry,(tx-cx)/rx);
+      const st={fill:'#fff',stroke:LINE,'stroke-width':SW,'stroke-linejoin':'round'};
+      if(k==='think'){
+        const n=Math.max(9,Math.round((rx+ry)/34)), r0=Math.min(rx,ry)*.36, bumps=[];
+        for(let i=0;i<n;i++){const [x,y]=ep(cx,cy,rx*.86,ry*.86,i/n*2*Math.PI);bumps.push([x,y])}
+        const d=Math.hypot(tx-cx,ty-cy), ux=(tx-cx)/d, uy=(ty-cy)/d, edge=Math.hypot(rx*Math.cos(th),ry*Math.sin(th));
+        [[.25,20],[.55,13],[.82,8]].forEach(([f,r])=>{const s=edge+(d-edge)*f;back.appendChild(el('circle',{cx:cx+ux*s,cy:cy+uy*s,r,...st}))});
+        bumps.forEach(([x,y])=>back.appendChild(el('circle',{cx:x,cy:y,r:r0,...st})));
+        bumps.forEach(([x,y])=>front.appendChild(el('circle',{cx:x,cy:y,r:r0-SW/2,fill:'#fff'})));
+        front.appendChild(el('ellipse',{cx,cy,rx:rx*.86,ry:ry*.86,fill:'#fff'}));
+        return;
+      }
+      const N=k==='shout'?24:k==='phone'?46:90, out=[];
+      for(let i=0;i<N;i++){let s=1;
+        if(k==='shout') s=i%2?.84:1.12+((i*37)%7)/50;
+        if(k==='phone') s=i%2?.95:1.04;
+        out.push(ep(cx,cy,rx,ry,i/N*2*Math.PI,s));}
+      const w=k==='shout'?.12:.17;
+      const b1=ep(cx,cy,rx,ry,th-w,.92), b2=ep(cx,cy,rx,ry,th+w,.92);
+      const tip=[tx,ty];
+      let tail;
+      if(k==='phone'){
+        const m1=[b1[0]+(tip[0]-b1[0])*.45+16,b1[1]+(tip[1]-b1[1])*.45-16], m2=[b2[0]+(tip[0]-b2[0])*.55-16,b2[1]+(tip[1]-b2[1])*.55+16];
+        tail=[b1,m1,tip,m2,b2];
+      } else {
+        const mid=[(b1[0]+b2[0])/2,(b1[1]+b2[1])/2], px=(b2[0]-b1[0])*.18, py=(b2[1]-b1[1])*.18;
+        tail=[b1,[mid[0]+(tip[0]-mid[0])*.55+px,mid[1]+(tip[1]-mid[1])*.55+py],tip,b2];
+      }
+      back.appendChild(el('polygon',{points:pts(tail),...st}));
+      back.appendChild(el('polygon',{points:pts(out),...st}));
+      // 꼬리와 몸통 사이 선 지우기: 꼬리를 흰색으로 다시 칠하고(테두리 없이) 꼬리 바깥선만 다시 긋는다
+      front.appendChild(el('polygon',{points:pts(tail),fill:'#fff'}));
+      const c1=ep(cx,cy,rx,ry,th-w,.8), c2=ep(cx,cy,rx,ry,th+w,.8);
+      front.appendChild(el('polygon',{points:pts([b1,c1,c2,b2]),fill:'#fff'}));
+      const e1=ep(cx,cy,rx,ry,th-w,k==='shout'?.98:1.0), e2=ep(cx,cy,rx,ry,th+w,k==='shout'?.98:1.0); const tl=tail.slice(); tl[0]=e1; tl[tl.length-1]=e2;
+      front.appendChild(el('polyline',{points:pts(tl),fill:'none',stroke:LINE,'stroke-width':SW,'stroke-linejoin':'round','stroke-linecap':'round'}));
+    });
+  });
+}
+document.fonts.ready.then(draw);
+</script>
+</body></html>

@@ -23,3 +23,9 @@ out/
 *.db
 .DS_Store
 Thumbs.db
+
+# PDF 굽기 · 브라우저 임시 폴더 (헤드리스 브라우저 프로필이 섞여 올라가지 않게)
+_build/
+**/_build/
+**/chrome-profile/
+**/edge-profile/

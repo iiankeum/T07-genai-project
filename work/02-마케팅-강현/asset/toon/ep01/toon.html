@@ -1,0 +1,220 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<style>
+:root{--ink:#3a5f79;--accent:#d8664c;--paper:#f9f5f2;--line:#3a5f79;--muted:#6f8394;--skin:#ffd9b8;--skin2:#f5c49c}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#d9dce2}
+body{font-family:"Noto Sans CJK KR","Noto Sans KR",sans-serif;color:var(--ink);word-break:keep-all}
+.slide{width:1080px;height:1350px;position:relative;overflow:hidden;background:var(--paper);margin:0 auto 40px;padding:56px}
+.top{display:flex;justify-content:space-between;align-items:center;height:64px;font-size:30px;font-weight:900}
+.top .ep{background:var(--ink);color:#fff;padding:8px 22px;border-radius:999px}
+.top .time{color:var(--accent);font-size:40px}
+.panel{position:absolute;left:56px;right:56px;background:#fff;border:7px solid var(--line);border-radius:18px;overflow:hidden}
+.p-full{top:140px;bottom:120px}
+.p-a{top:140px;height:560px}
+.p-b{top:730px;bottom:120px}
+.bub{position:absolute;background:#fff;border:6px solid var(--line);border-radius:44px;padding:26px 34px;font-size:46px;font-weight:900;line-height:1.32;z-index:3}
+.bub:after{content:"";position:absolute;width:34px;height:34px;background:#fff;border-right:6px solid var(--line);border-bottom:6px solid var(--line)}
+.bub.tl:after{left:60px;bottom:-21px;transform:rotate(45deg)}
+.bub.tr:after{right:60px;bottom:-21px;transform:rotate(45deg)}
+.bub.bl:after{left:60px;top:-21px;transform:rotate(225deg)}
+.bub.phone{border-style:dashed;border-radius:30px}
+.bub em{font-style:normal;color:var(--accent)}
+.think{position:absolute;background:#fff;border:6px solid var(--line);border-radius:999px;padding:30px 44px;font-size:48px;font-weight:900;z-index:3}
+.nar{position:absolute;background:var(--ink);color:#fff;font-size:38px;font-weight:700;padding:16px 26px;border-radius:12px;z-index:3;line-height:1.4}
+.sfx{position:absolute;font-weight:900;color:var(--accent);-webkit-text-stroke:3px var(--line);paint-order:stroke fill;z-index:2;letter-spacing:-2px}
+.foot{position:absolute;left:56px;right:56px;bottom:40px;display:flex;justify-content:space-between;font-size:28px;color:var(--muted);font-weight:700}
+.foot b{color:var(--ink)}
+.chr{position:absolute;z-index:1}
+.bg-shop{position:absolute;inset:0;background:
+  repeating-linear-gradient(90deg,transparent 0 158px,#e9e2c8 158px 166px),
+  linear-gradient(#f7f1dc 0 62%,#e8dcb8 62% 100%)}
+.shelf{position:absolute;left:0;right:0;height:14px;background:#cdbf93}
+.box{position:absolute;width:110px;height:70px;background:#e9c98f;border:4px solid #b9935a;border-radius:6px}
+.bg-garage{position:absolute;inset:0;background:linear-gradient(#e6ebf2 0 70%,#b9c2cf 70% 100%)}
+.speed{position:absolute;inset:0;background:repeating-conic-gradient(from 0deg at 50% 50%,#fff 0 4deg,#fff3e8 4deg 8deg)}
+.memo{position:absolute;background:#fffdf8;border:5px solid var(--line);box-shadow:8px 8px 0 rgba(27,42,74,.15);transform:rotate(-4deg);padding:40px 46px;font-family:"Nanum Pen Script","Noto Sans CJK KR",cursive}
+.memo .row{font-size:62px;font-weight:700;line-height:1.5;color:#2e4c61}
+.memo .row s{color:#c92a2a}
+.cover h1{font-size:96px;line-height:1.15;font-weight:900;letter-spacing:-3px}
+.cover h1 em{font-style:normal;color:var(--accent)}
+.next{font-size:120px;font-weight:900;letter-spacing:-4px;color:#fff}
+.fakebadge{position:absolute;right:56px;bottom:84px;font-size:24px;color:var(--muted);font-weight:700}
+
+/* 아차 랩 mark next to handle */
+.foot b:before,.x-none:before{content:"";display:inline-block;width:1.15em;height:1.1em;margin-right:.35em;vertical-align:-.18em;background:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%22215%20205%20620%20580%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%233a5f79%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22M281%20478%20V547%22%20stroke-width%3D%22104%22/%3E%3Cpath%20d%3D%22M407%20372%20V607%22%20stroke-width%3D%22104%22/%3E%3Cpath%20d%3D%22M526%20441%20V562%22%20stroke-width%3D%22104%22/%3E%3Cpath%20d%3D%22M660%20273%20V590%22%20stroke-width%3D%22112%22/%3E%3Cpath%20d%3D%22M660%20421%20H773%22%20stroke-width%3D%2286%22/%3E%3C/g%3E%3Ccircle%20cx%3D%22660%22%20cy%3D%22722%22%20r%3D%2258%22%20fill%3D%22%23e4927c%22/%3E%3C/svg%3E") no-repeat center/contain}
+.dark .foot b:before{background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%22215%20205%20620%20580%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%23ffffff%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22M281%20478%20V547%22%20stroke-width%3D%22104%22/%3E%3Cpath%20d%3D%22M407%20372%20V607%22%20stroke-width%3D%22104%22/%3E%3Cpath%20d%3D%22M526%20441%20V562%22%20stroke-width%3D%22104%22/%3E%3Cpath%20d%3D%22M660%20273%20V590%22%20stroke-width%3D%22112%22/%3E%3Cpath%20d%3D%22M660%20421%20H773%22%20stroke-width%3D%2286%22/%3E%3C/g%3E%3Ccircle%20cx%3D%22660%22%20cy%3D%22722%22%20r%3D%2258%22%20fill%3D%22%23e4927c%22/%3E%3C/svg%3E")}
+</style></head><body>
+
+<!-- ===== SVG character library ===== -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <!-- 부품집 사장님: round face, glasses, navy apron -->
+    <symbol id="boss-body" viewBox="0 0 300 260">
+      <path d="M40 260 Q40 120 150 120 Q260 120 260 260Z" fill="#3a5f79" stroke="#3a5f79" stroke-width="6"/>
+      <path d="M105 130 L150 200 L195 130" fill="#fff" stroke="#3a5f79" stroke-width="6"/>
+      <rect x="110" y="190" width="80" height="70" rx="8" fill="#4d7290"/>
+      <text x="150" y="238" font-size="30" font-weight="900" fill="#f4b8a5" text-anchor="middle" font-family="Noto Sans CJK KR">부품</text>
+    </symbol>
+    <symbol id="boss-head" viewBox="0 0 240 240">
+      <ellipse cx="120" cy="130" rx="92" ry="98" fill="#ffd9b8" stroke="#3a5f79" stroke-width="7"/>
+      <path d="M30 110 Q40 30 120 28 Q205 30 212 110 Q190 70 120 72 Q55 70 30 110Z" fill="#3a5f79"/>
+      <circle cx="85" cy="130" r="28" fill="#fff" stroke="#3a5f79" stroke-width="6"/>
+      <circle cx="157" cy="130" r="28" fill="#fff" stroke="#3a5f79" stroke-width="6"/>
+      <line x1="113" y1="130" x2="129" y2="130" stroke="#3a5f79" stroke-width="6"/>
+      <ellipse cx="60" cy="172" rx="16" ry="10" fill="#ffb3a0" opacity=".7"/>
+      <ellipse cx="182" cy="172" rx="16" ry="10" fill="#ffb3a0" opacity=".7"/>
+    </symbol>
+    <g id="boss-eyes-ok"><circle cx="85" cy="132" r="8" fill="#3a5f79"/><circle cx="157" cy="132" r="8" fill="#3a5f79"/></g>
+    <!-- 정비소 실장님: orange cap, grey jumpsuit -->
+    <symbol id="mech" viewBox="0 0 300 500">
+      <path d="M40 500 Q40 300 150 300 Q260 300 260 500Z" fill="#8a94a6" stroke="#3a5f79" stroke-width="6"/>
+      <rect x="120" y="330" width="60" height="40" rx="6" fill="#fff" stroke="#3a5f79" stroke-width="4"/>
+      <ellipse cx="150" cy="200" rx="88" ry="96" fill="#f5c49c" stroke="#3a5f79" stroke-width="7"/>
+      <path d="M58 170 Q62 86 150 84 Q238 86 242 170Z" fill="#d8664c" stroke="#3a5f79" stroke-width="7"/>
+      <path d="M150 170 L270 176 Q272 192 240 192 L150 186Z" fill="#d8664c" stroke="#3a5f79" stroke-width="6"/>
+      <circle cx="118" cy="214" r="9" fill="#3a5f79"/><circle cx="182" cy="214" r="9" fill="#3a5f79"/>
+      <path d="M112 252 Q150 280 188 252" fill="none" stroke="#3a5f79" stroke-width="7" stroke-linecap="round"/>
+      <path d="M92 196 L134 190 M166 190 L208 196" stroke="#3a5f79" stroke-width="7" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="phone" viewBox="0 0 120 120">
+      <path d="M20 40 Q20 18 42 18 L78 18 Q100 18 100 40 L100 50 L78 50 L72 36 L48 36 L42 50 L20 50Z" fill="#3a5f79"/>
+      <rect x="18" y="56" width="84" height="54" rx="12" fill="#d8664c" stroke="#3a5f79" stroke-width="5"/>
+      <g fill="#fff"><circle cx="42" cy="74" r="5"/><circle cx="60" cy="74" r="5"/><circle cx="78" cy="74" r="5"/><circle cx="42" cy="92" r="5"/><circle cx="60" cy="92" r="5"/><circle cx="78" cy="92" r="5"/></g>
+    </symbol>
+  </defs>
+</svg>
+
+<!-- 1 · cover -->
+<div class="slide cover">
+  <div class="top"><span class="ep">아차! 부품집 전화 극장 · 1화</span><span class="time">08:30</span></div>
+  <h1 style="margin-top:70px">전화 한 통의<br><em>나비효과</em> 🦋</h1>
+  <p style="font-size:42px;font-weight:700;margin-top:28px;color:#4f6f86">「두 개라고 했잖아요!」 사건의 시작</p>
+  <svg class="chr" style="left:80px;bottom:120px" width="520" height="720" viewBox="0 0 300 420">
+    <use href="#boss-body" x="0" y="160" width="300" height="260"/>
+    <use href="#boss-head" x="30" y="0" width="240" height="240"/>
+    <use href="#boss-eyes-ok" transform="translate(30 0)"/>
+    <path d="M118 190 Q150 214 182 190" fill="none" stroke="#3a5f79" stroke-width="7" stroke-linecap="round"/>
+  </svg>
+  <svg class="chr" style="right:60px;bottom:120px" width="400" height="660" viewBox="0 0 300 500"><use href="#mech"/></svg>
+  <div class="nar" style="left:110px;bottom:150px">부품집 사장님</div>
+  <div class="nar" style="right:90px;bottom:150px;background:#d8664c">정비소 실장님</div>
+  <div class="foot"><span><b>@acha.lab.kr</b></span><span>넘겨서 보기 →</span></div>
+  <div class="fakebadge" style="bottom:100px">※ 있을 법한 일을 재구성한 가상 이야기</div>
+</div>
+
+<!-- 2 · morning rush -->
+<div class="slide">
+  <div class="top"><span class="ep">1화</span><span class="time">08:30</span></div>
+  <div class="panel p-full">
+    <div class="bg-shop"></div>
+    <div class="shelf" style="top:160px"></div><div class="shelf" style="top:330px"></div>
+    <div class="box" style="left:60px;top:90px"></div><div class="box" style="left:190px;top:90px;background:#d8b77a"></div><div class="box" style="left:700px;top:260px"></div><div class="box" style="left:820px;top:260px;background:#d8b77a"></div>
+    <svg class="chr" style="left:60px;top:430px" width="110" height="110"><use href="#phone" width="110" height="110"/></svg>
+    <svg class="chr" style="left:420px;top:380px" width="130" height="130"><use href="#phone" width="130" height="130"/></svg>
+    <svg class="chr" style="left:780px;top:440px" width="110" height="110"><use href="#phone" width="110" height="110"/></svg>
+    <div class="sfx" style="left:30px;top:350px;font-size:64px;transform:rotate(-12deg)">따르릉</div>
+    <div class="sfx" style="left:390px;top:290px;font-size:80px">따르르릉!!</div>
+    <div class="sfx" style="left:730px;top:360px;font-size:64px;transform:rotate(10deg)">띠리링</div>
+    <svg class="chr" style="left:290px;bottom:-10px" width="390" height="500" viewBox="0 0 300 380">
+      <use href="#boss-body" x="0" y="140" width="300" height="240"/>
+      <use href="#boss-head" x="30" y="-10" width="240" height="240"/>
+      <g transform="translate(30 -10)"><path d="M70 128 L100 136 M142 136 L172 128" stroke="#3a5f79" stroke-width="8" stroke-linecap="round"/></g>
+      <ellipse cx="150" cy="196" rx="20" ry="14" fill="#3a5f79"/>
+      <path d="M262 50 Q280 60 270 80" stroke="#4dabf7" stroke-width="8" fill="none" stroke-linecap="round"/>
+    </svg>
+    <div class="bub tl" style="left:540px;top:130px;max-width:420px">네네!<br>잠시만요!! 😵</div>
+  </div>
+  <div class="nar" style="left:90px;top:180px">아침 주문 전화가 한꺼번에 몰리는 시간</div>
+  <div class="foot"><span><b>@acha.lab.kr</b></span><span>2 / 7</span></div>
+</div>
+
+<!-- 3 · the call -->
+<div class="slide">
+  <div class="top"><span class="ep">1화</span><span class="time">08:32</span></div>
+  <div class="panel p-full">
+    <div class="bg-garage"></div>
+    <div style="position:absolute;left:520px;top:300px;width:420px;height:180px;background:#ced4da;border:6px solid #3a5f79;border-radius:60px 90px 20px 20px"></div>
+    <div style="position:absolute;left:560px;top:450px;width:90px;height:90px;border-radius:50%;background:#343a40;border:6px solid #3a5f79"></div>
+    <div style="position:absolute;left:820px;top:450px;width:90px;height:90px;border-radius:50%;background:#343a40;border:6px solid #3a5f79"></div>
+    <div class="sfx" style="left:560px;top:130px;font-size:64px;color:#adb5bd">위이이잉~ 쾅쾅</div>
+    <svg class="chr" style="left:30px;bottom:-30px" width="460" height="760" viewBox="0 0 300 500"><use href="#mech"/></svg>
+    <div class="bub phone tl" style="left:360px;top:500px;max-width:600px">사장님~ 아반떼 AD<br>앞범퍼, 그거 <em>두 개</em>!<br>오늘 오후 급해요!</div>
+  </div>
+  <div class="nar" style="left:90px;top:180px">같은 시각, 시끄러운 정비소</div>
+  <div class="foot"><span><b>@acha.lab.kr</b></span><span>3 / 7</span></div>
+</div>
+
+<!-- 4 · writing memo -->
+<div class="slide">
+  <div class="top"><span class="ep">1화</span><span class="time">08:32</span></div>
+  <div class="panel p-a">
+    <div class="bg-shop"></div>
+    <svg class="chr" style="left:40px;bottom:-20px" width="360" height="480" viewBox="0 0 300 380">
+      <use href="#boss-body" x="0" y="140" width="300" height="240"/>
+      <use href="#boss-head" x="30" y="-10" width="240" height="240"/>
+      <use href="#boss-eyes-ok" transform="translate(30 -10)"/>
+      <path d="M128 196 L172 196" stroke="#3a5f79" stroke-width="7" stroke-linecap="round"/>
+    </svg>
+    <div class="bub tl" style="left:400px;top:50px;max-width:520px">네네~ 아반떼<br>앞범퍼 몇… 네?</div>
+    <div class="sfx" style="left:600px;top:360px;font-size:70px">따르릉!!</div>
+  </div>
+  <div class="panel p-b" style="background:#f1ead1">
+    <div class="memo" style="left:150px;top:60px;width:640px">
+      <div class="row">거래처: 새한? 세안?</div>
+      <div class="row">아반떼 앞범..</div>
+      <div class="row">수량: 1? <s>2</s>?</div>
+    </div>
+    <div class="nar" style="right:30px;bottom:30px">받아 적는 손보다 말이 더 빠르다</div>
+  </div>
+  <div class="foot"><span><b>@acha.lab.kr</b></span><span>4 / 7</span></div>
+</div>
+
+<!-- 5 · doubt -->
+<div class="slide">
+  <div class="top"><span class="ep">1화</span><span class="time">08:35</span></div>
+  <div class="panel p-full">
+    <div class="speed"></div>
+    <svg class="chr" style="left:230px;top:300px" width="620" height="820" viewBox="0 0 300 400">
+      <use href="#boss-body" x="0" y="150" width="300" height="250"/>
+      <use href="#boss-head" x="30" y="0" width="240" height="240"/>
+      <g transform="translate(30 0)"><circle cx="85" cy="130" r="4" fill="#3a5f79"/><circle cx="157" cy="130" r="4" fill="#3a5f79"/></g>
+      <path d="M130 196 Q150 186 170 196" fill="none" stroke="#3a5f79" stroke-width="7" stroke-linecap="round"/>
+      <path d="M258 70 Q276 84 264 106" stroke="#4dabf7" stroke-width="8" fill="none" stroke-linecap="round"/>
+    </svg>
+    <div class="think" style="left:60px;top:60px">두 개…였나?</div>
+    <div class="think" style="right:60px;top:200px">하나…였나? 🤔</div>
+    <div class="bub phone tr" style="right:40px;bottom:190px;max-width:470px;font-size:40px">사장님~ 쏘렌토 앞 패드 한 세트요!</div>
+  </div>
+  <div class="nar" style="left:90px;top:1100px;z-index:4">…생각할 틈도 없이 다음 전화</div>
+  <div class="foot"><span><b>@acha.lab.kr</b></span><span>5 / 7</span></div>
+</div>
+
+<!-- 6 · 15:10 -->
+<div class="slide">
+  <div class="top"><span class="ep">1화</span><span class="time">15:10</span></div>
+  <div class="panel p-full" style="background:#2e4c61">
+    <div style="position:absolute;inset:0;background:radial-gradient(circle at 50% 55%,#4a5778 0,#3a5f79 70%)"></div>
+    <svg class="chr" style="left:260px;top:360px" width="560" height="740" viewBox="0 0 300 400">
+      <use href="#boss-body" x="0" y="150" width="300" height="250"/>
+      <use href="#boss-head" x="30" y="0" width="240" height="240"/>
+      <g transform="translate(30 0)"><circle cx="85" cy="132" r="8" fill="#3a5f79"/><circle cx="157" cy="132" r="8" fill="#3a5f79"/></g>
+      <path d="M126 200 L174 200" stroke="#3a5f79" stroke-width="7" stroke-linecap="round"/>
+      <g stroke="#3a5f79" stroke-width="5"><line x1="70" y1="40" x2="70" y2="80"/><line x1="100" y1="34" x2="100" y2="80"/><line x1="130" y1="30" x2="130" y2="80"/></g>
+    </svg>
+    <div class="sfx" style="left:120px;top:120px;font-size:110px">따르르르릉…</div>
+    <div class="think" style="right:40px;top:300px;font-size:54px">아차…!<br><span style="font-size:40px">아침 그 앞범퍼…</span></div>
+  </div>
+  <div class="nar" style="left:90px;top:180px">그리고 오후 3시 10분</div>
+  <div class="foot" style="z-index:5"><span><b>@acha.lab.kr</b></span><span>6 / 7</span></div>
+</div>
+
+<!-- 7 · to be continued -->
+<div class="slide dark" style="background:#3a5f79;color:#fff">
+  <div class="top"><span class="ep" style="background:#d8664c">1화 끝</span><span class="time" style="color:#f4b8a5">다음 화 예고</span></div>
+  <div class="next" style="margin-top:150px">2화에<br>계속…</div>
+  <p style="font-size:48px;font-weight:700;margin-top:60px;line-height:1.5;color:#e2edf5">「사장님, 두 개 시켰는데<br><span style="color:#f4b8a5">하나만 왔어요</span>」<br>녹음은 분명 있는데… 어느 통화였지?</p>
+  <p style="font-size:40px;font-weight:700;margin-top:80px;color:#fff">이런 일 겪어 보셨으면 댓글로 🙋<br>@acha.lab.kr 팔로우하고 2화 보기</p>
+  <div class="fakebadge" style="color:#b5cbdb">※ 있을 법한 일을 재구성한 가상 이야기입니다</div>
+  <div class="foot" style="color:#b5cbdb"><span><b style="color:#fff">@acha.lab.kr</b></span><span>7 / 7</span></div>
+</div>
+</body></html>
