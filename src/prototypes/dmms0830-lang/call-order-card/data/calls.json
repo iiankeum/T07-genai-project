@@ -1,0 +1,187 @@
+{
+  "_설명": "가짜 주문 통화 대본과 정답 주문 카드. 거래처 이름·차번호·품번은 모두 지어낸 것이다. say 는 사람이 전화에서 읽는 대로(숫자·영문을 한글 소리로) 적었다.",
+  "calls": [
+    {
+      "id": "call01",
+      "turns": [
+        {"who": "dealer", "say": "네, 부품 대리점입니다."},
+        {"who": "shop", "say": "예, 새한카센터인데요. 그, 아반떼 에이디 앞범퍼 하나 있어요?"},
+        {"who": "dealer", "say": "아반떼 에이디요. 몇 년식이에요?"},
+        {"who": "shop", "say": "십칠 년식이요. 좀 급해요, 오전 중으로 보내 주세요."},
+        {"who": "dealer", "say": "네, 앞범퍼 하나, 오전 배송으로 넣어 드릴게요."},
+        {"who": "shop", "say": "네, 수고하세요."}
+      ],
+      "gold": {
+        "customer": "새한카센터", "car_kw": ["아반떼", "AD"], "year": "2017", "plate": null,
+        "items": [{"part_kw": ["앞범퍼", "프론트범퍼"], "qty": 1, "part_no": null}],
+        "urgent": true, "needs_ask": false
+      }
+    },
+    {
+      "id": "call02",
+      "turns": [
+        {"who": "dealer", "say": "네, 부품입니다."},
+        {"who": "shop", "say": "우리공업사예요. 쏘나타 디엔에잇인데, 차번호가 삼십사 나, 오육칠팔이에요."},
+        {"who": "dealer", "say": "네, 삼십사 나 오육칠팔. 뭐 필요하세요?"},
+        {"who": "shop", "say": "운전석 휀다 하나하고, 운전석 헤드라이트 하나 주세요."},
+        {"who": "dealer", "say": "헤드라이트는 엘이디예요, 일반이에요?"},
+        {"who": "shop", "say": "아, 그건 차 보고 다시 전화 드릴게요. 급한 건 아니고 내일 받아도 돼요."},
+        {"who": "dealer", "say": "네, 그럼 휀다 먼저 잡아 놓을게요."}
+      ],
+      "gold": {
+        "customer": "우리공업사", "car_kw": ["쏘나타|소나타", "DN8"], "year": null, "plate": "34나5678",
+        "items": [
+          {"part_kw": ["휀다", "펜더", "휀더", "펜다"], "qty": 1, "part_no": null},
+          {"part_kw": ["헤드라이트", "헤드램프", "전조등"], "qty": 1, "part_no": null}
+        ],
+        "urgent": false, "needs_ask": true
+      }
+    },
+    {
+      "id": "call03",
+      "turns": [
+        {"who": "dealer", "say": "네, 부품입니다."},
+        {"who": "shop", "say": "미래모터스입니다. 포터 투 앞쇼바 좌우로 두 개하고요, 활대링크도 두 개 주세요."},
+        {"who": "dealer", "say": "포터 투 몇 년식이죠?"},
+        {"who": "shop", "say": "십구 년식이요."},
+        {"who": "dealer", "say": "네, 앞쇼바 두 개, 활대링크 두 개요. 오후 차로 나가요."},
+        {"who": "shop", "say": "예, 천천히 주셔도 돼요."}
+      ],
+      "gold": {
+        "customer": "미래모터스", "car_kw": ["포터"], "year": "2019", "plate": null,
+        "items": [
+          {"part_kw": ["쇼바", "쇼크업소버", "쇽업소버", "쇼버"], "qty": 2, "part_no": null},
+          {"part_kw": ["활대링크", "스태빌라이저링크", "스테빌라이저링크"], "qty": 2, "part_no": null}
+        ],
+        "urgent": false, "needs_ask": false
+      }
+    },
+    {
+      "id": "call04",
+      "turns": [
+        {"who": "dealer", "say": "네, 부품입니다."},
+        {"who": "shop", "say": "한성정비인데요, 품번으로 주문할게요."},
+        {"who": "dealer", "say": "네, 불러 주세요."},
+        {"who": "shop", "say": "오팔일공일, 다시, 디 사 에이 이 오. 앞 브레이크 패드예요. 두 개 주세요."},
+        {"who": "dealer", "say": "오팔일공일 다시 디사에이이오, 두 개 맞죠?"},
+        {"who": "shop", "say": "네 맞아요. 지금 차 올려놨으니까 빨리 좀 부탁해요."}
+      ],
+      "gold": {
+        "customer": "한성정비", "car_kw": [], "year": null, "plate": null,
+        "items": [{"part_kw": ["브레이크패드", "패드"], "qty": 2, "part_no": "58101-D4A25"}],
+        "urgent": true, "needs_ask": false
+      }
+    },
+    {
+      "id": "call05",
+      "turns": [
+        {"who": "dealer", "say": "네, 부품입니다."},
+        {"who": "shop", "say": "동아카공업사예요. 그랜저 아이지, 렌터카라서 차번호가 백이십삼 허, 사오육칠이에요."},
+        {"who": "dealer", "say": "백이십삼 허 사오육칠, 네."},
+        {"who": "shop", "say": "라지에다 하나하고 에어컨 콘덴서 하나요. 오늘 오후까지 꼭 필요해요."},
+        {"who": "dealer", "say": "라지에다 하나, 콘덴서 하나. 오후 두 시 차로 보낼게요."}
+      ],
+      "gold": {
+        "customer": "동아카공업사", "car_kw": ["그랜저", "IG"], "year": null, "plate": "123허4567",
+        "items": [
+          {"part_kw": ["라지에다", "라디에이터", "라지에이터", "라디에타"], "qty": 1, "part_no": null},
+          {"part_kw": ["콘덴서", "컨덴서"], "qty": 1, "part_no": null}
+        ],
+        "urgent": true, "needs_ask": false
+      }
+    },
+    {
+      "id": "call06",
+      "turns": [
+        {"who": "dealer", "say": "네, 부품입니다."},
+        {"who": "shop", "say": "제일카서비스입니다. 싼타페 티엠 디젤 오일필터 열 개, 아니다, 스무 개 주세요."},
+        {"who": "dealer", "say": "스무 개요?"},
+        {"who": "shop", "say": "네 스무 개. 그리고 에어필터는 다섯 개만 주세요."},
+        {"who": "dealer", "say": "오일필터 스무 개, 에어필터 다섯 개. 급하세요?"},
+        {"who": "shop", "say": "아니요, 재고용이라 이번 주 안에만 주시면 돼요."}
+      ],
+      "gold": {
+        "customer": "제일카서비스", "car_kw": ["싼타페|산타페", "TM"], "year": null, "plate": null,
+        "items": [
+          {"part_kw": ["오일필터"], "qty": 20, "part_no": null},
+          {"part_kw": ["에어필터", "에어크리너", "에어클리너"], "qty": 5, "part_no": null}
+        ],
+        "urgent": false, "needs_ask": false
+      }
+    },
+    {
+      "id": "call07",
+      "turns": [
+        {"who": "dealer", "say": "네, 부품입니다."},
+        {"who": "shop", "say": "한빛카인데요, 어제 시킨 그거 하나 더 보내 주세요."},
+        {"who": "dealer", "say": "어제 거요? 어떤 거 말씀이세요?"},
+        {"who": "shop", "say": "아 그 케이파이브 백미러요. 그거 하나 더요."},
+        {"who": "dealer", "say": "운전석이에요, 조수석이에요?"},
+        {"who": "shop", "say": "어, 잠깐만요. 그건 기사님한테 물어보고 문자 드릴게요."},
+        {"who": "dealer", "say": "네, 확인되면 알려 주세요."}
+      ],
+      "gold": {
+        "customer": "한빛카", "car_kw": ["K5"], "year": null, "plate": null,
+        "items": [{"part_kw": ["백미러", "사이드미러", "아웃사이드미러"], "qty": 1, "part_no": null}],
+        "urgent": false, "needs_ask": true
+      }
+    },
+    {
+      "id": "call08",
+      "turns": [
+        {"who": "dealer", "say": "네, 부품입니다."},
+        {"who": "shop", "say": "대한모터스예요. 카니발 케이에이포, 이십이 년식이고 차번호는 육십칠 저, 팔구공일이요."},
+        {"who": "dealer", "say": "육십칠 저 팔구공일. 네, 말씀하세요."},
+        {"who": "shop", "say": "뒷범퍼 하나하고 운전석 쪽 후미등 하나 주세요."},
+        {"who": "dealer", "say": "뒷범퍼 하나, 운전석 후미등 하나요. 내일 오전에 들어가요."},
+        {"who": "shop", "say": "네 그렇게 해 주세요."}
+      ],
+      "gold": {
+        "customer": "대한모터스", "car_kw": ["카니발", "KA4"], "year": "2022", "plate": "67저8901",
+        "items": [
+          {"part_kw": ["뒷범퍼", "뒤범퍼", "리어범퍼"], "qty": 1, "part_no": null},
+          {"part_kw": ["후미등", "테일램프", "데루등", "테일라이트", "리어램프", "리어콤비"], "qty": 1, "part_no": null}
+        ],
+        "urgent": false, "needs_ask": false
+      }
+    },
+    {
+      "id": "call09",
+      "turns": [
+        {"who": "dealer", "say": "네, 부품입니다."},
+        {"who": "shop", "say": "중앙공업사입니다. 투싼 엔엑스포 이십일 년식 사고차인데요."},
+        {"who": "dealer", "say": "네."},
+        {"who": "shop", "say": "본네트 하나, 라지에다 그릴 하나, 그리고 범퍼 레일은 품번으로 드릴게요. 육사구공공, 다시, 엔 구공공공. 하나요."},
+        {"who": "dealer", "say": "육사구공공 다시 엔구공공공. 네, 본네트, 그릴, 레일 하나씩이요."},
+        {"who": "shop", "say": "네, 모레까지만 주시면 돼요."}
+      ],
+      "gold": {
+        "customer": "중앙공업사", "car_kw": ["투싼", "NX4"], "year": "2021", "plate": null,
+        "items": [
+          {"part_kw": ["본네트", "본넷", "보닛", "후드"], "qty": 1, "part_no": null},
+          {"part_kw": ["그릴"], "qty": 1, "part_no": null},
+          {"part_kw": ["레일", "범퍼빔"], "qty": 1, "part_no": "64900-N9000"}
+        ],
+        "urgent": false, "needs_ask": false
+      }
+    },
+    {
+      "id": "call10",
+      "turns": [
+        {"who": "dealer", "say": "네, 부품입니다."},
+        {"who": "shop", "say": "태양카센터요. 봉고 쓰리 세루모터 하나하고 제네레다 하나 급하게 필요해요."},
+        {"who": "dealer", "say": "차번호 있으세요?"},
+        {"who": "shop", "say": "팔십구 바, 일이삼사요. 지금 차가 길에 서 있어서 퀵으로 보내 주세요."},
+        {"who": "dealer", "say": "팔십구 바 일이삼사. 세루모터, 제네레다 하나씩 퀵으로 보낼게요."}
+      ],
+      "gold": {
+        "customer": "태양카센터", "car_kw": ["봉고"], "year": null, "plate": "89바1234",
+        "items": [
+          {"part_kw": ["세루모터", "스타트모터", "스타터", "셀모터", "시동모터"], "qty": 1, "part_no": null},
+          {"part_kw": ["제네레다", "제네레이터", "알터네이터", "발전기", "제너레이터"], "qty": 1, "part_no": null}
+        ],
+        "urgent": true, "needs_ask": false
+      }
+    }
+  ]
+}
