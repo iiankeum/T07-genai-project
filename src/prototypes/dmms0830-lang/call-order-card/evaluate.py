@@ -25,15 +25,29 @@ CONDITIONS = [
 ]
 FIELDS = ["거래처", "차종", "연식", "차번호", "부품", "수량", "품번", "급함", "되물음 판정"]
 
+# 틀린 칸에 「들어 보기」 표시가 붙었는지 볼 때, 표시 문장에 이 말이 들어 있으면 그 칸을 짚은 것으로 본다.
+# 남희 리뷰(PR #47 · 2026-11-26): 정답률만으로는 「경고 없이 출고로 넘어갈 위험」이 안 보인다.
+FLAG_WORDS = {
+    "거래처": ["거래처", "상호"], "차종": ["차종"], "연식": ["연식"], "차번호": ["차번호", "차량 번호"],
+    "부품": ["부품", "품목"], "수량": ["수량"], "품번": ["품번"], "급함": ["급"], "되물음 판정": ["되물"],
+}
+SILENT_ROW = "표시 없이 틀린 카드 (적을수록 좋음)"
+
+
+def unflagged(fields_wrong: list[str], unsure: list[str]) -> list[str]:
+    """틀린 칸 가운데 AI 의 「들어 보기」 표시가 짚지 않은 칸."""
+    return [f for f in fields_wrong if not any(w in u for u in (unsure or []) for w in FLAG_WORDS[f])]
+
 
 def norm(value) -> str:
     return re.sub(r"[\s\-·()]", "", str(value or "")).upper()
 
 
-def score(card: dict, gold: dict) -> tuple[dict, list[str]]:
-    """항목별 (맞은 수, 전체 수)와 틀린 내용 설명을 돌려준다."""
+def score(card: dict, gold: dict) -> tuple[dict, list[str], list[str]]:
+    """항목별 (맞은 수, 전체 수), 틀린 내용 설명, 틀린 칸 이름을 돌려준다."""
     s = {f: [0, 0] for f in FIELDS}
     wrong = []
+    fields_wrong: list[str] = []
 
     def check(field: str, ok: bool, expected, got) -> None:
         s[field][1] += 1
@@ -41,6 +55,7 @@ def score(card: dict, gold: dict) -> tuple[dict, list[str]]:
             s[field][0] += 1
         else:
             wrong.append(f"{field}: 정답 {expected!r} ↔ 카드 {got!r}")
+            fields_wrong.append(field)
 
     check("거래처", norm(card["customer"]) == norm(gold["customer"]), gold["customer"], card["customer"])
 
@@ -67,10 +82,11 @@ def score(card: dict, gold: dict) -> tuple[dict, list[str]]:
         check("품번", norm(hit["part_no"]) == norm(g["part_no"]), f"{name} {g['part_no']}", hit["part_no"])
     if left:
         wrong.append(f"없는 품목을 적음: {[i['part'] for i in left]}")
+        fields_wrong.append("부품")
 
     check("급함", card["urgent"] == gold["urgent"], gold["urgent"], card["urgent"])
     check("되물음 판정", bool(card["ask_back"]) == gold["needs_ask"], gold["needs_ask"], card["ask_back"])
-    return s, wrong
+    return s, wrong, fields_wrong
 
 
 def main() -> None:
@@ -90,30 +106,37 @@ def main() -> None:
 
         total = {f: [0, 0] for f in FIELDS}
         perfect = 0
+        silent = 0
         details.append(f"\n### {label}\n")
         for r in results:
             call_id = Path(r["file"]).stem
-            s, wrong = score(r["card"], gold[call_id])
+            s, wrong, fields_wrong = score(r["card"], gold[call_id])
             for f in FIELDS:
                 total[f][0] += s[f][0]
                 total[f][1] += s[f][1]
             perfect += not wrong
+            missed = unflagged(fields_wrong, r["card"]["unsure"])
+            silent += bool(missed)
             if wrong:
                 details.append(f"- **{call_id}** — " + " / ".join(wrong))
                 details.append(f"  - 받아쓴 글: {r['text']}")
                 if r["card"]["unsure"]:
                     details.append(f"  - AI 가 의심스럽다고 표시함: {r['card']['unsure']}")
+                if missed:
+                    details.append(f"  - **표시 없이 틀림**: {missed}")
         if perfect == len(results):
             details.append("- 틀린 카드 없음")
         total["카드 전체가 정답"] = [perfect, len(results)]
+        total[SILENT_ROW] = [silent, len(results)]
         table[label] = total
         print("   " + "  ".join(f"{f} {a}/{b}" for f, (a, b) in total.items()), flush=True)
 
-    rows = FIELDS + ["카드 전체가 정답"]
+    rows = FIELDS + ["카드 전체가 정답", SILENT_ROW]
     lines = [
         "# 평가 결과",
         "",
         "가짜 주문 통화 10건(합성 음성)을 돌려 정답 카드와 비교했다. 숫자는 `맞은 수/전체 수`다.",
+        f"마지막 줄 「{SILENT_ROW}」만 `해당 카드 수/전체 수`다 — 틀린 칸 가운데 하나라도 「들어 보기」 표시가 짚지 않은 카드.",
         "",
         "| 항목 | " + " | ".join(table) + " |",
         "|---|" + "---|" * len(table),
