@@ -1,0 +1,3 @@
+*.csv
+!가짜-검수.csv
+__pycache__/
