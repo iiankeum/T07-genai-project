@@ -1,0 +1,10 @@
+call_id,field,judgment,warning
+C001,customer,wrong,no
+C001,part:01,wrong,no
+C001,quantity:01,wrong,yes
+C002,customer,correct,yes
+C002,part:01,correct,no
+C002,quantity:01,unsure,
+C003,card,missing_card,
+C004,customer,unsure,
+C004,delivery,not_applicable,
